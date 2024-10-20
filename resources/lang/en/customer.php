@@ -82,8 +82,8 @@ return [
         'last-caller-id' => 'Last Caller ID',
         'caller-id' => 'Caller ID',
         'update-with-last-caller-id' => 'Update with last caller ID',
-        'disconnect-client-button' => 'Dont disconnect client after update secret?'
-
+        'disconnect-client-button' => 'Dont disconnect client after update secret?',
+        'price' => 'Price'
     ],
     'placeholder' => [
         'name' => 'Insert customer name',

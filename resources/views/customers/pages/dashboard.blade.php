@@ -46,12 +46,37 @@
                 </tr>
                 <tr class="table-borderless">
                     <td><strong>{{ __('customer.page.label.due-date') }}</strong></td>
-                    <td>{{ __(':') }} {{ $customer->activation_date ?? 'No Data' }}</td>
+                    <td>{{ __(':') }}
+                        @if ($billings->isEmpty())
+                            @if ($customer->activation_date)
+                                {{ \Carbon\Carbon::parse($customer->activation_date)->addDays(30)->translatedFormat('d F Y, h:i A') }}
+                            @else
+                                {{ __('No Due Date') }}
+                            @endif
+                        @else
+                            @if ($customer->activation_date)
+                                {{ \Carbon\Carbon::parse($customer->activation_date)->translatedFormat('d F Y, h:i A') }}
+                            @else
+                                {{ __('No Due Date') }}
+                            @endif
+                        @endif
+                    </td>
+                </tr>
+                <tr class="table-borderless">
+                    <td><strong>{{ __('customer.label.last-payment') }}</strong></td>
+                    <td>{{ __(':') }}
+                        @if ($last_payment)
+                            {{ \Carbon\Carbon::parse($last_payment->payment_time)->translatedFormat('d F Y, h:i A') }}
+                        @else
+                            {{ __('No Payment History') }}
+                        @endif
+                    </td>
                 </tr>
 
             </table>
         </div>
-        <strong>{{ __('customer.page.label.bill-not-payed') }}</strong>{{ $billings->count() }} {{ __(' tagihan') }}
+        <strong>{{ __('customer.page.label.bill-not-payed') }}</strong>{{ $billings->count() }}
+        {{ __('customer.label.bill') }}
 
         <div style="overflow-x: auto;">
             <table id="customersTable" cellspacing="0" width="100%"
@@ -65,7 +90,7 @@
                 </tr>
                 @foreach ($billings as $billing)
                     <tr>
-                        <td></td>
+                        <td>{{ $loop->iteration }}</td>
                         <td>{{ $billing->billing_periode->name }}</td>
                         <td>{{ $billing->paket_name }}</td>
                         <td>

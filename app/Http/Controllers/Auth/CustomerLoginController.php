@@ -56,10 +56,10 @@ class CustomerLoginController extends Controller
             'password' => 'required',
         ]);
 
-        Log::info('Login attempt:', [
-            'email' => $request->input('email'),
-            'password' => $request->input('password') // Hati-hati dengan logging password
-        ]);
+        // Log::info('Login attempt:', [
+        //     'email' => $request->input('email'),
+        //     'password' => $request->input('password') // Hati-hati dengan logging password
+        // ]);
 
         if (auth()->guard('customer')->attempt([
             'email' => $request->input('email'),

@@ -20,16 +20,28 @@ class ProfileController extends Controller
         $customerId = (auth()->guard('customer')->user()->id);
         // $bills = Billing::where('customer_id', $customerId)->get();
         // $orders = Order::where('customer_id', $customerId)->where('payment_status', 1)->orWhere('payment_status', 3)->orWhere('payment_status', 3)->get();'!='
-        $billings = Billing::where('customer_id', $customerId)->where('status', 'BL')->get();
+
+        $billings = Billing::where('customer_id', $customerId)
+            ->where('status', 'BL')
+            ->get();
+
+        $last_payment = Billing::where('customer_id', $customerId)
+            ->where('status', 'LS')
+            ->orderBy('payment_time', 'DESC')
+            ->first();
+
         $customer = Customer::where('id', $customerId)->first();
+
         // return dd($customer);
         $websystem = Websystem::where('slug', 'websystem')->first();
+
         $agent = new Agent();
         $result = $agent->isMobile();
+
         if ($result) {
-            return view('mobile.customers.pages.dashboard', compact('customer', 'billings', 'websystem'));
+            return view('mobile.customers.pages.dashboard', compact('customer', 'billings', 'websystem', 'last_payment'));
         } else {
-            return view('customers.pages.dashboard', compact('customer', 'billings', 'websystem'));
+            return view('customers.pages.dashboard', compact('customer', 'billings', 'websystem', 'last_payment'));
         }
     }
 
