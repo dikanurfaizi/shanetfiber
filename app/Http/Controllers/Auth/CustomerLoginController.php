@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
+use Illuminate\Support\Facades\Log;
 
 class CustomerLoginController extends Controller
 {
@@ -53,6 +54,11 @@ class CustomerLoginController extends Controller
         $this->validate($request, [
             'email' => 'required|email',
             'password' => 'required',
+        ]);
+
+        Log::info('Login attempt:', [
+            'email' => $request->input('email'),
+            'password' => $request->input('password') // Hati-hati dengan logging password
         ]);
 
         if (auth()->guard('customer')->attempt([

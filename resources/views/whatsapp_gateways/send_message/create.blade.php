@@ -212,7 +212,7 @@
                     return;
                 }
 
-                button.addEventListener("click", async function() {
+                button.addEventListener("click", async () => {
                     const phoneInput = document.getElementById("phone-input").value;
                     const messageInput = document.querySelector('textarea[name="message"]').value;
 
@@ -250,42 +250,30 @@
                 });
             }
 
-            async function fetchApiUrl() {
-                const response = await fetch('/api/urls/1');
-                if (!response.ok) throw new Error('Network response was not ok');
-                return (await response.json()).url;
-            }
-
             async function sendMessage(number, message) {
                 try {
-                    const url = await fetchApiUrl();
-                    const response = await fetch(url, {
+                    const response = await fetch('/api/send-whatsapp', { // Mengirim ke endpoint Laravel
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute(
+                                'content') // Pastikan CSRF token dikirim
                         },
                         body: JSON.stringify({
                             phone: number,
-                            message
-                        }),
+                            message: message
+                        })
                     });
 
                     const data = await response.json();
-                    if (data.code === "SUCCESS") {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Successfully sent message',
-                            text: 'Please check your WhatsApp application',
-                            confirmButtonText: 'OK'
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Failed to send message',
-                            text: parseMessage(data),
-                            confirmButtonText: 'OK'
-                        });
-                    }
+
+                    Swal.fire({
+                        icon: data.message === 'Successfully sent message' ? 'success' : 'error',
+                        title: data.message === 'Successfully sent message' ? 'Message Sent!' : 'Message Failed!',
+                        text: data.message === 'Successfully sent message' ? 'Please check your WhatsApp' :
+                            parseMessage(data),
+                        confirmButtonText: 'OK'
+                    });
                 } catch (error) {
                     showError(error.message || 'An error occurred during sending.');
                 }
@@ -293,9 +281,8 @@
 
             function parseMessage(response) {
                 const message = response.message || response;
-                const regex = /Phone (\d+)@s\.whatsapp\.net is not on whatsapp/; // Regex yang diperbarui
-                const match = message.match(regex);
-                return match ? `Phone ${match[1]} is not on whatsapp` : response.message; // Pesan default jika tidak cocok
+                const match = message.match(/Phone (\d+)@s\.whatsapp\.net is not on whatsapp/);
+                return match ? `Phone ${match[1]} is not on WhatsApp` : response.message; // Pesan default jika tidak cocok
             }
 
             function toggleBroadcastButton(checkbox) {
@@ -319,16 +306,25 @@
                 });
             }
 
-            // Fungsi untuk mengirim broadcast WhatsApp
             async function sendBroadcastWhatsApp() {
                 try {
-                    // Ambil data dari server
+                    // 1. Validasi pesan (message) apakah sudah diisi
+                    const message = document.querySelector('textarea[name="message"]').value;
+                    if (message.length === 0) {
+                        Swal.fire({
+                            title: 'Message is still empty',
+                            text: 'Make sure the message has been filled in first',
+                            icon: 'info',
+                            confirmButtonText: 'OK'
+                        });
+                        return;
+                    }
+
+                    // 2. Ambil dan validasi data pelanggan
                     const response = await fetch('/api/get-customers');
                     if (!response.ok) throw new Error('Failed to retrieve customer data');
-
                     const customers = await response.json();
 
-                    // Periksa apakah data pelanggan kosong
                     if (customers.length === 0) {
                         Swal.fire({
                             title: 'No Customers',
@@ -336,17 +332,15 @@
                             icon: 'info',
                             confirmButtonText: 'OK'
                         });
-                        return; // Hentikan eksekusi jika tidak ada pelanggan
+                        return;
                     }
 
+                    // Validasi kontak pelanggan
                     const validContacts = [];
                     const invalidContacts = [];
 
-                    // Validasi nomor kontak
                     customers.forEach(customer => {
-                        const contactNumber = customer.contact; // Ganti 'phone' dengan 'contact'
-
-                        // Periksa apakah contactNumber tidak null, undefined, atau kosong
+                        const contactNumber = customer.contact;
                         if (contactNumber && typeof contactNumber === 'string') {
                             if (!isNaN(contactNumber)) {
                                 if (contactNumber.startsWith('08')) {
@@ -354,90 +348,63 @@
                                 } else if (contactNumber.startsWith('8')) {
                                     validContacts.push('62' + contactNumber);
                                 } else {
-                                    invalidContacts.push(contactNumber); // Tambahkan ke daftar invalid
+                                    invalidContacts.push(contactNumber);
                                 }
                             } else {
-                                invalidContacts.push(contactNumber); // Tambahkan ke daftar invalid
+                                invalidContacts.push(contactNumber);
                             }
                         } else {
-                            invalidContacts.push(contactNumber || 'null/undefined'); // Tambahkan ke daftar invalid
+                            invalidContacts.push(contactNumber || 'null/undefined');
                         }
                     });
 
-                    // Kirim request ke API WhatsApp jika ada nomor yang valid
+                    // 3. Kirim nomor kontak yang valid dan pesan ke backend
                     if (validContacts.length > 0) {
-                        const message = document.querySelector('textarea[name="message"]').value; // Ambil message dari form
+                        const body = {
+                            contacts: validContacts, // Array berisi nomor kontak yang valid
+                            message: message
+                        };
 
-                        // Periksa apakah data message kosong
-                        if (message.length === 0) {
-                            Swal.fire({
-                                title: 'Message is still empty',
-                                text: 'Make sure the message has been filled in first',
-                                icon: 'info',
-                                confirmButtonText: 'OK'
-                            });
-                            return; // Hentikan eksekusi jika tidak ada message
-                        }
+                        //console.log("Contacts being sent: ", validContacts); // Debugging kontak
+                        //console.log("Message being sent: ", message); // Debugging pesan
 
-                        const apiUrl = await fetch('/api/urls/1'); // Ambil URL API dari database
-                        if (!apiUrl.ok) throw new Error('Failed to get API URL');
-                        const apiEndpoint = await apiUrl.json();
+                        try {
+                            // Ambil CSRF token dari meta tag
+                            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                            //console.log("CSRF Token: ", csrfToken); // Debugging CSRF token
 
-                        const failedContacts = []; // Array untuk menyimpan kontak yang gagal dikirim
-
-                        await Promise.all(validContacts.map(async (contact) => {
-                            const body = {
-                                phone: `${contact}@s.whatsapp.net`,
-                                message: message
-                            };
-                            try {
-                                const apiResponse = await fetch(apiEndpoint.url, {
+                            const apiResponse = await fetch(
+                                '/api/send-broadcast', {
                                     method: 'POST',
                                     headers: {
-                                        'Content-Type': 'application/json'
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': csrfToken
                                     },
                                     body: JSON.stringify(body)
-                                });
-
-                                if (!apiResponse.ok) {
-                                    const errorData = await apiResponse.json();
-                                    // Simpan info kontak yang gagal ke array
-                                    failedContacts.push({
-                                        contact: contact,
-                                        reason: errorData.message || 'Unknown error'
-                                    });
-                                } else {
-                                    const data = await apiResponse.json();
-                                    Swal.fire({
-                                        icon: data.code === "SUCCESS" ? 'success' : 'error',
-                                        title: data.code === "SUCCESS" ? 'Successfully' :
-                                            'Failed to send message',
-                                        text: data.code === "SUCCESS" ?
-                                            'Sent WhatsApp message to all customers' : parseMessage(
-                                                data),
-                                        confirmButtonText: 'OK'
-                                    });
                                 }
-                            } catch (error) {
-                                // Tangani error jaringan atau kesalahan lainnya dan tambahkan ke array gagal
-                                failedContacts.push({
-                                    contact: contact,
-                                    reason: error.message
-                                });
+                            );
+                            //console.log("API Response Status: ", apiResponse.status);
+
+                            if (!apiResponse.ok) {
+                                const errorData = await apiResponse.text(); // Ambil sebagai teks untuk debugging
+                                //console.log("Error Response Text: ", errorData); // Debugging jika ada error dari server
+                                throw new Error(errorData.message || 'Unknown error');
                             }
-                        }));
 
-                        // Setelah semua pengiriman selesai, cek apakah ada kegagalan
-                        if (failedContacts.length > 0) {
-                            let errorMessage = 'Failed to send message to the following contacts:\n\n';
-                            failedContacts.forEach(failed => {
-                                errorMessage += `${failed.contact}: ${failed.reason}\n`;
-                            });
+                            const jsonResponse = await apiResponse.json(); // Parsing JSON jika responsnya valid
+                            //console.log("Parsed JSON Response: ", jsonResponse);
 
-                            // Tampilkan pesan error untuk semua pengiriman yang gagal
                             Swal.fire({
-                                title: 'Some messages failed',
-                                text: errorMessage,
+                                icon: 'success',
+                                title: 'Successfully',
+                                text: 'Sent WhatsApp message to all customers',
+                                confirmButtonText: 'OK'
+                            });
+                        } catch (error) {
+                            //console.log("Error caught: ", error); // Debugging error di blok catch
+                            Swal.fire({
+                                title: 'Error sending messages',
+                                text: error.message,
                                 icon: 'error',
                                 confirmButtonText: 'OK'
                             });
@@ -455,7 +422,6 @@
                         });
                     }
                 } catch (error) {
-                    // Menampilkan pesan error
                     Swal.fire({
                         title: 'Error',
                         text: error.message,

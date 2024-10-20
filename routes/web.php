@@ -58,7 +58,13 @@ use App\Http\Controllers\ApiUrlController;
 
 
 /// Silahkan dihapus setelah melakukan instalasi
-
+Route::get('install', [InstallController::class, 'install'])->name('install');
+Route::get('install/start', [InstallController::class, 'start'])->name('installStart');
+Route::get('install/seeder', [InstallController::class, 'seeder'])->name('installSeeder');
+Route::get('install/create/seeder', [InstallController::class, 'create_seeder'])->name('installCreateSeeder');
+Route::get('install/create', [InstallController::class, 'create_admin'])->name('installCreateAdmin');
+Route::post('install/store', [InstallController::class, 'store_admin'])->name('installStoreAdmin');
+Route::get('install/finish', [InstallController::class, 'finish'])->name('installFinish');
 // Batas akhir hapus setelah instalasi
 
 Route::resource('test-command', TestCommandController::class);
@@ -256,4 +262,6 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('api/urls/{id}', [ApiUrlController::class, 'show']); // Mengambil URL berdasarkan ID
     Route::put('api/urls/{id}', [ApiUrlController::class, 'update']); // Mengupdate URL berdasarkan ID
     Route::delete('api/urls/{id}', [ApiUrlController::class, 'destroy']);
+    Route::post('api/send-whatsapp', [WhatsAppGatewayController::class, 'sendMessage']);
+    Route::post('api/send-broadcast', [WhatsAppGatewayController::class, 'sendBulkMessages']);
 });
