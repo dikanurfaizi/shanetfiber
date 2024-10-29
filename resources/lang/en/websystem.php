@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'title' => 'Welcome Customers "ShaNet Fiber"',
+    'title' => 'Welcome Customers <br> "ShaNet Fiber"',
     'version' => 'Version: ',
     'new-version' => 'New Version: ',
     'header' => [
