@@ -50,29 +50,29 @@ class CustomerLoginController extends Controller
         return view('customers.auth.login');
     }
 
-    // public function postLogin(Request $request)
-    // {
-    //     $this->validate($request, [
-    //         'email' => 'required|email',
-    //         'password' => 'required',
-    //     ]);
+    //public function postLogin(Request $request)
+    //{
+    //    $this->validate($request, [
+    //        'email' => 'required|email',
+    //        'password' => 'required',
+    //    ]);
 
-    //     if (auth()->guard('customer')->attempt([
-    //         'email' => $request->input('email'),
-    //         'password' => $request->input('password')
-    //     ])) {
-    //         $user = auth()->guard('customer')->user();
-    //         return redirect()->route('customer.dashboard')
-    //             ->withSuccess('You have Successfully loggedin');
-    //         //return dd($user);
-    //         //if ($user->is_customer == 1) {
-    //         //return redirect()->route('customerDashboard')->with('success', 'You are Logged in sucessfully.');
-    //         // }
-    //     } else {
-    //         return back()->with('error', 'Whoops! invalid email and password.');
-    //     }
-    // }
-
+    //    if (auth()->guard('customer')->attempt([
+    //        'email' => $request->input('email'),
+    //        'password' => $request->input('password')
+    //    ])) {
+    //        $user = auth()->guard('customer')->user();
+    //        return redirect()->route('customer.dashboard')
+    //            ->withSuccess('You have Successfully loggedin');
+    //        //return dd($user);
+    //        //if ($user->is_customer == 1) {
+    //        //return redirect()->route('customerDashboard')->with('success', 'You are Logged in sucessfully.');
+    //        // }
+    //    } else {
+    //        return back()->with('error', 'Whoops! invalid email and password.');
+    //    }
+    //}
+    
     public function postLogin(Request $request)
     {
         // Validasi input email atau nomor telepon

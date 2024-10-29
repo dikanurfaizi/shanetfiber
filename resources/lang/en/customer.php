@@ -16,7 +16,8 @@ return [
         'state' => 'State',
         'remote-address' => 'Remote Addr.',
         'last-logged-out' => 'Last Logout',
-        'id' => 'Customer ID'
+        'id' => 'Customer ID',
+        'contact' => 'Contact'
     ],
     'title' => [
         'index' => 'Manage Customers',
