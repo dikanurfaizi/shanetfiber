@@ -58,13 +58,7 @@ use App\Http\Controllers\ApiUrlController;
 
 
 /// Silahkan dihapus setelah melakukan instalasi
-Route::get('install', [InstallController::class, 'install'])->name('install');
-Route::get('install/start', [InstallController::class, 'start'])->name('installStart');
-Route::get('install/seeder', [InstallController::class, 'seeder'])->name('installSeeder');
-Route::get('install/create/seeder', [InstallController::class, 'create_seeder'])->name('installCreateSeeder');
-Route::get('install/create', [InstallController::class, 'create_admin'])->name('installCreateAdmin');
-Route::post('install/store', [InstallController::class, 'store_admin'])->name('installStoreAdmin');
-Route::get('install/finish', [InstallController::class, 'finish'])->name('installFinish');
+
 // Batas akhir hapus setelah instalasi
 
 Route::resource('test-command', TestCommandController::class);
