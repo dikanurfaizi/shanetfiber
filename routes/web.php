@@ -164,6 +164,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::put('/banks/{bank}/disabled/false', [BankController::class, 'enable'])->name('bank.enable');
         Route::resource('receipts', ReceiptController::class);
         Route::get('receipt/{receipt}/print/', [ReceiptController::class, 'print'])->name('receipts.print');
+        Route::get('receipt/{receipt}/thermal', [ReceiptController::class, 'thermalPrint'])->name('receipts.thermal');
         //Route::get('/billings/state/{status}/show', [BillingController::class, 'index'])->name('billings.show.state');
         Route::get('billings/create/one', [BillingController::class, 'create_one'])->name('billings.create.one');
         Route::post('billings/store/one', [BillingController::class, 'store_one'])->name('billings.store.one');

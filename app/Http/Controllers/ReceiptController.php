@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use App\Models\Customer;
 use App\Models\Websystem;
+use Illuminate\Support\Facades\Log;
 
 //use Barryvdh\DomPDF\PDF;
 
@@ -102,5 +103,19 @@ class ReceiptController extends Controller
             'websystem' => $websystem
         ]);
         return $pdf->download($receipt->number . str($receipt->customer_name)->slug() . '_' . str($receipt->customer_address)->slug() . '_' . str($receipt->month)->slug() . '_' . $receipt->year . '.pdf');
+    }
+
+    public function thermalPrint(Receipt $receipt)
+    {
+        $websystem = Websystem::where('slug', 'websystem')->first();
+
+        // Atur ukuran kertas thermal (55mm x 100mm) dalam satuan point
+        $pdf = PDF::loadView('receipts.thermal', [
+            'receipt' => $receipt,
+            'websystem' => $websystem
+        ])->setPaper([0, 0, 155.43, 283.5], 'portrait'); // 55mm x 100mm dalam satuan point
+
+        // Kembalikan tampilan PDF untuk pratinjau
+        return $pdf->stream($receipt->number . '_thermal_' . str($receipt->customer_name)->slug() . '_' . str($receipt->customer_address)->slug() . '_' . str($receipt->month)->slug() . '_' . $receipt->year . '.pdf');
     }
 }

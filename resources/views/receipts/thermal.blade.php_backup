@@ -1,0 +1,149 @@
+@extends('layouts.thermal')
+
+@section('content')
+    <div class="container">
+        <!-- Watermark -->
+        <div class="watermark">
+            Payment Received
+        </div>
+
+        <div class="header">
+            <img src="{{ public_path('images/receipt_logo.png') }}" style="width: 100%; max-width: 45mm;" />
+            <div class="separator"></div>
+        </div>
+        <div class="receipt-info">
+            <div>
+                Receipt #: {{ $receipt->number }}
+            </div>
+            <div>
+                Created: {{ Carbon\Carbon::parse($receipt->created_at)->translatedFormat('l, d M Y') ?? 'No Created Time' }}
+            </div>
+        </div>
+        <div class="content">
+            <div class="section">
+                <div class="label">
+                    Bill to :
+                </div>
+                <div class="value">
+                    {{ $receipt->customer_name }} (Your ID: {{ $receipt->customer->customer_id }})
+                </div>
+                <div class="value">
+                    {{ $receipt->customer_address }}
+                </div>
+                <div class="value">
+                    {{ $receipt->customer->contact ?? '' }}
+                </div>
+            </div>
+            <table class="table table-margin-top">
+                <tr>
+                    <th>
+                        Paket
+                    </th>
+                    <th>
+                        Price
+                    </th>
+                </tr>
+                <tr>
+                    <td>
+                        {{ $receipt->paket_name }} - {{ $receipt->periode }}
+                    </td>
+                    <td class="right">
+                        @moneyIDR($receipt->paket_price)
+                    </td>
+                </tr>
+            </table>
+            <table class="table">
+                <tr>
+                    <td class="right">
+                        Sub Total:
+                    </td>
+                    <td class="right">
+                        @moneyIDR($receipt->paket_price)
+                    </td>
+                </tr>
+                <tr>
+                    <td class="right">
+                        PPN:
+                    </td>
+                    <td class="right">
+                        @moneyIDR($receipt->tax)
+                    </td>
+                </tr>
+                <tr>
+                    <td class="right">
+                        <strong>
+                            Total:
+                        </strong>
+                    </td>
+                    <td class="right">
+                        <strong>
+                            @moneyIDR($receipt->paket_price + $receipt->tax)
+                        </strong>
+                    </td>
+                </tr>
+            </table>
+            @if ($receipt->payment_methode === 'transfer')
+                <div class="section">
+                    <div class="label">Payment Method:</div>
+                    <div class="value">Transfer</div>
+                </div>
+                <div class="section">
+                    <div class="label">Bank:</div>
+                    <div class="value">{{ $receipt->bank_name }}</div>
+                </div>
+                <div class="section">
+                    <div class="label">Account Name:</div>
+                    <div class="value">{{ $receipt->account_name }}</div>
+                </div>
+                <div class="section">
+                    <div class="label">Account Number:</div>
+                    <div class="value">{{ $receipt->account_number }}</div>
+                </div>
+                <div class="section">
+                    <div class="label">Reference Id:</div>
+                    <div class="value">{{ $receipt->reference_id }}</div>
+                </div>
+            @elseif ($receipt->payment_methode === 'online')
+                <div class="section">
+                    <div class="label">Payment Method:</div>
+                    <div class="value">Online</div>
+                </div>
+                <div class="section">
+                    <div class="label">Bank:</div>
+                    <div class="value">{{ $receipt->bank_name }}</div>
+                </div>
+                <div class="section">
+                    <div class="label">Account Name:</div>
+                    <div class="value">{{ $receipt->account_name }}</div>
+                </div>
+                <div class="section">
+                    <div class="label">Account Number:</div>
+                    <div class="value">{{ $receipt->account_number }}</div>
+                </div>
+            @elseif ($receipt->payment_methode === 'cash')
+                <div class="section">
+                    <div class="label">Payment Method:</div>
+                    <div class="value">Cash</div>
+                </div>
+                <div class="section">
+                    <div class="label">Teller:</div>
+                    <div class="value">{{ $receipt->teller_name }}</div>
+                </div>
+            @endif
+
+        </div>
+        <div class="footer">
+            Struk ini merupakan bukti pembayaran yang sah dari {{ $websystem->title }} dan tidak diperlukan tanda tangan
+            basah.
+        </div>
+        <div class="footer">
+            ~~~ Terimakasih ~~~
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            window.print();
+        };
+    </script>
+@endsection

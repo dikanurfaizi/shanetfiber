@@ -39,9 +39,9 @@
             <div class="form-group">
                 <strong>Price:</strong>
                 @if ($receipt->paket_price === 0)
-                {{ __('Free') }}
+                    {{ __('Free') }}
                 @else
-                @moneyIDR($receipt->paket_price)
+                    @moneyIDR($receipt->paket_price)
                 @endif
             </div>
         </div>
@@ -72,7 +72,8 @@
             <div class="form-group">
                 <strong>Payment Time:</strong>
                 <span class="badge bg-s-soft text-primary">
-                    <i class="fas fa-id-card-alt"></i> {{ Carbon\Carbon::parse($receipt->payment_time)->translatedFormat('l, d M Y - H:m:s') ?? 'No Payment Time' }}
+                    <i class="fas fa-id-card-alt"></i>
+                    {{ Carbon\Carbon::parse($receipt->payment_time)->translatedFormat('l, d M Y - H:m:s') ?? 'No Payment Time' }}
                 </span>
             </div>
         </div>
@@ -83,28 +84,33 @@
                 <span class="badge bg-s-soft text-primary">
                     <i class="fas fa-id-card-alt"></i> {{ $receipt->payment_methode ?? 'No Payment Methode' }}
                     @if ($receipt->payment_methode === 'transfer')
-                    <i> - </i> {{ $receipt->account_name ?? 'No Name' }} ( {{ $receipt->bank_name ?? 'No Bank' }} - {{ $receipt->account_number ?? 'No Number' }} )
+                        <i> - </i> {{ $receipt->account_name ?? 'No Name' }} ( {{ $receipt->bank_name ?? 'No Bank' }}
+                        - {{ $receipt->account_number ?? 'No Number' }} )
                     @endif
                 </span>
             </div>
         </div>
         @if ($receipt->payment_methode === 'transfer')
-        <div class="col-xs-12 col-sm-12 col-md-12">
-            <div class="form-group">
-                <strong>Reference Id:</strong>
-                <span class="badge bg-s-soft text-primary">
-                    <i class="fas fa-id-card-alt"></i> {{ $receipt->reference_id ?? 'No Reference Id' }}
-                </span>
+            <div class="col-xs-12 col-sm-12 col-md-12">
+                <div class="form-group">
+                    <strong>Reference Id:</strong>
+                    <span class="badge bg-s-soft text-primary">
+                        <i class="fas fa-id-card-alt"></i> {{ $receipt->reference_id ?? 'No Reference Id' }}
+                    </span>
+                </div>
             </div>
-        </div>
         @endif
 
 
     </div>
     <div class="card-footer">
         <a class="btn btn-sm btn-secondary" href="{{ URL::previous() }}"><i class="fa fa-arrow-left"></i> Back</a>
-        <a class="btn btn-success btn-sm" href="{{ route('receipts.print', $receipt->slug) }}" target="_blank"><i class="fa fa-print"></i> PDF</a>
-        <a class="btn btn-success btn-sm" href="{{ route('receipts.print', $receipt->slug) }}" target="_blank"><i class="fa fa-print"></i> Thermal</a>
+        <a class="btn btn-success btn-sm" href="{{ route('receipts.print', $receipt->slug) }}" target="_blank"><i
+                class="fa fa-print"></i> PDF</a>
+        <a class="btn btn-success btn-sm" href="{{ route('receipts.thermal', $receipt->slug) }}" target="_blank">
+            <i class="fa fa-print"></i> Thermal
+        </a>
+
     </div>
 
 </x-layouts.cpanel.billings.app-layout>
