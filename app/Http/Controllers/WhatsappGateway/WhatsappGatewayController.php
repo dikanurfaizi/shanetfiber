@@ -199,11 +199,12 @@ class WhatsappGatewayController extends Controller
 
     public function getCustomers(): JsonResponse
     {
-        // Ambil semua customer
-        $customers = Customer::all(['contact']); // Ambil hanya kolom contact
+        // Ambil kolom contact dan name
+        $customers = Customer::all(['contact', 'name']);
 
         return response()->json($customers);
     }
+
 
     public function sendMessage(Request $request)
     {
