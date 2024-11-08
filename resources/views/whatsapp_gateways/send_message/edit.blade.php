@@ -333,132 +333,42 @@
             }
 
             async function sendBroadcastWhatsApp() {
-                try {
-                    // 1. Validasi pesan (message) apakah sudah diisi
-                    const message = document.querySelector('textarea[name="message"]').value;
-                    if (message.length === 0) {
-                        Swal.fire({
-                            title: 'Message is still empty',
-                            text: 'Make sure the message has been filled in first',
-                            icon: 'info',
-                            confirmButtonText: 'OK'
-                        });
-                        return;
-                    }
-
-                    // 2. Ambil dan validasi data pelanggan
-                    const response = await fetch('/api/get-customers');
-                    if (!response.ok) throw new Error('Failed to retrieve customer data');
-                    const customers = await response.json();
-
-                    if (customers.length === 0) {
-                        Swal.fire({
-                            title: 'No Customers',
-                            text: 'There are no registered customers',
-                            icon: 'info',
-                            confirmButtonText: 'OK'
-                        });
-                        return;
-                    }
-
-                    // Validasi kontak pelanggan
-                    const validContacts = [];
-                    const invalidContacts = [];
-
-                    customers.forEach(customer => {
-                        const contactNumber = customer.contact;
-                        const name = customer.name || 'Unknown';
-
-                        if (contactNumber && typeof contactNumber === 'string') {
-                            if (/^\d+$/.test(contactNumber)) {
-                                if (contactNumber.startsWith('08')) {
-                                    validContacts.push(contactNumber.replace('0', '62'));
-                                } else if (contactNumber.startsWith('8')) {
-                                    validContacts.push('62' + contactNumber);
-                                } else if (contactNumber.startsWith('62')) {
-                                    validContacts.push(contactNumber);
-                                } else {
-                                    invalidContacts.push(`${name} (${contactNumber})`);
-                                }
-                            } else {
-                                invalidContacts.push(`${name} (${contactNumber})`);
-                            }
-                        } else {
-                            invalidContacts.push(`${name} (null/undefined)`);
-                        }
-                    });
-
-                    //console.log("Valid Contacts:", validContacts);
-                    //console.log("Invalid Contacts:", invalidContacts);
-
-                    // Fungsi untuk mengirim satu batch kontak ke backend
-                    async function sendBatch(contactsBatch) {
-                        const body = {
-                            contacts: contactsBatch,
-                            message: message
-                        };
-                        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-                        const apiResponse = await fetch('/api/send-broadcast', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': csrfToken
-                            },
-                            body: JSON.stringify(body)
-                        });
-
-                        if (!apiResponse.ok) {
-                            const errorData = await apiResponse.text();
-                            throw new Error(errorData.message || 'Unknown error');
-                        }
-
-                        return await apiResponse.json();
-                    }
-
-                    // 3. Kirim kontak yang valid dalam batch
-                    const batchSize = 50; // Set jumlah kontak per batch
-                    let batchNumber = 1; // Mulai dengan batch pertama
-                    for (let i = 0; i < validContacts.length; i += batchSize) {
-                        const contactsBatch = validContacts.slice(i, i + batchSize);
-                        try {
-                            const jsonResponse = await sendBatch(contactsBatch);
-                            // Tampilkan status keberhasilan untuk setiap batch
-                            console.log(`Batch ${batchNumber} sent successfully`);
-                            batchNumber++; // Naikkan nomor batch untuk iterasi berikutnya
-                        } catch (error) {
-                            console.error(`Error sending batch ${batchNumber}: ${error.message}`);
-                            Swal.fire({
-                                title: 'Error sending messages',
-                                text: error.message,
-                                icon: 'error',
-                                confirmButtonText: 'OK'
-                            });
-                            break;
-                        }
-                    }
-
+                const message = document.querySelector('textarea[name="message"]').value;
+                if (message.length === 0) {
                     Swal.fire({
-                        icon: 'success',
-                        title: 'Successfully',
-                        text: 'Sent WhatsApp message to all customers',
+                        title: 'Message is empty',
+                        text: 'Please fill in the message first',
+                        icon: 'info',
                         confirmButtonText: 'OK'
                     });
+                    return;
+                }
 
-                    // Notifikasi untuk kontak yang tidak valid
-                    if (invalidContacts.length > 0) {
-                        Swal.fire({
-                            title: 'Invalid Contacts',
-                            text: 'The following contact numbers are not in the correct format: ' + invalidContacts
-                                .join(', '),
-                            icon: 'warning',
-                            confirmButtonText: 'OK'
-                        });
-                    }
+                try {
+                    const response = await fetch('/api/send-broadcast', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute(
+                                'content')
+                        },
+                        body: JSON.stringify({
+                            message
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    Swal.fire({
+                        title: result.status === 'success' ? 'Success!' : 'Error!',
+                        text: result.message,
+                        icon: result.status === 'success' ? 'success' : 'error',
+                        confirmButtonText: 'OK'
+                    });
                 } catch (error) {
                     Swal.fire({
                         title: 'Error',
-                        text: error.message,
+                        text: 'Failed to queue the message',
                         icon: 'error',
                         confirmButtonText: 'OK'
                     });

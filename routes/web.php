@@ -258,5 +258,5 @@ Route::group(['middleware' => ['auth']], function () {
     Route::put('api/urls/{id}', [ApiUrlController::class, 'update']); // Mengupdate URL berdasarkan ID
     Route::delete('api/urls/{id}', [ApiUrlController::class, 'destroy']);
     Route::post('api/send-whatsapp', [WhatsAppGatewayController::class, 'sendMessage']);
-    Route::post('api/send-broadcast', [WhatsAppGatewayController::class, 'sendBulkMessages']);
+    Route::post('api/send-broadcast', [WhatsAppGatewayController::class, 'sendBroadcastMessage']);
 });
