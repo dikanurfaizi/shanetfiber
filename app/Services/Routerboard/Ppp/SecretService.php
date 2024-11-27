@@ -57,14 +57,13 @@ class SecretService
             ->equal('service', $service)
             ->equal('comment', $comment)
             ->equal('profile', $profile)
-            ->equal('disabled', 'true');
+            ->equal('disabled', 'false');
 
         return $client->query($query)->read();
     }
 
     public function updateSecret($mikrotik, $username, $password, $service, $profile, $id)
     {
-
         $client = $this->getMikrotik($mikrotik);
         $pppsecrets = new Query('/ppp/secret/print');
         $pppsecrets->where('.id', $id);
@@ -88,7 +87,6 @@ class SecretService
 
     public function updateUserPasswordServiceSecret($mikrotik, $username, $password, $service, $id, $callerID)
     {
-
         $client = $this->getMikrotik($mikrotik);
         $pppsecrets = new Query('/ppp/secret/print');
         $pppsecrets->where('.id', $id);
@@ -112,7 +110,6 @@ class SecretService
 
     public function updateProfileSecret($mikrotik, $profile, $id)
     {
-        // return dd($profile);
         $client = $this->getMikrotik($mikrotik);
         $pppsecrets = new Query('/ppp/secret/print');
         $pppsecrets->where('.id', $id);
@@ -128,7 +125,6 @@ class SecretService
 
     public function addCommentSecret($mikrotik, $comment, $secretId)
     {
-        //return dd($comment);
         $client = $this->getMikrotik($mikrotik);
         $pppsecrets = new Query('/ppp/secret/print');
         $pppsecrets->where('.id', $secretId);
@@ -139,8 +135,6 @@ class SecretService
                 ->equal('.id', $editPppSecret['.id'])
                 ->equal('comment', $comment);
             return $client->query($edit)->read();
-            //$response = $client->query($edit)->read();
-            //return dd('response');
         }
     }
     /*
@@ -175,7 +169,6 @@ class SecretService
         if ($enablePppSecrets == []) {
             return ($response = 'error');
         }
-
         foreach ($enablePppSecrets as $enablePppSecret) {
             $enable = (new Query('/ppp/secret/set'))
                 ->where('name', $username)
@@ -194,7 +187,6 @@ class SecretService
         $pppsecrets->where('.id', $secretId);
         //return dd($pppsecrets);
         $enablePppSecrets = $client->query($pppsecrets)->read();
-
         foreach ($enablePppSecrets as $enablePppSecret) {
             $enable = (new Query('/ppp/secret/set'))
                 ->where('.id', $secretId)
@@ -214,7 +206,6 @@ class SecretService
         if ($disablePppSecrets == []) {
             return ($response = 'error');
         }
-        // return dd($disablePppSecrets);
         foreach ($disablePppSecrets as $disablePppSecret) {
             $dsbl = (new Query('/ppp/secret/set'))
                 ->where('name', $username)
@@ -232,7 +223,6 @@ class SecretService
         $pppsecrets = new Query('/ppp/secret/print');
         $pppsecrets->where('.id', $secretId);
         $disablePppSecrets = $client->query($pppsecrets)->read();
-
         foreach ($disablePppSecrets as $disablePppSecret) {
             $dsbl = (new Query('/ppp/secret/set'))
                 ->where('.id', $secretId)
@@ -255,7 +245,6 @@ class SecretService
         $pppsecret = new Query('/ppp/secret/print');
         $pppsecret->where('name', $username);
         $deleteSecrets = $client->query($pppsecret)->read();
-
         foreach ($deleteSecrets as $secret) {
             $secret = (new Query('/ppp/secret/remove'))
                 ->where('name', $username)
@@ -280,17 +269,13 @@ class SecretService
      * @throws ConfigException
      */
 
-
     //public function getPppSecrests($router)
     public function getAllPppSecrets($mikrotik)
     {
         $client = $this->getMikrotik($mikrotik);
         $query = new Query('/ppp/secret/print');
-
         return $client->query($query)->read();
     }
-
-
 
     public function getSecretById($mikrotik, $id)
     {
@@ -303,24 +288,11 @@ class SecretService
         } else {
             return $getPppSecrets;
         }
-        // return dd($disablePppSecrets);
-        // foreach ($getPppSecrets as $getPppSecret) {
-        //      $secret = (new Query('/ppp/secret/print'))
-        //          ->where('.id', $getPppSecret['.id']);
-        //      return $client->query($secret)->read();
-        //  }
-
-
-        // $client = $this->getMikrotik($mikrotik);
-        //  $query = (new Query('/ppp/secret/print'))
-        //      ->where('.id', $id);
-        //  return $client->query($query)->read();
     }
 
     public function getSecretByName($mikrotik, $username)
     {
         $client = $this->getMikrotik($mikrotik);
-        // $query = new Query('/ppp/secret/print');
         $pppsecrets = (new Query('/ppp/secret/print'))
             ->where('name', $username);
         $getPppSecrets = $client->query($pppsecrets)->read();
@@ -458,7 +430,6 @@ class SecretService
 
     public function updateRateLimitProfileSecret($mikrotik, $rateLimit, $id)
     {
-        // return dd($rateLimit);
         $client = $this->getMikrotik($mikrotik);
         $pppProfile = (new Query('/ppp/profile/print'))
             ->where('.id', $id);

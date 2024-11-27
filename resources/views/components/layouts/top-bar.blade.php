@@ -6,21 +6,23 @@
             <i data-feather="menu"></i>
         </button>
         @if ($billings->where('status', '!=', 'LS')->count() > 0)
-        <li class="nav-item">
-            <a class="nav-link" href="{{ route('billings.index', 'search_status=!LS') }}">
-                <span class="badge bg-danger text-white">You have {{$billings->where('status', '!=', 'LS')->count()}} bill in all periode</span>
-            </a>
-        </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ route('billings.index', 'search_status=!LS') }}">
+                    <span class="badge bg-danger text-white">You have
+                        {{ $billings->where('status', '!=', 'LS')->count() }} bill in all periode</span>
+                </a>
+            </li>
         @endif
         <li class="nav-item">
-            <a class="nav-link" href="{{ route('home') }}">
-                <img src="/images/nih_buat_jajan.png" alt="Nih buat jajan" style="height: 30px !important;">
+            <a class="nav-link" href="https://www.shanetfiber.my.id/cpanel/home" target="_blank">
+                <img src="/images/donate.png" alt="Saweria" style="height: 30px !important;">
             </a>
         </li>
         <div class="topbar-divider d-none d-sm-block"></div>
         <!-- Nav Item - User Information -->
         <li class="nav-item dropdown no-arrow">
-            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown"
+                aria-haspopup="true" aria-expanded="false">
                 <span class="mr-2 d-none d-lg-inline text-gray-600 small">{{ Auth::user()->name }}
                     <div>{{ Carbon\Carbon::now()->format('d F Y') }}</div>
                 </span>

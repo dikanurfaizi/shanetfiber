@@ -17,7 +17,7 @@ class WebsystemSeeder extends Seeder
         Websystem::create([
             'title' => 'Customer Management',
             'slug' => 'websystem',
-            'version' => '1.0.8b',
+            'version' => config('app.version'),
 
         ]);
     }

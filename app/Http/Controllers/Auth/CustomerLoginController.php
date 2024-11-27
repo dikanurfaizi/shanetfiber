@@ -50,29 +50,6 @@ class CustomerLoginController extends Controller
         return view('customers.auth.login');
     }
 
-    //public function postLogin(Request $request)
-    //{
-    //    $this->validate($request, [
-    //        'email' => 'required|email',
-    //        'password' => 'required',
-    //    ]);
-
-    //    if (auth()->guard('customer')->attempt([
-    //        'email' => $request->input('email'),
-    //        'password' => $request->input('password')
-    //    ])) {
-    //        $user = auth()->guard('customer')->user();
-    //        return redirect()->route('customer.dashboard')
-    //            ->withSuccess('You have Successfully loggedin');
-    //        //return dd($user);
-    //        //if ($user->is_customer == 1) {
-    //        //return redirect()->route('customerDashboard')->with('success', 'You are Logged in sucessfully.');
-    //        // }
-    //    } else {
-    //        return back()->with('error', 'Whoops! invalid email and password.');
-    //    }
-    //}
-    
     public function postLogin(Request $request)
     {
         // Validasi input email atau nomor telepon
@@ -88,31 +65,52 @@ class CustomerLoginController extends Controller
         // Log input yang digunakan untuk login
         Log::info('Attempting login with: ' . $input);
 
+        // Deteksi apakah input dimulai dengan "0"
+        if (substr($input, 0, 1) === '0') {
+            // Ubah "0" di awal menjadi "62"
+            $localInput = '62' . substr($input, 1);
+            //Log::info('Converted input to international format: ' . $input);
+        } elseif (substr($input, 0, 2) === '62') {
+            // Jika input dimulai dengan "62", coba ubah menjadi format lokal (dimulai dengan "0")
+            $localInput = '0' . substr($input, 2);
+            //Log::info('Checking alternative local format: ' . $localInput);
+        }
+
         // Cari pengguna berdasarkan email atau nomor telepon
         $user = \App\Models\Customer::where('email', $input)
             ->orWhere('contact', $input)
+            ->orWhere('contact', $localInput ?? null) // Tambahkan pencarian dengan format lokal jika ada
             ->first();
 
         //Log::info('User found with: ' . $user);
 
         // Jika pengguna ditemukan, lakukan autentikasi
-        if ($user && Hash::check($password, $user->password)) {
-            auth()->guard('customer')->login($user);
+        if ($user) {
+            Log::info('User found. Checking password...');
+            //Log::debug('Input password (plain): ' . $password);
+            //Log::debug('Stored password (hash): ' . $user->password);
 
-            // Ambil nama pengguna untuk log
-            $userName = $user->name;
+            if (Hash::check($password, $user->password)) {
+                auth()->guard('customer')->login($user);
 
-            // Periksa apakah nama mengandung '@'
-            if (strpos($userName, '@') !== false) {
-                // Ambil bagian setelah '@'
-                $userName = explode('@', $userName)[1];
+                // Ambil nama pengguna untuk log
+                $userName = $user->name;
+
+                // Periksa apakah nama mengandung '@'
+                if (strpos($userName, '@') !== false) {
+                    // Ambil bagian setelah '@'
+                    $userName = explode('@', $userName)[1];
+                }
+
+                Log::info('Login successful for user: ' . $userName);
+                return redirect()->route('customer.dashboard')
+                    ->withSuccess('You have Successfully logged in');
+            } else {
+                Log::warning('Password mismatch for user: ' . $input);
+                return back()->with('error', 'Whoops! invalid credentials.');
             }
-
-            Log::info('Login successful for user: ' . $userName);
-            return redirect()->route('customer.dashboard')
-                ->withSuccess('You have Successfully logged in');
         } else {
-            Log::warning('Login attempt failed for: ' . $input);
+            Log::warning('Login attempt failed. No user found with: ' . $input);
             return back()->with('error', 'Whoops! invalid credentials.');
         }
     }

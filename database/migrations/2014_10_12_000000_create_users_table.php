@@ -23,6 +23,7 @@ return new class extends Migration
                 $table->enum('disabled', ['false', 'true'])->default('false');
                 //end
                 $table->timestamps();
+                // $table->softDeletes();
             });
         }
     }

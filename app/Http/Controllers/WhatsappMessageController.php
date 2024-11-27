@@ -1,0 +1,154 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+
+
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
+use App\Models\WhatsappGateway\WhatsappNumber;
+use App\Models\WhatsappGateway\WhatsappMessage;
+
+class WhatsappMessageController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        $messages = WhatsappMessage::orderBy('name', 'ASC')->paginate(10);
+        return view('whatsapp_gateways.messages.index', compact('messages'))->with('i', (request()->input('page', 1) - 1) * 10);
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        //
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        //
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(WhatsappMessage  $whatsappmessage, Request $request)
+    {
+
+        $message = $whatsappmessage->reply_message;
+        // $message = str_replace("\n", "\n", $message);
+        $replace = [
+            '%name%' => 'Alex',
+            '%customer_id%' => 'WND-101',
+            '%address%' => 'Weru, Sukoharjo',
+            '%day%' => 2,
+            '%pakets%' => 'Paket',
+            '%customer_service%' => Auth::user()->name,
+            '%email%' => Auth::user()->email,
+
+            // '/n' => '<br>',
+        ];
+        $send_message =  str_replace(array_keys($replace), $replace, $message);
+
+        return view('whatsapp_gateways.messages.show', [
+            'data' => $whatsappmessage,
+            'preview_messagge' => $send_message
+        ]);
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(WhatsappMessage $whatsappmessage)
+    {
+
+        return view('whatsapp_gateways.messages.edit', [
+            'data' => $whatsappmessage
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, WhatsappMessage $whatsappmessage)
+    {
+        if ($whatsappmessage->default) {
+
+            $this->validate(
+                $request,
+                [
+                    'name'                  => ['required', 'max:255', Rule::unique('whatsapp_messages')->ignore($whatsappmessage->slug, 'slug')],
+                    'reply_message'        => 'required'
+                ]
+            );
+        } else {
+
+            $this->validate(
+                $request,
+                [
+                    'name'                  => ['required', 'max:255', Rule::unique('whatsapp_messages')->ignore($whatsappmessage->slug, 'slug')],
+                    'incoming_message'      => ['required', Rule::unique('whatsapp_messages')->ignore($whatsappmessage->slug, 'slug')],
+                    'reply_message'        => 'required'
+                ],
+                [
+
+                    'incoming_message.unique' => trans('whatsapp.message.validator.incoming-message-hasben-taken'),
+                    'incoming_message.required' => trans('whatsapp.message.validator.incoming-message-required'),
+                ]
+            );
+        }
+        $whatsappmessage->name = strip_tags($request->input('name'));
+        if ($whatsappmessage->default == false) {
+            $whatsappmessage->incoming_message = strip_tags($request->input('incoming_message'));
+            $whatsappmessage->whatsapp_number_id = $request->input('whatsapp_number');
+        }
+
+        $whatsappmessage->reply_message = strip_tags($request->input('reply_message'));
+        $whatsappmessage->description = strip_tags($request->input('description'));
+        $whatsappmessage->save();
+        return redirect()->route('whatsappmessage.index')
+            ->with('success', trans('whatsapp.message.notify.success-update-message', ['name' => $whatsappmessage->name]));
+    }
+
+
+    public function disable_message(Request $request, WhatsappMessage $whatsappmessage)
+    {
+        if ($whatsappmessage->disabled == true) {
+            $whatsappmessage->disabled = false;
+        } else {
+            $whatsappmessage->disabled = true;
+        }
+        $whatsappmessage->save();
+        return redirect()->route('whatsappmessage.index')
+            ->with('success', trans('whatsapp.message.notify.success-update-message', ['name' => $whatsappmessage->name]));
+    }
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function delete(WhatsappMessage $whatsappmessage)
+    {
+        return view('whatsapp_gateways.messages.delete', compact('whatsappmessage'));
+    }
+    public function destroy(WhatsappMessage $whatsappmessage)
+    {
+        if ($whatsappmessage->default) {
+            return redirect()->route('whatsappmessage.index')
+                ->with('error', trans('whatsapp.message.notify.error-delete-default-message', ['name' => $whatsappmessage->name]));
+        } else {
+            // $whatsappmessage->delete();
+            $whatsappmessage->forceDelete();
+            return redirect()->route('whatsappmessage.index')
+                ->with('success', trans('whatsapp.message.notify.success-delete-message', ['name' => $whatsappmessage->name]));
+        }
+    }
+}

@@ -24,29 +24,40 @@ use App\Jobs\CancelPaymentAfterDueDateJob;
 use App\Jobs\CancelPaymentBeforeDueDateJob;
 use App\Http\Resources\Pppoe\SecretResource;
 use App\Http\Requests\BillingStoreOneRequest;
+use App\Jobs\AddPaymentIpStaticAfterDueDateJob;
+use App\Jobs\CancelPaymentIpStaticAfterDueDateJob;
+use App\Jobs\CancelPaymentIpStaticBeforeDueDateJob;
+use App\Jobs\CreateBillingIpStaticJob;
 use App\Models\Bank;
 use App\Models\Receipt;
 use App\Models\Websystem;
+use App\Models\WhatsappGateway\WhatsappGateway;
+use App\Services\Routerboard\IpStaticService;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Routerboard\TestConnectionService;
-use PDF;
+// use PDF;
+use App\Services\WhatsappMessageService;
+use Barryvdh\DomPDF\Facade\PDF;
 
 use Illuminate\Contracts\Database\Eloquent\Builder;
 //use Barryvdh\DomPDF\PDF;
 
 class BillingController extends Controller
 {
-
+    private WhatsappMessageService $messageService;
     private SecretService $secretService;
     private TestConnectionService $testConnectionService;
-    public function __construct(SecretService $secretService, TestConnectionService $testConnectionService)
+    private IpStaticService $ipStaticService;
+    public function __construct(SecretService $secretService, TestConnectionService $testConnectionService, IpStaticService $ipStaticService)
     {
         $this->secretService = $secretService;
         $this->testConnectionService = $testConnectionService;
+        $this->ipStaticService = $ipStaticService;
         $this->middleware('permission:billing-list|billing-create|billing-edit|billing-delete', ['only' => ['index', 'show']]);
         $this->middleware('permission:billing-create', ['only' => ['create', 'store', 'create_one', 'store_one']]);
         $this->middleware('permission:billing-edit', ['only' => ['edit', 'update', 'payment', 'unpayment', 'transfer', 'paylater', 'post_paylater']]);
         $this->middleware('permission:billing-delete', ['only' => ['deletePeriode', 'destroyPeriode']]);
+        $this->messageService = app(WhatsappMessageService::class);
     }
     /**
      * Display a listing of the resource.
@@ -67,6 +78,7 @@ class BillingController extends Controller
             $searchDuedate = Carbon::parse($request->duedate)->format('Y-m-d');
         }
         $customer = $request->customer;
+        $bank = Bank::where('disabled', 'false')->get();
         // $searchDuedate = $request->search_name;
         //return dd(Carbon::parse($searchDuedate));
         if (!$customer && !$searchName && !$request->search_month && !$request->search_year && !$searchStatus && !$searchAddress && !$searchDuedate) {
@@ -144,7 +156,7 @@ class BillingController extends Controller
             $pdf = PDF::loadView('print.billing', ['dataPrint' => $dataPrint], $search);
             return $pdf->download('Tagihan_' . str($search['name'] ?? 'all_name')->slug() . '_' . str($search['address'] ?? 'all_address')->slug() . '_' . str($search['status'] ?? 'all_status')->slug() . '_' . str($search['month'] ?? 'all_month')->slug() . '_' . $search['year'] ?? 'all_years' . '.pdf');
         } else {
-            return view('billings.index', compact('data', 'totalPrice', 'search', 'oldPaymentsOff'))
+            return view('billings.index', compact('data', 'totalPrice', 'search', 'oldPaymentsOff', 'bank'))
                 ->with('i', (request()->input('page', 1) - 1) * $paginate);
         }
     }
@@ -171,7 +183,7 @@ class BillingController extends Controller
     }
     /**
      * Store a newly created resource in storage.
-     * Add Comment "Belum Lunas" on User Secret Mikrotik 
+     * Add Comment "Belum Lunas" on User Secret Mikrotik
      */
     // public function store(BillingStoreRequest $request)
     public function store(Request $request)
@@ -239,7 +251,10 @@ class BillingController extends Controller
                 if ($customerActivationDate > $totalDaysInMonth) {
                     $customerActivationDate = $totalDaysInMonth;
                 }
+                $internet_service = $customer->internet_service;
                 $secretId = $customer->secret_id;
+                $simplequeId = $customer->simpleque_id;
+
                 // $customerMikrotikId = $customer->mikrotik_id;
                 // $router = Mikrotik::where('id', $customerMikrotikId)->first();
 
@@ -255,7 +270,11 @@ class BillingController extends Controller
                             }
 
                             try {
-                                dispatch(new CreateBillingJob($router, $comment, $secretId))->onQueue('default');
+                                if ($internet_service == 'ppp') {
+                                    dispatch(new CreateBillingJob($router, $comment, $secretId))->onQueue('default');
+                                } else if ($internet_service == 'ip_static') {
+                                    dispatch(new CreateBillingIpStaticJob($router, $simplequeId, $comment))->onQueue('default');
+                                }
                             } catch (\Exception $e) {
                                 $billingPeriode->delete();
                                 return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your router.']);
@@ -264,7 +283,11 @@ class BillingController extends Controller
                             if ($customerPriceAfterDiscount == 0.0) {
                                 $comment = $autoIsolir->comment_unpayment . '_' . $customerActivationDate . '_' . $nextMonth;
                                 try {
-                                    dispatch(new CreateBillingJob($router, $comment, $secretId))->onQueue('default');
+                                    if ($internet_service == 'ppp') {
+                                        dispatch(new CreateBillingJob($router, $comment, $secretId))->onQueue('default');
+                                    } else if ($internet_service == 'ip_static') {
+                                        dispatch(new CreateBillingIpStaticJob($router, $simplequeId, $comment))->onQueue('default');
+                                    }
                                 } catch (\Exception $e) {
                                     $billingPeriode->delete();
                                     return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your router.']);
@@ -338,7 +361,11 @@ class BillingController extends Controller
                 if ($customerActivationDate > $totalDaysInMonth) {
                     $customerActivationDate = $totalDaysInMonth;
                 }
+
+                $internet_service = $customer->internet_service;
                 $secretId = $customer->secret_id;
+                $simplequeId = $customer->simpleque_id;
+
                 // $mikrotikId = $customer->mikrotik_id;
                 // $router = Mikrotik::where('id', $mikrotikId)->first();
                 $autoIsolir = AutoIsolir::where('mikrotik_id', $router->id)->first();
@@ -352,7 +379,11 @@ class BillingController extends Controller
                                 $comment = $autoIsolir->comment_payment;
                             }
                             try {
-                                dispatch(new CreateBillingJob($router, $comment, $secretId))->onQueue('default');
+                                if ($internet_service == 'ppp') {
+                                    dispatch(new CreateBillingJob($router, $comment, $secretId))->onQueue('default');
+                                } else if ($internet_service == 'ip_static') {
+                                    dispatch(new CreateBillingIpStaticJob($router, $simplequeId, $comment))->onQueue('default');
+                                }
                             } catch (\Exception $e) {
                                 return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your router.']);
                             }
@@ -361,7 +392,11 @@ class BillingController extends Controller
                                 // $comment = $autoIsolir->comment_payment;
                                 $comment = $autoIsolir->comment_unpayment . '_' . $customerActivationDate . '_' . $nextMonth;
                                 try {
-                                    dispatch(new CreateBillingJob($router, $comment, $secretId))->onQueue('default');
+                                    if ($internet_service == 'ppp') {
+                                        dispatch(new CreateBillingJob($router, $comment, $secretId))->onQueue('default');
+                                    } else if ($internet_service == 'ip_static') {
+                                        dispatch(new CreateBillingIpStaticJob($router, $simplequeId, $comment))->onQueue('default');
+                                    }
                                 } catch (\Exception $e) {
                                     return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your router.']);
                                 }
@@ -442,27 +477,51 @@ class BillingController extends Controller
         $router = Mikrotik::where('id', $mikrotikId)->first();
         $autoIsolir = AutoIsolir::where('mikrotik_id', $mikrotikId)->first();
         if ($router->disabled == 'false' && $autoIsolir != NULL && $autoIsolir->disabled == 'false') {
-            try {
-                //dispatch(new TestConnectionJob($router))->onQueue('default');
-                $userSecretId = $this->secretService->getSecretById($router, $customerSecretId);
-            } catch (\Exception $e) {
-                return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your router.']);
-            }
+
             if ($autoIsolir->activation_date == 'false') {
                 $comment_payment = $autoIsolir->comment_payment;
             } else {
                 $comment_payment = $autoIsolir->comment_unpayment . '_' . $paylaterDate . '_' . $paylaterMonth;
             }
-
-            if ($userSecretId != 'error') {
-                $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
-                if ($secretProfiles == $customerProfile) {
-                    dispatch(new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerSecretId))->onQueue('default');
-                } else {
-                    dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername))->onQueue('default');
+            if ($customer->internet_service == 'ppp') {
+                try {
+                    //dispatch(new TestConnectionJob($router))->onQueue('default');
+                    $userSecretId = $this->secretService->getSecretById($router, $customerSecretId);
+                } catch (\Exception $e) {
+                    return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your router.']);
                 }
-            } else {
-                return redirect()->back()->withErrors(['msg' => $customerSecretId . '! Canot find user "' . $customer->username . '" on server ' . $router->name . '.']);
+                if ($userSecretId != 'error') {
+                    $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
+                    if ($secretProfiles == $customerProfile) {
+                        dispatch(new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerSecretId))->onQueue('default');
+                    } else {
+                        dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername))->onQueue('default');
+                    }
+                } else {
+                    return redirect()->back()->withErrors(['msg' => $customerSecretId . '! Canot find user "' . $customer->username . '" on server ' . $router->name . '.']);
+                }
+            } else if ($customer->internet_service == 'ip_static') {
+                $ip_address = $customer->ip_static;
+                $simpleque_id = $customer->simpleque_id;
+                $address_list_isolir = $autoIsolir->address_list_isolir;
+                $comment = $customer->username . '_' . $comment_payment;
+                try {
+                    //Get Address List Name
+                    $address_list_customer = $this->ipStaticService->getAddressListByIpAddress($router, $ip_address);
+                } catch (\Exception $e) {
+                    return redirect()->back()->withErrors(['msg' => 'Cant connect to Server ' . $router->name . '.']);
+                }
+                // return dd($address_list);
+                if (isset($address_list_customer[0]['list'])) {
+                    if ($address_list_customer[0]['list'] == $address_list_isolir) {
+                        // $address_list_id = $address_list[0]['.id'];
+                        dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
+                    } else {
+                        dispatch(new AddPaymentBeforeDueDateJob($router, $simpleque_id, $comment_payment))->onQueue('default');
+                    }
+                } else {
+                    dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
+                }
             }
         }
 
@@ -508,10 +567,10 @@ class BillingController extends Controller
                     $request,
                     [
                         'bank_transfer' => 'required',
-                        'reference_id' => 'required|unique:receipts,reference_id,',
+                        //  'reference_id' => 'required|unique:receipts,reference_id,',
                         'deposit_bank_name' => 'required',
                         'deposit_account_name' => 'required',
-                        'deposit_account_number' => 'required',
+                        //'deposit_account_number' => 'required',
                     ],
                     [
                         'bank_transfer.required' => 'Bank transfer required!',
@@ -534,46 +593,68 @@ class BillingController extends Controller
                 $referenceId = $request->reference_id;
             }
 
-            $customer = Customer::where('id', $billing->customer_id)->first();
+            // $customer = Customer::where('id', $billing->customer_id)->first();
+            $customer = $billing->customer;
             $customerPaketId = $customer->paket_id;
             $customerSecretId = $customer->secret_id;
             $customerUsername = $customer->username;
             $activationDate = Carbon::parse($customer->activation_date)->format('d');
             $periodeName = BillingPeriode::latest('created_at')->value('name');
-
             $nextMonth = Carbon::parse($periodeName)->addMonth()->format('m_Y');
             $mikrotikId = $customer->mikrotik_id;
             $customerProfile = Paket::where('id', $customerPaketId)->value('profile');
             $router = Mikrotik::where('id', $mikrotikId)->first();
             $autoIsolir = AutoIsolir::where('mikrotik_id', $mikrotikId)->first();
-
+            if ($autoIsolir->activation_date == 'false') {
+                $comment_payment = $autoIsolir->comment_payment;
+            } else {
+                $totalDaysInMonth = Carbon::now()->addMonth()->daysInMonth;
+                if ($activationDate > $totalDaysInMonth) {
+                    $activationDate = $totalDaysInMonth;
+                }
+                $comment_payment = $autoIsolir->comment_unpayment . '_' . $activationDate . '_' . $nextMonth;
+            }
             if ($router->disabled == 'false' && $autoIsolir != NULL && $autoIsolir->disabled == 'false') {
-                try {
-                    //dispatch(new TestConnectionJob($router))->onQueue('default');
-                    $userSecretId = $this->secretService->getSecretById($router, $customerSecretId);
-                } catch (\Exception $e) {
-                    return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your server.']);
-                }
-                if ($autoIsolir->activation_date == 'false') {
-                    $comment_payment = $autoIsolir->comment_payment;
-                } else {
-                    $totalDaysInMonth = Carbon::now()->addMonth()->daysInMonth;
-                    if ($activationDate > $totalDaysInMonth) {
-                        $activationDate = $totalDaysInMonth;
+                if ($customer->internet_service == 'ppp') {
+                    try {
+                        //dispatch(new TestConnectionJob($router))->onQueue('default');
+                        $userSecretId = $this->secretService->getSecretById($router, $customerSecretId);
+                    } catch (\Exception $e) {
+                        return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your server.']);
                     }
-                    $comment_payment = $autoIsolir->comment_unpayment . '_' . $activationDate . '_' . $nextMonth;
-                }
 
-
-                if ($userSecretId != 'error') {
-                    $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
-                    if ($secretProfiles == $customerProfile) {
-                        dispatch(new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerSecretId))->onQueue('default');
+                    if ($userSecretId != 'error') {
+                        $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
+                        if ($secretProfiles == $customerProfile) {
+                            dispatch(new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerSecretId))->onQueue('default');
+                        } else {
+                            dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername))->onQueue('default');
+                        }
                     } else {
-                        dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername))->onQueue('default');
+                        return redirect()->back()->withErrors(['msg' => $customerSecretId . '! Canot find user "' . $customer->username . '" on server ' . $router->name . '.']);
                     }
-                } else {
-                    return redirect()->back()->withErrors(['msg' => $customerSecretId . '! Canot find user "' . $customer->username . '" on server ' . $router->name . '.']);
+                } else if ($customer->internet_service == 'ip_static') {
+                    $ip_address = $customer->ip_static;
+                    $simpleque_id = $customer->simpleque_id;
+                    $address_list_isolir = $autoIsolir->address_list_isolir;
+                    $comment = $customer->username . '_' . $comment_payment;
+                    try {
+                        //Get Address List Name
+                        $address_list_customer = $this->ipStaticService->getAddressListByIpAddress($router, $ip_address);
+                    } catch (\Exception $e) {
+                        return redirect()->back()->withErrors(['msg' => 'Cant connect to Server ' . $router->name . '.']);
+                    }
+
+                    if (isset($address_list_customer[0]['list'])) {
+                        if ($address_list_customer[0]['list'] == $address_list_isolir) {
+                            // $address_list_id = $address_list[0]['.id'];
+                            dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
+                        } else {
+                            dispatch(new AddPaymentBeforeDueDateJob($router, $simpleque_id, $comment_payment))->onQueue('default');
+                        }
+                    } else {
+                        dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
+                    }
                 }
             }
             $getLastReceipt = Receipt::latest('created_at')->value('number');
@@ -614,7 +695,9 @@ class BillingController extends Controller
                 'status' => 'LS',
                 'receipt_id' => $getReceipt->id,
             ]);
-
+            if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
+                $this->messageService->payment_paket($billing, $payment);
+            }
             return redirect()->back()->with('success', 'Payment ' . $billing->customer_name . ' successfully.');
         }
     }
@@ -623,21 +706,15 @@ class BillingController extends Controller
     {
         $day = Carbon::now()->format('d');
         $customer = Customer::where('id', $billing->customer_id)->first();
-        $secretId = $customer->secret_id;
-        $username = $customer->username;
         $mikrotikId = $customer->mikrotik_id;
-
         $customerDueDate = $customer->activation_date;
         $date = Carbon::parse($customerDueDate)->format('d');
-
         $periodeName = BillingPeriode::latest('created_at')->value('name');
         $month = Carbon::parse($periodeName)->format('m');
         $year = Carbon::parse($periodeName)->format('Y');
-
         $autoIsolir = AutoIsolir::where('mikrotik_id', $mikrotikId)->first();
         if ($autoIsolir != NULL) {
             $profileIsolir = $autoIsolir->profile_id;
-
             if ($autoIsolir->activation_date == 'false') {
                 $comment_unpayment = $autoIsolir->comment_unpayment;
                 $dueDate = $autoIsolir->due_date;
@@ -646,15 +723,35 @@ class BillingController extends Controller
                 $dueDate = $date;
             }
             $router = Mikrotik::where('id', $mikrotikId)->first();
-            try {
-                // dispatch(new TestConnectionJob($router))->onQueue('default');
-                if ($day <= $dueDate) {
-                    dispatch(new CancelPaymentBeforeDueDateJob($router, $comment_unpayment, $secretId))->onQueue('default');
-                } else {
-                    dispatch(new CancelPaymentAfterDueDateJob($router, $comment_unpayment, $profileIsolir, $secretId, $username))->onQueue('default');
+            if ($customer->internet_service == 'ppp') {
+                $secretId = $customer->secret_id;
+                $username = $customer->username;
+                try {
+                    // dispatch(new TestConnectionJob($router))->onQueue('default');
+                    if ($day <= $dueDate) {
+                        dispatch(new CancelPaymentBeforeDueDateJob($router, $comment_unpayment, $secretId))->onQueue('default');
+                    } else {
+                        dispatch(new CancelPaymentAfterDueDateJob($router, $comment_unpayment, $profileIsolir, $secretId, $username))->onQueue('default');
+                    }
+                } catch (\Exception $e) {
+                    return redirect()->back()->withErrors(['msg' => 'Cant connect to server ' . $router->name . '.']);
                 }
-            } catch (\Exception $e) {
-                return redirect()->back()->withErrors(['msg' => 'Router offline, please check your router.']);
+            } else if ($customer->internet_service == 'ip_static') {
+                $simpleque_id = $customer->simpleque_id;
+                $comment = $customer->username . '_' . $comment_unpayment;
+                try {
+                    if ($day <= $dueDate) {
+                        // return dd('tes');
+                        dispatch(new CancelPaymentIpStaticBeforeDueDateJob($router, $simpleque_id, $comment_unpayment))->onQueue('default');
+                    } else {
+                        $ip_address = $customer->ip_static;
+                        $address_list_isolir = $autoIsolir->address_list_isolir;
+                        $comment = $customer->username . '_' . $comment_unpayment;
+                        dispatch(new CancelPaymentIpStaticAfterDueDateJob($router, $address_list_isolir, $ip_address, $simpleque_id, $comment))->onQueue('default');
+                    }
+                } catch (\Exception $e) {
+                    return redirect()->back()->withErrors(['msg' => 'Cant connect to Server ' . $router->name . '.']);
+                }
             }
         }
 
@@ -665,6 +762,10 @@ class BillingController extends Controller
             'receipt_id' => null,
         ]);
         $receipt->delete();
+        if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
+            $this->messageService->payment_paket($billing, 'unpayment');
+        }
+
         return redirect()->back()->with('success', 'Cancel payment successfully.');
     }
 

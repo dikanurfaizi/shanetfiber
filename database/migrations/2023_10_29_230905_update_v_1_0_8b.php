@@ -17,6 +17,7 @@ use App\Models\Paket;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Http\Resources\Pppoe\ProfileResource;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Validation\Rules\Unique;
 //use Exception;
 use RouterOS\Client;
@@ -293,6 +294,8 @@ return new class extends Migration
                 $table->string('firewall_filter_id')->default('0');
             }
         });
+
+        Artisan::call('db:seed --class=AdminPermissionTableSeeder');
     }
 
     /**

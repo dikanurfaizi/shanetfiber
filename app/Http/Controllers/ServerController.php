@@ -70,6 +70,7 @@ class ServerController extends Controller
             'username' => $request->username,
             'password' => $request->password,
             'port' => $request->port,
+            'ros_version_id' => $request->ros_version_id
         ]);
         return redirect()->route('servers.index')
             ->with('success', 'Mikrotik added successfully.');
@@ -101,6 +102,7 @@ class ServerController extends Controller
             'host' => $request['host'],
             'username' => $request['username'],
             'port' => $request['port'],
+            'ros_version_id' => $request->ros_version_id
         ]);
         return redirect()->route('servers.index')
             ->with('success', 'Mikrotik updated successfully');

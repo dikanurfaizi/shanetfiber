@@ -140,10 +140,12 @@ class ScriptService
         */
     }
 
-    public function addAutoisolirDueDate($routerboard, $rosVersion, $nameScript, $dueDate, $unpayment, $profile)
+    public function addAutoisolirDueDate($routerboard, $rosVersion, $nameScript, $dueDate, $unpayment, $profile, $address_list)
     {
         if ($rosVersion == '1') {
-            $sourceScript = ':local day [:pick [/system clock get date] 4 6]
+            $sourceScript = '
+            /ip firewall address-list remove [/ip firewall address-list find list="' . $address_list . '"]
+            :local day [:pick [/system clock get date] 4 6]
             :if (day >= "' . $dueDate . '") do={
             :local userppp
             :foreach v in=[/ppp secret find where comment="' . $unpayment . '"] do={
@@ -151,9 +153,20 @@ class ScriptService
             /ppp active remove [find name=$userppp]
             /ppp secret set profile=' . $profile . ' [find name=$userppp];
             }
+
+            
+            
+            :local userstatic  
+            foreach v in=[/queue simple find where comment="' . $unpayment . '"] do={          
+            :set userstatic ( userstatic [/queue simple get $v target])           
+            /ip firewall address-list add list=' . $address_list . ' address=$userstatic                       
+            }
             }';
+			$comment = 'create_by_customer_management_mikrotik_<7.10';
         } else {
-            $sourceScript = ':local day [:pick [/system clock get date] 8 10]
+            $sourceScript = '
+            /ip firewall address-list remove [/ip firewall address-list find list="' . $address_list . '"]
+            :local day [:pick [/system clock get date] 8 10]
             :if (day >= "' . $dueDate . '") do={
             :local userppp
             :foreach v in=[/ppp/secret find comment="' . $unpayment . '"] do={
@@ -161,7 +174,15 @@ class ScriptService
             /ppp active remove [find name=$userppp]
             /ppp secret set profile=' . $profile . ' [find name=$userppp];
             }
-            }';
+            
+            
+            :local userstatic        
+            foreach v in=[/queue/simple find comment="' . $unpayment . '"] do={           
+            :set userstatic ( userstatic [/queue simple get $v target])           
+            /ip firewall address-list add list=' . $address_list . ' address=$userstatic                       
+            }}';
+			
+			$comment = 'create_by_customer_management_mikrotik_>=7.10';
         }
 
         $client = $this->getMikrotik($routerboard);
@@ -169,12 +190,12 @@ class ScriptService
             (new Query('/system/script/add'))
             ->equal('name', $nameScript)
             ->equal('source', $sourceScript)
-            ->equal('comment', 'create_by_customer_management');
+            ->equal('comment', $comment);
 
         return $client->query($query)->read();
     }
 
-    public function addAutoisolirActivationDate($routerboard, $rosVersion, $nameScript, $unpayment, $profile)
+    public function addAutoisolirActivationDate($routerboard, $rosVersion, $nameScript, $unpayment, $profile, $address_list)
     {
 
         if ($rosVersion == '1') {
@@ -185,16 +206,25 @@ class ScriptService
            :local MM ([:find "janfebmaraprmayjunjulaugsepoctnovdec" [:pick $date 0 3] ] / 3 + 1)
            :if ($MM < 10) do={:set MM "0$MM"}
            :local dd    [:pick $date 4 6]
+           /ip firewall address-list remove [/ip firewall address-list find list="' . $address_list . '"]
            
             :for e from 1 to $dd do={
             :if ($e < 10) do={:set e "0$e"}
-            :local duedate    "belum_lunas_$e_$MM_$yyyy"
+            :local duedate    "' . $unpayment . '_$e_$MM_$yyyy"
             :local userppp
             :foreach v in=[/ppp secret find where comment=$duedate] do={
             :set userppp ( userppp [/ppp secret get $v name])
             /ppp active remove [find name=$userppp]
-            /ppp secret set profile=profile_isolir [find name=$userppp];
+            /ppp secret set profile=' . $profile . ' [find name=$userppp];
+            }
+            
+            :local userstatic   
+            foreach v in=[/queue simple find where comment="$duedate"] do={             
+            :set userstatic ( userstatic [/queue simple get $v target])           
+            /ip firewall address-list add list=' . $address_list . ' address=$userstatic                       
             }}';
+			
+			$comment = 'create_by_customer_management_mikrotik_<7.10';
         } else {
             //ROS Versi 7.10+
             $sourceScript = '
@@ -202,6 +232,7 @@ class ScriptService
             :local yyyy  [:pick $date 0 4]
             :local MM    [:pick $date 5 7]
             :local dd    [:pick $date 8 10]
+            /ip firewall address-list remove [/ip firewall address-list find list="' . $address_list . '"]
             
             :for e from 1 to $dd do={
             :if ($e < 10) do={:set e "0$e"}
@@ -211,7 +242,15 @@ class ScriptService
             :set userppp ( userppp [/ppp secret get $v name])
             /ppp active remove [find name=$userppp]
             /ppp secret set profile=' . $profile . ' [find name=$userppp];
+            }
+            
+            :local userstatic      
+            foreach v in=[/queue/simple find comment="$duedate"] do={           
+            :set userstatic ( userstatic [/queue simple get $v target])           
+            /ip firewall address-list add list=' . $address_list . ' address=$userstatic                       
             }}';
+			
+			$comment = 'create_by_customer_management_mikrotik_>=7.10';
         }
 
 
@@ -221,7 +260,7 @@ class ScriptService
             (new Query('/system/script/add'))
             ->equal('name', $nameScript)
             ->equal('source', $sourceScript)
-            ->equal('comment', 'create_by_customer_management');
+            ->equal('comment', $comment);
 
         return $client->query($query)->read();
     }
@@ -247,30 +286,49 @@ class ScriptService
         }
     }
 
-    public function setAutoisolirDueDate($routerboard, $rosVersion, $scriptId, $dueDate, $unpayment, $profile)
+    public function setAutoisolirDueDate($routerboard, $rosVersion, $scriptId, $dueDate, $unpayment, $profile, $address_list)
     {
         if ($rosVersion == '1') {
             //  $day = '4 6';
-            $sourceScript = ':local day [:pick [/system clock get date] 4 6]
+            $sourceScript = '
+            /ip firewall address-list remove [/ip firewall address-list find list="' . $address_list . '"]
+            :local day [:pick [/system clock get date] 4 6]
         :if (day >= "' . $dueDate . '") do={
         :local userppp
         :foreach v in=[/ppp secret find where comment="' . $unpayment . '"] do={
+        
         :set userppp ( userppp [/ppp secret get $v name])
         /ppp active remove [find name=$userppp]
         /ppp secret set profile=' . $profile . ' [find name=$userppp];
         }
-        }';
+        
+        
+        :local userstatic
+		foreach v in=[/queue simple find where comment="' . $unpayment . '"] do={      
+            foreach v in=[/queue/simple find comment="$duedate"] do={           
+            :set userstatic ( userstatic [/queue simple get $v target])           
+            /ip firewall address-list add list=' . $address_list . ' address=$userstatic                       
+            }}';
         } else {
             //$day = '8 10';
-            $sourceScript = ':local day [:pick [/system clock get date] 8 10]
+            $sourceScript = '
+            /ip firewall address-list remove [/ip firewall address-list find list="' . $address_list . '"]
+            :local day [:pick [/system clock get date] 8 10]
             :if (day >= "' . $dueDate . '") do={
+
             :local userppp
             :foreach v in=[/ppp/secret find comment="' . $unpayment . '"] do={
             :set userppp ( userppp [/ppp secret get $v name])
             /ppp active remove [find name=$userppp]
             /ppp secret set profile=' . $profile . ' [find name=$userppp];
             }
-            }';
+            
+            
+            :local userstatic          
+            foreach v in=[/queue/simple find comment="$duedate"] do={           
+            :set userstatic ( userstatic [/queue simple get $v target])           
+            /ip firewall address-list add list=' . $address_list . ' address=$userstatic                       
+            }}';
         }
 
 
@@ -291,7 +349,7 @@ class ScriptService
         }
     }
 
-    public function setAutoisolirActivationDate($routerboard, $rosVersion, $scriptId, $unpayment, $profile)
+    public function setAutoisolirActivationDate($routerboard, $rosVersion, $scriptId, $unpayment, $profile, $address_list)
     {
         if ($rosVersion == '1') {
             //ROS Versi < 7.10
@@ -301,15 +359,23 @@ class ScriptService
            :local MM ([:find "janfebmaraprmayjunjulaugsepoctnovdec" [:pick $date 0 3] ] / 3 + 1)
            :if ($MM < 10) do={:set MM "0$MM"}
            :local dd    [:pick $date 4 6]
+           /ip firewall address-list remove [/ip firewall address-list find list="' . $address_list . '"]
            
             :for e from 1 to $dd do={
             :if ($e < 10) do={:set e "0$e"}
-            :local duedate    "belum_lunas_$e_$MM_$yyyy"
+            :local duedate    "' . $unpayment . '_$e_$MM_$yyyy"
+
             :local userppp
             :foreach v in=[/ppp secret find where comment=$duedate] do={
             :set userppp ( userppp [/ppp secret get $v name])
             /ppp active remove [find name=$userppp]
-            /ppp secret set profile=profile_isolir [find name=$userppp];
+            /ppp secret set profile=' . $profile . ' [find name=$userppp];
+            }
+            
+            :local userstatic        
+            foreach v in=[/queue simple find where comment="$duedate"] do={         
+            :set userstatic ( userstatic [/queue simple get $v target])           
+            /ip firewall address-list add list=' . $address_list . ' address=$userstatic                       
             }}';
         } else {
             //ROS Versi 7.10+
@@ -318,15 +384,23 @@ class ScriptService
             :local yyyy  [:pick $date 0 4]
             :local MM    [:pick $date 5 7]
             :local dd    [:pick $date 8 10]
+            /ip firewall address-list remove [/ip firewall address-list find list="' . $address_list . '"]
             
             :for e from 1 to $dd do={
             :if ($e < 10) do={:set e "0$e"}
             :local duedate    "' . $unpayment . '_$e_$MM_$yyyy"
+
             :local userppp
             foreach v in=[/ppp/secret find comment="$duedate"] do={
             :set userppp ( userppp [/ppp secret get $v name])
             /ppp active remove [find name=$userppp]
             /ppp secret set profile=' . $profile . ' [find name=$userppp];
+            }
+            
+            :local userstatic         
+            foreach v in=[/queue/simple find comment="$duedate"] do={           
+            :set userstatic ( userstatic [/queue simple get $v target])           
+            /ip firewall address-list add list=' . $address_list . ' address=$userstatic                       
             }}';
         }
 
@@ -363,4 +437,7 @@ class ScriptService
             return $client->query($query)->read();
         }
     }
+
+
+    //
 }

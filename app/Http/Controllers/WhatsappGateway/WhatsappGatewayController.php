@@ -4,7 +4,6 @@ namespace App\Http\Controllers\WhatsappGateway;
 
 use App\Models\Websystem;
 use App\Models\Customer;
-use App\Models\ApiUrl;
 use App\Models\WhatsAppGateway;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -13,7 +12,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\JsonResponse; // Pastikan ini benar
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Log;
-use App\Jobs\SendWhatsAppMessageJob;
+use App\Jobs\SendWhatsappBulkJob;
 
 class WhatsappGatewayController extends Controller
 {
@@ -212,11 +211,8 @@ class WhatsappGatewayController extends Controller
             'message' => 'required|string',
         ]);
 
-        // Mengambil URL dari database berdasarkan ID atau nama, misal ID = 1
-        $apiUrl = ApiUrl::find(1);
-
-        // IP statis digunakan secara langsung
-        //$apiUrl = 'http://103.129.148.212:3000/send/message';
+        // Mengambil URL dari .env
+        $apiUrl = config('whatsapp.api_url');
 
         if (!$apiUrl) {
             Log::error('API URL not found');
@@ -230,12 +226,10 @@ class WhatsappGatewayController extends Controller
             Log::info('Sending message', [
                 'phone' => $validated['phone'],
                 'message' => $validated['message'],
-                'api_url' => $apiUrl->url,
-                //'api_url' => $apiUrl,
+                'api_url' => $apiUrl,
             ]);
 
-            $response = $client->post($apiUrl->url, [ // Menggunakan URL dari database
-                //$response = $client->post($apiUrl, [
+            $response = $client->post($apiUrl, [ // Menggunakan URL .env
                 'json' => [
                     'phone' => $validated['phone'],
                     'message' => $validated['message'],
@@ -265,77 +259,12 @@ class WhatsappGatewayController extends Controller
         }
     }
 
-    // public function sendBulkMessages(Request $request)
-    // {
-    //     try {
-    //         $validated = $request->validate([
-    //             'contacts' => 'required|array',
-    //             'contacts.*' => 'required|string',
-    //             'message' => 'required|string',
-    //         ]);
-
-    //         $contacts = $validated['contacts'];
-    //         $message = $validated['message'];
-
-    //         // Debugging logs
-    //         Log::info('Contacts received', ['contacts' => $contacts]);
-    //         Log::info('Message received', ['message' => $message]);
-
-    //         // Mengambil URL dari database atau gunakan static IP
-    //         $apiUrl = ApiUrl::find(1);
-
-    //         if (!$apiUrl) {
-    //             Log::error('API URL not found');
-    //             return response()->json(['message' => 'API URL not found'], 404);
-    //         }
-
-    //         $client = new Client();
-    //         $failedContacts = [];
-
-    // foreach ($contacts as $contact) {
-    //     try {
-    //         Log::info('Sending message to', ['phone' => $contact]);
-
-    //         $response = $client->post($apiUrl->url, [
-    //             'json' => [
-    //                 'phone' => $contact,
-    //                 'message' => $message,
-    //             ],
-    //         ]);
-
-    //         $data = json_decode($response->getBody()->getContents(), true);
-
-    //         if ($data['code'] !== 'SUCCESS') {
-    //             Log::warning('Failed to send message', ['response' => $data, 'phone' => $contact]);
-    //             $failedContacts[] = $contact;
-    //         }
-    //     } catch (\Exception $e) {
-    //         Log::error('Error sending message', [
-    //             'error' => $e->getMessage(),
-    //             'phone' => $contact,
-    //         ]);
-    //         $failedContacts[] = $contact;
-    //     }
-    // }
-
-    //         if (count($failedContacts) > 0) {
-    //             Log::error('Failed to send message to some contacts', ['failed_contacts' => $failedContacts]);
-    //             return response()->json(['message' => 'Failed to send to some contacts', 'failed_contacts' => $failedContacts], 500);
-    //         }
-
-    //         return response()->json(['message' => 'Successfully sent message to all contacts'], 200);
-    //     } catch (\Exception $e) {
-    //         Log::error('An error occurred in sendBulkMessages', ['error' => $e->getMessage()]);
-    //         return response()->json(['message' => 'Internal server error', 'error' => $e->getMessage()], 500);
-    //     }
-    // }
-
     public function sendBroadcastMessage(Request $request)
     {
         $message = $request->input('message');
 
         // Dispatch job
-        SendWhatsAppMessageJob::dispatch($message);
+        SendWhatsappBulkJob::dispatch($message);
 
         return response()->json([
             'status' => 'success',

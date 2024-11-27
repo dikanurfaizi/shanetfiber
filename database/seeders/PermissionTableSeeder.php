@@ -35,9 +35,9 @@ class PermissionTableSeeder extends Seeder
         $billing = Permission::create([
             'name' => 'Billing'
         ]);
-        $admin = Permission::create([
-            'name' => 'Admin'
-        ]);
+        // $admin = Permission::create([
+        //      'name' => 'Admin'
+        // ]);
         //=================Server=============================
         Permission::create([
             'name' => 'server-list',
@@ -192,7 +192,7 @@ class PermissionTableSeeder extends Seeder
             'title' => 'Delete Billing',
             'parent_id' =>  $billing->id
         ]);
-
+        /*
         //=================Admin=============================
         Permission::create([
             'name' => 'is-admin',
@@ -204,5 +204,6 @@ class PermissionTableSeeder extends Seeder
             'title' => 'Can Update',
             'parent_id' =>  $admin->id
         ]);
+        */
     }
 }

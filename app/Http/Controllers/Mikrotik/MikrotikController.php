@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Mikrotik;
 
 use App\Models\Mikrotik;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Services\Routerboard\SystemService;
 use App\Services\Routerboard\TestConnectionService;

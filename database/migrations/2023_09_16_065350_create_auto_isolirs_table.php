@@ -19,6 +19,7 @@ return new class extends Migration
                 $table->string('profile_id');
                 $table->string('script_id');
                 $table->string('schedule_id');
+                $table->string('address_list_isolir')->nullable();
                 $table->enum('activation_date', ['false', 'true'])->default('false');
                 $table->string('due_date');
                 $table->string('comment_unpayment');
@@ -26,6 +27,7 @@ return new class extends Migration
                 $table->string('ros_version_id');
                 $table->enum('disabled', ['false', 'true'])->default('true');
                 $table->timestamps();
+                $table->softDeletes();
             });
         }
     }

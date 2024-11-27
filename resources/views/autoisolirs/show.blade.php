@@ -20,8 +20,8 @@
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>{{ __('autoisolir.label.script') }}</strong>
-                <span class="badge bg-danger-soft text-danger">
-                    {{ $autoisolir->script_id ?? 'no data' }}
+                <span class="badge bg-success-soft text-primary">
+                    {{ $autoisolir->name ?? 'no data' }} (ID: {{ $autoisolir->script_id ?? 'no data' }})
                 </span>
 
             </div>
@@ -29,7 +29,9 @@
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>{{ __('autoisolir.label.schedule') }}</strong>
-                {{ $autoisolir->schedule_id ?? 'no data' }}
+                <span class="badge bg-success-soft text-primary">
+                    {{ $autoisolir->name ?? 'no data' }} (ID: {{ $autoisolir->schedule_id ?? 'no data' }})
+                </span>
             </div>
         </div>
 
@@ -65,8 +67,10 @@
         </div>
     </div>
     <div class="card-footer">
-        <a class="btn btn-sm btn-success" href="{{ route('autoisolir.edit',$autoisolir->id) }}"><i class="fa fa-edit"></i> {{ __('autoisolir.button.edit') }}</a>
-        <a class="btn btn-sm btn-primary" href="{{ route('autoisolir.index') }}"><i class="fa fa-arrow-left"></i> {{ __('autoisolir.button.back') }}</a>
+        <a class="btn btn-sm btn-success" href="{{ route('autoisolir.edit', $autoisolir->id) }}"><i
+                class="fa fa-edit"></i> {{ __('autoisolir.button.edit') }}</a>
+        <a class="btn btn-sm btn-primary" href="{{ route('autoisolir.index') }}"><i class="fa fa-arrow-left"></i>
+            {{ __('autoisolir.button.back') }}</a>
     </div>
 
 </x-layouts.cpanel.settings.app-layout>

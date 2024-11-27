@@ -32,7 +32,7 @@ return [
         'profile-isolir' => 'This is used to set a customer isolation profile.',
         'due-date' => 'Determine the payment date.',
         'every-due-date' => 'Every date :due_date',
-        'tax-rate' => 'Please write without %, default in Indonesia 11.'
+        'tax-rate' => 'Please write without %, default in Indonesia 12.'
 
     ],
     'placeholder' => [

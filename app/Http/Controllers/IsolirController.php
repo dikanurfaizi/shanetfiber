@@ -28,7 +28,8 @@ class IsolirController extends Controller
     public function index(Request $request)
     {
         $clientIP = $_SERVER['REMOTE_ADDR'];
-        //$clientIP = '10.1.0.4';
+        //return dd($clientIP);
+        //  $clientIP = '10.1.12.235';
         $routers = Mikrotik::all();
 
         foreach ($routers as $router) {

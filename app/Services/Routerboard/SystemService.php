@@ -108,6 +108,16 @@ class SystemService
         return $client->query($inf)->read();
     }
 
+    public function mikrotikEtherInterface(Mikrotik $routerboard)
+    {
+        $client = $this->getMikrotik($routerboard);
+        $query = new Query('/interface/print');
+        $query->where('type', 'ether');
+        $query->where('type', 'vlan');
+        $query->operations('|');
+        return $client->query($query)->read();
+    }
+
     public function getInterfacePppByName($router, $username)
     {
         // $router = $routerboard;

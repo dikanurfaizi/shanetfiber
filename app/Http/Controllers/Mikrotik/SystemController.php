@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Mikrotik;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Http\Resources\RouterboardResource;
 use App\Http\Resources\RouterboardTimeResource;
 use App\Models\Mikrotik;
@@ -32,11 +31,8 @@ class SystemController extends Controller
      */
     public function routerResource(Mikrotik $mikrotik)
     {
-        $router = $mikrotik;
         $spec = $this->systemService->getAllResources($mikrotik);
         $resources = RouterboardResource::collection($spec);
-        // return dd($resources);
-
         return response()->json([
             'resources' => $resources,
         ]);
@@ -51,7 +47,6 @@ class SystemController extends Controller
      */
     public function mikrotikTrafficInterface(Mikrotik $mikrotik)
     {
-        //return dd($this->systemService->monitoringTraffic($mikrotik));
         return $this->systemService->monitoringTraffic($mikrotik);
     }
 
@@ -64,11 +59,8 @@ class SystemController extends Controller
      */
     public function getTimeRouter(Mikrotik $mikrotik)
     {
-        $router = $mikrotik;
-
         $tm = $this->systemService->getTime($mikrotik);
         $time = RouterboardTimeResource::collection($tm);
-
         return response()->json([
             'time' => $time,
         ]);

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\AddressListResource;
+use App\Http\Resources\InterfaceResource;
 use App\Models\Paket;
 use App\Models\Mikrotik;
 use App\Models\MerkRouter;
@@ -11,6 +13,7 @@ use App\Services\Routerboard\ScriptService;
 use App\Http\Resources\Pppoe\ProfileResource;
 use App\Http\Resources\QueueResource;
 use App\Models\Bank;
+use App\Services\Routerboard\IpStaticService;
 use App\Services\Routerboard\ScheduleService;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Routerboard\QueueService;
@@ -21,13 +24,15 @@ class DropdownController extends Controller
     private ScriptService $scriptService;
     private ScheduleService $scheduleService;
     private QueueService $queueService;
+    private IpStaticService $ipStaticService;
 
-    public function __construct(SecretService $secretService, ScriptService $scriptService, ScheduleService $scheduleService, QueueService $queueService)
+    public function __construct(SecretService $secretService, ScriptService $scriptService, ScheduleService $scheduleService, QueueService $queueService, IpStaticService $ipStaticService)
     {
         $this->secretService = $secretService;
         $this->scriptService = $scriptService;
         $this->scheduleService = $scheduleService;
         $this->queueService = $queueService;
+        $this->ipStaticService = $ipStaticService;
     }
 
     /**
@@ -112,5 +117,21 @@ class DropdownController extends Controller
             ->orderBy('name', 'ASC')
             ->get(["name", "id", "bank", "account_number"]);
         return response()->json($data);
+    }
+
+    public function fetchInterface(Request $request)
+    {
+        $router = Mikrotik::where('id', $request->mikrotik_id)->first();
+        $getInterfaces = $this->ipStaticService->getInterfaces($router);
+        $interfaces = InterfaceResource::collection($getInterfaces);
+        return response()->json($interfaces);
+    }
+
+    public function fetchAddressList(Request $request)
+    {
+        $router = Mikrotik::where('id', $request->mikrotik_id)->first();
+        $addressList = $this->ipStaticService->getAddressList($router);
+        $addressList = AddressListResource::collection($addressList);
+        return response()->json($addressList);
     }
 }

@@ -1,0 +1,298 @@
+<?php
+
+return [
+    'button' => [
+        'enable'      => 'Enable',
+        'disable'      => 'Disable',
+        'create'      => 'Create',
+        'preview'      => 'Preview',
+        'delete'      => 'Delete',
+        'edit'      => 'Edit',
+        'update'      => 'Update',
+        'manage-messages' => 'Manage Messages',
+        'manage-numbers' => 'Manage Numbers',
+        'manage-gateways' => 'Manage Gateways'
+    ],
+
+    'status' => [
+        'enable'      => 'Enable',
+        'disable'      => 'Disable',
+        'default-yes'      => 'Yes',
+        'default-no'      => 'No',
+        'not-set' => 'Not Set'
+    ],
+
+    'gateway' => [
+        'page-title-index'     => 'Whatsapp Gateways',
+        'header-index' => 'Setting Whats App Gateway',
+        'header-edit' => 'Config Whats App Gateway',
+
+        'menu-alt' => 'Menu',
+        'caption-remaining-day'          => '{0,1} :day day|[2,*] :day days',
+        'day' => 'day',
+        'schedule-time' => ':00',
+        'schedule-every' => 'Every',
+        'at_hour' => 'at hour :hour:00',
+
+        'label' => [
+            'status'      => 'Status',
+            'country-code'      => 'Country Code',
+            'remaining-day'     => 'Notif Remaining Day',
+            'api-key'     => 'Api Key',
+            'url-callback'     => 'URL Call Back',
+            'cert-file'   => 'Certificate File',
+            'schedule-time'   => 'Schedule',
+            'description'   => 'Description',
+            'default-number'   => 'Default Number',
+            'setting-gateway' => 'Setting Gateway',
+            'test-gateway' => 'Test WA Gateway',
+            'test-number' => 'Number',
+            'manual-sending' => 'Manual Broadcast',
+        ],
+
+        'ph' => [
+            'country_code'     => 'ex. 62',
+            'remaining_day'     => 'ex . 2',
+            'api_key'     => 'Api Key',
+            'url_callback'     => 'URL Call Back',
+            'cert_file'   => 'Certificate File',
+            'description'   => 'Description',
+            'select_default_number' => 'Select default number',
+            'schedule-time' => '00',
+            'no-number' => 'No Number',
+            'test-number' => 'Input number WA to test',
+        ],
+        'button' => [
+            'edit'     => 'Edit',
+            'test'     => 'Test',
+            'update'     => 'Update',
+            'cancel'     => 'Cancel',
+            'send'  => 'Send',
+        ],
+
+        'notify' => [
+            'success'      => 'Success',
+            'error'      => 'Error',
+            'success-update-gateway'     => 'Update  :name to whatsapp gateway successfully',
+            'error-update-gateway'     => 'Failed to update :name to whatsapp gateway',
+            'success-enable-gateway' => 'Enable :name gateway successfully.',
+            'success-disable-gateway' => 'Disable :name gateway successfully.',
+            'gateway-found' => 'Get data successfully.',
+            'update-success' => 'Update successfully',
+            'gateway-disable' => 'WA Gateway disable. Please enable first!',
+            'test-success' => 'Send message successfully.',
+            'test-error' => 'Send message failed.',
+            'update-error' => 'Failed to update',
+            'error-callback' => 'URL callback required',
+            'job-dispatched' => 'The payment reminder job has been successfully dispatched',
+        ],
+        'confirm' => [
+            'enable-gateway' => 'Are you sure enable :name gateway?',
+            'disable-gateway' => 'Are you sure disable :name gateway?',
+        ],
+        'tooltips' => [
+            'edit' => 'Edit',
+            'send' => 'Send WA'
+        ],
+    ],
+
+
+    'number' => [
+        'page-title-index'     => 'Numbers | WA Gateway',
+        'header-index' => 'Whats App Numbers',
+        'page-title-add'     => 'Add Number | WA Gateway',
+        'page-title-show'     => 'Showing Number',
+        'page-title-edit'     => 'Edit :name',
+        'page-title-deleted-index' => 'Delete Number | WA Gateway',
+        'page-title-deleted-show' => ':name',
+        'menu-alt' => 'Menu',
+        'caption-total'          => '{0,1} :count number total|[2,*] :count numbers',
+
+        'table' => [
+            'no'        => 'No',
+            'name'      => 'Name',
+            'number'     => 'Number',
+            'status'     => 'Status',
+            'default'     => 'Default',
+            'description'   => 'Description',
+            'actions'   => 'Actions',
+        ],
+        'title' => [
+            'index' => 'Whatsapp Numbers',
+            'edit' => 'Edit Whatsapp Number',
+            'add-new-number' => 'Add Whatsapp Number',
+            'show' => 'Show Whatsapp Number',
+            'enable-number' => 'Enable :number?',
+            'disable-number' => 'Disable :number?',
+            'delete-number' => 'Delete :number?',
+        ],
+        'label' => [
+            'name'      => 'Name',
+            'number'     => 'Number',
+            'description'     => 'Description',
+            'default'     => 'Default',
+            'status'   => 'Status',
+            'your-secret' => 'Your Secret',
+            'wa-secret' => 'Gateway Secret',
+            'header-name' => 'Header Name',
+        ],
+        'ph' => [
+            'name'      => 'Name',
+            'number'     => 'Ex. 085xxxxxxxx',
+            'description'     => 'Description for number',
+            'wa-secret' => 'Gateway Secret',
+            'header-name' => 'Header Name',
+            'your-secret' => 'If available, your secret code in here.'
+
+        ],
+        'button' => [
+            'add-new-number'      => 'Add Number',
+            'edit-number'     => 'Edit Number',
+            'update-number'     => 'Update Number',
+            'delete-number'     => 'Delete Number',
+            'save'   => 'Save',
+            'enable-number'   => 'Enable Number',
+            'disable-number'   => 'Disable Number',
+            'show-number'   => 'Show Number',
+            'back'          => '<i class="fas fa-angle-left"></i> Back'
+        ],
+
+        'notify' => [
+            'success'      => 'Success',
+            'error'      => 'Error',
+            'success-save-number'     => 'Add number :number to whatsapp gateway successfully',
+            'success-update-number'     => 'Update :name successfully',
+            'success-found-number'     => 'Get data :name number successfully',
+            'error-save-number'     => 'Failed to add number :number to whatsapp gateway',
+
+            'error-update-number'     => 'Failed to update :name',
+            'success-enable-number' => 'Enable :number successfully.',
+            'success-disable-number' => 'Disable :number successfully.',
+            'error-disable-default-number' => 'This :number default number, you cant disable it.',
+            'success-delete-number' => 'Delete :number successfully.',
+            'error-delete-default-number' => 'Failed to delete default number :number!',
+            'error-field' => 'Please complete your field and check again!',
+        ],
+
+        'message' => [
+            'enable-number' => 'Are you sure enable :number?',
+            'disable-number' => 'Are you sure disable :number?',
+            'delete-number' => 'Are you sure delete :number?',
+        ],
+    ],
+    'message' => [
+        'page-title-index'     => 'Message | WA Gateways',
+        'page-title-create'     => 'New Message | WA Gateways',
+        'page-title-show'     => ':name',
+        'page-title-edit'     => 'Edit  | WA Gateway',
+        'page-title-deleted-index' => 'Delete Message | WA Gateway',
+        'page-title-deleted-show' => ':name',
+        'header-index' => 'Whatsapp Messages',
+        'menu-alt' => 'Menu',
+        'caption-total'          => '{0,1} :count message total|[2,*] :count messages',
+        'status' => [
+            'active' => 'Active',
+            'nonactive' => 'Non-active'
+        ],
+        'table' => [
+            'no'        => 'No',
+            'name'      => 'Name',
+            'number'      => 'Number',
+            'incoming_message'     => 'Incoming Message',
+            'reply_message'     => 'Reply Message',
+            'description'     => 'Description',
+            'status'     => 'Status',
+            'actions'   => 'Actions',
+        ],
+        'title' => [
+            'index' => 'Messages | WA Gateway',
+            'create' => 'Create Message | WA Gateway',
+            'edit' => 'Edit Message | WA Gateway',
+            'delete' => 'Delete Message | WA Gateway',
+            'show' => 'Show Message | WA Gateway',
+            'edit-message-name' => 'Edit message: :name',
+            'help-reply-message' => 'Help?',
+            'enable-message' => 'Enable :name Message?',
+            'disable-message' => 'Disable :name Message?',
+            'delete-message' => 'Delete :name message?',
+            'preview-message' => 'Preview Message [:name]',
+            'edit-message' => 'Edit Message [:name]',
+            'enable-message' => 'Enable Message [:name]',
+            'disable-message' => 'Disable Message [:name]'
+        ],
+        'label' => [
+            'name'      => 'Name',
+            'incoming_message'     => 'Incoming Message',
+            'keyword'     => 'Keyword',
+            'reply_message'     => 'Reply Message',
+            'preview_message'     => 'Preview Message',
+            'description'     => 'Description',
+            'gateway-number' => 'Gateway Number',
+        ],
+
+        'ph' => [
+            'name'      => 'Name',
+            'incoming_message'     => 'Incoming messages format',
+            'reply_message'     => 'Message to reply customer',
+
+            'description'     => 'Description of message',
+            'select-number'     => 'Select Number',
+            'keyword'     => 'keyword/incoming message',
+        ],
+        'button' => [
+            'create'      => 'Add Message',
+            'edit-message'     => 'Edit Message',
+            'update-message'     => 'Update Message',
+            'delete-message'     => 'Delete Message',
+            'save'   => 'Save',
+            'show-message'   => 'Show Message',
+            'enable-message'   => 'Enable Message',
+            'disable-message'   => 'Disable Message',
+        ],
+        'validator' => [
+            'incoming-message-required' => 'The keyword field is required.',
+            'incoming-message-hasben-taken' => 'The keyword has already been taken.'
+        ],
+        'notify' => [
+            'success'      => 'Success',
+            'error'      => 'Error',
+            'success-save-message'     => 'Add message :name to whatsapp gateway successfully',
+            'success-found-message'     => 'Get data :name message successfully',
+            'error-save-message'     => 'Failed to add message :name to whatsapp gateway',
+            'success-enable-message' => 'Enable :name message successfully.',
+            'success-disable-message' => 'Disable :name message successfully.',
+            'success-update-message'     => 'Update message :name successfully',
+            'error-update-message'     => 'Update message :name failed',
+            'success-delete-message' => 'Delete :name successfully.',
+            'error-delete-default-message' => 'Failed to delete default message :name!',
+            'validator-error' => 'Validator error.'
+        ],
+
+        'message' => [
+            //'notif-lessthan-deadline-payment'      => 'Periode :periode bill :bill deadline :deadline',
+            'notif-admin-deadline-payment-customer-paket'      => ':name :address tagihan :bill jatuh tempo :deadline.',
+            'notif-admin-deadline-paylater-customer-paket'      => ':name :address tagihan :bill jatuh tempo paylater :deadline.',
+            'notif-lessthan-deadline-payment'      => 'Periode :periode tagihan :bill batas bayar :deadline.',
+            'notif-lessthan-deadline-payment-with-pay-later' => 'Periode :periode tagihan :bill batas bayar :deadline dengan jatuh tempo Paylater :paylater.',
+            'enable-message' => 'Are you sure enable [:name] message?',
+            'error-enable-message' => 'Enable message [:name] failed. Please try again!',
+            'disable-message' => 'Are you sure disable [:name] message?',
+            'error-disable-message' => 'Disable message [:name] failed. Please try again!',
+            'delete-message' => 'Are you sure delete :name message?',
+            'detail-paket' => ':no. :paketname Rp. :bill. Batas waktu pembayaran tanggal :deadline.%0a',
+            'info-detail-billing' => ':no. Periode :start_periode s/d :end_periode Rp. :bill.%0a',
+            'info-wifi' => ':no. :ssid_id *:ssid_name*, Lokasi :installation_address %0a%0a   Perangkat yang terhubung saat ini:%0a:device_connected%0a',
+            'device-connected' => ':no. :host_name%0a',
+            'info-wifi-unconfigure' => ':no. Router belum disetting.',
+            'no-device-connected' => '   Tidak ada perangkat yang terhubung%0a%0a',
+            'today' => 'Hari ini',
+            'tomorrow' => 'Besok',
+            'days-again' => ':day hari lagi',
+        ],
+        'help' => [
+            'no-paket' => '[%name% = Customer Name] [%customer_id% = Customer ID] [%address% = Customer Address]',
+            'warning-bill' => '[%name%=Customer Name] [%customer_id%=Customer ID] [%address%=Customer Address] [%day%=Less than day] [%paket-name%=Paket Name] [%count-bill%=Count bill] [%pakets%=All paket customer] [%total-bill%=Total bill]',
+
+        ],
+    ],
+];

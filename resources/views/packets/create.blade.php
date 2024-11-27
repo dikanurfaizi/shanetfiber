@@ -6,7 +6,7 @@
     <div class="row">
         <div class="col-lg-12">
 
-            {!! Form::open(array('route' => 'packets.store','method'=>'POST')) !!}
+            {!! Form::open(['route' => 'packets.store', 'method' => 'POST']) !!}
 
             <div class="card-body col-lg-8">
 
@@ -14,10 +14,10 @@
                     <div class="col-md-12 mb-3">
                         <label for="name"><strong>{{ __('paket.label.name') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('name', null, array('placeholder' => __('paket.placeholder.name'),'class' => 'form-control')) !!}
+                            {!! Form::text('name', null, ['placeholder' => __('paket.placeholder.name'), 'class' => 'form-control']) !!}
                         </div>
                         @if ($errors->has('name'))
-                        <span class="text-danger">{{ $errors->first('name') }}</span>
+                            <span class="text-danger">{{ $errors->first('name') }}</span>
                         @endif
                     </div>
                 </div>
@@ -26,10 +26,14 @@
                     <div class="col-md-12 mb-3">
                         <label for="server"><strong>{{ __('customer.label.server') }}</strong></label>
 
-                        {!! Form::select('mikrotik_id', $mikrotiks, null, array('placeholder' => 'Select Server','class' => 'form-control', 'id' => 'server-dropdown')) !!}
+                        {!! Form::select('mikrotik_id', $mikrotiks, null, [
+                            'placeholder' => 'Select Server',
+                            'class' => 'form-control',
+                            'id' => 'server-dropdown',
+                        ]) !!}
 
                         @if ($errors->has('mikrotik_id'))
-                        <span class="text-danger">{{ $errors->first('mikrotik_id') }}</span>
+                            <span class="text-danger">{{ $errors->first('mikrotik_id') }}</span>
                         @endif
                     </div>
                 </div>
@@ -45,7 +49,7 @@
                             </select>
                         </div>
                         @if ($errors->has('profile'))
-                        <span class="text-danger">{{ $errors->first('profile') }}</span>
+                            <span class="text-danger">{{ $errors->first('profile') }}</span>
                         @endif
                     </div>
                 </div>
@@ -54,10 +58,10 @@
                     <div class="col-md-12 mb-3">
                         <label for="price"><strong>{{ __('paket.label.price') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('price', null, array('placeholder' => __('paket.placeholder.price'),'class' => 'form-control')) !!}
+                            {!! Form::text('price', null, ['placeholder' => __('paket.placeholder.price'), 'class' => 'form-control']) !!}
                         </div>
                         @if ($errors->has('price'))
-                        <span class="text-danger">{{ $errors->first('price') }}</span>
+                            <span class="text-danger">{{ $errors->first('price') }}</span>
                         @endif
                     </div>
                 </div>
@@ -66,54 +70,59 @@
                     <div class="col-md-12 mb-3">
                         <label for="description"><strong>{{ __('paket.label.description') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('description', null, array('placeholder' => __('paket.placeholder.description'),'class' => 'form-control')) !!}
+                            {!! Form::text('description', null, [
+                                'placeholder' => __('paket.placeholder.description'),
+                                'class' => 'form-control',
+                            ]) !!}
                         </div>
                         @if ($errors->has('mikrotik_id'))
-                        <span class="text-danger">{{ $errors->first('mikrotik_id') }}</span>
+                            <span class="text-danger">{{ $errors->first('mikrotik_id') }}</span>
                         @endif
                     </div>
                 </div>
             </div>
             <div class="card-footer">
-                <button type="submit" class="btn btn-sm btn-success"><i class="fa fa-save"></i> &nbsp {{ __('paket.button.save') }}</button>
+                <button type="submit" class="btn btn-sm btn-success"><i class="fa fa-save"></i> &nbsp
+                    {{ __('paket.button.save') }}</button>
             </div>
             {!! Form::close() !!}
         </div>
     </div>
 
     @section('custom_scripts')
-    <script type="text/javascript">
-        $(document).ready(function() {
+        <script type="text/javascript">
+            $(document).ready(function() {
 
-            /*==================================================
-                Server Dropdown Change Event
-            ====================================================*/
-            $('#server-dropdown').on('change', function() {
-                var idServer = this.value;
-                $("#profile-dropdown").html('');
-                $.ajax({
+                /*==================================================
+                    Server Dropdown Change Event
+                ====================================================*/
+                $('#server-dropdown').on('change', function() {
+                    var idServer = this.value;
+                    $("#profile-dropdown").html('');
+                    $.ajax({
 
-                    url: "{{url('api/fetch-profiles')}}",
-                    type: "POST",
-                    data: {
-                        mikrotik_id: idServer,
-                        _token: '{{csrf_token()}}'
-                    },
-                    dataType: 'json',
-                    success: function(result_server) {
-                        $('#profile-dropdown').html('<option value="">Select Profile</option>');
-                        $.each(result_server, function(key, value) {
-                            $("#profile-dropdown").append('<option value="' + value.name + '">' + value.name + '</option>');
-                        });
-                    }
+                        url: "{{ url('api/fetch-profiles') }}",
+                        type: "POST",
+                        data: {
+                            mikrotik_id: idServer,
+                            _token: '{{ csrf_token() }}'
+                        },
+                        dataType: 'json',
+                        success: function(result_server) {
+                            $('#profile-dropdown').html('<option value="">Select Profile</option>');
+                            $.each(result_server, function(key, value) {
+                                $("#profile-dropdown").append('<option value="' + value
+                                    .name + '">' + value.name + '</option>');
+                            });
+                        }
+
+                    });
 
                 });
 
+
+
             });
-
-
-
-        });
-    </script>
+        </script>
     @endsection
 </x-layouts.app-layout>

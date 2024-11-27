@@ -24,6 +24,7 @@ return new class extends Migration
                 $table->enum('disabled', ['false', 'true'])->default('true');
                 //end
                 $table->timestamps();
+                $table->softDeletes();
             });
         }
 
@@ -37,10 +38,17 @@ return new class extends Migration
                 $table->string('email')->unique()->nullable();
                 $table->foreignId('paket_id')->references('id')->on('pakets')->onDelete('cascade')->nullable();
                 $table->foreignId('mikrotik_id')->references('id')->on('mikrotiks')->onDelete('cascade');
-                $table->string('secret_id');
+                $table->string('secret_id')->nullable();
                 $table->string('username')->nullable();
                 $table->string('password_ppp')->nullable();
-                $table->foreignId('ppp_type_id')->references('id')->on('ppp_types')->onDelete('cascade');
+                $table->foreignId('ppp_type_id')->references('id')->on('ppp_types')->onDelete('cascade')->nullable();
+                $table->string('simpleque_id')->nullable();
+                $table->string('simpleque_name')->nullable();
+                $table->string('ip_static')->nullable();
+                $table->string('mac_address')->nullable();
+                $table->string('interface')->nullable();
+                $table->string('arp_id')->nullable();
+                $table->string('address_list_id')->nullable();
                 $table->text('address')->nullable();
                 $table->text('contact')->nullable();
                 //Add new disable
@@ -49,6 +57,7 @@ return new class extends Migration
                 $table->string('activation_date')->nullable();
                 //end
                 $table->timestamps();
+                $table->softDeletes();
             });
         }
     }

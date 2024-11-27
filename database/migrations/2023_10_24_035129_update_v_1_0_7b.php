@@ -3,11 +3,11 @@
 //use DB;
 use App\Models\Midtran;
 use App\Models\Customer;
-use App\Models\Websystem;
 use App\Models\PaymentGateway;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {

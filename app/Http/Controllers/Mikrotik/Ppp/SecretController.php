@@ -9,37 +9,16 @@ use App\Models\PppType;
 use App\Models\Customer;
 use App\Models\Mikrotik;
 use App\Models\Websystem;
-
 use App\Models\CustomerOnt;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
-
-use App\Jobs\DeletePppSecretJob;
 use App\Jobs\EnablePppSecretJob;
 use App\Jobs\DisablePppSecretJob;
-use App\Jobs\UpdatePppoeSecretJob;
-
-
-
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
-use Symfony\Component\Mime\RawMessage;
-use RouterOS\Exceptions\QueryException;
-use RouterOS\Exceptions\ClientException;
-use RouterOS\Exceptions\ConfigException;
-
-
-
-use Yajra\DataTables\Facades\DataTables;
-use Illuminate\Support\Facades\Validator;
-
-use RouterOS\Exceptions\ConnectException;
-use App\Services\Routerboard\SystemService;
-use function PHPUnit\Framework\returnValue;
 use App\Http\Resources\Pppoe\SecretResource;
 use App\Http\Resources\Pppoe\ProfileResource;
 use App\Services\Routerboard\Ppp\SecretService;
-use RouterOS\Exceptions\BadCredentialsException;
 
 class SecretController extends Controller
 {
@@ -178,19 +157,12 @@ class SecretController extends Controller
             'profile.required' => 'Profile field is required.',
 
         ]);
-
-        // $router = $mikrotik;
-
         $username = $request->name;
         $password = $request->password;
         $service = $request->service;
         $profile = $request->profile;
         $id = request('id');
-
-        //  $response =  dispatch(new UpdatePppoeSecretJob($router, $username, $password, $service, $profile, $id))->onQueue('default');
         $response = $this->secretService->updateSecret($mikrotik, $username, $password, $service, $profile, $id);
-        //return dd($response);
-
         if (isset($response['after']['message'])) {
             return redirect()->back()->with('error', $response['after']['message']);
             //return dd($createSecret['after']['message']);
@@ -202,10 +174,8 @@ class SecretController extends Controller
 
     public function getCountPppSecrets(Mikrotik $mikrotik)
     {
-        // $router = $mikrotik;
         $allPppSecrets = $this->secretService->getAllPppSecrets($mikrotik);
         $allPppSecretsCount = count($allPppSecrets);
-
         return response()->json([
             'allPppSecretsCount' => $allPppSecretsCount,
         ]);
@@ -213,62 +183,35 @@ class SecretController extends Controller
 
     public function getCountPppSecretsActive(Mikrotik $mikrotik)
     {
-        // $router = $mikrotik;
         $allPppActive = $this->secretService->getPppActive($mikrotik);
         $allPppActiveCount = count($allPppActive);
-
         return response()->json([
             'allPppActiveCount' => $allPppActiveCount,
         ]);
     }
-
-
-
     //===================================PPP Secret Action ==============================================
     /**
      * Remove the specified resource from storage.
      */
     public function delete(Mikrotik $mikrotik)
     {
-        // $router = $mikrotik;
-        // $username = request()->input('username');
-        // dispatch(new DeletePppSecretJob($mikrotik, $username))->onQueue('default');
-        // return back();
-        //$username = request()->input('username');
-        // $this->secretService->deleteSecret($mikrotik, $username);
-        // return back();
         $secretId = request('id');
         $this->secretService->deleteOneSecret($mikrotik, $secretId);
         return back();
     }
 
-
-
-
     public function disable(Mikrotik $mikrotik)
     {
-
         $username = request()->input('username');
         dispatch(new DisablePppSecretJob($mikrotik, $username))->onQueue('default');
         return back();
-
-
-        // $username = request()->input('username');
-        // $this->secretService->disableSecret($mikrotik, $username);
-        // return back();
     }
 
     public function enable(Mikrotik $mikrotik)
     {
-
         $username = request()->input('username');
         dispatch(new EnablePppSecretJob($mikrotik, $username))->onQueue('default');
         return back();
-
-
-        // $username = request()->input('username');
-        // $this->secretService->enableSecret($mikrotik, $username);
-        // return back();
     }
 
     public function clone_secret(Request $request, Mikrotik $mikrotik)
@@ -276,30 +219,23 @@ class SecretController extends Controller
         $mikrotikId = $mikrotik->id;
         $allSecrets = $this->secretService->getAllPppSecrets($mikrotik);
         $pppsecrets = SecretResource::collection($allSecrets);
-        //return dd($pppsecrets);
         $pppsecretsIDs = $pppsecrets->pluck(['.id'])->toArray();
         $scretIDs = collect($pppsecretsIDs);
         $activationDate = Carbon::now();
         $customers = Customer::where('mikrotik_id', $mikrotikId)->pluck('secret_id')->toArray();
         $customersSecretIDs = collect($customers);
-
         $secretIDNonCustomers = $scretIDs->diff($customersSecretIDs);
         $secretNonCustomer =  $pppsecrets->whereIn(['.id'], $secretIDNonCustomers)
             ->toArray();
-
         foreach ($secretNonCustomer as $secret) {
-
             $pppTypeId = PppType::where('name', $secret['service'])->value('id');
             if (!isset($pppTypeId)) {
                 return redirect()->back()->withErrors(['msg' => 'There isnot PPP services are the same, please check ppp_types table on your database.']);
             }
-            // return dd($pppTypes);
             $paketId = Paket::where('mikrotik_id', $mikrotikId)->where('profile', $secret['profile'])->value('id');
             if (!isset($paketId)) {
                 return redirect()->back()->withErrors(['msg' => 'Please create one package according to your Mikrotik profile!', 'Go to on sidebar menu then select [Home] -> [Package] -> [Create New Package]', 'Or you can import profile on your mikrotik, select menu [PPP] -> [PPP Profiles] -> [Import Profiles]']);
             }
-
-
             $customer = Customer::create([
                 'slug' => str($secret['name'] . '-' . Str::random(4))->slug(),
                 'name' => $secret['name'],
@@ -310,6 +246,7 @@ class SecretController extends Controller
                 'username' => $secret['name'],
                 'password_ppp' => $secret['password'],
                 'ppp_type_id' => $pppTypeId,
+                'internet_service' => 'ppp',
                 'disabled' => $secret['disabled'],
                 'activation_date' => $activationDate,
                 'activation' => 'true',
@@ -319,10 +256,7 @@ class SecretController extends Controller
                 'customer_id' => $getCustomer->id,
             ]);
         }
-
-
         return redirect()->route('customers.index')
             ->with('success', 'Import customers successfully.');
-        // return redirect()->back()->with('success', 'Billing created successfully.');
     }
 }

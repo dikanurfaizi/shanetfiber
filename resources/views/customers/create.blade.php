@@ -32,13 +32,70 @@
 
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
-                        <label for="service">{{ __('pppoe.secret.service') }}</label>
-                        {!! Form::select('ppp_type_id', $pppservices, null, array('placeholder' => 'Select Service','class' => 'form-control', 'id' => 'ppp_types_id')) !!}
+                        <label for="internet_service"><strong>{{ __('customer.label.internet_service') }}</strong></label>
+                        <select name="internet_service" id="service-dropdown" class="form-control">
+                            <option value="">Select Service</option>
+                            <option value="ppp">PPP</option>
+                            <option value="ip_static">IP Static</option>
+                        </select>
+                        @if ($errors->has('internet_service'))
+                        <span class="text-danger">{{ $errors->first('internet_service') }}</span>
+                        @endif
+                    </div>
+                </div>
+
+                <div id="input-ppp" class="row align-items-center d-none">
+                    <div class="col-md-12 mb-3">
+
+                        {!! Form::select('ppp_type_id', $pppservices, null, array('placeholder' => 'Select PPP Type','class' => 'form-control', 'id' => 'ppp_types_id')) !!}
                         @if ($errors->has('ppp_type_id'))
                         <span class="text-danger">{{ $errors->first('ppp_type_id') }}</span>
                         @endif
                     </div>
                 </div>
+
+
+                <div id="input-ip-static" class="row align-items-center d-none">
+                    <div class="col-md-12 mb-3">
+                        <label for="interface"><strong>{{ __('customer.label.interface') }}</strong></label>
+                        <select name="interface" id="interface-dropdown" class="form-control">
+                            <option value="">Select Interface</option>
+                        </select>
+                        @if ($errors->has('interface'))
+                        <span class="text-danger">{{ $errors->first('interface') }}</span>
+                        @endif
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <div class="input-group">
+                            {!! Form::text('ip_static', null, array('placeholder' => __('customer.placeholder.ip_static'),'class' => 'form-control')) !!}
+                            <div class="input-group-append">
+                                <div class="input-group-text">
+                                    <span class="far fa-keyboard"></span>
+                                </div>
+                            </div>
+                        </div>
+                        @if ($errors->has('ip_static'))
+                        <span class="text-danger">{{ $errors->first('ip_static') }}</span>
+                        @endif
+                    </div>
+
+                    <div class="col-md-12 mb-3">
+
+                        <div class="input-group">
+                            {!! Form::text('mac_address', null, array('placeholder' => __('customer.placeholder.mac_address'),'class' => 'form-control')) !!}
+                            <div class="input-group-append">
+                                <div class="input-group-text">
+                                    <span class="far fa-keyboard"></span>
+                                </div>
+                            </div>
+                        </div>
+                        @if ($errors->has('mac_address'))
+                        <span class="text-danger">{{ $errors->first('mac_address') }}</span>
+                        @endif
+                    </div>
+                </div>
+
+
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="name"><strong>{{ __('customer.label.name') }}</strong></label>

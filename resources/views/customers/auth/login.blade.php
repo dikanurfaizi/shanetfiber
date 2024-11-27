@@ -55,16 +55,15 @@
                                     </button>
                                 </form>
                                 <hr>
-                                @if (Route::has('password.request'))
+                                {{-- @if (Route::has('password.request'))
                                     <div class="text-center">
                                         <a class="small"
                                             href="{{ route('password.request') }}">{{ __('Forgot Password?') }}</a>
                                     </div>
-                                @endif
+                                @endif --}}
                                 @if (Route::has('register'))
                                     <div class="text-center">
-                                        <a class="small"
-                                            href="{{ route('register') }}">{{ __('Create New Account!') }}</a>
+                                        <a class="small" href="{{ route('register') }}">{{ __('Create New Account!') }}</a>
                                     </div>
                                 @endif
                             </div>

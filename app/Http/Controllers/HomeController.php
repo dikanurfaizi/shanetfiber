@@ -33,7 +33,7 @@ class HomeController extends Controller
         $this->systemService = $systemService;
 
         $this->middleware('permission:server-edit', ['only' => ['index', 'update']]);
-        $this->newVersion = '1.0.8b';
+        $this->newVersion = config('app.version');
         $this->version = Websystem::where('id', 1)->value('version');
         if ($this->version == null) {
             $this->version = Websystem::where('slug', 'websystem')->value('version');
@@ -68,13 +68,15 @@ class HomeController extends Controller
 
         if (count($routersEnable) != 0) {
             $onlineRouters = array();
+            // $countRouterEnable = count($routersEnable);
+            //$i = 0;
             foreach ($routersEnable as $routerEnable) {
                 $profileIsolir = AutoIsolir::where('mikrotik_id', $routerEnable->id)->value('profile_id');
                 try {
                     $this->testConnectionService->checkOnline($routerEnable);
                     $countRouterOnline++;
                     $onlineRouters[] = $routerEnable;
-                    $interfaces = $this->systemService->mikrotikInterface($routerEnable);
+                    $interfaces = $this->systemService->mikrotikEtherInterface($routerEnable);
                     $usernameCustomers = Customer::where('mikrotik_id', $routerEnable->id)
                         ->where('disabled', 'false')
                         ->pluck('username')->toArray();

@@ -32,11 +32,6 @@ class ProfileController extends Controller
         } else {
             return view('customers.pages.dashboard', compact('customer', 'billings', 'websystem', 'last_payment'));
         }
-        //if ($result) {
-        //    return view('mobile.customers.pages.dashboard', compact('customer', 'billings', 'websystem'));
-        //} else {
-        //    return view('customers.pages.dashboard', compact('customer', 'billings', 'websystem'));
-        //}
     }
 
     /**

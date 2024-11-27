@@ -17,6 +17,7 @@ use App\Services\Routerboard\FirewallService;
 use App\Services\Routerboard\ScheduleService;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Http\Resources\FirewallAddressListResource;
+use App\Jobs\AddPaymentIpStaticBeforeDueDateJob;
 use App\Services\Routerboard\ProxyService;
 use App\Services\Routerboard\TestConnectionService;
 
@@ -55,6 +56,7 @@ class AutoIsolirController extends Controller
     public function create()
     {
         $mikrotiks = Mikrotik::where('disabled', 'false')->orderBy('name', 'ASC')->pluck('name', 'id');
+        // $ipAddressList = $this->firewallService->getIpAddressList($router);
         return view('autoisolirs.create', compact('mikrotiks'));
     }
 
@@ -64,15 +66,24 @@ class AutoIsolirController extends Controller
     public function store(Request $request)
     {
         $dueDate = null;
-        $this->validate($request, [
-            'mikrotik_id' => 'required|unique:auto_isolirs',
-            'profile_id' => ['required'],
-            'name' => ['required', 'alpha_dash'],
-            'comment_payment' => ['required', 'alpha_dash'],
-            'comment_unpayment' => ['required', 'alpha_dash'],
-            'activation_date' => ['required'],
-            'ros_version_id' => ['required'],
-        ]);
+        $this->validate(
+            $request,
+            [
+                'mikrotik_id' => 'required|unique:auto_isolirs',
+                'profile_id' => ['required'],
+                'address_list_isolir' => ['required'],
+                'name' => ['required', 'alpha_dash'],
+                'comment_payment' => ['required', 'alpha_dash'],
+                'comment_unpayment' => ['required', 'alpha_dash'],
+                'activation_date' => ['required'],
+                // 'ros_version_id' => ['required'],
+
+                //  'address_list_non_isolir' => ['required'],
+            ],
+            [
+                'address_list_isolir' => 'Address list isolir required'
+            ]
+        );
         if ($request->activation_date == 'false') {
             $this->validate($request, [
                 'due_date' => ['required', 'numeric', 'max:28'],
@@ -88,19 +99,19 @@ class AutoIsolirController extends Controller
         }
 
         $profile = $request->profile_id;
-
         $nameScript = $nameSchedule = $request->name;
         $activationDate = $request->activation_date;
         $payment = $request->comment_payment;
         $unpayment = $request->comment_unpayment;
-        $rosVersion = $request->ros_version_id;
-
-
+        // $rosVersion = $request->ros_version_id;
+        $rosVersion = $router->ros_version_id;
+        // $address_list_non_isolir = $request->address_list_non_isolir;
+        $address_list_isolir = $request->address_list_isolir;
 
         if ($activationDate == 'true') {
-            $script = $this->scriptService->addAutoisolirActivationDate($router, $rosVersion, $nameScript, $unpayment, $profile);
+            $script = $this->scriptService->addAutoisolirActivationDate($router, $rosVersion, $nameScript, $unpayment, $profile, $address_list_isolir);
         } else {
-            $script = $this->scriptService->addAutoisolirDueDate($router, $rosVersion, $nameScript, $dueDate, $unpayment, $profile);
+            $script = $this->scriptService->addAutoisolirDueDate($router, $rosVersion, $nameScript, $dueDate, $unpayment, $profile, $address_list_isolir);
         }
 
         if (isset($script['after']['message'])) {
@@ -138,10 +149,12 @@ class AutoIsolirController extends Controller
                 'comment_payment' => $payment,
                 'comment_unpayment' => $unpayment,
                 'due_date' => $dueDate,
-                'ros_version_id' => $rosVersion,
+                //'ros_version_id' => $rosVersion,
                 'disabled' => 'false',
                 'nat_id' => 0,
                 'proxy_access_id' => 0,
+                'address_list_isolir' => $address_list_isolir,
+                // 'address_list_non_isolir' => $address_list_non_isolir,
             ]);
 
             return redirect()->route('autoisolir.index')
@@ -181,6 +194,8 @@ class AutoIsolirController extends Controller
         $router = Mikrotik::where('id', $autoisolir->mikrotik_id)->first();
         try {
             $this->testConnectionService->checkOnline($router);
+            $ipAddressList = $this->firewallService->getIpAddressList($router);
+            // return dd($ipAddressList);
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your router.']);
         }
@@ -190,10 +205,12 @@ class AutoIsolirController extends Controller
         }
         $profiles = $this->secretService->getPppProfile($router);
         $collectionProfiles = ProfileResource::collection($profiles)->pluck('name', 'name');
+        $collectionIpAddressLists = FirewallAddressListResource::collection($ipAddressList)->pluck('list', 'list');
 
         return view('autoisolirs.edit', [
             'autoisolir' => $autoisolir,
             'collectionProfiles' => $collectionProfiles,
+            'collectionIpAddressLists' => $collectionIpAddressLists,
         ]);
     }
 
@@ -203,13 +220,20 @@ class AutoIsolirController extends Controller
     public function update(Request $request, AutoIsolir $autoisolir)
     {
         $dueDate = null;
-        $this->validate($request, [
-            'profile_id' => ['required'],
-            'comment_payment' => ['required', 'alpha_dash'],
-            'comment_unpayment' => ['required', 'alpha_dash'],
-            'activation_date' => ['required'],
-            'ros_version_id' => ['required'],
-        ]);
+        $this->validate(
+            $request,
+            [
+                'profile_id' => ['required'],
+                'comment_payment' => ['required', 'alpha_dash'],
+                'comment_unpayment' => ['required', 'alpha_dash'],
+                'activation_date' => ['required'],
+                // 'ros_version_id' => ['required'],
+                'address_list_isolir' => ['required'],
+            ],
+            [
+                'address_list_isolir.required' => 'Address list isolir required'
+            ]
+        );
 
         if ($request->activation_date == 'false') {
             $this->validate($request, [
@@ -217,10 +241,9 @@ class AutoIsolirController extends Controller
             ]);
             $dueDate = $request->due_date;
         }
-
-
-        $mikrotik_id = $autoisolir->mikrotik_id;
-        $router = Mikrotik::where('id', $mikrotik_id)->first();
+        // $mikrotik_id = $autoisolir->mikrotik_id;
+        $router = $autoisolir->mikrotik;
+        // $router = Mikrotik::where('id', $mikrotik_id)->first();
         try {
             $this->testConnectionService->checkOnline($router);
         } catch (\Exception $e) {
@@ -234,19 +257,21 @@ class AutoIsolirController extends Controller
         $unpayment = $request->comment_unpayment;
         $scriptId = $autoisolir->script_id;
         $activationDate = $request->activation_date;
-        $rosVersion = $request->ros_version_id;
-
-        $customers = Customer::where('disabled', 'false')->where('activation', 'true')->get();
+        $rosVersion = $router->ros_version_id;
+        $address_list_isolir = $request->address_list_isolir;
 
         $periodeId = BillingPeriode::latest('created_at')->value('id');
+        //$address_list = 'IP_ISOLIR';
         if (isset($periodeId)) {
+            $customers_ppp = Customer::where('internet_service', 'ppp')->where('disabled', 'false')->where('activation', 'true')->get();
+            $customers_ip_static = Customer::where('internet_service', 'ip_static')->where('disabled', 'false')->where('activation', 'true')->get();
             if ($activationDate == 'true') {
-                $response = $this->scriptService->setAutoisolirActivationDate($router, $rosVersion, $scriptId, $unpayment, $profile);
+                $response = $this->scriptService->setAutoisolirActivationDate($router, $rosVersion, $scriptId, $unpayment, $profile, $address_list_isolir);
                 $periodeName = BillingPeriode::latest('created_at')->value('name');
                 $nextMonth = Carbon::parse($periodeName)->addMonth()->format('m');
                 $month = Carbon::parse($periodeName)->format('m');
                 $year = Carbon::parse($periodeName)->format('Y');
-                foreach ($customers as $customer) {
+                foreach ($customers_ppp as $customer) {
                     $paylater = Billing::where('customer_id', $customer->id)->latest('updated_at')->value('pay_later');
                     if ($paylater) {
                         $date = Carbon::parse($paylater)->format('d');
@@ -255,28 +280,50 @@ class AutoIsolirController extends Controller
                     } else {
                         $date = Carbon::parse($customer->activation_date)->format('d');
                     }
-
-
                     $statusPayment = Billing::where('customer_id', $customer->id)->where('billing_periode_id', $periodeId)->value('status');
                     if ($statusPayment == 'LS') {
                         $comment_unpayment = $unpayment . '_' . $date . '_' . $nextMonth . '_' . $year;
-                        dispatch(new AddPaymentBeforeDueDateJob($router, $comment_unpayment, $customer->secret_id))->onQueue('default');
                     } else {
                         $comment_unpayment = $unpayment . '_' . $date . '_' . $month . '_' . $year;
-                        dispatch(new AddPaymentBeforeDueDateJob($router, $comment_unpayment, $customer->secret_id))->onQueue('default');
                     }
+                    dispatch(new AddPaymentBeforeDueDateJob($router, $comment_unpayment, $customer->secret_id))->onQueue('default');
+                }
+                foreach ($customers_ip_static as $customer) {
+                    $paylater = Billing::where('customer_id', $customer->id)->latest('updated_at')->value('pay_later');
+                    if ($paylater) {
+                        $date = Carbon::parse($paylater)->format('d');
+                        $month = Carbon::parse($paylater)->format('m');
+                        $year = Carbon::parse($paylater)->format('Y');
+                    } else {
+                        $date = Carbon::parse($customer->activation_date)->format('d');
+                    }
+                    $statusPayment = Billing::where('customer_id', $customer->id)->where('billing_periode_id', $periodeId)->value('status');
+                    if ($statusPayment == 'LS') {
+                        $comment_unpayment = $unpayment . '_' . $date . '_' . $nextMonth . '_' . $year;
+                    } else {
+                        $comment_unpayment = $unpayment . '_' . $date . '_' . $month . '_' . $year;
+                    }
+                    dispatch(new AddPaymentIpStaticBeforeDueDateJob($router, $customer->simpleque_id, $comment_unpayment))->onQueue('default');
                 }
             } else {
-                $response = $this->scriptService->setAutoisolirDueDate($router, $rosVersion, $scriptId, $dueDate, $unpayment, $profile);
-                foreach ($customers as $customer) {
+                $response = $this->scriptService->setAutoisolirDueDate($router, $rosVersion, $scriptId, $dueDate, $unpayment, $profile, $address_list_isolir);
+                foreach ($customers_ppp as $customer) {
                     // $date = Carbon::parse($customer->activation_date)->format('d');
                     $statusPayment = Billing::where('customer_id', $customer->id)->where('billing_periode_id', $periodeId)->value('status');
                     if ($statusPayment == 'LS') {
-
                         dispatch(new AddPaymentBeforeDueDateJob($router, $payment, $customer->secret_id))->onQueue('default');
                     } else {
-
                         dispatch(new AddPaymentBeforeDueDateJob($router, $unpayment, $customer->secret_id))->onQueue('default');
+                    }
+                }
+
+                foreach ($customers_ip_static as $customer) {
+                    // $date = Carbon::parse($customer->activation_date)->format('d');
+                    $statusPayment = Billing::where('customer_id', $customer->id)->where('billing_periode_id', $periodeId)->value('status');
+                    if ($statusPayment == 'LS') {
+                        dispatch(new AddPaymentIpStaticBeforeDueDateJob($router, $customer->simpleque_id, $payment))->onQueue('default');
+                    } else {
+                        dispatch(new AddPaymentIpStaticBeforeDueDateJob($router, $customer->simpleque_id, $unpayment))->onQueue('default');
                     }
                 }
             }
@@ -291,7 +338,8 @@ class AutoIsolirController extends Controller
                 'comment_unpayment' => $unpayment,
                 'due_date' => $dueDate,
                 'activation_date' => $activationDate,
-                'ros_version_id' => $rosVersion,
+                //  'ros_version_id' => $rosVersion,
+                'address_list_isolir' => $address_list_isolir,
             ]);
             return redirect()->route('autoisolir.index')
                 ->with('success', 'Auto isolir updated.');
@@ -301,32 +349,32 @@ class AutoIsolirController extends Controller
     public function edit_nat(AutoIsolir $autoisolir)
     {
         $router = Mikrotik::where('id', $autoisolir->mikrotik_id)->first();
+        /*
         if ($router->disabled == 'true') {
             return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' disable, please enable first to change configuration.']);
         }
         try {
             $ipAddressList = $this->firewallService->getIpAddressList($router);
-            // return dd($ipAddressList);
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your router.']);
         }
-
         $collectionIpAddressLists = FirewallAddressListResource::collection($ipAddressList)->pluck('list', 'list');
-        // return dd($collectionIpAddressLists);
-        // $response = $this->firewallService->getIpAddressList($router);
         return view('autoisolirs.edit_nat', compact('autoisolir', 'collectionIpAddressLists'));
+        */
+        return view('autoisolirs.edit_nat', compact('autoisolir'));
     }
 
     public function update_nat(Request $request, AutoIsolir $autoisolir)
     {
         $this->validate($request, [
             'nat_dst_address' => ['required'],
-            'nat_src_address_list' => ['required'],
+            // 'nat_src_address_list' => ['required'],
             'access_action' => ['required'],
             'proxy_access_src_address' => ['required'],
         ]);
         $nat_dst_address = $request->nat_dst_address;
-        $nat_src_address_list = $request->nat_src_address_list;
+        // $nat_src_address_list = $request->nat_src_address_list;
+        $nat_src_address_list = $autoisolir->address_list_isolir;
         //if ($request->nat_dst_address_list) {
         $nat_dst_address_list = $request->nat_dst_address_list;
         // } else {
@@ -356,7 +404,7 @@ class AutoIsolirController extends Controller
                 $updateNatIsolir = $this->firewallService->updateNatService($router, $nat_dst_address, $nat_src_address_list, $nat_dst_address_list, $autoisolir->nat_id);
             }
 
-            if ($autoisolir->firewall_filter_id == 0) {
+            /*  if ($autoisolir->firewall_filter_id == 0) {
                 $createFilterDrop = $this->firewallService->createFilterDropService($router, $nat_src_address_list, $nat_dst_address);
                 if (isset($createFilterDrop['after']['message'])) {
                     $filterDropId = 0;
@@ -369,15 +417,17 @@ class AutoIsolirController extends Controller
             } else {
                 $updateFilterDrop = $this->firewallService->updateFilterDropService($router, $nat_src_address_list, $nat_dst_address, $autoisolir->firewall_filter_id);
             }
+            */
 
             if ($autoisolir->proxy_access_id == 0) {
-                if ($autoisolir->ros_version_id == '1') {
+                if ($autoisolir->mikrotik->ros_version_id == '1') {
                     $createProxyAccessIsolir = $this->proxyService->createAccessServiceV6_49($router, $proxy_access_src_address, $nat_dst_address, $action);
-                } else if ($autoisolir->ros_version_id == '2') {
+                } else if ($autoisolir->mikrotik->ros_version_id == '2') {
                     $createProxyAccessIsolir = $this->proxyService->createAccessServiceV7_10($router, $proxy_access_src_address, $nat_dst_address, $action);
                 }
                 if (isset($createProxyAccessIsolir['after']['message'])) {
                     $proxyAccessId =  0;
+                    return redirect()->back()->withErrors(['msg' => $createProxyAccessIsolir['after']['message']]);
                 } else {
                     $proxyAccessId = $createProxyAccessIsolir['after']['ret'];
                     $autoisolir->update([
@@ -400,12 +450,13 @@ class AutoIsolirController extends Controller
 
         $autoisolir->update([
             'nat_dst_address' => $nat_dst_address,
-            'nat_src_address_list' => $nat_src_address_list,
+            // 'nat_src_address_list' => $nat_src_address_list,
             'nat_dst_address_list' => $nat_dst_address_list,
             'proxy_access_src_address' => $proxy_access_src_address,
             'proxy_access_action_data' => $nat_dst_address . '/isolir',
             'proxy_access_action' => $action,
         ]);
+
         return redirect()->back()
             ->with('success', 'Updated successfully');
     }
