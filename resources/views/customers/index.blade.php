@@ -17,6 +17,80 @@
                 </div>
             @endif
         </span>
+        <span>
+            <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSearchCustomer"
+                aria-expanded="false" aria-controls="collapseSearchCustomer" style="padding-top: inherit;">
+                <i class="fas fa-search"></i>
+                <span>{{ __('billing.header.search') }}</span>
+            </a>
+            <div class="collapse" id="collapseSearchCustomer">
+                <div class="card-header py-3 rounded">
+                    <form>
+                        <div class="row">
+                            <!-- Kolom Pencarian Nama -->
+                            <div class="col-md-3 col-12 mb-2">
+                                <input type="search" class="form-control"
+                                    placeholder="{{ __('customer.placeholder.name') }}" name="search_name">
+                            </div>
+                            <!-- Kolom Alamat -->
+                            <div class="col-md-3 col-12 mb-2">
+                                <select name="search_address" class="form-control">
+                                    <option value="">{{ __('customer.placeholder.select-address') }}</option>
+                                    <option value="NULL">{{ __('customer.placeholder.without-address') }}</option>
+                                    @foreach ($address as $addrr)
+                                        <option value="{{ $addrr }}">{{ $addrr }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <!-- Kolom Status -->
+                            <div class="col-md-2 col-12 mb-2">
+                                <select name="status" class="form-control">
+                                    <option value="">All Status</option>
+                                    <option value="false">Enable</option>
+                                    <option value="true">Disable</option>
+                                    <option value="isolir">Isolir</option>
+                                    <option value="offline">Offline</option>
+                                    <option value="online">Online</option>
+                                    <option value="free">Free</option>
+                                    <option value="deactivated">Deactivated</option>
+                                </select>
+                            </div>
+                            <!-- Kolom Layanan -->
+                            <div class="col-md-2 col-12 mb-2">
+                                <select name="search_service" class="form-control">
+                                    <option value="">{{ __('customer.placeholder.all-internet-service') }}
+                                    </option>
+                                    <option value="ppp">{{ __('customer.placeholder.ppp') }}</option>
+                                    <option value="ip_static">{{ __('customer.placeholder.ip-static') }}</option>
+                                </select>
+                            </div>
+                            <!-- Kolom Server -->
+                            <div class="col-md-2 col-12 mb-2">
+                                {!! Form::select('server_search', $allServers, null, [
+                                    'placeholder' => 'All Server',
+                                    'class' => 'form-control',
+                                    'id' => 'server-dropdown',
+                                ]) !!}
+                            </div>
+                            <!-- Kolom Paket -->
+                            <div class="col-md-2 col-12 mb-2">
+                                <select name="search_paket" id="paket-dropdown" class="form-control d-none">
+                                    <option value="">All Paket</option>
+                                </select>
+                            </div>
+                        </div>
+                        <!-- Tombol Pencarian -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <button class="btn btn-success btn-sm" type="submit"><i class="fas fa-search"></i>
+                                    {{ __('customer.button.search') }}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </span>
     </div>
 
     <div class="card-body">

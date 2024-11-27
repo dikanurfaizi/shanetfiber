@@ -224,15 +224,21 @@ class CustomerController extends Controller
             $customersGet = $customers->get();
             $data = $customers->paginate($paginate);
             $totalIncoming = 0;
+
+            $customers = Customer::orderBy('address', 'ASC')->where('address', '!=', NULL)->get();
+            $addressUnique = $customers->unique('address');
+            $address = $addressUnique->pluck('address', 'address');
+            $allServers = Mikrotik::where('disabled', 'false')->orderBy('name', 'ASC')->pluck('name', 'id');
+
             foreach ($customersGet as $customerGet) {
                 $totalIncoming += $customerGet->paket->price * ((100 - $customerGet->discount) / 100);
             }
             if (count($data) == 0) {
-                return view('customers.index', compact('data', 'totalIncoming'), [
+                return view('customers.index', compact('data', 'totalIncoming', 'address', 'allServers'), [
                     'message' => 'No customer found. Try to search again !',
                 ]);
             } else {
-                return view('customers.index', compact('data', 'totalIncoming'))
+                return view('customers.index', compact('data', 'totalIncoming', 'address', 'allServers'))
                     ->with('i', (request()->input('page', 1) - 1) * $paginate);
             }
         }

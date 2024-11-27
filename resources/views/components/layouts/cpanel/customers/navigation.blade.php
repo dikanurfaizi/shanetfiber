@@ -11,13 +11,12 @@
 
 @canany(['customer-list', 'customer-edit', 'customer-delete', 'customer-create', 'secret-edit'])
     <li class="nav-item @if (request()->routeIs('customers*')) active @endif">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseCustomer" aria-expanded="true"
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseCustomer" aria-expanded="false"
             aria-controls="collapseCustomer" style="padding-top: inherit;">
             <i class="fas fa-fw fa-users"></i>
             <span>{{ __('navigation.customers.nav-item') }}</span>
         </a>
-        <div id="collapseCustomer" class="collapse collapse @if (request()->routeIs('customers*')) show @endif"
-            aria-labelledby="headingBilling" data-parent="#accordionSidebar">
+        <div id="collapseCustomer" class="collapse" aria-labelledby="headingCustomer" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 @can('customer-create')
                     <a class="collapse-item @if (request()->routeIs('customers.create')) active @endif"
@@ -30,14 +29,51 @@
     </li>
 @endcanany
 
+@canany(['billing-list', 'billing-create', 'billing-edit', 'billing-delete'])
+    <li class="nav-item @if (request()->routeIs('billings*')) active @endif">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBilling"
+            aria-expanded="false" aria-controls="collapseBilling" style="padding-top: inherit;">
+            <i class="fas fa-money-check-alt"></i>
+            <span>{{ __('navigation.billings.nav-item') }}</span>
+        </a>
+        <div id="collapseBilling" class="collapse" aria-labelledby="headingBilling" data-parent="#accordionSidebar">
+            @can('billing-create')
+                <div class="bg-white py-2 collapse-inner rounded">
+                    <a class="collapse-item @if (request()->routeIs('billings.create')) active @endif"
+                        href="{{ route('billings.create') }}">{{ __('navigation.billings.create') }}</a>
+                    <a class="collapse-item @if (request()->routeIs('billings.create.one')) active @endif"
+                        href="{{ route('billings.create.one') }}">{{ __('navigation.billings.add') }}</a>
+                </div>
+            @endcan
+            @canany(['billing-list', 'billing-edit', 'billing-delete'])
+                <div class="bg-white py-2 collapse-inner rounded">
+                    <a class="collapse-item @if (request()->routeIs('billings.index')) active @endif"
+                        href="{{ route('billings.index') }}">{{ __('navigation.billings.last') }}</a>
+                </div>
+            @endcanany
+        </div>
+    </li>
+@endcanany
+@canany(['user-list', 'user-create', 'user-edit', 'user-delete', 'role-list', 'role-edit', 'role-delete', 'server-list',
+    'server-edit', 'server-delete', 'server-create'])
+    <!-- Divider -->
+    <hr class="sidebar-divider">
+    <li class="nav-item">
+        <a class="nav-link" href="{{ route('websystem.edit', 'websystem') }}">
+            <i class="fas fa-tools"></i>
+            <span><strong>{{ __('Settings') }}</strong></span>
+        </a>
+    </li>
+@endcanany
+
 
 
 <!-- Divider -->
-<hr class="sidebar-divider">
+{{-- <hr class="sidebar-divider">
 @if (request()->routeIs('customers.index'))
     <li class="nav-item active">
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSearchCustomer"
-            aria-expanded="true" aria-controls="collapseSearchCustomer" style="padding-top: inherit;"
+            aria-expanded="false" aria-controls="collapseSearchCustomer" style="padding-top: inherit;"
             style="padding-top: inherit;">
             <i class="fas fa-search"></i>
             <span>{{ __('billing.header.search') }}</span>
@@ -104,7 +140,7 @@
 @endif
 <div class="text-center d-none d-md-inline pt-4">
     <button class="rounded-circle border-0" id="sidebarToggle"></button>
-</div>
+</div> --}}
 
 
 @section('custom_scripts')

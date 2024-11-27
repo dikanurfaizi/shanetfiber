@@ -108,6 +108,9 @@ return [
         'discount' => 'ex. 50',
         'paket' => 'Select Paket',
         'caller-id' => 'Caller ID',
+        'all-internet-service' => 'All Internet Service',
+        'ppp' => 'ppp',
+        'ip-static' => 'IP Static',
     ],
     'button' => [
         'create' => 'Create a Customer',
