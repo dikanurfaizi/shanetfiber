@@ -38,6 +38,7 @@ use App\Services\Routerboard\TestConnectionService;
 // use PDF;
 use App\Services\WhatsappMessageService;
 use Barryvdh\DomPDF\Facade\PDF;
+use App\Models\User;
 
 use Illuminate\Contracts\Database\Eloquent\Builder;
 //use Barryvdh\DomPDF\PDF;
@@ -152,11 +153,21 @@ class BillingController extends Controller
             'name' => $searchName,
             'address' => $searchAddress,
         ];
+        $banks = Bank::orderBy('name', 'ASC')->where('disabled', 'false')->get();
+        // $customers = Customer::orderBy('address', 'ASC')->where('address', '!=', NULL)->get();
+        // $addressUnique = $customers->unique('address');
+        // $address = $addressUnique->pluck('address', 'address');
+        $address = Customer::orderBy('address', 'ASC')->where('address', '!=', NULL)->pluck('address', 'address');
+        $billingsPeriode = BillingPeriode::all();
+        $months = BillingPeriode::orderBy('created_at', 'DESC')->pluck('month', 'month');
+        $years = BillingPeriode::orderBy('created_at', 'DESC')->pluck('year', 'year');
+        // $billings = Billing::orderBy('due_date', )
+        $tellers = User::pluck('name', 'name');
         if ($print == 'true') {
             $pdf = PDF::loadView('print.billing', ['dataPrint' => $dataPrint], $search);
             return $pdf->download('Tagihan_' . str($search['name'] ?? 'all_name')->slug() . '_' . str($search['address'] ?? 'all_address')->slug() . '_' . str($search['status'] ?? 'all_status')->slug() . '_' . str($search['month'] ?? 'all_month')->slug() . '_' . $search['year'] ?? 'all_years' . '.pdf');
         } else {
-            return view('billings.index', compact('data', 'totalPrice', 'search', 'oldPaymentsOff', 'bank'))
+            return view('billings.index', compact('data', 'totalPrice', 'search', 'oldPaymentsOff', 'bank', 'years', 'months', 'address', 'banks', 'tellers'))
                 ->with('i', (request()->input('page', 1) - 1) * $paginate);
         }
     }

@@ -11,13 +11,91 @@
             <div class="alert alert-success mt-2">
                 <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
                 {{ $data->total() }} billings found.
-                <span class="badge bg-primary text-white">Name: {{ $search['name'] ?? 'All' }}</span>
+                {{-- <span class="badge bg-primary text-white">Name: {{ $search['name'] ?? 'All' }}</span>
                 <span class="badge bg-primary text-white">Address: {{ $search['address'] ?? 'All' }}</span>
                 <span class="badge bg-primary text-white">Status: {{ $search['status'] ?? 'All' }}</span>
                 <span class="badge bg-primary text-white">Bulan: {{ $search['month'] ?? 'All' }}</span>
-                <span class="badge bg-primary text-white">Tahun: {{ $search['year'] ?? 'All' }}</span>
+                <span class="badge bg-primary text-white">Tahun: {{ $search['year'] ?? 'All' }}</span> --}}
             </div>
         @endif
+        <span>
+            <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSearchCustomer"
+                aria-expanded="false" aria-controls="collapseSearchCustomer" style="padding-top: inherit;"
+                style="padding-top: inherit;">
+                <i class="fas fa-search"></i>
+                <span>{{ __('billing.header.search') }}</span>
+            </a>
+            <div class="collapse  @if (request()->routeIs('billings.index'))  @endif" id="collapseSearchCustomer">
+                <div class="card-header py-3 rounded">
+                    <form>
+                        <div class="row">
+                            <div class="col-md-2 col-12 mb-2">
+                                {!! Form::text('search_name', null, [
+                                    'placeholder' => __('billing.placeholder.search-customer-name'),
+                                    'class' => 'form-control',
+                                ]) !!}
+                            </div>
+                            <div class="col-md-2 col-12 mb-2">
+                                <select name="search_address" class="form-control">
+                                    <option value="">{{ __('billing.placeholder.search-address') }}</option>
+                                    <option value="no-address">{{ __('billing.placeholder.search-without-address') }}
+                                    </option>
+                                    @foreach ($address as $addrr)
+                                        <option value="{{ $addrr }}">{{ $addrr }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-2 col-12 mb-2">
+                                {!! Form::select('search_month', $months, null, [
+                                    'placeholder' => __('billing.placeholder.search-month'),
+                                    'class' => 'form-control',
+                                    'id' => 'select-month-dropdown',
+                                ]) !!}
+                            </div>
+                            <div class="col-md-2 col-12 mb-2">
+                                {!! Form::select('search_year', $years, null, [
+                                    'placeholder' => __('billing.placeholder.search-year'),
+                                    'class' => 'form-control',
+                                ]) !!}
+                            </div>
+                            <div class="col-md-2 col-12 mb-2">
+                                <select name="search_status" class="form-control" id="search-status-dropdown">
+                                    <option value="">{{ __('billing.placeholder.select.status') }}</option>
+                                    <option value="!LS">{{ __('billing.placeholder.select.unpaid') }}</option>
+                                    <option value="PL">{{ __('billing.placeholder.select.paylater') }}</option>
+                                    <option value="LS">{{ __('billing.placeholder.select.paid') }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 col-12 mb-2">
+                                <input id="select-date" type="datetime-local" class="form-control d-none" name="duedate"
+                                    placeholder="Due Date">
+                            </div>
+                        </div>
+
+                        <!-- Cetak PDF Checkbox -->
+                        <div class="row mt-3">
+                            <div class="col-md-3 col-12 mb-2">
+                                <div class="form-switch">
+                                    <input class="form-check-input" value="true" type="checkbox" name="cetak_pdf">
+                                    <label class="form-check-label">
+                                        {{ __('Cetak PDF?') }}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tombol Search -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <button class="btn btn-success btn-sm" type="submit">
+                                    <i class="fas fa-search"></i> {{ __('customer.button.search') }}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </span>
     </div>
 
     <div class="card-body">
@@ -29,7 +107,7 @@
         @endif
         @if ($data->isNotEmpty())
             <!-- Table Wrapper for Horizontal Scrolling -->
-            <div class="table-responsive">
+            <div style="overflow-x: auto;">
                 <table id="billingsTable" cellspacing="0" width="100%"
                     class="table table-sm table-bordered table-striped table-hover">
                     <thead class="thead-dark text-center">
