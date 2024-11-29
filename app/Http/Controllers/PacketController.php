@@ -35,13 +35,13 @@ class PacketController extends Controller
      */
     public function index()
     {
-        $pakets = Paket::orderBy('name', 'ASC')->paginate(10);
+        $pakets = Paket::orderBy('name', 'ASC')->paginate(20);
         $allPaketsCount = count($pakets);
         return view('packets.index', [
             'pakets' =>  $pakets,
             'paketscount' => $allPaketsCount,
         ])
-            ->with('i', (request()->input('page', 1) - 1) * 10);
+            ->with('i', (request()->input('page', 1) - 1) * 20);
     }
 
     /**

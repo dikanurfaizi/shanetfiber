@@ -1,48 +1,50 @@
 <x-layouts.customers.app-layout title="Customers">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('customer.page.header.index') }}{{ auth()->guard('customer')->user()->name }}</h5>
+        <h5 class="m-0 font-weight-bold text-primary">
+            {{ __('customer.page.header.index') }}{{ auth()->guard('customer')->user()->name }}</h5>
 
     </div>
 
     @php
-    $price = $customer->paket->price;
-    $discountPrice = $price * ($customer->discount/100);
-    $priceAfterDiscount = $price - $discountPrice;
-    $taxPrice = ceil($priceAfterDiscount * ($websystem->tax_rate/100));
-    $totalPrice = $priceAfterDiscount + $taxPrice;
+        $price = $customer->paket->price;
+        $discountPrice = $price * ($customer->discount / 100);
+        $priceAfterDiscount = $price - $discountPrice;
+        $taxPrice = ceil($priceAfterDiscount * ($websystem->tax_rate / 100));
+        $totalPrice = $priceAfterDiscount + $taxPrice;
     @endphp
     <div class="card-body col-lg-12">
-        <table id="serverTable" cellspacing="0" width="100%" class="table no-footer">
+        <div style="overflow-x: auto;">
+            <table id="serverTable" cellspacing="0" width="100%" class="table no-footer">
 
-            <tr class="table-borderless">
-                <td width="100px"><strong>{{ __('customer.label.paket') }}</strong></td>
-                <td width="380px">{{ __(':') }} {{ $customer->paket->name ?? 'No Data' }}</td>
-            </tr>
-            <tr class="table-borderless">
-                <td width="100px"><strong>{{ __('customer.label.price') }}</strong></td>
-                <td width="380px">{{ __(':') }} @moneyIDR($price) </td>
-            </tr>
+                <tr class="table-borderless">
+                    <td width="100px"><strong>{{ __('customer.label.paket') }}</strong></td>
+                    <td width="380px">{{ __(':') }} {{ $customer->paket->name ?? 'No Data' }}</td>
+                </tr>
+                <tr class="table-borderless">
+                    <td width="100px"><strong>{{ __('customer.label.price') }}</strong></td>
+                    <td width="380px">{{ __(':') }} @moneyIDR($price) </td>
+                </tr>
 
-            <tr class="table-borderless">
-                <td width="100px"><strong>{{ __('customer.label.discount') }}</strong></td>
-                <td width="380px">{{ __(':') }} @moneyIDR($discountPrice) </td>
-            </tr>
-            @if ($websystem->enable_tax === 'true')
-            <tr class="table-borderless">
-                <td width="100px"><strong>{{ __('customer.label.tax-rate') }}</strong></td>
-                <td width="380px">{{ __(':') }} <strong>@moneyIDR($taxPrice)</strong></td>
-            </tr>
-            @endif
-            <tr class="table-borderless">
-                <td width="100px"><strong>{{ __('customer.label.bill') }}</strong></td>
+                <tr class="table-borderless">
+                    <td width="100px"><strong>{{ __('customer.label.discount') }}</strong></td>
+                    <td width="380px">{{ __(':') }} @moneyIDR($discountPrice) </td>
+                </tr>
                 @if ($websystem->enable_tax === 'true')
-                <td width="380px">{{ __(':') }} <strong>@moneyIDR($totalPrice)</strong> / month</td>
-                @else
-                <td width="380px">{{ __(':') }} <strong>@moneyIDR($priceAfterDiscount)</strong> / month</td>
+                    <tr class="table-borderless">
+                        <td width="100px"><strong>{{ __('customer.label.tax-rate') }}</strong></td>
+                        <td width="380px">{{ __(':') }} <strong>@moneyIDR($taxPrice)</strong></td>
+                    </tr>
                 @endif
-            </tr>
-            <tr class="table-borderless">
+                <tr class="table-borderless">
+                    <td width="100px"><strong>{{ __('customer.label.bill') }}</strong></td>
+                    @if ($websystem->enable_tax === 'true')
+                        <td width="380px">{{ __(':') }} <strong>@moneyIDR($totalPrice)</strong> / month</td>
+                    @else
+                        <td width="380px">{{ __(':') }} <strong>@moneyIDR($priceAfterDiscount)</strong> / month</td>
+                    @endif
+                </tr>
+                <tr class="table-borderless">
                     <td><strong>{{ __('customer.page.label.due-date') }}</strong></td>
                     <td>{{ __(':') }}
                         @if ($billings->isEmpty())
@@ -60,7 +62,7 @@
                         @endif
                     </td>
                 </tr>
-                {{-- <tr class="table-borderless">
+                <tr class="table-borderless">
                     <td><strong>{{ __('customer.label.last-payment') }}</strong></td>
                     <td>{{ __(':') }}
                         @if ($last_payment)
@@ -69,60 +71,75 @@
                             {{ __('No Payment History') }}
                         @endif
                     </td>
-                </tr> --}}
+                </tr>
 
-        </table>
-        <strong>{{ __('customer.page.label.bill-not-payed') }}</strong>{{ $billings->count() }} {{ __('customer.label.bill') }}
+            </table>
+        </div>
 
-        <table id="customersTable" cellspacing="0" width="100%" class="table  datatable-loading no-footer sortable searchable">
-            <tr>
-                <th>{{ __('customer.table.no') }}</th>
-                <th>{{ __('billing.table.periode') }}</th>
-                <th>{{ __('billing.table.paket-name') }}</th>
-                <th>{{ __('billing.table.paket-price') }}</th>
-                <th width="180px">{{ __('billing.table.action') }}</th>
-            </tr>
-            @foreach ($billings as $billing)
-            <tr>
-                <td>{{ $loop->iteration }}</td>
-                <td>{{ $billing->billing_periode->name }}</td>
-                <td>{{ $billing->paket_name }}</td>
-                <td>
-                    @moneyIDR($billing->paket_price + $billing->tax)
-                </td>
-                <td class="d-flex items-center justify-content">
-                    <a href="{{ route('customer.payment.show', $billing->id) }}" class="btn btn-sm btn-success">
-                        Bayar Online
-                    </a>
-                </td>
-            </tr>
-            @endforeach
+        <div style="overflow-x: auto;">
+            <table id="serverTable" cellspacing="0" width="100%" class="table no-footer">
+                <tr class="table-borderless">
+                    <td><strong>{{ __('customer.page.label.bill-not-payed') }}</strong>{{ $billings->count() }}
+                        {{ __('customer.label.bill') }}</td>
+                </tr>
+            </table>
+        </div>
 
-            <tr>
-                <td></td>
-                <td></td>
-                <td><strong>Total Price</strong></td>
-                <td><strong>: @moneyIDR($billings->sum('paket_price') + $billings->sum('tax'))</strong></td>
-            </tr>
+        <div style="overflow-x: auto;">
+            <table id="customersTable" cellspacing="0" width="100%"
+                class="table  datatable-loading no-footer sortable searchable">
+                <tr>
+                    <th>{{ __('customer.table.no') }}</th>
+                    <th>{{ __('billing.table.periode') }}</th>
+                    <th>{{ __('billing.table.paket-name') }}</th>
+                    <th>{{ __('billing.table.paket-price') }}</th>
+                    <th width="180px">{{ __('billing.table.action') }}</th>
+                </tr>
+                @foreach ($billings as $billing)
+                    <tr>
+                        <td>{{ $loop->iteration }}</td>
+                        <td>{{ $billing->billing_periode->name }}</td>
+                        <td>{{ $billing->paket_name }}</td>
+                        <td>
+                            @moneyIDR($billing->paket_price + $billing->tax)
+                        </td>
+                        <td class="d-flex items-center justify-content">
+                            <a href="{{ route('customer.payment.show', $billing->id) }}"
+                                class="btn btn-sm btn-success">
+                                Bayar Online
+                            </a>
+                        </td>
+                    </tr>
+                @endforeach
+
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td><strong>Total Price</strong></td>
+                    <td><strong>: @moneyIDR($billings->sum('paket_price') + $billings->sum('tax'))</strong></td>
+                </tr>
 
 
-        </table>
-        
+            </table>
+        </div>
+
         @foreach ($billings as $billing)
-        <div class="card-body col-lg-12">
-            Pembayaran dapat dilakukan dengan cara:<br>
-            1. Cash/Tunai.<br>
-            2. Pembayaran Online.<br>
-            3. Transfer ke rekening kami atas nama <span class="badge bg-primary text-white">Dian Ardiansyah</span><br>
+            <div class="card-body col-lg-12">
+                Pembayaran dapat dilakukan dengan cara:<br>
+                1. Cash/Tunai.<br>
+                2. Pembayaran Online.<br>
+                3. Transfer ke rekening kami atas nama <span class="badge bg-primary text-white">Dian
+                    Ardiansyah</span><br>
                 <br>
                 - <span class="badge bg-success text-white">Bank Mandiri : 1730012695905</span><br>
                 - <span class="badge bg-success text-white">Bank BCA : 2990407315</span><br>
                 - <span class="badge bg-success text-white">DANA : 085795909904</span><br>
                 <br>
-                Silahkan konfirmasi ke nomor WhatsApp <span class="badge bg-primary text-white">0878 1804 0024</span> setelah melakukan pembayaran dengan mengirimkan bukti transfer.
-        </div>
+                Silahkan konfirmasi ke nomor WhatsApp <span class="badge bg-primary text-white">0878 1804 0024</span>
+                setelah melakukan pembayaran dengan mengirimkan bukti transfer.
+            </div>
         @endforeach
-        
+
     </div>
 
 </x-layouts.customers.app-layout>

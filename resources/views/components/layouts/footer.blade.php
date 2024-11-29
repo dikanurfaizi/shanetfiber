@@ -4,7 +4,7 @@
             <span>Customer Management V{{ $websystem->version }}</span>
             <div>
                 <span>
-                    Copyright &copy; Shanum Network Fiber 2024
+                    {{ $websystem->title }} &#64;{{ Carbon\Carbon::now()->format('Y') }}
                 </span>
             </div>
         </div>

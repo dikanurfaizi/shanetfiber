@@ -7,7 +7,7 @@
     </div>
 
     <div class="card-body">
-        <div class="table-responsive">
+        <div style="overflow-x: auto;">
             <table id="paketsTable" cellspacing="0" width="100%"
                 class="table datatable-loading no-footer sortable searchable">
                 <thead>

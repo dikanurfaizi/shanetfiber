@@ -8,15 +8,16 @@
     <meta name="description" content="">
     <meta name="author" content="Mehrdad Amini">
     <meta name="csrf-token" content="{{ csrf_token() }}" />
-    <title>{{$title ?? ''}} | {{ __('websystem.title') }}</title>
+    <title>{{ $title ?? '' }} | {{ __('websystem.title') }}</title>
     <link rel="icon" type="image/x-icon" href="{{ asset('images/favicon/favicon.png') }}" />
     @vite('resources/sass/app.scss')
     <!-- Custom fonts for this template-->
     <link href="{{ asset('css/fontawsome-free-all.min.css') }}" rel="stylesheet" type="text/css">
-    <link href="{{asset('assets/notify/notify.min.css')}}" rel="stylesheet">
-    <link href="{{asset('assets/sweet-alert/sweet-alert.min.css')}}" rel="stylesheet">
-    <link href="{{asset('assets/vendor/datatables/datatables.min.css')}}" rel="stylesheet">
+    <link href="{{ asset('assets/notify/notify.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('assets/sweet-alert/sweet-alert.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('assets/vendor/datatables/datatables.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/mobile.css') }}" rel="stylesheet">
 
     <!-- Custom styles for this template-->
     <link href="{{ asset('css/sb-admin-2.min.css') }}" rel="stylesheet">
@@ -38,24 +39,24 @@
                 <x-layouts.customers.top-bar />
                 <!-- End of Topbar -->
                 @if ($errors->any())
-                <div class="container-fluid">
-                    <div class="card shadow mb-4">
+                    <div class="container-fluid">
+                        <div class="card shadow mb-4">
 
-                        <div class="card-body">
-                            <div class="form-group mt-4 mb-4">
-                                <div class="pull-right alert alert-danger">
-                                    <strong>Whoops!</strong> There were some problems.<br><br>
-                                    <ul>
-                                        @foreach ($errors->all() as $error)
-                                        <li>{{ $error }}</li>
-                                        @endforeach
-                                    </ul>
+                            <div class="card-body">
+                                <div class="form-group mt-4 mb-4">
+                                    <div class="pull-right alert alert-danger">
+                                        <strong>Whoops!</strong> There were some problems.<br><br>
+                                        <ul>
+                                            @foreach ($errors->all() as $error)
+                                                <li>{{ $error }}</li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
+                        </div>
                     </div>
-                </div>
                 @endif
                 <!-- Main page content-->
                 <div class="container-fluid">
@@ -70,7 +71,7 @@
             <!-- Footer -->
             <x-layouts.customers.footer />
             <!-- End of Footer -->
-       </div>
+        </div>
         <!-- End of Content Wrapper -->
     </div>
     <!-- End of Page Wrapper -->
@@ -81,7 +82,8 @@
     </a>
 
     <!-- Logout Modal-->
-    <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -110,32 +112,31 @@
     <!-- Core plugin JavaScript-->
     <script src="{{ asset('assets/vendor/jquery/jquery.min.js') }}"></script>
     <script src="{{ asset('js/jquery.easing-1.4.1.min.js') }}"></script>
-    <script src="{{asset('js/bootstrap.bundle.min.js')}}" crossorigin="anonymous"></script>
+    <script src="{{ asset('js/bootstrap.bundle.min.js') }}" crossorigin="anonymous"></script>
     <!-- Custom scripts for all pages-->
     <script src="{{ asset('js/sb-admin-2.min.js') }}"></script>
-    <script src="{{asset('assets/notify/notify.min.js')}}"></script>
-    <script src="{{asset('assets/sweet-alert/sweet-alert.min.js')}}"></script>
-    <script src="{{asset('assets/vendor/datatables/datatables.min.js')}}"></script>
+    <script src="{{ asset('assets/notify/notify.min.js') }}"></script>
+    <script src="{{ asset('assets/sweet-alert/sweet-alert.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/datatables/datatables.min.js') }}"></script>
+
     <!-- Page level custom scripts -->
     @yield('custom_scripts')
     @if ($message = Session::get('success'))
-
-    <script>
-        Swal.fire({
-            icon: 'success',
-            text: '{{ $message }}',
-        })
-    </script>
+        <script>
+            Swal.fire({
+                icon: 'success',
+                text: '{{ $message }}',
+            })
+        </script>
     @endif
 
     @if ($message = Session::get('error'))
-
-    <script>
-        Swal.fire({
-            icon: 'error',
-            text: '{{ $message }}',
-        })
-    </script>
+        <script>
+            Swal.fire({
+                icon: 'error',
+                text: '{{ $message }}',
+            })
+        </script>
     @endif
 
 </body>

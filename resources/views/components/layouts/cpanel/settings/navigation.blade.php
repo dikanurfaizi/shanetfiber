@@ -25,7 +25,7 @@
             <i class="fas fa-server"></i>
             <span>{{ __('Servers') }}</span>
         </a>
-        <div id="collapseServer" class="collapse collapse @if (request()->routeIs('servers*')) show @endif"
+        <div id="collapseServer" class="collapse collapse @if (request()->routeIs('servers*'))  @endif"
             aria-labelledby="headingBilling" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 @can('server-create')
@@ -52,7 +52,7 @@
             <i class="fas fa-user-shield"></i>
             <span>{{ __(' Router') }}</span>
         </a>
-        <div id="collapseRouter" class="collapse collapse @if (request()->routeIs('routers*') || request()->routeIs('brand*')) show @endif"
+        <div id="collapseRouter" class="collapse collapse @if (request()->routeIs('routers*') || request()->routeIs('brand*'))  @endif"
             aria-labelledby="headingBilling" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 @can('server-create')
@@ -88,7 +88,7 @@
             <i class="fas fa-user-cog"></i>
             <span>{{ __('dashboard.users') }}</span>
         </a>
-        <div id="collapseUser" class="collapse collapse @if (request()->routeIs('users*')) show @endif"
+        <div id="collapseUser" class="collapse collapse @if (request()->routeIs('users*'))  @endif"
             aria-labelledby="headingBilling" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 @can('user-create')
@@ -114,7 +114,7 @@
             <i class="fas fa-user-secret"></i>
             <span>{{ __(' Roles') }}</span>
         </a>
-        <div id="collapseRole" class="collapse collapse @if (request()->routeIs('roles*')) show @endif"
+        <div id="collapseRole" class="collapse collapse @if (request()->routeIs('roles*'))  @endif"
             aria-labelledby="headingBilling" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 <a class="collapse-item @if (request()->routeIs('roles.create')) active @endif"
@@ -142,7 +142,7 @@
         </a>
         <div id="collapseGateway" class="collapse collapse @if (request()->routeIs('whatsappgateway*') ||
                 request()->routeIs('whatsappnumber*') ||
-                request()->routeIs('whatsappmessage*')) show @endif"
+                request()->routeIs('whatsappmessage*'))  @endif"
             aria-labelledby="headingBilling" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
 
@@ -190,7 +190,7 @@
             <i class="fas fa-user-times"></i>
             <span>{{ __(' Auto Isolir') }}</span>
         </a>
-        <div id="collapseAutoisolir" class="collapse collapse @if (request()->routeIs('autoisolir*')) show @endif"
+        <div id="collapseAutoisolir" class="collapse collapse @if (request()->routeIs('autoisolir*'))  @endif"
             aria-labelledby="headingBilling" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 <a class="collapse-item @if (request()->routeIs('autoisolir.create')) active @endif"

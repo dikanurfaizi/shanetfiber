@@ -16,7 +16,7 @@
             <i class="fas fa-money-check-alt"></i>
             <span>{{ __('navigation.billings.nav-item') }}</span>
         </a>
-        <div id="collapseBilling" class="collapse collapse @if (request()->routeIs('billings*') || request()->routeIs('receipts*')) show @endif"
+        <div id="collapseBilling" class="collapse collapse @if (request()->routeIs('billings*') || request()->routeIs('receipts*'))  @endif"
             aria-labelledby="headingBilling" data-parent="#accordionSidebar">
             @canany(['billing-list'])
                 <div class="bg-white py-2 collapse-inner rounded">
@@ -27,8 +27,7 @@
                 </div>
             @endcanany
             @can('billing-create')
-                <div
-                    class="collapse collapse @if (request()->routeIs('billings*')) show @endif bg-white py-2 collapse-inner rounded">
+                <div class="collapse collapse @if (request()->routeIs('billings*'))  @endif bg-white py-2 collapse-inner rounded">
                     <a class="collapse-item @if (request()->routeIs('billings.create')) active @endif"
                         href="{{ route('billings.create') }}">{{ __('navigation.billings.create') }}</a>
                     <a class="collapse-item @if (request()->routeIs('billings.create.one')) active @endif"
@@ -109,7 +108,7 @@
             <i class="fas fa-search"></i>
             <span>{{ __('billing.header.search') }}</span>
         </a>
-        <div class="collapse show" id="collapseSearchCustomer">
+        <div class="collapse" id="collapseSearchCustomer">
             <div class="card-header py-3 rounded">
                 <form>
                     <div class="row align-items-center mb-1">
