@@ -5,88 +5,90 @@
     </div>
 
     <div class="card-body col-lg-12">
-        <table id="serverTable" cellspacing="0" width="100%" class="table no-footer">
-            <tr class="table-borderless">
-                <td class="py-1" width="150px"><strong>{{ __('customer.label.id') }}</strong></td>
-                <td class="py-1" width="380px">{{ __(':') }} {{ $customer->customer_id ?? 'No ID' }}</td>
+        <div style="overflow-x: auto;">
+            <table id="serverTable" cellspacing="0" width="100%" class="table no-footer">
+                <tr class="table-borderless">
+                    <td class="py-1" width="150px"><strong>{{ __('customer.label.id') }}</strong></td>
+                    <td class="py-1" width="380px">{{ __(':') }} {{ $customer->customer_id ?? 'No ID' }}</td>
 
-            </tr>
-            <tr class="table-borderless">
-                <td class="py-1" width="150px"><strong>{{ __('customer.label.name') }}</strong></td>
-                <td class="py-1" width="380px">{{ __(':') }} {{ $customer->name }}</td>
-                <td class="py-1" width="150px"><strong>{{ __('customer.label.email') }}</strong></td>
-                <td class="py-1" width="380px">{{ __(':') }} {{ $customer->email }}</td>
-            </tr>
-            <tr class="table-borderless">
-                <td class="py-1"><strong>{{ __('customer.label.address') }}</strong></td>
-                <td class="py-1">{{ __(':') }} {{ $customer->address }}</td>
-                <td class="py-1"><strong>{{ __('customer.label.contact') }}</strong></td>
-                <td class="py-1">{{ __(':') }} {{ $customer_contact }}</td>
-            </tr>
-            <tr class="table-borderless">
-                <td class="py-1"><strong>{{ __('customer.label.paket') }}</strong></td>
-                <td class="py-1">{{ __(':') }} {{ $customer->paket->name ?? 'No Data' }}</td>
+                </tr>
+                <tr class="table-borderless">
+                    <td class="py-1" width="150px"><strong>{{ __('customer.label.name') }}</strong></td>
+                    <td class="py-1" width="380px">{{ __(':') }} {{ $customer->name }}</td>
+                    <td class="py-1" width="150px"><strong>{{ __('customer.label.email') }}</strong></td>
+                    <td class="py-1" width="380px">{{ __(':') }} {{ $customer->email }}</td>
+                </tr>
+                <tr class="table-borderless">
+                    <td class="py-1"><strong>{{ __('customer.label.address') }}</strong></td>
+                    <td class="py-1">{{ __(':') }} {{ $customer->address }}</td>
+                    <td class="py-1"><strong>{{ __('customer.label.contact') }}</strong></td>
+                    <td class="py-1">{{ __(':') }} {{ $customer_contact }}</td>
+                </tr>
+                <tr class="table-borderless">
+                    <td class="py-1"><strong>{{ __('customer.label.paket') }}</strong></td>
+                    <td class="py-1">{{ __(':') }} {{ $customer->paket->name ?? 'No Data' }}</td>
 
-                <td class="py-1"><strong>{{ __('customer.label.activation-date') }}</strong></td>
-                <td class="py-1">{{ __(':') }}
-                    @if ($customer->activation == 'true')
-                        {{ Carbon\Carbon::parse($customer->activation_date)->translatedFormat('l, d F Y') ?? 'No Data' }}
-                    @else
-                        <i class="text-danger">{{ __('Not Acitaved') }}</i>
-                    @endif
-                </td>
-            </tr>
-            <tr class="table-borderless">
-                <td class="py-1"><strong>{{ __('customer.label.bill') }}</strong></td>
-                <td class="py-1">{{ __(':') }}
-                    <strong>
-                        @if ($customer->paket->price * ((100 - $customer->discount) / 100) > 0)
-                            @moneyIDR($customer->paket->price * ((100 - $customer->discount) / 100))
+                    <td class="py-1"><strong>{{ __('customer.label.activation-date') }}</strong></td>
+                    <td class="py-1">{{ __(':') }}
+                        @if ($customer->activation == 'true')
+                            {{ Carbon\Carbon::parse($customer->activation_date)->translatedFormat('l, d F Y') ?? 'No Data' }}
                         @else
-                            {{ __('Free') }}
+                            <i class="text-danger">{{ __('Not Acitaved') }}</i>
                         @endif
-                    </strong>
-                </td>
-                <td class="py-1"><strong>{{ __('customer.label.discount') }}</strong></td>
-                <td class="py-1">{{ __(':') }}
-                    @if ($customer->discount > 0)
-                        {{ $customer->discount ?? 'No Data' }} %
-                    @else
-                        {{ __('No Discount') }}
-                    @endif
-                </td>
-            </tr>
-            @if ($billingLastPayment)
-                @php
-                    $activationDate = Carbon\Carbon::parse($customer->activation_date)->format('d');
-                    $totalDaysInMonth = Carbon\Carbon::parse(
-                        $billingLastPayment->payment_time ?? '1970-01-01',
-                    )->addMonth()->daysInMonth;
-                    if ($activationDate > $totalDaysInMonth) {
-                        $activationDate = $totalDaysInMonth;
-                    }
-                @endphp
+                    </td>
+                </tr>
+                <tr class="table-borderless">
+                    <td class="py-1"><strong>{{ __('customer.label.bill') }}</strong></td>
+                    <td class="py-1">{{ __(':') }}
+                        <strong>
+                            @if ($customer->paket->price * ((100 - $customer->discount) / 100) > 0)
+                                @moneyIDR($customer->paket->price * ((100 - $customer->discount) / 100))
+                            @else
+                                {{ __('Free') }}
+                            @endif
+                        </strong>
+                    </td>
+                    <td class="py-1"><strong>{{ __('customer.label.discount') }}</strong></td>
+                    <td class="py-1">{{ __(':') }}
+                        @if ($customer->discount > 0)
+                            {{ $customer->discount ?? 'No Data' }} %
+                        @else
+                            {{ __('No Discount') }}
+                        @endif
+                    </td>
+                </tr>
+                @if ($billingLastPayment)
+                    @php
+                        $activationDate = Carbon\Carbon::parse($customer->activation_date)->format('d');
+                        $totalDaysInMonth = Carbon\Carbon::parse(
+                            $billingLastPayment->payment_time ?? '1970-01-01',
+                        )->addMonth()->daysInMonth;
+                        if ($activationDate > $totalDaysInMonth) {
+                            $activationDate = $totalDaysInMonth;
+                        }
+                    @endphp
 
-                <tr class="table-borderless">
-                    <td class="py-1"><strong>{{ __('customer.label.last-payment') }}</strong></td>
-                    <td class="py-1">{{ __(':') }}
-                        {{ Carbon\Carbon::parse($billingLastPayment->payment_time ?? '1970-01-01')->format('d F Y') ?? 'No Payment' }}
-                    </td>
-                    <td class="py-1"><strong>{{ __('customer.label.next-payment') }}</strong></td>
-                    <td class="py-1">{{ __(':') }}
-                        {{ $activationDate .' ' .Carbon\Carbon::parse($billingLastPayment->payment_time ?? '1970-01-01')->addMonth()->format('F Y') }}
-                    </td>
-                </tr>
-            @endif
-            @if ($notYetPaid > 0)
-                <tr class="table-borderless">
-                    <td class="py-1"><strong>{{ __('customer.label.not-yet-paid') }}</strong></td>
-                    <td class="py-1">{{ __(':') }}
-                        @moneyIDR($notYetPaid)
-                    </td>
-                </tr>
-            @endif
-        </table>
+                    <tr class="table-borderless">
+                        <td class="py-1"><strong>{{ __('customer.label.last-payment') }}</strong></td>
+                        <td class="py-1">{{ __(':') }}
+                            {{ Carbon\Carbon::parse($billingLastPayment->payment_time ?? '1970-01-01')->format('d F Y') ?? 'No Payment' }}
+                        </td>
+                        <td class="py-1"><strong>{{ __('customer.label.next-payment') }}</strong></td>
+                        <td class="py-1">{{ __(':') }}
+                            {{ $activationDate .' ' .Carbon\Carbon::parse($billingLastPayment->payment_time ?? '1970-01-01')->addMonth()->format('F Y') }}
+                        </td>
+                    </tr>
+                @endif
+                @if ($notYetPaid > 0)
+                    <tr class="table-borderless">
+                        <td class="py-1"><strong>{{ __('customer.label.not-yet-paid') }}</strong></td>
+                        <td class="py-1">{{ __(':') }}
+                            @moneyIDR($notYetPaid)
+                        </td>
+                    </tr>
+                @endif
+            </table>
+        </div>
         <div class="row align-items-center">
             <div class="col-md-12 mb-3">
                 @can('customer-edit')
@@ -117,104 +119,114 @@
                 @endif
             </div>
             <div class="card-body col-lg-12">
-                <table id="serverTable" cellspacing="0" width="100%" class="table no-footer">
-                    <tr class="table-borderless">
-                        <td class="py-1" width="150px"><strong>{{ __('customer.label.server') }}</strong></td>
-                        <td class="py-1" width="380px">{{ __(':') }}
-                            <span class="badge text-white bg-success">
-                                <i class="fas fa-server"></i> {{ $customer->mikrotik->name }}
-                            </span>
-                        </td>
-                        <td class="py-1" width="150px"><strong>{{ __('customer.label.profile') }}</strong></td>
-                        <td class="py-1" width="380px">
-                            {{ __(':') }}
-                            <span class="text-primary">{{ $pppsecret['profile'] ?? 'No Profile' }}</span>
-                        </td>
-                    </tr>
-
-                    <tr class="table-borderless">
-                        <td class="py-1"><strong>{{ __('customer.label.username') }}</strong></td>
-                        <td class="py-1">
-                            {{ __(':') }} <span
-                                class="@if ($pppsecret['name'] != $customer->username) alert alert-danger @else text-primary @endif">
-                                {{ $pppsecret['name'] ?? 'No Data' }}</span>
-                        </td>
-                        <td class="py-1"><strong>{{ __('customer.label.password-ppp') }}</strong></td>
-                        <td class="py-1">
-                            {{ __(':') }} <span
-                                class="@if ($pppsecret['password'] != $customer->password_ppp) alert alert-danger @else text-primary @endif">
-                                {{ $pppsecret['password'] ?? 'No Data' }}</span>
-                        </td>
-                    </tr>
-
-                    <tr class="table-borderless">
-                        <td class="py-1"><strong>{{ __('customer.label.remote-address') }}</strong></td>
-                        <td class="py-1">{{ __(':') }}
-                            <span class="text-primary"> {{ $secretActive['address'] ?? 'Offline' }}</span>
-                            @if (isset($secretActive['address']))
-                                <span>
-                                    <a class="mt-1 text-danger"
-                                        href="http://{{ $secretActive['address'] }}:{{ $ont->port ?? '80' }}"
-                                        target="_blank">
-                                        <span class="badge text-white bg-primary">{{ __('customer.remote') }}</span>
-                                    </a>
+                <div style="overflow-x: auto;">
+                    <table id="serverTable" cellspacing="0" width="100%" class="table no-footer">
+                        <tr class="table-borderless">
+                            <td class="py-1" width="150px">
+                                <strong>{{ __('customer.label.server') }}</strong>
+                            </td>
+                            <td class="py-1" width="380px">{{ __(':') }}
+                                <span class="badge text-white bg-success">
+                                    <i class="fas fa-server"></i> {{ $customer->mikrotik->name }}
                                 </span>
-                            @endif
-                        </td>
-                        <td class="py-1"><strong>{{ __('customer.label.service') }}</strong></td>
-                        <td class="py-1">
-                            {{ __(':') }} <span class="text-primary"> {{ $customer->ppp_type->name }}</span>
-                        </td>
-                    </tr>
+                            </td>
+                            <td class="py-1" width="150px">
+                                <strong>{{ __('customer.label.profile') }}</strong>
+                            </td>
+                            <td class="py-1" width="380px">
+                                {{ __(':') }}
+                                <span class="text-primary">{{ $pppsecret['profile'] ?? 'No Profile' }}</span>
+                            </td>
+                        </tr>
 
-                    <tr class="table-borderless">
-                        <td class="py-1"><strong>{{ __('customer.label.state') }}</strong></td>
-                        <td class="py-1">{{ __(':') }}
-
-                            @if ($customer->activation == 'false')
-                                <span class="badge text-white bg-danger">
-                                    <i class="fa fa-times text-warning me-2"></i>
-                                    {{ __('customer.info.not-activation') }}
-                                </span>
-                            @else
-                                @if ($pppsecret['disabled'] === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
-                                    <span class="badge text-white bg-success">
-                                        <i class="fas fa-lock-open"></i> {{ __('pppoe.secret.enabled') }}
-                                    </span>
-                                @else
-                                    <span class="badge text-white bg-danger">
-                                        <i class="fas fa-lock"></i> {{ __('pppoe.secret.disabled') }}
-                                    </span>
-                                @endif
-                            @endif
-                        </td>
-                        @if (isset($secretActive))
-                            <td class="py-1"><strong>{{ __('customer.label.uptime') }}</strong></td>
+                        <tr class="table-borderless">
+                            <td class="py-1"><strong>{{ __('customer.label.username') }}</strong></td>
                             <td class="py-1">
                                 {{ __(':') }} <span
-                                    class="text-primary">{{ $secretActive['uptime'] ?? 'No Data' }}</span>
+                                    class="@if ($pppsecret['name'] != $customer->username) alert alert-danger @else text-primary @endif">
+                                    {{ $pppsecret['name'] ?? 'No Data' }}</span>
                             </td>
-                        @endif
-                    </tr>
+                            <td class="py-1"><strong>{{ __('customer.label.password-ppp') }}</strong></td>
+                            <td class="py-1">
+                                {{ __(':') }} <span
+                                    class="@if ($pppsecret['password'] != $customer->password_ppp) alert alert-danger @else text-primary @endif">
+                                    {{ $pppsecret['password'] ?? 'No Data' }}</span>
+                            </td>
+                        </tr>
 
-                    <tr class="table-borderless">
-                        <td class="py-1"><strong>{{ __('customer.label.caller-id') }}</strong></td>
-                        <td class="py-1">{{ __(':') }}
-                            <span class="text-primary"> {{ $customer->caller_id ?? 'No Caller ID' }}</span>
-                        </td>
-                        <td class="py-1"><strong>{{ __('customer.label.last-caller-id') }}</strong></td>
-                        <td class="py-1">{{ __(':') }}
-                            <span class="text-primary"> {{ $pppsecret['last-caller-id'] ?? 'No Caller ID' }}</span>
-                        </td>
-                    </tr>
-                    <tr class="table-borderless">
+                        <tr class="table-borderless">
+                            <td class="py-1"><strong>{{ __('customer.label.remote-address') }}</strong></td>
+                            <td class="py-1">{{ __(':') }}
+                                <span class="text-primary"> {{ $secretActive['address'] ?? 'Offline' }}</span>
+                                @if (isset($secretActive['address']))
+                                    <span>
+                                        <a class="mt-1 text-danger"
+                                            href="http://{{ $secretActive['address'] }}:{{ $ont->port ?? '80' }}"
+                                            target="_blank">
+                                            <span
+                                                class="badge text-white bg-primary">{{ __('customer.remote') }}</span>
+                                        </a>
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="py-1"><strong>{{ __('customer.label.service') }}</strong></td>
+                            <td class="py-1">
+                                {{ __(':') }} <span class="text-primary">
+                                    {{ $customer->ppp_type->name }}</span>
+                            </td>
+                        </tr>
 
-                        <td class="py-1"><strong>{{ __('customer.label.comment') }}</strong></td>
-                        <td class="py-1">{{ __(':') }}
-                            <span class="text-primary"> {{ $pppsecret['comment'] ?? 'No Comment' }}</span>
-                        </td>
-                    </tr>
-                </table>
+                        <tr class="table-borderless">
+                            <td class="py-1"><strong>{{ __('customer.label.state') }}</strong></td>
+                            <td class="py-1">{{ __(':') }}
+
+                                @if ($customer->activation == 'false')
+                                    <span class="badge text-white bg-danger">
+                                        <i class="fa fa-times text-warning me-2"></i>
+                                        {{ __('customer.info.not-activation') }}
+                                    </span>
+                                @else
+                                    @if ($pppsecret['disabled'] === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
+                                        <span class="badge text-white bg-success">
+                                            <i class="fas fa-lock-open"></i> {{ __('pppoe.secret.enabled') }}
+                                        </span>
+                                    @else
+                                        <span class="badge text-white bg-danger">
+                                            <i class="fas fa-lock"></i> {{ __('pppoe.secret.disabled') }}
+                                        </span>
+                                    @endif
+                                @endif
+                            </td>
+                            @if (isset($secretActive))
+                                <td class="py-1"><strong>{{ __('customer.label.uptime') }}</strong></td>
+                                <td class="py-1">
+                                    {{ __(':') }} <span
+                                        class="text-primary">{{ $secretActive['uptime'] ?? 'No Data' }}</span>
+                                </td>
+                            @endif
+                        </tr>
+
+                        <tr class="table-borderless">
+                            <td class="py-1"><strong>{{ __('customer.label.caller-id') }}</strong></td>
+                            <td class="py-1">{{ __(':') }}
+                                <span class="text-primary">
+                                    {{ $customer->caller_id ?? 'No Caller ID' }}</span>
+                            </td>
+                            <td class="py-1"><strong>{{ __('customer.label.last-caller-id') }}</strong></td>
+                            <td class="py-1">{{ __(':') }}
+                                <span class="text-primary">
+                                    {{ $pppsecret['last-caller-id'] ?? 'No Caller ID' }}</span>
+                            </td>
+                        </tr>
+                        <tr class="table-borderless">
+
+                            <td class="py-1"><strong>{{ __('customer.label.comment') }}</strong></td>
+                            <td class="py-1">{{ __(':') }}
+                                <span class="text-primary"> {{ $pppsecret['comment'] ?? 'No Comment' }}</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         @can('secret-edit')
@@ -287,54 +299,60 @@
         </div>
 
         <div class="card-body col-lg-8">
-            <table id="serverTable" cellspacing="0" width="100%" class="table no-footer">
-                <tr class="table-borderless">
-                    <td class="py-1" width="150px"><strong>{{ __('customer.label.server') }}</strong></td>
-                    <td class="py-1" width="380px">{{ __(':') }} {{ $customer->mikrotik->name }}</td>
-                    <td class="py-1" width="150px"><strong>{{ __('customer.label.profile') }}</strong></td>
-                    <td class="py-1" width="380px">{{ __(':') }} {{ $customer->paket->profile }}</td>
-                </tr>
-                <tr class="table-borderless">
-                    <td class="py-1"><strong>{{ __('customer.label.service') }}</strong></td>
-                    <td class="py-1">
-                        {{ __(':') }} <span class="text-primary">
-                            {{ $customer->ppp_type->name ?? 'No Service' }}</span>
-                    </td>
-                    <td class="py-1"><strong>{{ __('customer.label.state') }}</strong></td>
-                    <td class="py-1">
-                        {{ __(':') }} <span class="text-primary">
-                            @if ($customer->activation == 'false')
-                                <span class="badge text-white bg-danger">
-                                    <i class="fa fa-times text-warning me-2"></i>
-                                    {{ __('customer.info.not-activation') }}
-                                </span>
-                            @else
-                                @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
-                                    <span class="badge text-white bg-success">
-                                        <i class="fas fa-lock-open"></i> {{ __('pppoe.secret.enabled') }}
-                                    </span>
-                                @elseif ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
+            <div style="overflow-x: auto;">
+                <table id="serverTable" cellspacing="0" width="100%" class="table no-footer">
+                    <tr class="table-borderless">
+                        <td class="py-1" width="150px"><strong>{{ __('customer.label.server') }}</strong>
+                        </td>
+                        <td class="py-1" width="380px">{{ __(':') }} {{ $customer->mikrotik->name }}
+                        </td>
+                        <td class="py-1" width="150px"><strong>{{ __('customer.label.profile') }}</strong>
+                        </td>
+                        <td class="py-1" width="380px">{{ __(':') }} {{ $customer->paket->profile }}
+                        </td>
+                    </tr>
+                    <tr class="table-borderless">
+                        <td class="py-1"><strong>{{ __('customer.label.service') }}</strong></td>
+                        <td class="py-1">
+                            {{ __(':') }} <span class="text-primary">
+                                {{ $customer->ppp_type->name ?? 'No Service' }}</span>
+                        </td>
+                        <td class="py-1"><strong>{{ __('customer.label.state') }}</strong></td>
+                        <td class="py-1">
+                            {{ __(':') }} <span class="text-primary">
+                                @if ($customer->activation == 'false')
                                     <span class="badge text-white bg-danger">
-                                        <i class="fas fa-lock"></i> {{ __('pppoe.secret.disabled') }}
+                                        <i class="fa fa-times text-warning me-2"></i>
+                                        {{ __('customer.info.not-activation') }}
                                     </span>
+                                @else
+                                    @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
+                                        <span class="badge text-white bg-success">
+                                            <i class="fas fa-lock-open"></i> {{ __('pppoe.secret.enabled') }}
+                                        </span>
+                                    @elseif ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
+                                        <span class="badge text-white bg-danger">
+                                            <i class="fas fa-lock"></i> {{ __('pppoe.secret.disabled') }}
+                                        </span>
+                                    @endif
                                 @endif
-                            @endif
-                        </span>
-                    </td>
-                </tr>
-                <tr class="table-borderless">
-                    <td class="py-1"><strong>{{ __('customer.label.username') }}</strong></td>
-                    <td class="py-1">
-                        {{ __(':') }} <span class="text-primary">
-                            {{ $customer->username ?? 'No Data' }}</span>
-                    </td>
-                    <td class="py-1"><strong>{{ __('customer.label.password-ppp') }}</strong></td>
-                    <td class="py-1">
-                        {{ __(':') }} <span class="text-primary">
-                            {{ $customer->password_ppp ?? 'No Data' }}</span>
-                    </td>
-                </tr>
-            </table>
+                            </span>
+                        </td>
+                    </tr>
+                    <tr class="table-borderless">
+                        <td class="py-1"><strong>{{ __('customer.label.username') }}</strong></td>
+                        <td class="py-1">
+                            {{ __(':') }} <span class="text-primary">
+                                {{ $customer->username ?? 'No Data' }}</span>
+                        </td>
+                        <td class="py-1"><strong>{{ __('customer.label.password-ppp') }}</strong></td>
+                        <td class="py-1">
+                            {{ __(':') }} <span class="text-primary">
+                                {{ $customer->password_ppp ?? 'No Data' }}</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
             <div class="col-xs-12 col-sm-12 col-md-12">
                 @canany('customer-edit', 'customer-create')
                     @if ($customer->activation == 'false')
@@ -358,43 +376,49 @@
     </div>
 
     <div class="card-body col-lg-12">
-        <table id="serverTable" cellspacing="0" width="100%" class="table no-footer">
-            <tr class="table-borderless">
-                <td class="py-1" width="150px"><strong>{{ __('customer.label.router') }}</strong></td>
-                <td class="py-1" width="380px">{{ __(':') }}
-                    <span class="badge text-white bg-success">
-                        <i class="fas fa-server"></i> {{ $ont->merk_ont ?? 'Not Set' }} {{ $ont->type_ont ?? '' }}
-                    </span>
-                </td>
-            </tr>
-            <tr class="table-borderless">
-                <td class="py-1"><strong>{{ __('customer.label.username-ont') }}</strong></td>
-                <td class="py-1">
-                    {{ __(':') }} <span class="text-primary">{{ $ont->username ?? 'Not Set' }}</span>
-                </td>
-                <td class="py-1" width="150px"><strong>{{ __('customer.label.password-ont') }}</strong></td>
-                <td class="py-1" width="380px">
-                    {{ __(':') }} <span class="text-primary"> {{ $ont->password ?? 'Not Set' }}</span>
-                </td>
-            </tr>
-            <tr class="table-borderless">
-                <td class="py-1"><strong>{{ __('customer.label.remote-port') }}</strong></td>
-                <td class="py-1">
-                    {{ __(':') }} <span class="text-primary"> {{ $ont->port ?? 'Not Set' }}</span>
-                </td>
-                <td class="py-1"><strong>{{ __('customer.label.mac-address') }}</strong></td>
-                <td class="py-1">
-                    {{ __(':') }} <span class="text-primary"> {{ $ont->mac_address ?? 'Not Set' }}</span>
-                </td>
-            </tr>
-            <tr class="table-borderless">
-                <td class="py-1"><strong>{{ __('customer.label.description') }}</strong></td>
-                <td class="py-1">
-                    {{ __(':') }} <span class="text-primary">
-                        {{ $ont->description ?? 'No Description' }}</span>
-                </td>
-            </tr>
-        </table>
+        <div style="overflow-x: auto;">
+            <table id="serverTable" cellspacing="0" width="100%" class="table no-footer">
+                <tr class="table-borderless">
+                    <td class="py-1" width="150px"><strong>{{ __('customer.label.router') }}</strong></td>
+                    <td class="py-1" width="380px">{{ __(':') }}
+                        <span class="badge text-white bg-success">
+                            <i class="fas fa-server"></i> {{ $ont->merk_ont ?? 'Not Set' }}
+                            {{ $ont->type_ont ?? '' }}
+                        </span>
+                    </td>
+                </tr>
+                <tr class="table-borderless">
+                    <td class="py-1"><strong>{{ __('customer.label.username-ont') }}</strong></td>
+                    <td class="py-1">
+                        {{ __(':') }} <span class="text-primary">{{ $ont->username ?? 'Not Set' }}</span>
+                    </td>
+                    <td class="py-1" width="150px"><strong>{{ __('customer.label.password-ont') }}</strong>
+                    </td>
+                    <td class="py-1" width="380px">
+                        {{ __(':') }} <span class="text-primary">
+                            {{ $ont->password ?? 'Not Set' }}</span>
+                    </td>
+                </tr>
+                <tr class="table-borderless">
+                    <td class="py-1"><strong>{{ __('customer.label.remote-port') }}</strong></td>
+                    <td class="py-1">
+                        {{ __(':') }} <span class="text-primary"> {{ $ont->port ?? 'Not Set' }}</span>
+                    </td>
+                    <td class="py-1"><strong>{{ __('customer.label.mac-address') }}</strong></td>
+                    <td class="py-1">
+                        {{ __(':') }} <span class="text-primary">
+                            {{ $ont->mac_address ?? 'Not Set' }}</span>
+                    </td>
+                </tr>
+                <tr class="table-borderless">
+                    <td class="py-1"><strong>{{ __('customer.label.description') }}</strong></td>
+                    <td class="py-1">
+                        {{ __(':') }} <span class="text-primary">
+                            {{ $ont->description ?? 'No Description' }}</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
 
         <div class="row align-items-center">
             <div class="col-md-12 mb-3">
