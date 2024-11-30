@@ -6,7 +6,7 @@
     </button>
 
     <!-- Link Donasi (Pindahkan ke posisi paling kiri) -->
-    <a class="nav-link" href="https://www.shanetfiber.my.id/cpanel/home" target="_blank">
+    <a class="nav-link" href="/cpanel/home">
         <img src="/images/donate.png" alt="Saweria" style="height: 30px !important;">
     </a>
 

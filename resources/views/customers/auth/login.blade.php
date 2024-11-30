@@ -31,10 +31,15 @@
                                         </div>
                                     @enderror
 
-                                    <div class="form-group">
+                                    <div class="form-group position-relative">
                                         <input type="password" name="password"
                                             class="form-control form-control-user @error('password') is-invalid @enderror"
-                                            id="exampleInputPassword" placeholder="{{ __('Password') }}" required>
+                                            id="passwordInput" placeholder="{{ __('Password') }}" required>
+                                        <span class="position-absolute"
+                                            style="right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer;"
+                                            onclick="togglePasswordVisibility()">
+                                            <i id="passwordIcon" class="fas fa-eye"></i>
+                                        </span>
                                     </div>
                                     @error('password')
                                         <div class="form-group custom-control">

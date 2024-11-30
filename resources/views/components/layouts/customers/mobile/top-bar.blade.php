@@ -1,5 +1,5 @@
 <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
-    <a class="nav-link" href="https://www.shanetfiber.my.id/cpanel/home" target="_blank">
+    <a class="nav-link" href="/customer">
         <img src="/images/donate.png" alt="Saweria" style="height: 30px !important;">
     </a>
 

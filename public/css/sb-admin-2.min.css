@@ -2235,7 +2235,7 @@ a.btn.disabled,
 fieldset:disabled a.btn {
     pointer-events: none;
 }
-.btn-primary {
+/* .btn-primary {
     color: #fff;
     background-color: #4e73df;
     border-color: #4e73df;
@@ -2257,14 +2257,64 @@ fieldset:disabled a.btn {
     color: #fff;
     background-color: #4e73df;
     border-color: #4e73df;
+} */
+.btn-primary {
+    color: #fff; /* Warna teks */
+    background: linear-gradient(
+        180deg,
+        #005f73 10%,
+        /* Biru laut gelap */ #0369a1 50%,
+        /* Biru tegas */ #1e90ff 100% /* Biru terang */
+    );
+    border: none; /* Menghapus border untuk tampilan bersih */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Shadow lembut */
+    transition: all 0.3s ease; /* Animasi halus saat hover */
 }
+
+.btn-primary:hover {
+    color: #fff;
+    background: linear-gradient(
+        180deg,
+        #1e90ff 10%,
+        /* Biru terang menjadi warna dominan */ #0369a1 50%,
+        /* Biru tegas */ #005f73 100% /* Biru laut gelap */
+    );
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3); /* Shadow lebih besar saat hover */
+    transform: translateY(-2px); /* Efek angkat tombol */
+}
+
+.btn-primary:focus,
+.btn-primary.focus {
+    color: #fff;
+    outline: none; /* Menghapus border fokus default */
+    box-shadow: 0 0 0 0.2rem rgba(30, 144, 255, 0.5); /* Efek fokus biru lembut */
+}
+
+.btn-primary.disabled,
+.btn-primary:disabled {
+    color: #aaa; /* Warna teks pudar */
+    background: linear-gradient(
+        180deg,
+        #4e73df 10%,
+        /* Biru pucat */ #2e59d9 100% /* Biru terang */
+    );
+    border: none;
+    box-shadow: none;
+    cursor: not-allowed; /* Indikator tidak aktif */
+}
+
 .btn-primary:not(:disabled):not(.disabled).active,
 .btn-primary:not(:disabled):not(.disabled):active,
 .show > .btn-primary.dropdown-toggle {
     color: #fff;
-    background-color: #2653d4;
-    border-color: #244ec9;
+    background: linear-gradient(
+        180deg,
+        #0369a1 10%,
+        /* Biru tegas */ #005f73 100% /* Biru laut gelap */
+    );
+    border-color: #004d66; /* Biru laut lebih gelap */
 }
+
 .btn-primary:not(:disabled):not(.disabled).active:focus,
 .btn-primary:not(:disabled):not(.disabled):active:focus,
 .show > .btn-primary.dropdown-toggle:focus {
@@ -9113,10 +9163,15 @@ a:focus {
     -webkit-animation-timing-function: opacity cubic-bezier(0, 1, 0.4, 1);
     animation-timing-function: opacity cubic-bezier(0, 1, 0.4, 1);
 }
-.bg-gradient-primary {
+/* .bg-gradient-primary {
     background-color: #4e73df;
     background-image: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
     background-size: cover;
+} */
+.bg-gradient-primary {
+    background: url("/images/bg-primary.jpg") no-repeat center center; /* Gambar sebagai latar */
+    background-size: cover; /* Latar memenuhi seluruh area */
+    background-attachment: fixed; /* Tetap saat menggulir */
 }
 .bg-gradient-secondary {
     background-color: #858796;
@@ -9128,9 +9183,20 @@ a:focus {
     background-image: linear-gradient(180deg, #1cc88a 10%, #13855c 100%);
     background-size: cover;
 }
-.bg-gradient-info {
+/* .bg-gradient-info {
     background-color: #36b9cc;
     background-image: linear-gradient(180deg, #36b9cc 10%, #258391 100%);
+    background-size: cover;
+} */
+.bg-gradient-info {
+    background-color: #1b2838; /* Biru gelap mendekati hitam */
+    background-image: linear-gradient(
+        180deg,
+        #1b2838 10%,
+        /* Hitam kebiruan */ #005f73 40%,
+        /* Biru laut gelap */ #0369a1 70%,
+        /* Biru tegas */ #1e90ff 100% /* Biru terang */
+    );
     background-size: cover;
 }
 .bg-gradient-warning {
