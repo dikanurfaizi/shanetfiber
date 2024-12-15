@@ -1,43 +1,144 @@
 <x-layouts.app-layout title="Dashboard">
+    
     <div class="card-header py-3">
         <h5 class="m-0 font-weight-bold text-primary">
-            Customers
+            Dashboard
         </h5>
     </div>
     <div class="row col-lg-12">
         <div class="card-body">
             <div class="row">
+                
                 <div class="col-xl-3 col-md-6 mb-4">
                     <div class="card border-start-lg border-start-primary h-100">
                         <div class="card-header py-3">
                             <h6 class="m-0 font-weight-bold text-primary">
-                                <i class="fas fa-fw fa-users text-primary"></i> Customers
+                                <i class="fas fa-fw fa-server text-primary"></i> Server :
+                                @if($mikrotiks->count() > 0 )
+                                    <a href="{{ route('servers.index') }}">{{ $mikrotiks->count() }}</a>
+                                @else
+                                0
+                                @endif
+                                <span class="text-xs fw-bold text-success d-inline-flex align-items-center">
+                                    servers
+                                </span>
                             </h6>
+                            
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    
+                                    <div class="small fw-bold text-primary mb-1">
+                                        <span><i class="fas fa-server text-primary"></i>
+                                            <span>
+                                                <a href="{{ route('servers.index') }}">
+                                                    @if($mikrotiks->count() > 0 )
+                                                    {{ $mikrotiks->count() }}
+                                                    @else
+                                                    0
+                                                    @endif
+                                                    Servers
+                                                </a>
+                                            </span>
+                                        </span>
+                                        <div>
+                                            <i class="fas fa-check-circle text-success"></i>
+                                            <span>
+                                                <a href="{{ route('servers.index', ['disabled' => 'false']) }}">
+                                                    @if($routersEnable->count() > 0 )
+                                                    {{ $routersEnable->count() }}
+                                                    @else
+                                                    0
+                                                    @endif
+                                                    Enable
+                                                </a>
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <i class="fas fa-ban text-danger"></i>
+                                            <span>
+                                                <a href="{{ route('servers.index', ['disabled' => 'true']) }}">
+                                                    @if(($mikrotiks->count() - $routersEnable->count()) > 0 )
+                                                    {{$mikrotiks->count() - $routersEnable->count() }}
+                                                    @else
+                                                    0
+                                                    @endif
+                                                    Disable
+                                                </a>
+                                            </span>
+                                        </div>
+                                    </div>
+
+
+                                </div>
+                                <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="dollar-sign" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" data-fa-i2svg="">
+                                        <path fill="currentColor" d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z"></path>
+                                    </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com --></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-start-lg border-start-primary h-100">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">
+                                <i class="fas fa-fw fa-server text-primary"></i> Server Status
+                            </h6>
+                            
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    
+                                    <div class="small fw-bold text-primary mb-1">
+                                        <span><i class="fas fa-bullseye text-success"></i> {{ $countRouterOnline }} Online</span>
+                                    </div>
+                                    
+                                    <div class="small fw-bold text-primary mb-1">
+                                        <span><i class="fas fa-power-off text-danger"></i> {{ $countRouterOffline }} Offline</span>
+                                    </div>
+                                    
+                                </div>
+                                <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="dollar-sign" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" data-fa-i2svg="">
+                                        <path fill="currentColor" d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z"></path>
+                                    </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com --></div>
+                                </div>
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-start-lg border-start-primary h-100">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">
+                                <i class="fas fa-fw fa-users text-primary"></i> Customers :
+                                @if($customers->count() > 0 )
+                                <a href="{{ route('customers.index') }}">{{ $customers->count() }}</a>
+                                @else
+                                0
+                                @endif
+                                <span class="text-xs fw-bold text-success d-inline-flex align-items-center">
+                                    customers
+                                </span>
+                            </h6>
+                            
                         </div>
                         <div class="card-body">
                             <div class="d-flex align-items-center">
                                 <div class="flex-grow-1">
 
-                                    <div id="all-customers-count" class="h5">
-                                        <div id="loading">
-                                            @if ($customers->count() > 0)
-                                                <a href="{{ route('customers.index') }}">{{ $customers->count() }}</a>
-                                            @else
-                                                0
-                                            @endif
-                                            <span class="text-xs fw-bold text-success d-inline-flex align-items-center">
-                                                customers
-                                            </span>
-                                        </div>
-                                    </div>
+                                    
                                     <div class="small fw-bold text-primary mb-1">
                                         <span>
                                             <a href="{{ route('customers.index', ['status' => 'false']) }}">
                                                 <i class="fas fa-check-circle text-success"></i>
-                                                @if ($customers->where('disabled', 'false')->count() > 0)
-                                                    {{ $customers->where('disabled', 'false')->count() }}
-                                                @else
-                                                    0
+                                                @if($customers->where('disabled', 'false')->count() > 0 )
+                                                {{ $customers->where('disabled', 'false')->count() }}
+
+                                                @else 0
                                                 @endif Enable
                                             </a>
                                         </span>
@@ -46,10 +147,10 @@
                                         <span>
                                             <a href="{{ route('customers.index', ['status' => 'true']) }}">
                                                 <i class="fas fa-ban text-danger"></i>
-                                                @if ($customers->where('disabled', 'true')->count() - $customers->where('activation', 'false')->count() > 0)
-                                                    {{ $customers->where('disabled', 'true')->count() - $customers->where('activation', 'false')->count() }}
-                                                @else
-                                                    0
+                                                @if($customers->where('disabled', 'true')->count() - $customers->where('activation', 'false')->count() > 0 )
+                                                {{ $customers->where('disabled', 'true')->count() - $customers->where('activation', 'false')->count() }}
+
+                                                @else 0
                                                 @endif Disable
                                         </span>
                                         </a>
@@ -58,33 +159,27 @@
                                         <span>
                                             <a href="{{ route('customers.index', ['status' => 'deactivated']) }}">
                                                 <i class="fas fa-ban text-danger"></i>
-                                                @if ($customers->where('activation', 'false')->count() > 0)
-                                                    {{ $customers->where('activation', 'false')->count() }}
-                                                @else
-                                                    0
+                                                @if($customers->where('activation', 'false')->count() > 0 )
+                                                {{ $customers->where('activation', 'false')->count() }}
+                                                @else 0
                                                 @endif Deactivation
                                             </a>
                                         </span>
                                     </div>
                                 </div>
-                                <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200"
-                                        aria-hidden="true" focusable="false" data-prefix="fas" data-icon="dollar-sign"
-                                        role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"
-                                        data-fa-i2svg="">
-                                        <path fill="currentColor"
-                                            d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z">
-                                        </path>
-                                    </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com -->
-                                </div>
+                                <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="dollar-sign" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" data-fa-i2svg="">
+                                        <path fill="currentColor" d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z"></path>
+                                    </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com --></div>
                             </div>
                         </div>
                     </div>
                 </div>
+
                 <div class="col-xl-3 col-md-6 mb-4">
                     <div class="card border-start-lg border-start-primary h-100">
                         <div class="card-header py-3">
                             <h6 class="m-0 font-weight-bold text-primary">
-                                <i class="far fa-dot-circle text-success"></i> Status
+                                <i class="far fa-dot-circle text-success"></i> Customers Status
                             </h6>
                         </div>
                         <div class="card-body">
@@ -96,10 +191,10 @@
                                         <span>
                                             <a href="{{ route('customers.index', ['status' => 'online']) }}">
                                                 <i class="fas fa-check-circle text-success"></i>
-                                                @if ($sumCustomersOnline - $sumCustomersIsolir > 0)
-                                                    {{ $sumCustomersOnline - $sumCustomersIsolir }}
+                                                @if($sumCustomersOnline - $sumCustomersIsolir > 0 )
+                                                {{ $sumCustomersOnline - $sumCustomersIsolir }}
                                                 @else
-                                                    0
+                                                0
                                                 @endif {{ __('connected') }}
                                             </a>
                                         </span>
@@ -108,36 +203,31 @@
                                         <span>
                                             <a href="{{ route('customers.index', ['status' => 'isolir']) }}">
                                                 <i class="fas fa-ban text-danger"></i>
-                                                @if ($sumCustomersIsolir - $customers->where('activation', 'false')->where('disabled', 'true')->count() > 0)
-                                                    {{ $sumCustomersIsolir - $customers->where('activation', 'false')->where('disabled', 'true')->count() }}
-                                                @else
-                                                    0
+                                                @if($sumCustomersIsolir - $customers->where('activation', 'false')->where('disabled', 'true')->count() > 0 )
+                                                {{ $sumCustomersIsolir - $customers->where('activation', 'false')->where('disabled', 'true')->count() }}
+                                                @else 0
                                                 @endif Isolir
                                             </a>
                                         </span>
                                     </div>
+
                                     <div class="small fw-bold text-primary mb-1">
                                         <span>
                                             <a href="{{ route('customers.index', ['status' => 'offline']) }}">
                                                 <i class="fas fa-check-circle text-danger"></i>
-                                                @if ($sumCustomersOffline > 0)
-                                                    {{ $sumCustomersOffline }}
+                                                @if($sumCustomersOffline > 0 )
+                                                {{ $sumCustomersOffline }}
                                                 @else
-                                                    0
+                                                0
                                                 @endif {{ __('disconnect') }}
                                             </a>
                                         </span>
                                     </div>
+
                                 </div>
-                                <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200"
-                                        aria-hidden="true" focusable="false" data-prefix="fas" data-icon="dollar-sign"
-                                        role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"
-                                        data-fa-i2svg="">
-                                        <path fill="currentColor"
-                                            d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z">
-                                        </path>
-                                    </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com -->
-                                </div>
+                                <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="dollar-sign" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" data-fa-i2svg="">
+                                        <path fill="currentColor" d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z"></path>
+                                    </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com --></div>
                             </div>
                         </div>
                     </div>
@@ -146,135 +236,149 @@
         </div>
     </div>
 
+    
+    
+    @if($lastBillings)
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">
-            Server:
-            @if ($mikrotiks->count() > 0)
-                <a href="{{ route('servers.index') }}">{{ $mikrotiks->count() }}</a>
-            @else
-                0
-            @endif
-            servers
-        </h5>
+        <h5 class="m-0 font-weight-bold text-primary">Billing Periode : {{$lastBillingPeriode->name ?? 'No Billing Periode'}}</h5>
     </div>
+
     <div class="row col-lg-12">
         <div class="card-body">
             <div class="row">
                 <div class="col-xl-3 col-md-6 mb-4">
                     <div class="card border-start-lg border-start-primary h-100">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-grow-1">
-                                    <div class="small fw-bold text-primary mb-1">
-                                        <span><i class="fas fa-server text-primary"></i>
-                                            <span>
-                                                <a href="{{ route('servers.index') }}">
-                                                    @if ($mikrotiks->count() > 0)
-                                                        {{ $mikrotiks->count() }}
-                                                    @else
-                                                        0
-                                                    @endif
-                                                    Servers
-                                                </a>
-                                            </span>
-                                        </span>
-                                        <div>
-                                            <i class="fas fa-check-circle text-success"></i>
-                                            <span>
-                                                <a href="{{ route('servers.index', ['disabled' => 'false']) }}">
-                                                    @if ($routersEnable->count() > 0)
-                                                        {{ $routersEnable->count() }}
-                                                    @else
-                                                        0
-                                                    @endif
-                                                    Enable
-                                                </a>
-                                            </span>
-                                        </div>
-                                        <div>
-                                            <i class="fas fa-ban text-danger"></i>
-                                            <span>
-                                                <a href="{{ route('servers.index', ['disabled' => 'true']) }}">
-                                                    @if ($mikrotiks->count() - $routersEnable->count() > 0)
-                                                        {{ $mikrotiks->count() - $routersEnable->count() }}
-                                                    @else
-                                                        0
-                                                    @endif
-                                                    Disable
-                                                </a>
-                                            </span>
-                                        </div>
-                                    </div>
-
-
-                                </div>
-                                <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200"
-                                        aria-hidden="true" focusable="false" data-prefix="fas" data-icon="dollar-sign"
-                                        role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"
-                                        data-fa-i2svg="">
-                                        <path fill="currentColor"
-                                            d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z">
-                                        </path>
-                                    </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com -->
-                                </div>
-                            </div>
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">
+                                <i class="far fa-dot-circle text-success"></i> Billings
+                            </h6>
                         </div>
-                    </div>
-                </div>
-
-                <div class="col-xl-3 col-md-6 mb-4">
-                    <div class="card border-start-lg border-start-primary h-100">
                         <div class="card-body">
                             <div class="d-flex align-items-center">
                                 <div class="flex-grow-1">
-                                    <div class="small fw-bold text-primary mb-1">
-                                        <span><i class="fas fa-bullseye text-success"></i> Online</span>
-                                    </div>
-                                    <div id="all-ppp-secrets-count" class="h5">
-                                        <div id="loading">{{ $countRouterOnline }}</div>
-                                    </div>
-                                    <div class="text-xs fw-bold text-success d-inline-flex align-items-center">
-                                        {{ __('servers') }}
-                                    </div>
-                                </div>
-                                <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200"
-                                        aria-hidden="true" focusable="false" data-prefix="fas"
-                                        data-icon="dollar-sign" role="img" xmlns="http://www.w3.org/2000/svg"
-                                        viewBox="0 0 320 512" data-fa-i2svg="">
-                                        <path fill="currentColor"
-                                            d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z">
-                                        </path>
-                                    </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-xl-3 col-md-6 mb-4">
-                    <div class="card border-start-lg border-start-primary h-100">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-grow-1">
-                                    <div class="small fw-bold text-primary mb-1">
-                                        <span><i class="fas fa-power-off text-danger"></i> Offline</span>
-                                    </div>
                                     <div id="all-ppp-secrets-active-count" class="h5">
-                                        <div id="loading">{{ $countRouterOffline }}</div>
+                                        <div id="loading">
+
+                                            @if($lastBillings->count() > 0 )
+                                            <a href="{{ route('billings.index') }}">{{ $lastBillings->count() }}</a>
+                                            @else
+                                            0
+                                            @endif
+
+                                        </div>
                                     </div>
                                     <div class="text-xs fw-bold text-success d-inline-flex align-items-center">
-                                        servers
+                                        customers
                                     </div>
                                 </div>
-                                <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200"
-                                        aria-hidden="true" focusable="false" data-prefix="fas"
-                                        data-icon="dollar-sign" role="img" xmlns="http://www.w3.org/2000/svg"
-                                        viewBox="0 0 320 512" data-fa-i2svg="">
-                                        <path fill="currentColor"
-                                            d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z">
-                                        </path>
-                                    </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com -->
+                                <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="dollar-sign" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" data-fa-i2svg="">
+                                        <path fill="currentColor" d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z"></path>
+                                    </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com --></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-start-lg border-start-primary h-100">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">
+                                <i class="far fa-dot-circle text-success"></i> Payment
+                            </h6>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <div id="all-ppp-secrets-active-count" class="h5">
+                                        <div id="loading">
+
+                                            @if($lastBillings->where('status', 'LS')->count() > 0 )
+                                            <a href="{{ route('billings.index', ['search_status=LS', 'search_month='.Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year='.Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}">{{ $lastBillings->where('status', 'LS')->count() }}</a>
+                                            @else
+                                            0
+                                            @endif
+
+                                        </div>
+                                    </div>
+                                    <div class="text-xs fw-bold text-success d-inline-flex align-items-center">
+                                        customers
+                                    </div>
                                 </div>
+                                <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="dollar-sign" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" data-fa-i2svg="">
+                                        <path fill="currentColor" d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z"></path>
+                                    </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com --></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-start-lg border-start-primary h-100">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">
+                                <i class="far fa-dot-circle text-success"></i> Pay Laters
+                            </h6>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <div id="all-ppp-secrets-active-count" class="h5">
+                                        <div id="loading">
+
+                                            @if($lastBillings->where('status', 'PL')->count() > 0 )
+                                            <a href="{{ route('billings.index', ['search_status=PL', 'search_month='.Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year='.Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}">{{ $lastBillings->where('status', 'PL')->count() }}</a>
+                                            @else
+                                            0
+                                            @endif
+
+                                        </div>
+                                    </div>
+                                    <div class="text-xs fw-bold text-success d-inline-flex align-items-center">
+                                        customers
+                                    </div>
+
+                                </div>
+                                <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="dollar-sign" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" data-fa-i2svg="">
+                                        <path fill="currentColor" d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z"></path>
+                                    </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com --></div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-start-lg border-start-primary h-100">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">
+                                <i class="far fa-dot-circle text-success"></i> Unpayment
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+
+                                    <div id="all-ppp-secrets-active-count" class="h5">
+                                        <div id="loading">
+
+                                            @if($lastBillings->where('status', 'BL')->count() > 0 )
+                                            <a href="{{ route('billings.index', ['search_status=BL', 'search_month='.Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year='.Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}">{{ $lastBillings->where('status', 'BL')->count() }}</a>
+
+                                            @else
+                                            0
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="text-xs fw-bold text-success d-inline-flex align-items-center">
+                                        customers
+                                    </div>
+
+                                </div>
+                                <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="dollar-sign" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" data-fa-i2svg="">
+                                        <path fill="currentColor" d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z"></path>
+                                    </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com --></div>
                             </div>
                         </div>
                     </div>
@@ -284,7 +388,8 @@
             </div>
         </div>
     </div>
-
+    @endif
+    
     @foreach ($routersEnable as $mikrotik)
         <div class="card-header py-3">
             <h5 class="m-0 font-weight-bold text-primary">
@@ -334,29 +439,6 @@
                                                 role="progressbar" style="width: 19%;">199.04MB/1GB</div>
                                         </div>
 
-                                        <div class="small fw-bold text-primary mt-2 mb-1">
-                                            <strong><span><i class="far fa-dot-circle text-primary"></i></span> <span
-                                                    id="loading_ppp_secret-{{ $mikrotik->slug }}"
-                                                    class="d-none">Loading...</span><span
-                                                    id="ppp-secrets-count-{{ $mikrotik->slug }}"></span><span> PPP
-                                                    Secrets</span></strong>
-                                        </div>
-
-                                        <div class="small fw-bold text-primary mb-1">
-                                            <span><i class="far fa-dot-circle text-success"></i></span> <span
-                                                id="loading_ppp_active-{{ $mikrotik->slug }}"
-                                                class="d-none">Loading...</span><span
-                                                id="ppp-secrets-active-count-{{ $mikrotik->slug }}"></span><span> PPP
-                                                Active</span>
-                                        </div>
-
-                                        <div class="small fw-bold text-primary mb-1">
-                                            <span><i class="far fa-dot-circle text-danger"></i> <span
-                                                    id="loading_ppp_non_active-{{ $mikrotik->slug }}"
-                                                    class="d-none">Loading...</span><span
-                                                    id="ppp-secrets-non-active-count-{{ $mikrotik->slug }}"></span><span>
-                                                    PPP Non Active</span>
-                                        </div>
                                     </div>
                                     <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200"
                                             aria-hidden="true" focusable="false" data-prefix="fas"
@@ -371,58 +453,7 @@
                             </div>
                         </div>
                     </div>
-                    @if ($interfaces)
-                        <div class="col-xl-9 col-md-6 mb-4">
-                            <div class="card border-start-lg border-start-primary h-100">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-center">
-                                        <div class="flex-grow-1">
-                                            <div class="card-header">
-                                                {{ __('hotspot.traffic-interface') }}
-                                                <div class="float-end">
-                                                    <div class="row align-items-center">
-                                                        <div class="col-md-12 mb-3">
-                                                            <div class="input-group">
-                                                                <select id="interface-{{ $mikrotik->slug }}"
-                                                                    name="interface"
-                                                                    class="form-control form-control-sm">
-
-
-
-
-                                                                </select>
-                                                                <div class="input-group-append">
-                                                                    <div class="input-group-text text-success">
-                                                                        <span class="fas fa-network-wired"></span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="card-body">
-                                                <div class="apex-charts" id="chart-{{ $mikrotik->slug }}"
-                                                    dir="ltr"></div>
-                                            </div>
-                                        </div>
-                                        <div class="ms-2"><svg
-                                                class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200"
-                                                aria-hidden="true" focusable="false" data-prefix="fas"
-                                                data-icon="dollar-sign" role="img"
-                                                xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"
-                                                data-fa-i2svg="">
-                                                <path fill="currentColor"
-                                                    d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z">
-                                                </path>
-                                            </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com -->
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @endif
+                    
                 </div>
 
 
@@ -431,184 +462,7 @@
         </div>
     @endforeach
 
-    @if ($lastBillings)
-        <div class="card-header py-3">
-            <h5 class="m-0 font-weight-bold text-primary">{{ $lastBillingPeriode->name ?? 'No Billing Periode' }}</h5>
-        </div>
-        <div class="row col-lg-12">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card border-start-lg border-start-primary h-100">
-                            <div class="card-header py-3">
-                                <h6 class="m-0 font-weight-bold text-primary">
-                                    <i class="far fa-dot-circle text-success"></i> Billings
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="d-flex align-items-center">
-                                    <div class="flex-grow-1">
-                                        <div id="all-ppp-secrets-active-count" class="h5">
-                                            <div id="loading">
-
-                                                @if ($lastBillings->count() > 0)
-                                                    <a
-                                                        href="{{ route('billings.index') }}">{{ $lastBillings->count() }}</a>
-                                                @else
-                                                    0
-                                                @endif
-
-                                            </div>
-                                        </div>
-                                        <div class="text-xs fw-bold text-success d-inline-flex align-items-center">
-                                            customers
-                                        </div>
-                                    </div>
-                                    <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200"
-                                            aria-hidden="true" focusable="false" data-prefix="fas"
-                                            data-icon="dollar-sign" role="img" xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 320 512" data-fa-i2svg="">
-                                            <path fill="currentColor"
-                                                d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z">
-                                            </path>
-                                        </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card border-start-lg border-start-primary h-100">
-                            <div class="card-header py-3">
-                                <h6 class="m-0 font-weight-bold text-primary">
-                                    <i class="far fa-dot-circle text-success"></i> Payment
-                                </h6>
-                            </div>
-
-                            <div class="card-body">
-                                <div class="d-flex align-items-center">
-                                    <div class="flex-grow-1">
-                                        <div id="all-ppp-secrets-active-count" class="h5">
-                                            <div id="loading">
-
-                                                @if ($lastBillings->where('status', 'LS')->count() > 0)
-                                                    <a
-                                                        href="{{ route('billings.index', ['search_status=LS', 'search_month=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}">{{ $lastBillings->where('status', 'LS')->count() }}</a>
-                                                @else
-                                                    0
-                                                @endif
-
-                                            </div>
-                                        </div>
-                                        <div class="text-xs fw-bold text-success d-inline-flex align-items-center">
-                                            customers
-                                        </div>
-                                    </div>
-                                    <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200"
-                                            aria-hidden="true" focusable="false" data-prefix="fas"
-                                            data-icon="dollar-sign" role="img" xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 320 512" data-fa-i2svg="">
-                                            <path fill="currentColor"
-                                                d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z">
-                                            </path>
-                                        </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card border-start-lg border-start-primary h-100">
-                            <div class="card-header py-3">
-                                <h6 class="m-0 font-weight-bold text-primary">
-                                    <i class="far fa-dot-circle text-success"></i> Pay Laters
-                                </h6>
-                            </div>
-
-                            <div class="card-body">
-                                <div class="d-flex align-items-center">
-                                    <div class="flex-grow-1">
-                                        <div id="all-ppp-secrets-active-count" class="h5">
-                                            <div id="loading">
-
-                                                @if ($lastBillings->where('status', 'PL')->count() > 0)
-                                                    <a
-                                                        href="{{ route('billings.index', ['search_status=PL', 'search_month=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}">{{ $lastBillings->where('status', 'PL')->count() }}</a>
-                                                @else
-                                                    0
-                                                @endif
-
-                                            </div>
-                                        </div>
-                                        <div class="text-xs fw-bold text-success d-inline-flex align-items-center">
-                                            customers
-                                        </div>
-
-                                    </div>
-                                    <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200"
-                                            aria-hidden="true" focusable="false" data-prefix="fas"
-                                            data-icon="dollar-sign" role="img" xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 320 512" data-fa-i2svg="">
-                                            <path fill="currentColor"
-                                                d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z">
-                                            </path>
-                                        </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com -->
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-
-                    <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card border-start-lg border-start-primary h-100">
-                            <div class="card-header py-3">
-                                <h6 class="m-0 font-weight-bold text-primary">
-                                    <i class="far fa-dot-circle text-success"></i> Unpayment
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="d-flex align-items-center">
-                                    <div class="flex-grow-1">
-
-                                        <div id="all-ppp-secrets-active-count" class="h5">
-                                            <div id="loading">
-
-                                                @if ($lastBillings->where('status', 'BL')->count() > 0)
-                                                    <a
-                                                        href="{{ route('billings.index', ['search_status=BL', 'search_month=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}">{{ $lastBillings->where('status', 'BL')->count() }}</a>
-                                                @else
-                                                    0
-                                                @endif
-                                            </div>
-                                        </div>
-                                        <div class="text-xs fw-bold text-success d-inline-flex align-items-center">
-                                            customers
-                                        </div>
-
-                                    </div>
-                                    <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200"
-                                            aria-hidden="true" focusable="false" data-prefix="fas"
-                                            data-icon="dollar-sign" role="img" xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 320 512" data-fa-i2svg="">
-                                            <path fill="currentColor"
-                                                d="M146 0c17.7 0 32 14.3 32 32V67.7c1.6 .2 3.1 .4 4.7 .7c.4 .1 .7 .1 1.1 .2l48 8.8c17.4 3.2 28.9 19.9 25.7 37.2s-19.9 28.9-37.2 25.7l-47.5-8.7c-31.3-4.6-58.9-1.5-78.3 6.2s-27.2 18.3-29 28.1c-2 10.7-.5 16.7 1.2 20.4c1.8 3.9 5.5 8.3 12.8 13.2c16.3 10.7 41.3 17.7 73.7 26.3l2.9 .8c28.6 7.6 63.6 16.8 89.6 33.8c14.2 9.3 27.6 21.9 35.9 39.5c8.5 17.9 10.3 37.9 6.4 59.2c-6.9 38-33.1 63.4-65.6 76.7c-13.7 5.6-28.6 9.2-44.4 11V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V445.1c-.4-.1-.9-.1-1.3-.2l-.2 0 0 0c-24.4-3.8-64.5-14.3-91.5-26.3C4.9 411.4-2.4 392.5 4.8 376.3s26.1-23.4 42.2-16.2c20.9 9.3 55.3 18.5 75.2 21.6c31.9 4.7 58.2 2 76-5.3c16.9-6.9 24.6-16.9 26.8-28.9c1.9-10.6 .4-16.7-1.3-20.4c-1.9-4-5.6-8.4-13-13.3c-16.4-10.7-41.5-17.7-74-26.3l-2.8-.7 0 0C105.4 279.3 70.4 270 44.4 253c-14.2-9.3-27.5-22-35.8-39.6C.3 195.4-1.4 175.4 2.5 154.1C9.7 116 38.3 91.2 70.8 78.3c13.3-5.3 27.9-8.9 43.2-11V32c0-17.7 14.3-32 32-32z">
-                                            </path>
-                                        </svg><!-- <i class="fas fa-dollar-sign fa-2x text-gray-200"></i> Font Awesome fontawesome.com -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-
-                </div>
-            </div>
-        </div>
-    @endif
-
+    
     @section('custom_scripts')
         <script>
             $.ajaxSetup({

@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::dropIfExists('message_logs');
-
+        
         Schema::create('message_logs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('customer_id');

@@ -2,6 +2,7 @@
 
 use App\Models\Midtran;
 use App\Models\Websystem;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HomeController;
@@ -29,6 +30,7 @@ use App\Http\Controllers\Mikrotik\MikrotikController;
 use App\Http\Controllers\Auth\CustomerLoginController;
 use App\Http\Controllers\Mikrotik\Ppp\SecretController;
 use App\Http\Controllers\PaymentGateway\MidtranController;
+use App\Http\Controllers\PaymentGateway\TripayController;
 use App\Http\Controllers\Midtran\PaymentCallbackController;
 use App\Http\Controllers\PaymentGateway\PaymentGatewayController;
 use App\Http\Controllers\Customer\ProfileController as CustomerProfileController;
@@ -178,11 +180,14 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('settings/routers/{router:id}/delete', [RouterController::class, 'delete'])->name('router.delete');
         Route::resource('settings/router/brand', BrandController::class);
         Route::get('settings/router/brand/{brand:id}/delete', [BrandController::class, 'delete'])->name('brand.delete');
+
         //Payment Gateway
         Route::get('settings/payment-gateway', [PaymentGatewayController::class, 'index'])->name('paymentgateway.index');
         Route::get('settings/payment-gateway/{paymentGateway:slug}', [PaymentGatewayController::class, 'edit'])->name('paymentgateway.edit');
         Route::get('settings/payment-gateway/1/{midtran:slug}', [MidtranController::class, 'edit'])->name('paymentgateway.midtran.edit');
         Route::patch('settings/payment-gateway/1/{midtran:slug}/update', [MidtranController::class, 'update'])->name('paymentgateway.midtran.update');
+        // Route::get('settings/payment-gateway/1/{tripay:slug}', [TripayController::class, 'edit'])->name('paymentgateway.tripay.edit');
+        //Route::patch ('settings/payment-gateway/1/{tripay:slug}/update', [TripayController::class, 'update'])->name('paymentgateway.tripay.update');
 
         // WhatsApp Gateway
         Route::get('settings/whatsapp-gateway', [WhatsappGatewayController::class, 'index'])->name('whatsapp-gateway.index'); // Menampilkan daftar WhatsApp Gateway

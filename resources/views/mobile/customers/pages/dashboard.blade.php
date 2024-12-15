@@ -6,6 +6,12 @@
     <div class="card-body col-lg-8">
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
+                <strong>{{ __('customer.label.id') }} :</strong>
+                {{ $customer->customer_id ?? 'No ID' }}
+            </div>
+        </div>
+        <div class="col-xs-12 col-sm-12 col-md-12">
+            <div class="form-group">
                 <strong>{{ __('customer.label.paket') }} :</strong>
                 {{ $customer->paket->name ?? 'No Data' }}
             </div>
@@ -84,15 +90,16 @@
 
         @foreach ($billings as $billing)
             <div class="card-body col-lg-8">
-                Pembayaran dapat dilakukan dengan cara:<br>
+                <strong>Pembayaran dapat dilakukan dengan cara:</strong><br>
                 1. Cash/Tunai.<br>
                 2. Pembayaran Online.<br>
-                3. Transfer ke rekening kami atas nama <span class="badge bg-primary text-white">Dian
-                    Ardiansyah</span><br>
+                3. Transfer ke rekening kami atas nama <span class="badge bg-primary text-white">Dian Ardiansyah</span><br>
+                    - <span class="badge bg-success text-white">Bank BCA : 299 040 7315</span><br>
+                    - <span class="badge bg-success text-white">Bank Mandiri : 173-00-1269590-5</span><br>
                 <br>
-                - <span class="badge bg-success text-white">Bank Mandiri : 1730012695905</span><br>
-                - <span class="badge bg-success text-white">Bank BCA : 2990407315</span><br>
-                - <span class="badge bg-success text-white">DANA : 085795909904</span><br>
+                4. Transfer ke rekening <span class="badge bg-primary text-white">PT. Global Sarana Elektronika</span><br>
+                    - <span class="badge bg-success text-white">Bank BCA : 231 711 1157</span><br>
+                    - <span class="badge bg-success text-white">Bank BRI : 0075-01-001957-30-4</span><br>
                 <br>
                 Silahkan konfirmasi ke nomor WhatsApp <span class="badge bg-primary text-white">0878 1804 0024</span>
                 setelah melakukan pembayaran dengan mengirimkan bukti transfer.

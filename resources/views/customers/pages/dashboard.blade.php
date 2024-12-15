@@ -1,50 +1,53 @@
 <x-layouts.customers.app-layout title="Customers">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">
-            {{ __('customer.page.header.index') }}{{ auth()->guard('customer')->user()->name }}</h5>
+        <h5 class="m-0 font-weight-bold text-primary">{{ __('customer.page.header.index') }}{{ auth()->guard('customer')->user()->name }}</h5>
 
     </div>
 
     @php
-        $price = $customer->paket->price;
-        $discountPrice = $price * ($customer->discount / 100);
-        $priceAfterDiscount = $price - $discountPrice;
-        $taxPrice = ceil($priceAfterDiscount * ($websystem->tax_rate / 100));
-        $totalPrice = $priceAfterDiscount + $taxPrice;
+    $price = $customer->paket->price;
+    $discountPrice = $price * ($customer->discount/100);
+    $priceAfterDiscount = $price - $discountPrice;
+    $taxPrice = ceil($priceAfterDiscount * ($websystem->tax_rate/100));
+    $totalPrice = $priceAfterDiscount + $taxPrice;
     @endphp
     <div class="card-body col-lg-12">
         <div style="overflow-x: auto;">
             <table id="serverTable" cellspacing="0" width="100%" class="table no-footer">
 
-                <tr class="table-borderless">
-                    <td width="100px"><strong>{{ __('customer.label.paket') }}</strong></td>
-                    <td width="380px">{{ __(':') }} {{ $customer->paket->name ?? 'No Data' }}</td>
-                </tr>
-                <tr class="table-borderless">
-                    <td width="100px"><strong>{{ __('customer.label.price') }}</strong></td>
-                    <td width="380px">{{ __(':') }} @moneyIDR($price) </td>
-                </tr>
+            <tr class="table-borderless">
+                <td width="100px"><strong>{{ __('customer.label.id') }}</strong></td>
+                <td width="380px">{{ __(':') }} {{ $customer->customer_id ?? 'No ID' }}</td>
+            </tr>
+            <tr class="table-borderless">
+                <td width="100px"><strong>{{ __('customer.label.paket') }}</strong></td>
+                <td width="380px">{{ __(':') }} {{ $customer->paket->name ?? 'No Data' }}</td>
+            </tr>
+            <tr class="table-borderless">
+                <td width="100px"><strong>{{ __('customer.label.price') }}</strong></td>
+                <td width="380px">{{ __(':') }} @moneyIDR($price) </td>
+            </tr>
 
-                <tr class="table-borderless">
-                    <td width="100px"><strong>{{ __('customer.label.discount') }}</strong></td>
-                    <td width="380px">{{ __(':') }} @moneyIDR($discountPrice) </td>
-                </tr>
+            <tr class="table-borderless">
+                <td width="100px"><strong>{{ __('customer.label.discount') }}</strong></td>
+                <td width="380px">{{ __(':') }} @moneyIDR($discountPrice) </td>
+            </tr>
+            @if ($websystem->enable_tax === 'true')
+            <tr class="table-borderless">
+                <td width="100px"><strong>{{ __('customer.label.tax-rate') }}</strong></td>
+                <td width="380px">{{ __(':') }} <strong>@moneyIDR($taxPrice)</strong></td>
+            </tr>
+            @endif
+            <tr class="table-borderless">
+                <td width="100px"><strong>{{ __('customer.label.bill') }}</strong></td>
                 @if ($websystem->enable_tax === 'true')
-                    <tr class="table-borderless">
-                        <td width="100px"><strong>{{ __('customer.label.tax-rate') }}</strong></td>
-                        <td width="380px">{{ __(':') }} <strong>@moneyIDR($taxPrice)</strong></td>
-                    </tr>
+                <td width="380px">{{ __(':') }} <strong>@moneyIDR($totalPrice)</strong> / month</td>
+                @else
+                <td width="380px">{{ __(':') }} <strong>@moneyIDR($priceAfterDiscount)</strong> / month</td>
                 @endif
-                <tr class="table-borderless">
-                    <td width="100px"><strong>{{ __('customer.label.bill') }}</strong></td>
-                    @if ($websystem->enable_tax === 'true')
-                        <td width="380px">{{ __(':') }} <strong>@moneyIDR($totalPrice)</strong> / month</td>
-                    @else
-                        <td width="380px">{{ __(':') }} <strong>@moneyIDR($priceAfterDiscount)</strong> / month</td>
-                    @endif
-                </tr>
-                <tr class="table-borderless">
+            </tr>
+            <tr class="table-borderless">
                     <td><strong>{{ __('customer.page.label.due-date') }}</strong></td>
                     <td>{{ __(':') }}
                         @if ($billings->isEmpty())
@@ -62,7 +65,7 @@
                         @endif
                     </td>
                 </tr>
-                <tr class="table-borderless">
+                {{-- <tr class="table-borderless">
                     <td><strong>{{ __('customer.label.last-payment') }}</strong></td>
                     <td>{{ __(':') }}
                         @if ($last_payment)
@@ -71,19 +74,10 @@
                             {{ __('No Payment History') }}
                         @endif
                     </td>
-                </tr>
+                </tr> --}}
 
-            </table>
-        </div>
-
-        <div style="overflow-x: auto;">
-            <table id="serverTable" cellspacing="0" width="100%" class="table no-footer">
-                <tr class="table-borderless">
-                    <td><strong>{{ __('customer.page.label.bill-not-payed') }}</strong>{{ $billings->count() }}
-                        {{ __('customer.label.bill') }}</td>
-                </tr>
-            </table>
-        </div>
+        </table>
+        <strong>{{ __('customer.page.label.bill-not-payed') }}</strong>{{ $billings->count() }} {{ __('customer.label.bill') }}
 
         <div style="overflow-x: auto;">
             <table id="customersTable" cellspacing="0" width="100%"
@@ -112,34 +106,34 @@
                     </tr>
                 @endforeach
 
-                <tr>
-                    <td></td>
-                    <td></td>
-                    <td><strong>Total Price</strong></td>
-                    <td><strong>: @moneyIDR($billings->sum('paket_price') + $billings->sum('tax'))</strong></td>
-                </tr>
+            <tr>
+                <td></td>
+                <td></td>
+                <td><strong>Total Price</strong></td>
+                <td><strong>: @moneyIDR($billings->sum('paket_price') + $billings->sum('tax'))</strong></td>
+            </tr>
 
 
             </table>
         </div>
 
         @foreach ($billings as $billing)
-            <div class="card-body col-lg-12">
-                Pembayaran dapat dilakukan dengan cara:<br>
-                1. Cash/Tunai.<br>
-                2. Pembayaran Online.<br>
-                3. Transfer ke rekening kami atas nama <span class="badge bg-primary text-white">Dian
-                    Ardiansyah</span><br>
+        <div class="card-body col-lg-12">
+            <strong>Pembayaran dapat dilakukan dengan cara:</strong><br>
+            1. Cash/Tunai.<br>
+            2. Pembayaran Online.<br>
+            3. Transfer ke rekening kami atas nama <span class="badge bg-primary text-white">Dian Ardiansyah</span><br>
+                - <span class="badge bg-success text-white">Bank BCA : 299 040 7315</span><br>
+                - <span class="badge bg-success text-white">Bank Mandiri : 173-00-1269590-5</span><br>
                 <br>
-                - <span class="badge bg-success text-white">Bank Mandiri : 1730012695905</span><br>
-                - <span class="badge bg-success text-white">Bank BCA : 2990407315</span><br>
-                - <span class="badge bg-success text-white">DANA : 085795909904</span><br>
-                <br>
-                Silahkan konfirmasi ke nomor WhatsApp <span class="badge bg-primary text-white">0878 1804 0024</span>
-                setelah melakukan pembayaran dengan mengirimkan bukti transfer.
-            </div>
+            4. Transfer ke rekening <span class="badge bg-primary text-white">PT. Global Sarana Elektronika </span><br>
+                - <span class="badge bg-success text-white">Bank BCA : 231 711 1157</span><br>
+                - <span class="badge bg-success text-white">Bank BRI : 0075-01-001957-30-4</span><br>
+                                <br>
+                Silahkan konfirmasi ke nomor WhatsApp <span class="badge bg-primary text-white">0878 1804 0024</span> setelah melakukan pembayaran dengan mengirimkan bukti transfer.
+        </div>
         @endforeach
-
+        
     </div>
 
 </x-layouts.customers.app-layout>

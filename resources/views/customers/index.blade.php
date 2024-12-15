@@ -92,7 +92,15 @@
             </div>
         </span>
     </div>
-
+    
+    
+    <div class="card-header py-3">
+    @can('customer-create')
+            <span><a class="btn btn-sm btn-success mt-2" href="{{ route('customers.create') }}"><i class="fa fa-plus"></i> Add New Customer </a></span>
+    @endcan
+    </div>
+    
+    
     <div class="card-body">
         {{ $data->withQueryString()->links() }}
         <div style="overflow-x: auto;">

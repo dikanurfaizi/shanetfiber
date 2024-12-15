@@ -110,7 +110,6 @@
         <a class="btn btn-success btn-sm" href="{{ route('receipts.thermal', $receipt->slug) }}" target="_blank">
             <i class="fa fa-print"></i> Thermal
         </a>
-
     </div>
 
 </x-layouts.cpanel.billings.app-layout>

@@ -48,9 +48,9 @@ class WhatsappMessageController extends Controller
         $message = $whatsappmessage->reply_message;
         // $message = str_replace("\n", "\n", $message);
         $replace = [
-            '%name%' => 'Alex',
+            '%name%' => 'Shanum',
             '%customer_id%' => 'WND-101',
-            '%address%' => 'Weru, Sukoharjo',
+            '%address%' => 'Ciseureuh, Purwakarta',
             '%day%' => 2,
             '%pakets%' => 'Paket',
             '%customer_service%' => Auth::user()->name,

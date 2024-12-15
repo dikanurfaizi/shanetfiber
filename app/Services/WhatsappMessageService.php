@@ -121,14 +121,16 @@ class WhatsappMessageService
                 '%customer_id%' => $billing->customer->customer_id,
                 '%billing_number%' =>  $billing->billing_number,
             ];
-            $billing_periode = Carbon::parse($billing->customer->activation_date)->format('d') . ' ' . $billing->billing_periode->name;
+            //$billing_periode = Carbon::parse($billing->customer->activation_date)->format('d') . ' ' . $billing->billing_periode->name;
+            $billing_periode = $billing->billing_periode->name;
 
             if ($action == 'transfer' || $action == 'cash') {
                 $message = $this->getDefaultMessage('payment');
                 $receipt = Receipt::where('id', $billing->receipt_id)->first();
                 if ($receipt) {
                     $replace['%paket%'] = $receipt->paket_name;
-                    $replace['%periode%'] = $billing_periode . ' - ' . Carbon::parse($billing_periode)->subDay()->addMonthsNoOverflow(1)->format('d F Y');
+                    //$replace['%periode%'] = $billing_periode . ' - ' . Carbon::parse($billing_periode)->subDay()->addMonthsNoOverflow(1)->format('d F Y');
+                    $replace['%periode%'] = $billing_periode;
                     $replace['%bill%'] = 'Rp.' . number_format($receipt->paket_price, 2);
                     $replace['%payment_time%'] = Carbon::parse($receipt->payment_time)->format('d F Y H:i:s');
                     $replace['%teller%'] =  $receipt->teller_name;

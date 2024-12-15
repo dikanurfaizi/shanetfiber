@@ -84,6 +84,7 @@ return [
         'caller-id' => 'Caller ID',
         'update-with-last-caller-id' => 'Update with last caller ID',
         'disconnect-client-button' => 'Dont disconnect client after update secret?',
+        'internet_service' => 'Internet Service',
         'price' => 'Price'
     ],
     'placeholder' => [

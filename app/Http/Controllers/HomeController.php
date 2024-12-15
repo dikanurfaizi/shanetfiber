@@ -68,8 +68,6 @@ class HomeController extends Controller
 
         if (count($routersEnable) != 0) {
             $onlineRouters = array();
-            // $countRouterEnable = count($routersEnable);
-            //$i = 0;
             foreach ($routersEnable as $routerEnable) {
                 $profileIsolir = AutoIsolir::where('mikrotik_id', $routerEnable->id)->value('profile_id');
                 try {
