@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -11,6 +12,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('whatsapp_numbers')) {
+            DB::table('whatsapp_numbers')->delete(); // Menghapus data dengan mematuhi foreign key
+        }
+
         if (!Schema::hasTable('whatsapp_numbers')) {
             Schema::create('whatsapp_numbers', function (Blueprint $table) {
                 $table->id();

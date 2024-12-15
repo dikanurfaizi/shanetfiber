@@ -117,7 +117,7 @@ Ciseureuh, Purwakarta
 %address%
 Customer ID: %customer_id%
 
-%day% hari lagi adalah batas akhir pembayaran paket %paket-name% internet anda. Saat ini anda memiliki %count-bill% tagihan yang belum dibayar:
+%day% hari lagi adalah batas akhir pembayaran paket internet anda. Saat ini anda memiliki %count-bill% tagihan yang belum dibayar:
 
 %pakets%
 *Jumlah tagihan: %total-bill%*
@@ -138,7 +138,7 @@ Ciseureuh, Purwakarta
 %address%
 Customer ID: %customer_id%
 
-Hari ini adalah batas akhir pembayaran paket %paket-name% internet anda. Saat ini anda memiliki %count-bill% tagihan yang belum dibayar:
+Hari ini adalah batas akhir pembayaran paket internet anda. Saat ini anda memiliki %count-bill% tagihan yang belum dibayar:
 
 %pakets%
 *Jumlah tagihan: %total-bill%*
@@ -160,7 +160,7 @@ Ciseureuh, Purwakarta
 %address%
 Customer ID: %customer_id%
 
-Kami ingin mengingatkan bahwa Anda memiliki %count-bill% tagihan paket internet %paket-name% yang belum dibayar hingga melewati jatuh tempo.
+Kami ingin mengingatkan bahwa Anda memiliki %count-bill% tagihan paket internet yang belum dibayar hingga melewati jatuh tempo.
 Berikut adalah rincian tagihan Anda:
 
 %pakets%

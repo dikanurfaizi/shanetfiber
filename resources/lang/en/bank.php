@@ -39,5 +39,9 @@ return [
         'name' => 'Account Name',
         'bank' => 'Bank Name',
         'account_number' => 'Account Number',
+        'deposit_bank_name' => 'Deposit Bank Name',
+        'deposit_account_name' => 'Deposit Account Name',
+        'deposit_account_number' => 'Deposit Account Number',
+        'reference-id' => 'Reference ID',
     ]
 ];

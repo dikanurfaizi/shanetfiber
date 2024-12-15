@@ -39,6 +39,7 @@ use App\Services\Routerboard\TestConnectionService;
 use App\Services\WhatsappMessageService;
 use Barryvdh\DomPDF\Facade\PDF;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
 use Illuminate\Contracts\Database\Eloquent\Builder;
 //use Barryvdh\DomPDF\PDF;
@@ -333,6 +334,38 @@ class BillingController extends Controller
             }
         }
 
+        try {
+            // Query untuk mendapatkan data tagihan
+            $create_billing = Billing::query()
+                ->where('billing_periode_id', $billingPeriode->id)
+                ->whereIn('status', ['BL', 'PL'])
+                ->get();
+
+            // Cek apakah data tagihan ditemukan
+            if ($create_billing->isEmpty()) {
+                Log::info("No billings found for billing_periode_id: {$billingPeriode->id}");
+            } else {
+                // Cek apakah gateway WhatsApp aktif
+                $gatewayStatus = WhatsappGateway::where('slug', 'gateway')->value('disabled');
+                if ($gatewayStatus === false) {
+                    // Pastikan customer memiliki kontak yang valid
+                    if (!empty($customer->contact)) {
+                        $this->messageService->create_billing($create_billing);
+                    } else {
+                        Log::warning("Customer contact is missing for customer ID: {$customer->id}");
+                    }
+                } else {
+                    Log::info("WhatsApp Gateway is disabled.");
+                }
+            }
+        } catch (\Exception $e) {
+            // Log error jika terjadi kesalahan pada proses
+            Log::error("Error processing billing notifications: {$e->getMessage()}", [
+                'billing_periode_id' => $billingPeriode->id,
+                'exception' => $e
+            ]);
+        }
+
         return redirect()->route('billings.index')
             ->with('success', $totalBillingCreated . ' Billing created successfully.');
     }
@@ -440,6 +473,38 @@ class BillingController extends Controller
             }
         }
 
+        try {
+            // Query untuk mendapatkan data tagihan
+            $create_billing = Billing::query()
+                ->where('billing_periode_id', $billingPeriodeId)
+                ->whereIn('status', ['BL', 'PL'])
+                ->get();
+
+            // Cek apakah data tagihan ditemukan
+            if ($create_billing->isEmpty()) {
+                Log::info("No billings found for billing_periode_id: {$billingPeriodeId}");
+            } else {
+                // Cek apakah WhatsApp Gateway aktif
+                $gatewayDisabled = WhatsappGateway::where('slug', 'gateway')->value('disabled');
+                if ($gatewayDisabled === false) {
+                    // Pastikan kontak pelanggan tersedia
+                    if (!empty($customer->contact)) {
+                        $this->messageService->create_billing($create_billing);
+                    } else {
+                        Log::warning("Customer contact is missing for customer ID: {$customer->id}");
+                    }
+                } else {
+                    Log::info("WhatsApp Gateway is disabled.");
+                }
+            }
+        } catch (\Exception $e) {
+            // Tangani kesalahan dan log detailnya
+            Log::error("Error occurred during billing processing: {$e->getMessage()}", [
+                'billing_periode_id' => $billingPeriodeId,
+                'exception' => $e,
+            ]);
+        }
+
         return redirect()->route('billings.index')
             ->with('success', $totalBillingCreated . ' Billing created successfully.');
     }
@@ -536,12 +601,39 @@ class BillingController extends Controller
             }
         }
 
-
         $billing->update([
             'pay_later' => Carbon::parse($request->pay_later),
             'teller_name' => auth()->user()->name,
             'status' => 'PL'
         ]);
+
+        try {
+            // Cek jika WhatsappGateway ditemukan dan tidak dalam status disabled
+            $gatewayStatus = WhatsappGateway::where('slug', 'gateway')->value('disabled');
+
+            if ($gatewayStatus === null) {
+                throw new \Exception("Whatsapp Gateway with slug 'gateway' not found.");
+            }
+
+            // Pastikan gateway tidak dalam keadaan disabled dan customer memiliki contact
+            if ($gatewayStatus == false && $customer->contact) {
+                // Panggil method payment_paket
+                $this->messageService->payment_paket($billing, 'paylater');
+            } else {
+                if ($gatewayStatus) {
+                    Log::warning("Whatsapp Gateway is disabled.");
+                } elseif (!$customer->contact) {
+                    Log::warning("Customer contact not found.");
+                }
+            }
+        } catch (\Exception $e) {
+            // Tangani error atau exception
+            Log::error("Error occurred while processing payment package: " . $e->getMessage());
+            // Opsional: Menampilkan pesan error ke pengguna
+            return response()->json(['error' => 'There was an issue processing the payment package. Please try again later.']);
+        }
+
+
         return redirect()->back()->with('success', 'Pay later successfully.');
     }
 
@@ -562,7 +654,6 @@ class BillingController extends Controller
         if ($paymentMethode == 'transfer') {
             return redirect()->route('billings.transfer', $billing->slug);
         } else if ($paymentMethode == 'paylater') {
-
             return redirect()->route('billings.paylater', $billing->slug);
         } else {
             $payment = 'cash';
@@ -579,18 +670,17 @@ class BillingController extends Controller
                     [
                         'bank_transfer' => 'required',
                         //  'reference_id' => 'required|unique:receipts,reference_id,',
-                        'deposit_bank_name' => 'required',
-                        'deposit_account_name' => 'required',
+                        //'deposit_bank_name' => 'required',
+                        //'deposit_account_name' => 'required',
                         //'deposit_account_number' => 'required',
                     ],
                     [
                         'bank_transfer.required' => 'Bank transfer required!',
                         'reference_id.required' => 'Reference id required!',
                         'reference_id.unique' => 'Reference id already in use!',
-                        'deposit_bank_name.required' => 'Deposit Bank Name required!',
-                        'deposit_account_name.required' => 'Deposit Account Name required!',
+                        //'deposit_bank_name.required' => 'Deposit Bank Name required!',
+                        //'deposit_account_name.required' => 'Deposit Account Name required!',
                         'deposit_account_number.required' => 'Deposit Account Number required!',
-
                     ]
                 );
                 $payment = 'transfer';

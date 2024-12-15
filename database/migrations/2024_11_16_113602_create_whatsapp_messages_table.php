@@ -13,6 +13,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('whatsapp_messages')) {
+            DB::table('whatsapp_messages')->delete(); // Menghapus semua data dalam tabel
+        }
+
         if (!Schema::hasTable('whatsapp_messages')) {
             Schema::create('whatsapp_messages', function (Blueprint $table) {
                 $table->id();

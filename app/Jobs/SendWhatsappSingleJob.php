@@ -14,6 +14,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 // use App\Models\WhatsappGateway\WhatsappNumber;
 // use Illuminate\Contracts\Queue\ShouldBeUnique;
 use App\Models\WhatsappGateway\WhatsappGateway;
+use App\Models\Customer;
 use GuzzleHttp\Exception\RequestException;
 //use Spatie\SslCertificate\SslCertificate;
 
@@ -21,6 +22,7 @@ class SendWhatsappSingleJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    private string $customer_name;
     private string $receiver;
     private string $message;
     // private string $gateway_number;
@@ -30,8 +32,9 @@ class SendWhatsappSingleJob implements ShouldQueue
      * Create a new job instance.
      */
     // public function __construct(string $receiver, string $gateway_number, string $message)
-    public function __construct(string $receiver, WhatsappGateway $gateway, string $message)
+    public function __construct(string $customer_name, string $receiver, WhatsappGateway $gateway, string $message)
     {
+        $this->customer_name = $customer_name;
         $this->receiver = $receiver;
         //$this->gateway_number = $gateway_number;
         $this->gateway = $gateway;
@@ -65,6 +68,7 @@ class SendWhatsappSingleJob implements ShouldQueue
         $url = $this->gateway->url_callback;
         $sender_number = $this->gateway->whatsapp_number->number;
         $formattedReceiver = $this->receiver . '@s.whatsapp.net';
+        $customer_name = $this->customer_name;
 
         // Buat payload hanya untuk body
         $payload = [
@@ -91,20 +95,42 @@ class SendWhatsappSingleJob implements ShouldQueue
                 'json' => $payload, // Mengirim payload dalam format JSON
             ]);
 
+            $responseBody = $response->getBody()->getContents(); // Ambil body JSON dari response
+            $decodedResponse = json_decode($responseBody, true); // Decode ke array asosiatif
+
+            // Ambil informasi dari JSON
+            $timestamp = $decodedResponse['message'] ? substr($decodedResponse['message'], strpos($decodedResponse['message'], '(server timestamp:') + 19, 20) : 'Unknown time';
+
             // Log keberhasilan pengiriman
-            Log::info('Message sent successfully.', [
+            Log::info('Message sent to', [
                 'receiver' => $this->receiver,
+                'customer_name' => $customer_name,
                 'sender' => $sender_number,
-                'response_status' => $response->getStatusCode(),
-                'response_body' => $response->getBody()->getContents(),
+                'status_code' => $response->getStatusCode(),
+                'server_time' => $timestamp,
             ]);
         } catch (\GuzzleHttp\Exception\RequestException $e) {
             // Tangani error jika request gagal
+            $error = $e->getMessage(); // Mengambil pesan error lengkap
+            $response = $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : null;
+
+            // Ekstrak status error
+            preg_match('/\`(\d{3} [A-Za-z\s]+)\`/', $error, $statusMatch);
+            $errorStatus = $statusMatch[1] ?? 'Unknown error status';
+
+            // Ekstrak pesan dari JSON
+            $decodedResponse = $response ? json_decode($response, true) : [];
+            $message = $decodedResponse['message'] ?? 'Unknown message';
+
+            // Hapus domain @s.whatsapp.net dari message
+            $formattedMessage = preg_replace('/@s\.whatsapp\.net/', '', $message);
+
             Log::error('Failed to send message.', [
                 'receiver' => $this->receiver,
+                'customer_name' => $customer_name,
                 'sender' => $sender_number,
-                'error' => $e->getMessage(),
-                'response' => $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : null,
+                'status_code' => $errorStatus,
+                'response' => $formattedMessage,
             ]);
         }
     }
