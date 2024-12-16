@@ -19,7 +19,7 @@ class WhatsappMessageController extends Controller
      */
     public function index()
     {
-        $messages = WhatsappMessage::orderBy('name', 'ASC')->paginate(10);
+        $messages = WhatsappMessage::orderBy('name', 'ASC')->paginate(20);
         return view('whatsapp_gateways.messages.index', compact('messages'))->with('i', (request()->input('page', 1) - 1) * 10);
     }
 
