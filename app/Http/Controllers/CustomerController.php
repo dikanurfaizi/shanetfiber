@@ -11,6 +11,7 @@ use App\Models\AutoIsolir;
 use App\Models\MerkRouter;
 use App\Models\TypeRouter;
 use App\Models\CustomerOnt;
+use App\Models\User;
 
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
@@ -52,6 +53,7 @@ use App\Services\Routerboard\SystemService;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 //use ArielMejiaDev\LarapexCharts\Facades\LarapexChart;
 use ArielMejiaDev\LarapexCharts\LarapexChart;
@@ -93,44 +95,67 @@ class CustomerController extends Controller
      */
     public function index(Request $request)
     {
+        Log::info('Starting Customer Index method.');
         $paginate = 25;
         $searchName = $request->search_name;
         $searchAddress = $request->search_address;
         $searchServer = $request->server_search;
         $searchPaket = $request->search_paket;
         $searchStatus = $request->status;
-        $searchService = $request->search_service;
+        $searchAdmin = $request->search_admin;
+
+        Log::info('Search parameters retrieved.', [
+            'search_name' => $searchName,
+            'search_address' => $searchAddress,
+            'search_server' => $searchServer,
+            'search_paket' => $searchPaket,
+            'search_status' => $searchStatus,
+            'search_admin' => $searchAdmin,
+        ]);
+
         $routersEnable = Mikrotik::where('disabled', 'false')
             ->when($searchServer, function ($query) use ($searchServer) {
                 $query->where('id', $searchServer);
             })
             ->get();
+
         if ($searchStatus == 'isolir' || $searchStatus == 'offline' || $searchStatus == 'online') {
+            Log::info('Processing status-specific logic.', ['status' => $searchStatus]);
             $status = $searchStatus;
             $dataCustomers = array();
             if (count($routersEnable) == 0) {
+                Log::warning('No enabled routers found.');
                 return redirect()->route('customers.index')->withErrors(['msg' => 'All server disable, please check your server setting.', 'Or you dont have server data.']);
             }
             foreach ($routersEnable as $router) {
+                Log::info('Processing router.', ['router' => $router->name]);
+
                 try {
                     $this->testConnectionService->checkOnline($router);
+                    Log::info('Router connection successful.', ['router' => $router->name]);
                 } catch (\Exception $e) {
+                    Log::error('Router connection failed.', ['router' => $router->name, 'error' => $e->getMessage()]);
                     return redirect()->route('customers.index')->withErrors(['msg' => 'Server ' . $router->name . ' Offline.', 'Please enable first or check your configuration!']);
                 }
                 if ($status == 'isolir') {
                     $profileIsolir = AutoIsolir::where('mikrotik_id', $router->id)->value('profile_id');
+                    Log::info('Retrieved isolir profile.', ['profile_id' => $profileIsolir]);
                     if ($profileIsolir) {
                         $getSecretStatus = $this->secretService->getSecretByProfile($router, $profileIsolir);
                         $collectionSecretStatus = SecretResource::collection($getSecretStatus)->where('disabled', 'false');
                         $secretIsolir = $collectionSecretStatus->pluck(['name'])->toArray();
                         $secretsStatus = $secretIsolir;
+                        Log::info('Isolir secrets retrieved.', ['secrets' => $secretsStatus]);
                     } else {
+                        Log::warning('Isolir profile not configured for router.', ['router' => $router->name]);
                         return redirect()->route('customers.index')->withErrors(['msg' => 'Please config auto isolir on Server ' . $router->name . ' first.']);
                     }
                 } else {
                     $getAllSecretActive = $this->secretService->getPppActive($router);
                     $collectionSecretActive = SecretResource::collection($getAllSecretActive);
                     $secretActive = $collectionSecretActive->pluck(['name'])->toArray();
+                    Log::info('Active secrets retrieved.', ['secrets' => $secretActive]);
+
                     if ($status == 'offline') {
                         $usernameCustomers = Customer::where('mikrotik_id', $router->id)
                             ->where('disabled', 'false')
@@ -138,12 +163,14 @@ class CustomerController extends Controller
                             ->toArray();
                         $collectCustomerUsernames = collect($usernameCustomers);
                         $secretsStatus = $collectCustomerUsernames->diff($secretActive);
+                        Log::info('Offline customers calculated.', ['offline_customers' => $secretsStatus]);
                     } else {
                         $secretsStatus = $secretActive;
                     }
                 }
                 foreach ($secretsStatus as $secretName) {
                     $customers = Customer::where('username', $secretName)->first();
+                    Log::info('Customer retrieved by secret.', ['secret' => $secretName, 'customer' => $customers]);
                     $dataCustomers[] = $customers;
                     $dataCustomers = collect($dataCustomers)
                         ->filter(function ($customers) use ($searchAddress) {
@@ -173,6 +200,7 @@ class CustomerController extends Controller
                         ->sortBy('name');
                 }
             }
+
             //Get current page form url e.g. &page=6
             $currentPage = LengthAwarePaginator::resolveCurrentPage();
             $collection = new Collection($dataCustomers);
@@ -187,7 +215,8 @@ class CustomerController extends Controller
             ])->with('i', (request()->input('page', 1) - 1) * $paginate);
             // $loop->iteration
         } else {
-            $customers = Customer::query()
+            Log::info('Default customer query logic executed.');
+            $customers = Customer::with(['user'])
                 ->when($searchName, function ($query) use ($searchName) {
                     $query->where('name', 'like', "%{$searchName}%");
                 })
@@ -198,19 +227,24 @@ class CustomerController extends Controller
                         $query->where('address', $searchAddress);
                     }
                 })
-                ->when($searchService, function ($query) use ($searchService) {
-                    if ($searchService) {
-                        $query->where('internet_service', $searchService);
+                ->when($searchAdmin, function ($query) use ($searchAdmin) {
+                    if ($searchAdmin == 'NULL') {
+                        $query->where('user_id', NULL);
+                    } else {
+                        $query->where('user_id', $searchAdmin);
                     }
                 })
                 ->when($searchStatus, function ($query) use ($searchStatus) {
                     if ($searchStatus == 'deactivated') {
                         $query->where('activation', 'false');
+                        Log::info('Filter deactivated applied');
                     } else if ($searchStatus == 'free') {
                         $query->where('discount', 100);
+                        Log::info('Filter free applied');
                     } else {
                         $query->where('disabled', $searchStatus);
                         $query->where('activation', 'true');
+                        Log::info("Filter applied: $searchStatus");
                     }
                 })
                 ->when($searchServer, function ($query) use ($searchServer) {
@@ -221,24 +255,32 @@ class CustomerController extends Controller
                 })
                 ->orderBy('address', 'ASC')
                 ->orderBy('name', 'ASC');
-            $customersGet = $customers->get();
+
             $data = $customers->paginate($paginate);
+
+            $data->getCollection()->transform(function ($customer) {
+                $customer->contact = $this->formatContact($customer->contact, false);  // false berarti ubah ke format '08'
+                return $customer;
+            });
+
             $totalIncoming = 0;
 
-            $customers = Customer::orderBy('address', 'ASC')->where('address', '!=', NULL)->get();
-            $addressUnique = $customers->unique('address');
+            $addressUnique = $data->getCollection()->unique('address');
             $address = $addressUnique->pluck('address', 'address');
             $allServers = Mikrotik::where('disabled', 'false')->orderBy('name', 'ASC')->pluck('name', 'id');
+            $allAdmin = User::where('disabled', 'false')->orderBy('name', 'ASC')->pluck('name', 'id');
 
-            foreach ($customersGet as $customerGet) {
-                $totalIncoming += $customerGet->paket->price * ((100 - $customerGet->discount) / 100);
+            // Menghitung totalIncoming berdasarkan paket yang sudah diformat
+            foreach ($data as $customer) {
+                $totalIncoming += $customer->paket->price * ((100 - $customer->discount) / 100);
             }
+
             if (count($data) == 0) {
-                return view('customers.index', compact('data', 'totalIncoming', 'address', 'allServers'), [
+                return view('customers.index', compact('data', 'totalIncoming', 'address', 'allServers', 'allAdmin'), [
                     'message' => 'No customer found. Try to search again !',
                 ]);
             } else {
-                return view('customers.index', compact('data', 'totalIncoming', 'address', 'allServers'))
+                return view('customers.index', compact('data', 'totalIncoming', 'address', 'allServers', 'allAdmin'))
                     ->with('i', (request()->input('page', 1) - 1) * $paginate);
             }
         }
@@ -252,9 +294,11 @@ class CustomerController extends Controller
         $mikrotiks = Mikrotik::where('disabled', 'false')->orderBy('name', 'ASC')->pluck('name', 'id');
         $pppservices = PppType::orderBy('name', 'ASC')->pluck('name', 'id');
         // $interfaces = $this->ipStaticService->getInterfaces($mikrotiks);
+        $users = User::all();
         return view('customers.create', [
             'mikrotiks' => $mikrotiks,
             'pppservices' => $pppservices,
+            'users' => $users,
         ]);
     }
 
@@ -263,101 +307,99 @@ class CustomerController extends Controller
      */
     public function store(CustomerStoreRequest $request): RedirectResponse
     {
-        $internet_service = $request->internet_service;
-        $mikrotikId = $request->mikrotik_id;
-        $router = Mikrotik::where('id', $mikrotikId)->first();
-        //  $date = Carbon::now()->format('d');
-        if ($request->discount) {
-            $discount = $request->discount;
-        } else {
-            $discount = 0;
+        $discount = $request->discount ?? 0;
+        $periode = BillingPeriode::latest('created_at')->first();
+
+        if (!$periode) {
+            $periode = BillingPeriode::create(['name' => Carbon::now()->format('F Y')]);
         }
-        $periodeId = BillingPeriode::latest('created_at')->value('id');
-        if (!isset($periodeId)) {
-            $billingPeriode = BillingPeriode::create([
-                'name' => Carbon::now()->format('F Y'),
-            ]);
-            $newBillingPeriode = $billingPeriode->fresh();
-            $periodeId = $newBillingPeriode->id;
-            $periodeName = $newBillingPeriode->name;
-        } else {
-            $periodeName = BillingPeriode::latest('created_at')->value('name');
-        }
+
+        $periodeName = $periode->name;
+        $periodeId = $periode->id;
         $month = Carbon::parse($periodeName)->format('m');
         $year = Carbon::parse($periodeName)->format('Y');
-        $name = explode(' ', $request->name);
-        $first_name = $name[0];
-        if ($request->address) {
-            $string = str_replace(' ', '-', $request->address);
-            $address = preg_replace('/[^A-Za-z0-9\-]/', '', $string);
-            $username = str($first_name . '-' . $address . '-' . Str::random(4))->slug();
-        } else {
-            $username = str($first_name . '-' . $year . '-' . $month . '-' . Str::random(4))->slug();
+
+        $firstName = explode(' ', $request->name)[0];
+        $username = $this->generateUsername($firstName, $request->address, $year, $month);
+
+        $customerData = [
+            'name' => $request->name,
+            'email' => $request->email,
+            'slug' => str($firstName . '-' . Str::random(6))->slug(),
+            'password' => Hash::make($request->password),
+            'address' => $request->address,
+            'contact' => $this->formatContact($request->contact),
+            'internet_service' => $request->internet_service,
+            'primary_server' => $request->mikrotik_id,
+            'discount' => $discount,
+            'mikrotik_id' => $request->mikrotik_id,
+            'paket_id' => $request->paket_id,
+            'username' => $username,
+            'user_id' => $request->user_id,
+        ];
+
+        if ($request->internet_service === 'ppp') {
+            $customerData['password_ppp'] = str(Str::random(6));
+            $customerData['ppp_type_id'] = $request->ppp_type_id;
+        } elseif ($request->internet_service === 'ip_static') {
+            $customerData['simpleque_name'] = $username;
+            $customerData['ip_static'] = $request->ip_static;
+            $customerData['mac_address'] = $request->mac_address;
+            $customerData['interface'] = $request->interface;
         }
-        if ($internet_service == 'ppp') {
-            $passwordPpp = str(Str::random(6));
-            $customer = Customer::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'slug' => str($first_name . '-' . Str::random(6))->slug(),
-                'password' => Hash::make($request->password),
-                'address' => $request->address,
-                'contact' => $request->contact,
-                'internet_service' => $request->internet_service,
-                'primary_server' => $request->mikrotik_id,
-                'discount' => $discount,
-                'mikrotik_id' => $request->input('mikrotik_id'),
-                'paket_id' => $request->input('paket_id'),
-                'username' => $username,
-                'password_ppp' => $passwordPpp,
-                'ppp_type_id' => $request->ppp_type_id
-            ]);
-        } else if ($internet_service == 'ip_static') {
-            $ip_static = $request->input('ip_static');
-            $mac_address = $request->input('mac_address');
-            $interface = $request->input('interface');
-            $customer = Customer::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'slug' => str($first_name . '-' . Str::random(6))->slug(),
-                'username' => $username,
-                'password' => Hash::make($request->password),
-                'address' => $request->address,
-                'contact' => $request->contact,
-                'internet_service' => $request->internet_service,
-                'primary_server' => $request->mikrotik_id,
-                'discount' => $discount,
-                'mikrotik_id' => $request->input('mikrotik_id'),
-                'paket_id' => $request->input('paket_id'),
-                'simpleque_name' => $username,
-                'ip_static' => $ip_static,
-                'mac_address' => $mac_address,
-                'interface' => $interface
-            ]);
-        }
-        $getCustomer = $customer->fresh();
-        $websystem = Websystem::where('slug', 'websystem')->first();
-        $longCode = '%0' . $websystem->long_customer_code . 'd';
-        $customerId = $websystem->customer_code . sprintf('%02d', $customer->mikrotik_id) . '-' . sprintf($longCode, $customer->id);
-        $getCustomer->update([
-            'customer_id' => $customerId
-        ]);
-        CustomerOnt::create([
-            'customer_id' => $getCustomer->id,
-        ]);
-        $billing = Billing::create([
-            'billing_periode_id' => $periodeId,
-            'slug' => str($getCustomer->id . '-' . Str::random(4))->slug(),
-            'billing_number' => str($getCustomer->id . '-' . Str::random(4)  . '-' . $month . '-' . $year)->slug(),
-            'customer_id' => $getCustomer->id,
-            'customer_name' => $getCustomer->name,
-            'paket_name' => $getCustomer->paket->name,
-            'paket_price' => $getCustomer->paket->price * ((100 - $getCustomer->discount) / 100),
-            'created_name' => auth()->user()->name,
-            'status' => 'BL'
-        ]);
+
+        $customer = Customer::create($customerData);
+        $customer = $customer->fresh();
+
+        $this->generateCustomerId($customer, $request->mikrotik_id);
+        CustomerOnt::create(['customer_id' => $customer->id]);
+
+        $this->createBilling($customer, $periodeId, $periodeName);
+
+        $routerName = Mikrotik::find($request->mikrotik_id)->name ?? 'router';
         return redirect()->route('customers.index')
-            ->with('success', 'Customer added successfully. Please activated first to create user ppp on server ' . $router->name . '!');
+            ->with('success', 'Customer added successfully. Please activate first to create user ppp on server ' . $routerName . '!');
+    }
+
+    private function generateUsername(string $firstName, ?string $address, string $year, string $month): string
+    {
+        if ($address) {
+            $addressSlug = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '-', $address));
+            return str($firstName . '-' . $addressSlug . '-' . Str::random(4))->slug();
+        }
+        return str($firstName . '-' . $year . '-' . $month . '-' . Str::random(4))->slug();
+    }
+
+    private function generateCustomerId(Customer $customer, int $mikrotikId): void
+    {
+        $websystem = Websystem::where('slug', 'websystem')->first();
+        $longCode = sprintf('%%0%dd', $websystem->long_customer_code);
+        $customerId = sprintf(
+            '%s%02d-%s',
+            $websystem->customer_code,
+            $mikrotikId,
+            sprintf($longCode, $customer->id)
+        );
+
+        $customer->update(['customer_id' => $customerId]);
+    }
+
+    private function createBilling(Customer $customer, int $periodeId, string $periodeName): void
+    {
+        $month = Carbon::parse($periodeName)->format('m');
+        $year = Carbon::parse($periodeName)->format('Y');
+
+        Billing::create([
+            'billing_periode_id' => $periodeId,
+            'slug' => str($customer->id . '-' . Str::random(4))->slug(),
+            'billing_number' => str($customer->id . '-' . Str::random(4) . '-' . $month . '-' . $year)->slug(),
+            'customer_id' => $customer->id,
+            'customer_name' => $customer->name,
+            'paket_name' => $customer->paket->name,
+            'paket_price' => $customer->paket->price * ((100 - $customer->discount) / 100),
+            'created_name' => auth()->user()->name,
+            'status' => 'BL',
+        ]);
     }
 
     public function activation(Customer $customer): RedirectResponse
@@ -525,17 +567,9 @@ class CustomerController extends Controller
             $serverDisconnect = 'true';
             $message = 'Server ' . $router->name . ' offline, data displayed is local data. You cannot change this information.';
         }
-        $countryCode = '62';
-        if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false) {
-            $countryCode = WhatsappGateway::where('slug', 'gateway')->value('country_code');
-        }
-        $customer_number = $customer->contact;
-        if ($customer_number) {
-            $customer_number = preg_replace('/^' . $countryCode . '?/', '0', $customer_number);
-        }
         return view('customers.show', [
             'customer' => $customer,
-            'customer_contact' => $customer_number,
+            'customer_contact' => $this->formatContact($customer->contact, false),
             'pppsecret' => $secret,
             'mikrotik' => $router,
             'secretActive' => $secretActive,
@@ -553,6 +587,8 @@ class CustomerController extends Controller
     public function edit(Customer $customer)
     {
         $router = Mikrotik::where('id', $customer->mikrotik_id)->first();
+        Log::info("router: {$router}");
+
         if ($router->disabled == 'false') {
             try {
                 $this->testConnectionService->checkOnline($router);
@@ -564,17 +600,18 @@ class CustomerController extends Controller
             $serverDisconnect = 'true';
         }
 
-        $countryCode = '62';
-        if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false) {
-            $countryCode = WhatsappGateway::where('slug', 'gateway')->value('country_code');
-        }
-        $customer_number = $customer->contact;
-        if ($customer_number) {
-            $customer_number = preg_replace('/^' . $countryCode . '?/', '0', $customer_number);
-        }
-        $pakets = Paket::where('mikrotik_id', $customer->mikrotik_id)->where('disabled', 'false')->orderBy('price', 'ASC')->get();
-        return view('customers.edit', compact('customer', 'pakets', 'serverDisconnect', 'customer_number'));
+        Log::info("serverDisconnect: {$serverDisconnect}");
+
+        $customer_number = $this->formatContact($customer->contact, false);
+        $users = User::all();
+        $pakets = Paket::where('mikrotik_id', $customer->mikrotik_id)
+            ->where('disabled', 'false')
+            ->orderBy('price', 'ASC')
+            ->get();
+
+        return view('customers.edit', compact('customer', 'pakets', 'customer_number', 'users', 'serverDisconnect'));
     }
+
 
     public function update(CustomerUpdateRequest $request, Customer $customer)
     {
@@ -722,26 +759,14 @@ class CustomerController extends Controller
             $customer->update(['password' => Hash::make($request->password)]);
         }
 
-
-        $countryCode = '62';
-        if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false) {
-            $countryCode = WhatsappGateway::where('slug', 'gateway')->value('country_code');
-        }
-        $number = $request->input('contact');
-        if ($number) {
-            if (substr($number, 0, 2) == '62') {
-                $number = preg_replace('/^' . $countryCode . '?/', $countryCode, $number);
-            } else if (substr($number, 0, 1) == '0') {
-                $number = preg_replace('/^0?/', $countryCode, $number);
-            }
-        }
         $customer->update([
             'name' => $request->name,
             'paket_id' => $request->paket_id,
             'email' => $request->email,
             'address' => $request->address,
-            'contact' => $number,
+            'contact' => $this->formatContact($request->contact),
             'discount' => $discount,
+            'user_id' => $request->user_id
         ]);
         return redirect()->back()
             ->with('success', 'Customer ' . $customer->name . ' updated!');
@@ -780,11 +805,6 @@ class CustomerController extends Controller
      */
     public function updatePpp(CustomerPppUpdateRequest $request, Customer $customer)
     {
-        // return dd($request->interface);
-        //  $this->validate($request, [
-        //      'username' => ['required', 'string', 'max:45', Rule::unique('customers')->ignore($customer->slug, 'slug')],
-        //  ]);
-
         $router = Mikrotik::where('id', $customer->mikrotik_id)->first();
         if ($customer->internet_service == 'ppp') {
             $customerSecretId = $customer->secret_id;
@@ -893,22 +913,18 @@ class CustomerController extends Controller
         if ($customer->activation == 'true') {
             $router = Mikrotik::where('id', $customer->mikrotik_id)->first();
             $autoisolir = AutoIsolir::where('mikrotik_id', $customer->mikrotik_id)->first();
+
             if ($customer->internet_service == 'ppp') {
-                try {
-                    $this->testConnectionService->checkOnline($router);
-                } catch (\Exception $e) {
-                    return redirect()->back()->withErrors(['msg' => 'Router offline, please check your router.']);
+                if (!$router || $this->checkServerConnection($router)) {
+                    return redirect()->back()->withErrors(['msg' => $router ? 'Router offline, please check your router.' : 'Customer does not have router.']);
                 }
                 $username = $customer->username;
                 //dispatch(new DeletePppSecretJob($router, $username))->onQueue('default');
                 $this->secretService->deleteSecretByName($router, $username);
                 $this->secretService->deleteActiveSecret($router, $username);
             } else if ($customer->internet_service == 'ip_static') {
-                // return dd($customer->internet_service);
-                try {
-                    $this->testConnectionService->checkOnline($router);
-                } catch (\Exception $e) {
-                    return redirect()->back()->withErrors(['msg' => 'Router offline, please check your router.']);
+                if (!$router || $this->checkServerConnection($router)) {
+                    return redirect()->back()->withErrors(['msg' => $router ? 'Router offline, please check your router.' : 'Customer does not have router.']);
                 }
                 $simpleque_id = $customer->simpleque_id;
                 //  $address_list_id = $customer->address_list_id;
@@ -936,10 +952,8 @@ class CustomerController extends Controller
     public function disable(Customer $customer)
     {
         $router = Mikrotik::where('id', $customer->mikrotik_id)->first();
-        try {
-            $this->testConnectionService->checkOnline($router);
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['msg' => 'Router offline, please check your router.']);
+        if (!$router || $this->checkServerConnection($router)) {
+            return redirect()->back()->withErrors(['msg' => $router ? 'Router offline, please check your router.' : 'Customer does not have router.']);
         }
         $username = $customer->username;
         $job = new DisablePppSecretJob($router, $username);
@@ -966,11 +980,10 @@ class CustomerController extends Controller
     public function enable(Customer $customer)
     {
         $router = Mikrotik::where('id', $customer->mikrotik_id)->first();
-        try {
-            $this->testConnectionService->checkOnline($router);
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['msg' => 'Router offline, please check your router.']);
+        if (!$router || $this->checkServerConnection($router)) {
+            return redirect()->back()->withErrors(['msg' => $router ? 'Router offline, please check your router.' : 'Customer does not have router.']);
         }
+
         $username = $customer->username;
         // dispatch(new EnablePppSecretJob($router, $username))->onQueue('default');
         // $customer->update([
@@ -1034,5 +1047,55 @@ class CustomerController extends Controller
 
             ], 500);
         }
+    }
+
+    private function checkServerConnection($router)
+    {
+        if ($router->disabled == false) {
+            try {
+                // Cek koneksi
+                $this->testConnectionService->checkOnline($router);
+                Log::info('Koneksi ke router berhasil untuk customer ID: ' . $router->mikrotik_id);
+                return false;
+            } catch (\Exception $e) {
+                Log::error('Koneksi gagal ke router untuk customer ID: ' . $router->mikrotik_id . '. Error: ' . $e->getMessage());
+                return true;
+            }
+        } else {
+            Log::warning('Router disabled atau tidak valid untuk customer ID: ' . $router->mikrotik_id);
+            return true;
+        }
+    }
+
+    private function formatContact($contact, $toInternational = true)
+    {
+        $gateway = WhatsappGateway::where('slug', 'gateway')->first();
+
+        // Mengecek apakah gateway tersedia dan tidak disabled
+        if ($gateway && !$gateway->disabled) {
+            $countryCode = $gateway->country_code;
+        } else {
+            // Fallback ke kode negara default jika gateway disabled
+            Log::warning('Whatsapp Gateway disabled atau tidak ditemukan, menggunakan default country code "62".');
+            $countryCode = '62';  // Bisa diganti jika ada mekanisme alternatif lain
+        }
+
+        if ($contact) {
+            // Jika diubah menjadi format internasional (berdasarkan $countryCode)
+            if ($toInternational) {
+                // Ubah ke format internasional, menggunakan kode negara yang sesuai
+                if (substr($contact, 0, 1) == '0') {
+                    $contact = preg_replace('/^0?/', $countryCode, $contact);
+                }
+            } else {
+                // Jika nomor dimulai dengan kode negara yang ada di $countryCode (misalnya '62'), ubah menjadi '08'
+                if (substr($contact, 0, strlen($countryCode)) == $countryCode) {
+                    $contact = '0' . substr($contact, strlen($countryCode));
+                }
+                // Tidak ada perubahan jika nomor sudah dimulai dengan '08'
+            }
+        }
+
+        return $contact;
     }
 }

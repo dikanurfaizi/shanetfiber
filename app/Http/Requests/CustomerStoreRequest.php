@@ -23,41 +23,41 @@ class CustomerStoreRequest extends FormRequest
     {
         $internet_service = $this->input('internet_service');
         $routerboardId = $this->input('mikrotik_id');
-        if ($internet_service == 'ppp') {
-            return [
-                'name' => ['required', 'string', 'min:3', 'max:25'],
-                // 'email' => 'required|email|unique:customers,email',
-                //  'password' => ['required', 'min:8', 'confirmed'],
-                'mikrotik_id' => 'required',
-                'paket_id' => 'required',
-                'internet_service' => 'required',
-                'ppp_type_id' => 'required',
-                'discount' => ['numeric', 'nullable'],
-                'contact' => 'digits_between:10,15|nullable',
 
-            ];
-        } else if ($internet_service == 'ip_static') {
-            return [
-                'name' => ['required', 'string', 'min:3', 'max:25'],
+        // Validasi umum untuk semua kondisi
+        $rules = [
+            'mikrotik_id' => 'required',
+            'paket_id' => 'required',
+            'internet_service' => 'required',
+            'discount' => ['numeric', 'nullable'],
+            'contact' => 'digits_between:10,15|nullable',
+            'name' => ['required', 'string', 'min:3', 'max:25'],
+            'email' => 'required|email|unique:customers,email',
+        ];
+
+        // Validasi tambahan untuk kondisi internet_service 'ppp'
+        if ($internet_service == 'ppp') {
+            $rules = array_merge($rules, [
+                'ppp_type_id' => 'required',
                 // 'email' => 'required|email|unique:customers,email',
-                //  'password' => ['required', 'min:8', 'confirmed'],
-                'mikrotik_id' => 'required',
-                'paket_id' => 'required',
-                'internet_service' => 'required',
+                // 'password' => ['required', 'min:8', 'confirmed'],
+            ]);
+        }
+        // Validasi tambahan untuk kondisi internet_service 'ip_static'
+        else if ($internet_service == 'ip_static') {
+            $rules = array_merge($rules, [
                 'interface' => 'required',
                 'ip_static' => 'required|unique:customers,ip_static,null,null,mikrotik_id,' . $routerboardId,
                 'mac_address' => 'required|unique:customers,mac_address,null,null,mikrotik_id,' . $routerboardId,
-                'discount' => ['numeric', 'nullable'],
-                'contact' => 'digits_between:10,15|nullable',
-
-            ];
-        } else {
-            return [
-                'mikrotik_id' => 'required',
-                'paket_id' => 'required',
-                'internet_service' => 'required',
-            ];
+                // 'email' => 'required|email|unique:customers,email',
+                // 'password' => ['required', 'min:8', 'confirmed'],
+            ]);
         }
+
+        // Tambahkan validasi untuk user_id
+        $rules['user_id'] = 'required|exists:users,id';
+
+        return $rules;
     }
 
     public function messages()

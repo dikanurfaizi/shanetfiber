@@ -10,22 +10,29 @@
                 <tr class="table-borderless">
                     <td class="py-1" width="150px"><strong>{{ __('customer.label.id') }}</strong></td>
                     <td class="py-1" width="380px">{{ __(':') }} {{ $customer->customer_id ?? 'No ID' }}</td>
-
+                    <td class="py-1" width="150px"><strong>{{ __('customer.label.responsibility') }}</strong></td>
+                    <td class="py-1" width="380px">{{ __(':') }}
+                        {{ $customer->user->name ?? 'No Linked User' }}</td>
                 </tr>
                 <tr class="table-borderless">
                     <td class="py-1" width="150px"><strong>{{ __('customer.label.name') }}</strong></td>
                     <td class="py-1" width="380px">{{ __(':') }} {{ $customer->name }}</td>
                     <td class="py-1" width="150px"><strong>{{ __('customer.label.email') }}</strong></td>
-                    <td class="py-1" width="380px">{{ __(':') }} {{ $customer->email }}</td>
+                    <td class="py-1" width="380px">{{ __(':') }}
+                        {{ $customer->email ? $customer->email : 'Not Set' }}</td>
                 </tr>
                 <tr class="table-borderless">
                     <td class="py-1"><strong>{{ __('customer.label.address') }}</strong></td>
-                    <td class="py-1">{{ __(':') }} {{ $customer->address }}</td>
+                    <td class="py-1">{{ __(':') }}
+                        {{ $customer->address ? $customer->address : 'Not Set' }}</td>
                     <td class="py-1"><strong>{{ __('customer.label.contact') }}</strong></td>
-                    <td class="py-1">{{ __(':') }} {{ $customer_contact }}</td>
+                    <td class="py-1">
+                        {{ __(':') }}
+                        {{ $customer_contact ? $customer_contact : 'Not Set' }}
+                    </td>
                 </tr>
                 <tr class="table-borderless">
-                    <td class="py-1"><strong>{{ __('customer.label.paket') }}</strong></td>
+                    <td class="py-1"><strong>{{ __('customer.label.package') }}</strong></td>
                     <td class="py-1">{{ __(':') }} {{ $customer->paket->name ?? 'No Data' }}</td>
 
                     <td class="py-1"><strong>{{ __('customer.label.activation-date') }}</strong></td>
@@ -33,7 +40,7 @@
                         @if ($customer->activation == 'true')
                             {{ Carbon\Carbon::parse($customer->activation_date)->translatedFormat('l, d F Y') ?? 'No Data' }}
                         @else
-                            <i class="text-danger">{{ __('Not Acitaved') }}</i>
+                            <i class="text-danger">{{ __('Not Activated') }}</i>
                         @endif
                     </td>
                 </tr>
@@ -415,6 +422,11 @@
                     <td class="py-1">
                         {{ __(':') }} <span class="text-primary">
                             {{ $ont->description ?? 'No Description' }}</span>
+                    </td>
+                    <td class="py-1"><strong>{{ __('customer.label.vlan_id') }}</strong></td>
+                    <td class="py-1">
+                        {{ __(':') }} <span class="text-primary">
+                            {{ $ont->vlan_id ?? 'Not Set' }}</span>
                     </td>
                 </tr>
             </table>

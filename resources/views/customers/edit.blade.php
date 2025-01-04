@@ -22,7 +22,7 @@
                 </div>
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
-                        <label for="paket"><strong>{{ __('customer.label.paket') }}</strong>
+                        <label for="paket"><strong>{{ __('customer.label.package') }}</strong>
                         </label>
                         @if ($serverDisconnect === 'false')
                             <select name="paket_id" class="form-control dynamic" data-dependent="details">
@@ -125,6 +125,29 @@
                             placeholder="{{ trans('customer.placeholder.contact') }}" value="{{ $customer_number }}">
                         @if ($errors->has('contact'))
                             <span class="text-danger">{{ $errors->first('contact') }}</span>
+                        @endif
+                    </div>
+                </div>
+                <div class="row align-items-center">
+                    <div class="col-md-12 mb-3">
+                        <label for="responsibility"><strong>{{ __('customer.label.responsibility') }}</strong></label>
+
+                        <select name="user_id" class="form-control dynamic">
+                            @if ($customer->user_id !== null)
+                                <option value="{{ $customer->user_id }}" selected>
+                                    {{ $customer->user->name }}
+                                </option>
+                            @endif
+                            @foreach ($users as $user)
+                                @if ($customer->user_id !== $user->id)
+                                    <!-- Hindari duplikasi user -->
+                                    <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                @endif
+                            @endforeach
+                        </select>
+
+                        @if ($errors->has('user_id'))
+                            <span class="text-danger">{{ $errors->first('user_id') }}</span>
                         @endif
                     </div>
                 </div>

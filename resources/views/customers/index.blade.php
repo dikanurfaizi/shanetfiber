@@ -55,14 +55,13 @@
                                     <option value="deactivated">Deactivated</option>
                                 </select>
                             </div>
-                            <!-- Kolom Layanan -->
+                            <!-- Kolom Admin -->
                             <div class="col-md-2 col-12 mb-2">
-                                <select name="search_service" class="form-control">
-                                    <option value="">{{ __('customer.placeholder.all-internet-service') }}
-                                    </option>
-                                    <option value="ppp">{{ __('customer.placeholder.ppp') }}</option>
-                                    <option value="ip_static">{{ __('customer.placeholder.ip-static') }}</option>
-                                </select>
+                                {!! Form::select('search_admin', ['NULL' => 'Not Linked User'] + $allAdmin->toArray(), null, [
+                                    'placeholder' => __('customer.placeholder.all-responsibility') ?? 'All Admin',
+                                    'class' => 'form-control',
+                                    'id' => 'admin-dropdown',
+                                ]) !!}
                             </div>
                             <!-- Kolom Server -->
                             <div class="col-md-2 col-12 mb-2">
@@ -92,15 +91,16 @@
             </div>
         </span>
     </div>
-    
-    
+
+
     <div class="card-header py-3">
-    @can('customer-create')
-            <span><a class="btn btn-sm btn-success mt-2" href="{{ route('customers.create') }}"><i class="fa fa-plus"></i> Add New Customer </a></span>
-    @endcan
+        @can('customer-create')
+            <span><a class="btn btn-sm btn-success mt-2" href="{{ route('customers.create') }}"><i class="fa fa-plus"></i>
+                    Add New Customer </a></span>
+        @endcan
     </div>
-    
-    
+
+
     <div class="card-body">
         {{ $data->withQueryString()->links() }}
         <div style="overflow-x: auto;">
@@ -124,11 +124,6 @@
                     </th>
                     <th>
                         <span class="badge bg-danger-soft text-primary">
-                            {{ __('customer.table.email') }}
-                        </span>
-                    </th>
-                    <th>
-                        <span class="badge bg-danger-soft text-primary">
                             {{ __('customer.table.address') }}
                         </span>
                     </th>
@@ -139,7 +134,7 @@
                     </th>
                     <th>
                         <span class="badge bg-danger-soft text-primary">
-                            {{ __('customer.table.paket') }}
+                            {{ __('customer.table.package') }}
                         </span>
                     </th>
                     <th>
@@ -149,7 +144,7 @@
                     </th>
                     <th>
                         <span class="badge bg-danger-soft text-primary">
-                            {{ __('customer.table.server') }}
+                            {{ __('customer.table.responsibility') }}
                         </span>
                     </th>
                     <th>
@@ -171,33 +166,29 @@
                             </span>
                         </td>
                         <td>
-
                             @can('customer-list')
                                 <a class="@if ($customer->disabled === 'true') text-secondary @else text-primary @endif"
                                     href="{{ route('customers.show', $customer->slug) }}">{{ $customer->name }}</a>
                             @else
                                 {{ $customer->name }}
                             @endcan
-
                         </td>
                         <td>
                             <span class="badge bg-danger-soft">
                                 {{ $customer->contact }}
-                        </td>
-                        <td>
-                            <span class="badge bg-danger-soft">
-                                {{ $customer->email }}
+                            </span>
                         </td>
                         <td>
                             <span class="badge bg-danger-soft">
                                 {{ $customer->address }}
+                            </span>
                         </td>
                         <td>
                             <span class="badge bg-danger-soft">
                                 @if ($customer->activation == 'true')
                                     {{ Carbon\Carbon::parse($customer->activation_date)->translatedFormat('d F Y') ?? 'No Data' }}
                                 @else
-                                    <i class="text-danger">{{ __('Not Acitaved') }}</i>
+                                    <i class="text-danger">{{ __('Not Activated') }}</i>
                                 @endif
                         </td>
                         </span>
@@ -211,9 +202,10 @@
                                 @moneyIDR($customer->paket->price * ((100 - $customer->discount) / 100))
                             </span>
                         </td>
+
                         <td>
-                            <span class="badge bg-danger-soft @if ($customer->disabled === 'false') text-success @endif">
-                                <i class="fas fa-server"></i> {{ $customer->mikrotik->name }}
+                            <span class="badge bg-danger-soft">
+                                <i class="fas fa-user-shield"></i> {{ $customer->user?->name ?? 'No Linked User' }}
                             </span>
                         </td>
 

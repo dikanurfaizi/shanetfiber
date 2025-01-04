@@ -61,7 +61,7 @@ class WhatsappNumberController extends Controller
         } else if (substr($number, 0, 1) == '0') {
             $number = preg_replace('/^0?/', $gateway->country_code, $number);
         }
-        $header_name = 'Griyanet-Signature';
+        $header_name = 'Shanet-Signature';
         $number = WhatsappNumber::create([
             'slug'          => str(Str::random(5))->slug(),
             'name'          => $request->input('name'),

@@ -9,7 +9,7 @@ return [
         'email' => 'Email',
         'address' => 'Address',
         'activation_date' => 'Act. Date',
-        'paket' => 'Paket',
+        'package' => 'Package',
         'server' => 'Server',
         'bill' => 'Bill',
         'action' => 'Action',
@@ -17,7 +17,8 @@ return [
         'remote-address' => 'Remote Addr.',
         'last-logged-out' => 'Last Logout',
         'id' => 'Customer ID',
-        'contact' => 'Contact'
+        'contact' => 'Contact',
+        'responsibility' => 'Admin',
     ],
     'title' => [
         'index' => 'Manage Customers',
@@ -49,7 +50,7 @@ return [
         'confirm-password' => 'Confirm Password',
         'address' => 'Address',
         'server' => 'Server',
-        'paket' => 'Paket',
+        'package' => 'Package',
         'contact' => 'Contact',
         'bill' => 'Bill',
         'username' => 'Username PPP',
@@ -85,7 +86,9 @@ return [
         'update-with-last-caller-id' => 'Update with last caller ID',
         'disconnect-client-button' => 'Dont disconnect client after update secret?',
         'internet_service' => 'Internet Service',
-        'price' => 'Price'
+        'price' => 'Price',
+        'responsibility' => 'Admin',
+        'vlan_id' => 'VLAN ID',
     ],
     'placeholder' => [
         'name' => 'Insert customer name',
@@ -112,6 +115,9 @@ return [
         'all-internet-service' => 'All Internet Service',
         'ppp' => 'ppp',
         'ip-static' => 'IP Static',
+        'responsibility' => 'Admin',
+        'vlan_id' => 'VLAN ID',
+        'all-responsibility' => 'All Admin',
     ],
     'button' => [
         'create' => 'Create a Customer',

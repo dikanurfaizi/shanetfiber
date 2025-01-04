@@ -13,49 +13,60 @@ class WhatsappMessageTableSeeder extends Seeder
      */
     public function run(): void
     {
-        $pesan_pembayaran_lunas = '*ShaNet Fiber*
-=======================================
-Pelanggan ShaNet Fiber yang terhormat,
-Berikut kami sampaikan detail pembayaran anda:
+        $pesan_pembayaran_lunas = '===============================
+         SHANUM NETWORK FIBER
+          Receipt # : %billing_number%
+===============================
 
-Atas Nama : Bp/Ibu *%name%*
-Customer-ID : %customer_id%
-Alamat : %address%
-Nomor Tagihan: %billing_number%
-Paket Internet : *%paket%*
-Periode : *%periode%*
-Nominal : *%bill%*
-Teller : %teller%
-Tanggal : %payment_time%
-Metode pembayaran: %payment_methode%
+Pelanggan yang terhormat, Berikut kami sampaikan detail pembayaran anda:
 
-=======================================
-Terima kasih telah mempercayakan kebutuhan internetnya kepada kami. Kami berkomitmen untuk selalu memberikan yang terbaik untuk pelanggan.
-Mohon maaf jika ada penulisan nama yang salah. Anda dapat menghubungi kami untuk pembetulan nama.
-=======================================';
+*👥 Nama:* _Bpk/Ibu %name%_
+*🆔 Cust - ID:* _%customer_id%_
+*📍 Alamat:* _%address%_
+*📦 Paket:* _%paket%_
+*📆 Periode:* _%periode%_
+*💶 Nominal:* *_%bill%_*
 
-        $pay_later = '*ShaNet Fiber*
-=======================================
-Pelanggan ShaNet Fiber yang terhormat,
-Berikut kami sampaikan detail pembayaran mundur anda:
+*Teller:* _%teller%_
+*Tanggal:* _%payment_time%_
+*Metode pembayaran:* _%payment_methode%_
 
-Atas Nama : Bp/Ibu *%name%*
-Customer-ID : %customer_id%
-Alamat : %address%
-Nomor Tagihan: %billing_number%
-Paket Internet : *%paket%*
-Periode : *%periode%*
-Nominal : *%bill%*
-Teller : %teller%
-Metode pembayaran: *%payment_methode%*
-Jatuh Tempo: *%paylater%*
+===============================
+Terima kasih telah mempercayakan kebutuhan internetnya kepada kami.
+Kami berkomitmen untuk selalu memberikan yang terbaik.
+Mohon maaf jika ada salah penulisan nama, Anda dapat menghubungi kami untuk pembetulan.
+===============================
+            *Shanum Network Fiber*
+_Pwrd by PT. Global Sarana Elektronika_
+===============================';
 
-=======================================
-Terima kasih telah mempercayakan kebutuhan internetnya kepada kami. Kami berkomitmen untuk selalu memberikan yang terbaik untuk pelanggan.
-Mohon maaf jika ada penulisan nama yang salah. Anda dapat menghubungi kami untuk pembetulan nama.
-=======================================';
+        $pay_later = '===============================
+         SHANUM NETWORK FIBER
+          Receipt # : %billing_number%
+===============================
 
-        $pesan_unpayment = 'Yth. Bp/Ibu %name%,
+Pelanggan yang terhormat, Berikut kami sampaikan detail pembayaran mundur anda:
+
+*👥 Nama:* _Bpk/Ibu %name%_
+*🆔 Cust - ID:* _%customer_id%_
+*📍 Alamat:* _%address%_
+*📦 Paket:* _%paket%_
+*📆 Periode:* _%periode%_
+*💶 Nominal:* *_%bill%_*
+
+*Teller:* _%teller%_
+*Metode pembayaran:* _%payment_methode%_
+*Jatuh Tempo:* *%paylater%*
+
+===============================
+Mohon agar membayar tagihan tepat waktu guna menghindari
+terisolirnya akun Anda, Terima Kasih.
+===============================
+            *Shanum Network Fiber*
+_Pwrd by PT. Global Sarana Elektronika_
+===============================';
+
+        $pesan_unpayment = 'Yth. Bpk/Ibu %name%,
 %address%
 Customer ID: %customer_id%
 
@@ -69,36 +80,37 @@ Telah dibatalkan.
 
 Terima kasih telah menggunakan layanan internet kami.
 
-*ShaNet Fiber*
+*Shanum Network Fiber*
 Jl. Sukamaju No. 49 RT 009/007
 Ciseureuh, Purwakarta
 
-*Pesan ini dikirim otomatis oleh system, anda tidak perlu membalasnya*';
+*_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
+
         $pesan_no_keyword = 'Mohon maaf, keywoard yang anda masukkan salah
 
 Keyword yang tersedia:
 %keywords%';
 
         $pesan_non_customer = 'Mohon maaf, anda belum terdaftar sebagai customer kami.
-Silahkan menghubungi 086726455588 untuk proses registrasi.';
+Silahkan menghubungi 087818040024 untuk proses registrasi.';
 
 
 
-        $pesan_dont_have_paket = 'Yth. Bp/Ibu %name%,
+        $pesan_dont_have_paket = 'Yth. Bpk/Ibu %name%,
 %address%
 Customer ID: %customer_id%
 
 Saat ini anda sudah terdaftar di sistem kami, namun belum mempunyai paket.
 
-Jika anda ingin menggunakan layanan kami, silahkan hubungi 085726455588.
+Jika anda ingin menggunakan layanan kami, silahkan hubungi 0878-1804-0024.
 
-*ShaNet Fiber*
+*Shanum Network Fiber*
 Jl. Sukamaju No. 49 RT 009/007
 Ciseureuh, Purwakarta
 
-*Pesan ini dikirim otomatis oleh system, anda tidak perlu membalasnya*';
+*Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini.*';
 
-        $pesan_no_bill = 'Yth. Bp/Ibu %name%,
+        $pesan_no_bill = 'Yth. Bpk/Ibu %name%,
 %address%
 Customer ID: %customer_id%
 
@@ -107,13 +119,13 @@ Saat ini anda belum memiliki tagihan.
 Kami mengucapkan terima kasih karena anda tertib administrasi.
 Ini sangat berguna untuk kemajuan kami dalam memperbaiki layanan.
 
-*ShaNet Fiber*
+*Shanum Network Fiber*
 Jl. Sukamaju No. 49 RT 009/007
 Ciseureuh, Purwakarta
 
-*Pesan ini dikirim otomatis oleh system, anda tidak perlu membalasnya*';
+*Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini.*';
 
-        $pesan_peringatan_pembayaran = 'Yth. Bp/Ibu %name%,
+        $pesan_peringatan_pembayaran = 'Yth. Bpk/Ibu %name%,
 %address%
 Customer ID: %customer_id%
 
@@ -129,34 +141,36 @@ Anda dapat melakukan pembayaran melalui:
 
 Terima kasih telah menggunakan layanan internet kami.
 
-*ShaNet Fiber*
+*Shanum Network Fiber*
 Jl. Sukamaju No. 49 RT 009/007
 Ciseureuh, Purwakarta
 
-*Pesan ini dikirim otomatis oleh system, anda tidak perlu membalasnya*';
-        $pesan_peringatan_deadline = 'Yth. Bp/Ibu %name%,
+*_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
+
+        $pesan_peringatan_deadline = 'Yth. Bpk/Ibu %name%,
 %address%
 Customer ID: %customer_id%
 
 Hari ini adalah batas akhir pembayaran paket internet anda. Saat ini anda memiliki %count-bill% tagihan yang belum dibayar:
 
 %pakets%
-*Jumlah tagihan: %total-bill%*
+*✅ Jumlah tagihan: %total-bill%*
 
 Segera lakukan pembayaran sebelum jatuh tempo untuk menghindari isolir otomatis oleh system kami.
 
 Anda dapat melakukan pembayaran melalui:
 %account-bank%
 
+Informasikan kepada kami jika anda sudah melakukan pembayaran di nomor *WA 0878-1804-0024*
 Terima kasih telah menggunakan layanan internet kami.
 
-*ShaNet Fiber*
+*Shanum Network Fiber*
 Jl. Sukamaju No. 49 RT 009/007
 Ciseureuh, Purwakarta
 
-*Pesan ini dikirim otomatis oleh system, anda tidak perlu membalasnya*';
+*_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
 
-        $pesan_lewat_jatuh_tempo = 'Yth. Bp/Ibu %name%,
+        $pesan_lewat_jatuh_tempo = 'Yth. Bpk/Ibu %name%,
 %address%
 Customer ID: %customer_id%
 
@@ -164,20 +178,21 @@ Kami ingin mengingatkan bahwa Anda memiliki %count-bill% tagihan paket internet 
 Berikut adalah rincian tagihan Anda:
 
 %pakets%
-*Jumlah tagihan keseluruhan: %total-bill%*
+*✅ Jumlah tagihan keseluruhan : %total-bill%*
 
 Pembayaran dapat dilakukan melalui:
 %account-bank%
 
-Terima kasih telah menggunakan layanan internet ShaNet Fiber. Kami berkomitmen memberikan layanan terbaik untuk Anda.
+Informasikan kepada kami jika anda sudah melakukan pembayaran di nomor *WA 0878-1804-0024*
+Kami berkomitmen memberikan layanan terbaik untuk Anda.
 
-*ShaNet Fiber*
+*Shanum Network Fiber*
 Jl. Sukamaju No. 49 RT 009/007
 Ciseureuh, Purwakarta
 
-*Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini.*';
+*_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
 
-        $pesan_info_tagihan = 'Yth. Bp/Ibu %name%,
+        $pesan_info_tagihan = 'Yth. Bpk/Ibu %name%,
 %address%
 Customer ID: %customer_id%
 
@@ -190,13 +205,13 @@ Anda dapat melakukan pembayaran melalui:
 
 Terima kasih telah mempercayakan kebutuhan internet anda kepada kami.
 
-*ShaNet Fiber*
+*Shanum Network Fiber*
 Jl. Sukamaju No. 49 RT 009/007
 Ciseureuh, Purwakarta
 
-*Pesan ini dikirim otomatis oleh system, anda tidak perlu membalasnya*';
+*_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
 
-        $pesan_info_paket = 'Yth. Bp/Ibu %name%,
+        $pesan_info_paket = 'Yth. Bpk/Ibu %name%,
 %address%
 Customer ID: %customer_id%
 
@@ -205,48 +220,48 @@ Berikut kami sampaikan rincian paket anda:
 
 Terima kasih telah mempercayakan layanan internet anda kepada kami. Kami berkomitmen untuk selalu memberikan pelayanan yang terbaik.
 
-*ShaNet Fiber*
+*Shanum Network Fiber*
 Jl. Sukamaju No. 49 RT 009/007
 Ciseureuh, Purwakarta
 
-*Pesan ini dikirim otomatis oleh system, anda tidak perlu membalasnya*';
+*_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
 
-        $register_new_customer = 'Yth. Bp/Ibu %name%,
+        $register_new_customer = 'Yth. Bpk/Ibu %name%,
 %address%
 
 Terima kasih telah melakukan pendaftaran di sistem kami.
-Berikut layanan yang dapat anda pilih:
+Berikut layanan yang anda pilih:
 
 %pakets%
 
-Jika anda ingin menggunakan layanan kami, silahkan hubungi 085726455588.
+Jika anda ingin menggunakan layanan kami, silahkan hubungi *WA 0878-1804-0024*.
 
-*ShaNet Fiber*
+*Shanum Network Fiber*
 Jl. Sukamaju No. 49 RT 009/007
 Ciseureuh, Purwakarta
 
-*Pesan ini dikirim otomatis oleh system, anda tidak perlu membalasnya*';
+*_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
 
-        $activation_new_customer = 'Yth. Bp/Ibu %name%,
+        $activation_new_customer = 'Yth. Bpk/Ibu %name%,
 %address%
 
 Aktivasi akun berhasil. Berikut detail informasi akun anda:
 
-Nama: %name%
-Alamat: %address%
-Customer ID: %customer_id%
-Email: %email%
-Customer Service: %customer_service%
+*👥 Nama:* _Bpk/Ibu %name%_
+*🆔 Cust - ID:* _%customer_id%_
+*📍 Alamat:* _%address%_
+*📧 Email:* _%email%_
+*👨🏼‍💼 Customer Service:* %customer_service%
 
 Simpan informasi ini untuk pengajuan layanan atau saat terjadi gangguan layanan.
 
-*ShaNet Fiber*
+*Shanum Network Fiber*
 Jl. Sukamaju No. 49 RT 009/007
 Ciseureuh, Purwakarta
 
-*Pesan ini dikirim otomatis oleh system, anda tidak perlu membalasnya*';
+*_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
 
-        $deactivation_customer = 'Yth. Bp/Ibu %name%,
+        $deactivation_customer = 'Yth. Bpk/Ibu %name%,
 %address%
 Customer ID: %customer_id%
 
@@ -254,13 +269,13 @@ Dengan berat hati kami menonaktifkan akun anda. Jika tidak keberatan, silahkan k
 
 Terima kasih telah menjadi pelanggan kami selama ini.
 
-*ShaNet Fiber*
+*Shanum Network Fiber*
 Jl. Sukamaju No. 49 RT 009/007
 Ciseureuh, Purwakarta
 
-*Pesan ini dikirim otomatis oleh system, anda tidak perlu membalasnya*';
+*_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._**';
 
-        $add_paket = 'Yth. Bp/Ibu %name%,
+        $add_paket = 'Yth. Bpk/Ibu %name%,
 %address%
 Customer ID: %customer_id%
 
@@ -273,13 +288,13 @@ Biaya Langganan: %bill% per bulan
 
 silahkan tunggu beberapa saat karna paket anda masih dalam proses aktivasi.
 
-*ShaNet Fiber*
+*Shanum Network Fiber*
 Jl. Sukamaju No. 49 RT 009/007
 Ciseureuh, Purwakarta
 
-*Pesan ini dikirim otomatis oleh system, anda tidak perlu membalasnya*';
+*Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini.*';
 
-        $activation_paket = 'Yth. Bp/Ibu %name%,
+        $activation_paket = 'Yth. Bpk/Ibu %name%,
 %address%
 Customer ID: %customer_id%
 
@@ -292,13 +307,13 @@ Contact: %cs_contact%
 
 Jika terjadi kendala pada jaringan, silahkan hubungi CS kami.
 
-*ShaNet Fiber*
+*Shanum Network Fiber*
 Jl. Sukamaju No. 49 RT 009/007
 Ciseureuh, Purwakarta
 
-*Pesan ini dikirim otomatis oleh system, anda tidak perlu membalasnya*';
+*_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
 
-        $enable_paket = 'Yth. Bp/Ibu %name%,
+        $enable_paket = 'Yth. Bpk/Ibu %name%,
 %address%
 Customer ID: %customer_id%
 
@@ -308,15 +323,15 @@ Info paket:
 Paket: *%paket_name%*
 Tagihan: *%bill%* per bulan
 Status: *%status%*
-Tanggal Aktivasi: %activation_date%
+Tanggal Aktivasi : %activation_date%
 
-*ShaNet Fiber*
+*Shanum Network Fiber*
 Jl. Sukamaju No. 49 RT 009/007
 Ciseureuh, Purwakarta
 
-*Pesan ini dikirim otomatis oleh system, anda tidak perlu membalasnya*';
+*_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
 
-        $disable_paket = 'Yth. Bp/Ibu %name%,
+        $disable_paket = 'Yth. Bpk/Ibu %name%,
 %address%
 Customer ID: %customer_id%
 
@@ -326,35 +341,35 @@ Info paket:
 Paket: *%paket_name%*
 Status: *%status%*
 
-*ShaNet Fiber*
+*Shanum Network Fiber*
 Jl. Sukamaju No. 49 RT 009/007
 Ciseureuh, Purwakarta
 
-*Pesan ini dikirim otomatis oleh system, anda tidak perlu membalasnya*';
+*_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
 
-        $create_new_bill = 'Yth. Bp/Ibu %name%,
+        $create_new_bill = 'Yth. Bpk/Ibu %name%,
 %address%
 Customer ID: %customer_id%
 
 Saat ini anda sudah dapat membayar tagihan internet.
 Berikut rincian tagihan anda:
 
-Paket: %paket-name%
-Tagihan: %bill%
-Periode: %periode%
-Jatuh tempo: %deadline%
+*📦 Paket:* %paket-name%
+*💶 Tagihan:* %bill%
+*📆 Periode:* %periode%
+*✅ Jatuh tempo:* %deadline%
 
 Anda dapat melakukan pembayaran melalui:
 %account-banks%
 
-Informasikan kepada kami jika anda sudah melakukan pembayaran di nomor WA 085726455588.
+Informasikan kepada kami jika anda sudah melakukan pembayaran di nomor *WA 0878-1804-0024*
 Terima kasih telah mempercayakan kebutuhan internet anda kepada kami.
 
-*ShaNet Fiber*
+*Shanum Network Fiber*
 Jl. Sukamaju No. 49 RT 009/007
 Ciseureuh, Purwakarta
 
-*Pesan ini dikirim otomatis oleh system, anda tidak perlu membalasnya*';
+*_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
 
         //=================Create Template message============================
         WhatsappMessage::create([
