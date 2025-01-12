@@ -12,6 +12,7 @@ use App\Models\MerkRouter;
 use App\Models\TypeRouter;
 use App\Models\CustomerOnt;
 use App\Models\User;
+use App\Models\DeleteCustomer;
 
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
@@ -54,6 +55,7 @@ use Illuminate\Pagination\Paginator;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 //use ArielMejiaDev\LarapexCharts\Facades\LarapexChart;
 use ArielMejiaDev\LarapexCharts\LarapexChart;
@@ -95,7 +97,7 @@ class CustomerController extends Controller
      */
     public function index(Request $request)
     {
-        Log::info('Starting Customer Index method.');
+        // Log::info('Starting Customer Index method.');
         $paginate = 25;
         $searchName = $request->search_name;
         $searchAddress = $request->search_address;
@@ -104,14 +106,14 @@ class CustomerController extends Controller
         $searchStatus = $request->status;
         $searchAdmin = $request->search_admin;
 
-        Log::info('Search parameters retrieved.', [
-            'search_name' => $searchName,
-            'search_address' => $searchAddress,
-            'search_server' => $searchServer,
-            'search_paket' => $searchPaket,
-            'search_status' => $searchStatus,
-            'search_admin' => $searchAdmin,
-        ]);
+        // Log::info('Search parameters retrieved.', [
+        //     'search_name' => $searchName,
+        //     'search_address' => $searchAddress,
+        //     'search_server' => $searchServer,
+        //     'search_paket' => $searchPaket,
+        //     'search_status' => $searchStatus,
+        //     'search_admin' => $searchAdmin,
+        // ]);
 
         $routersEnable = Mikrotik::where('disabled', 'false')
             ->when($searchServer, function ($query) use ($searchServer) {
@@ -215,7 +217,7 @@ class CustomerController extends Controller
             ])->with('i', (request()->input('page', 1) - 1) * $paginate);
             // $loop->iteration
         } else {
-            Log::info('Default customer query logic executed.');
+            // Log::info('Default customer query logic executed.');
             $customers = Customer::with(['user'])
                 ->when($searchName, function ($query) use ($searchName) {
                     $query->where('name', 'like', "%{$searchName}%");
@@ -908,45 +910,105 @@ class CustomerController extends Controller
     {
         return view('customers.delete', compact('customer'));
     }
+
     public function destroy(Customer $customer)
     {
-        if ($customer->activation == 'true') {
-            $router = Mikrotik::where('id', $customer->mikrotik_id)->first();
+        if ($customer->activation === 'true') {
+            $router = Mikrotik::find($customer->mikrotik_id);
             $autoisolir = AutoIsolir::where('mikrotik_id', $customer->mikrotik_id)->first();
 
-            if ($customer->internet_service == 'ppp') {
-                if (!$router || $this->checkServerConnection($router)) {
-                    return redirect()->back()->withErrors(['msg' => $router ? 'Router offline, please check your router.' : 'Customer does not have router.']);
-                }
-                $username = $customer->username;
-                //dispatch(new DeletePppSecretJob($router, $username))->onQueue('default');
-                $this->secretService->deleteSecretByName($router, $username);
-                $this->secretService->deleteActiveSecret($router, $username);
-            } else if ($customer->internet_service == 'ip_static') {
-                if (!$router || $this->checkServerConnection($router)) {
-                    return redirect()->back()->withErrors(['msg' => $router ? 'Router offline, please check your router.' : 'Customer does not have router.']);
-                }
-                $simpleque_id = $customer->simpleque_id;
-                //  $address_list_id = $customer->address_list_id;
-                $ip_address = $customer->ip_static;
-                $arp_id = $customer->arp_id;
-                if ($autoisolir) {
-                    $address_list_name = $autoisolir->address_list_isolir;
-                } else {
-                    $address_list_name = 'none';
-                }
-
-                // $interface = $customer->interface;
-                //return dd($simple_queue_id);
-                dispatch(new DeleteIpStaticJob($router, $simpleque_id, $arp_id, $ip_address, $address_list_name))->onQueue('default');
-                //$this->ipStaticService->deleteIpFromSimpleQueue($router, $simple_queue_id);
-                //$this->ipStaticService->deleteIpFromIsolirAddressList($router, $address_list_id);
+            try {
+                $this->handleInternetService($customer, $router, $autoisolir);
+            } catch (\Exception $e) {
+                Log::error('Error handling internet service for customer ID: ' . $customer->id . '. Error: ' . $e->getMessage());
+                return redirect()->back()
+                    ->withErrors(['msg' => 'An error occurred while handling the router. Please try again.']);
             }
         }
-        //$customer->delete();
-        $customer->forceDelete();
-        return redirect()->route('customers.index')
-            ->with('success', 'Customer deleted successfully');
+
+        try {
+            $this->moveCustomerToDeleted($customer);
+            $customer->forceDelete();
+
+            return redirect()->route('customers.index')
+                ->with('success', 'Customer has been deleted, please check the router for confirmation.');
+        } catch (ModelNotFoundException $e) {
+            Log::error('Customer not found with ID: ' . $customer->id . '. Error: ' . $e->getMessage());
+            return redirect()->back()
+                ->withErrors(['msg' => 'Customer not found.']);
+        } catch (\Exception $e) {
+            Log::error('Error occurred while deleting customer ID: ' . $customer->id . '. Error: ' . $e->getMessage());
+            return redirect()->back()
+                ->withErrors(['msg' => 'An error occurred while deleting the customer. Please try again.']);
+        }
+    }
+
+    /**
+     * Handle the internet service logic for the customer.
+     */
+    private function handleInternetService(Customer $customer, $router, $autoisolir)
+    {
+        if (!$router) {
+            throw new \Exception('Router not found for customer ID: ' . $customer->id);
+        }
+
+        $this->testConnectionService->checkOnline($router);
+        Log::info('Connection to router succeeded for customer ID: ' . $customer->id);
+
+        if ($customer->internet_service === 'ppp') {
+            $this->handlePppService($router, $customer->username);
+        } elseif ($customer->internet_service === 'ip_static') {
+            $this->handleIpStaticService($router, $customer, $autoisolir);
+        }
+    }
+
+    /**
+     * Handle PPP service logic.
+     */
+    private function handlePppService($router, $username)
+    {
+        $this->secretService->deleteSecretByName($router, $username);
+        $this->secretService->deleteActiveSecret($router, $username);
+        Log::info('PPP service deleted for username: ' . $username);
+    }
+
+    /**
+     * Handle IP static service logic.
+     */
+    private function handleIpStaticService($router, Customer $customer, $autoisolir)
+    {
+        $simpleque_id = $customer->simpleque_id;
+        $ip_address = $customer->ip_static;
+        $arp_id = $customer->arp_id;
+        $address_list_name = $autoisolir->address_list_isolir ?? 'none';
+
+        dispatch(new DeleteIpStaticJob($router, $simpleque_id, $arp_id, $ip_address, $address_list_name))->onQueue('default');
+        Log::info('IP static service deletion dispatched for customer ID: ' . $customer->id);
+    }
+
+    /**
+     * Move customer data to the deleted_customers table.
+     */
+    private function moveCustomerToDeleted(Customer $customer)
+    {
+        $deleteCustomer = [
+            'name' => $customer->name,
+            'slug' => $customer->slug,
+            'password' => $customer->password,
+            'email' => $customer->email,
+            'paket_id' => $customer->paket_id,
+            'mikrotik_id' => $customer->mikrotik_id,
+            'secret_id' => $customer->secret_id,
+            'username' => $customer->username,
+            'password_ppp' => $customer->password_ppp,
+            'ppp_type_id' => $customer->ppp_type_id,
+            'address' => $customer->address,
+            'contact' => $this->formatContact($customer->contact),
+            'activation_date' => $customer->activation_date,
+        ];
+
+        DeletedCustomer::create($deleteCustomer);
+        Log::info('Customer data moved to deleted_customers for customer ID: ' . $customer->id);
     }
 
     public function disable(Customer $customer)
