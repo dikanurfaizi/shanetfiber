@@ -48,6 +48,8 @@ return [
             'test-gateway' => 'Test WA Gateway',
             'test-number' => 'Number',
             'manual-sending' => 'Manual Broadcast',
+            'dead-bill' => 'Dead Bill',
+            'past-due-warning' => 'Past Due Warning',
         ],
 
         'ph' => [

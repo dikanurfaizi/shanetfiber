@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -11,7 +10,6 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Carbon;
 use App\Models\WhatsappGateway\WhatsappGateway;
 use App\Models\Billing\Billing;
-use App\Models\Customer;
 use App\Models\MessageLog;
 use App\Services\WhatsappMessageService;
 use Illuminate\Support\Facades\Log;
@@ -38,9 +36,15 @@ class SendPaymentReminderJob implements ShouldQueue
     {
         Log::info("==================== Start Job Send WhatsApp Message Bill Reminder  ====================");
         $today = Carbon::today();
+        $allowedDates = [10, 14, 15, 16, 20];
 
-        $gateways = WhatsappGateway::where('remaining_day', '>', 0)
-            ->where('disabled', false)
+        // Pengecekan apakah hari ini bukan termasuk tanggal yang diperbolehkan
+        if (!in_array($today->day, $allowedDates)) {
+            Log::info("Today's date ({$today->format('Y-m-d')}) is not in the allowed dates. Job will not proceed.");
+            return;
+        }
+
+        $gateways = WhatsappGateway::where('disabled', false)
             ->get();
 
         if ($gateways->isEmpty()) {
@@ -56,7 +60,7 @@ class SendPaymentReminderJob implements ShouldQueue
             $billingsPastDue = Billing::query()
                 ->join('customers', 'billings.customer_id', '=', 'customers.id')
                 ->select(
-                    'billings.customer_id',
+                    'customers.customer_id',
                     'customers.name as customer_name',
                     'customers.contact as customer_contact',
                     'customers.address as customer_address',
@@ -81,7 +85,7 @@ class SendPaymentReminderJob implements ShouldQueue
             $billingsDueToday = Billing::query()
                 ->join('customers', 'billings.customer_id', '=', 'customers.id')
                 ->select(
-                    'billings.customer_id',
+                    'customers.customer_id',
                     'customers.name as customer_name',
                     'customers.contact as customer_contact',
                     'customers.address as customer_address',
@@ -106,7 +110,7 @@ class SendPaymentReminderJob implements ShouldQueue
             $billingsUpcoming = Billing::query()
                 ->join('customers', 'billings.customer_id', '=', 'customers.id')
                 ->select(
-                    'billings.customer_id',
+                    'customers.customer_id',
                     'customers.name as customer_name',
                     'customers.contact as customer_contact',
                     'customers.address as customer_address',
@@ -115,20 +119,17 @@ class SendPaymentReminderJob implements ShouldQueue
                 )
                 ->whereNotNull('customers.contact') // Kontak tidak null
                 ->where('customers.contact', '!=', '') // Kontak tidak kosong
-                ->where(function ($query) use ($today, $remainingDays) {
-                    $query->where(function ($q1) use ($today, $remainingDays) {
-                        // Untuk tagihan BL yang due_date-nya >= hari ini dan tidak lebih dari remainingDays
-                        $q1->where('billings.status', 'BL')
-                            ->whereNotNull('billings.due_date')
-                            ->whereDate('billings.due_date', '>=', $today) // Due date >= hari ini
-                            ->whereRaw('DATEDIFF(billings.due_date, ?) <= ?', [$today, $remainingDays]); // Selisih hari <= remainingDays
-                    })->orWhere(function ($q2) use ($today, $remainingDays) {
-                        // Untuk tagihan PL yang pay_later-nya >= hari ini dan tidak lebih dari remainingDays
-                        $q2->where('billings.status', 'PL')
-                            ->whereNotNull('billings.pay_later')
-                            ->whereDate('billings.pay_later', '>=', $today) // Pay later >= hari ini
-                            ->whereRaw('DATEDIFF(billings.pay_later, ?) <= ?', [$today, $remainingDays]); // Selisih hari <= remainingDays
-                    });
+                ->where(function ($query) use ($today) {
+                    $query->where(function ($subQuery) use ($today) {
+                        $subQuery->where('billings.status', 'BL') // Status belum lunas
+                            ->whereNotNull('billings.due_date') // Pastikan due_date tidak null
+                            ->whereDate('billings.due_date', '>', $today); // due_date >= hari ini
+                    })
+                        ->orWhere(function ($subQuery) use ($today) {
+                            $subQuery->where('billings.status', 'PL') // Status pay later
+                                ->whereNotNull('billings.pay_later') // Pastikan pay_later tidak null
+                                ->whereDate('billings.pay_later', '>', $today); // pay_later >= hari ini
+                        });
                 })
                 ->groupBy(
                     'billings.customer_id',

@@ -28,6 +28,7 @@ return [
         'search-teller' => 'All Tellers',
         'search-payment-methode' => 'All Payment Methode',
         'search-account-bank' => 'All Bank',
+        'search-admin' => 'All Admin',
         'select' => [
             'status' => 'Status',
             'paid' => 'Paid',

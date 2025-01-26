@@ -187,26 +187,48 @@ class HomeController extends Controller
 
     public function calculateBillingSummary()
     {
-        $lastBillingPeriode = BillingPeriode::latest('created_at')->first();
-        $searchPeriode = $lastBillingPeriode->name;
+        try {
+            $lastBillingPeriode = BillingPeriode::latest('created_at')->first();
 
-        // Query for billings
-        $billings = Billing::query()
-            ->whereHas('billing_periode', function ($query) use ($searchPeriode) {
-                $query->where('name', 'like', "%{$searchPeriode}%");
-            });
+            if (!$lastBillingPeriode) {
+                return [
+                    'total_billing' => 0,
+                    'total_paid' => 0,
+                    'total_paylater' => 0,
+                    'total_unpaid' => 0,
+                ];
+            }
 
-        $totalBilling = (clone $billings)->sum('paket_price');
-        $totalPaid = (clone $billings)->where('status', 'LS')->sum('paket_price');
-        $totalPayLater = (clone $billings)->where('status', 'PL')->sum('paket_price');
-        $totalUnpaid = (clone $billings)->where('status', 'BL')->sum('paket_price');
+            $searchPeriode = $lastBillingPeriode->name;
 
-        // Return result as an array
-        return [
-            'total_billing' => $totalBilling,
-            'total_paid' => $totalPaid,
-            'total_paylater' => $totalPayLater,
-            'total_unpaid' => $totalUnpaid,
-        ];
+            // Query for billings
+            $billings = Billing::query()
+                ->whereHas('billing_periode', function ($query) use ($searchPeriode) {
+                    $query->where('name', 'like', "%{$searchPeriode}%");
+                });
+
+            $totalBilling = (clone $billings)->sum('paket_price') ?? 0;
+            $totalPaid = (clone $billings)->where('status', 'LS')->sum('paket_price') ?? 0;
+            $totalPayLater = (clone $billings)->where('status', 'PL')->sum('paket_price') ?? 0;
+            $totalUnpaid = (clone $billings)->where('status', 'BL')->sum('paket_price') ?? 0;
+
+            // Return result as an array
+            return [
+                'total_billing' => $totalBilling,
+                'total_paid' => $totalPaid,
+                'total_paylater' => $totalPayLater,
+                'total_unpaid' => $totalUnpaid,
+            ];
+        } catch (\Exception $e) {
+            Log::error("Error calculating billing totals: " . $e->getMessage(), [
+                'exception' => $e
+            ]);
+            return [
+                'total_billing' => 0,
+                'total_paid' => 0,
+                'total_paylater' => 0,
+                'total_unpaid' => 0,
+            ];
+        }
     }
 }

@@ -313,7 +313,16 @@
                                                 @foreach ($adminBillingSummary as $adminData)
                                                     <li class="list-group-item">
                                                         <strong>{{ $adminData['admin_name'] }}</strong><br>
-                                                        {{ $adminData['total_customers'] }}
+                                                        @if ($lastBillings->count() > 0)
+                                                            <a
+                                                                href="{{ route('billings.index', [
+                                                                    'admin_name' => $adminData['admin_name'],
+                                                                    'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
+                                                                    'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
+                                                                ]) }}">{{ $adminData['total_customers'] }}</a>
+                                                        @else
+                                                            0
+                                                        @endif
                                                         <div
                                                             class="text-xs fw-bold text-success d-inline-flex align-items-center">
                                                             customers
@@ -384,7 +393,17 @@
                                                 @foreach ($adminBillingSummary as $adminData)
                                                     <li class="list-group-item">
                                                         <strong>{{ $adminData['admin_name'] }}</strong><br>
-                                                        {{ $adminData['total_paid_customers'] }}
+                                                        @if ($lastBillings->count() > 0)
+                                                            <a
+                                                                href="{{ route('billings.index', [
+                                                                    'admin_name' => $adminData['admin_name'],
+                                                                    'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
+                                                                    'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
+                                                                    'search_status=LS',
+                                                                ]) }}">{{ $adminData['total_paid_customers'] }}</a>
+                                                        @else
+                                                            0
+                                                        @endif
                                                         <div
                                                             class="text-xs fw-bold text-success d-inline-flex align-items-center">
                                                             customers
@@ -454,7 +473,17 @@
                                                 @foreach ($adminBillingSummary as $adminData)
                                                     <li class="list-group-item">
                                                         <strong>{{ $adminData['admin_name'] }}</strong><br>
-                                                        {{ $adminData['total_paylater_customers'] }}
+                                                        @if ($lastBillings->count() > 0)
+                                                            <a
+                                                                href="{{ route('billings.index', [
+                                                                    'admin_name' => $adminData['admin_name'],
+                                                                    'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
+                                                                    'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
+                                                                    'search_status=PL',
+                                                                ]) }}">{{ $adminData['total_paylater_customers'] }}</a>
+                                                        @else
+                                                            0
+                                                        @endif
                                                         <div
                                                             class="text-xs fw-bold text-success d-inline-flex align-items-center">
                                                             customers
@@ -525,7 +554,17 @@
                                                 @foreach ($adminBillingSummary as $adminData)
                                                     <li class="list-group-item">
                                                         <strong>{{ $adminData['admin_name'] }}</strong><br>
-                                                        {{ $adminData['total_unpaid_customers'] }}
+                                                        @if ($lastBillings->count() > 0)
+                                                            <a
+                                                                href="{{ route('billings.index', [
+                                                                    'admin_name' => $adminData['admin_name'],
+                                                                    'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
+                                                                    'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
+                                                                    'search_status=BL',
+                                                                ]) }}">{{ $adminData['total_unpaid_customers'] }}</a>
+                                                        @else
+                                                            0
+                                                        @endif
                                                         <div
                                                             class="text-xs fw-bold text-success d-inline-flex align-items-center">
                                                             customers

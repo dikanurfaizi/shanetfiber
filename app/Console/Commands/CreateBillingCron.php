@@ -109,6 +109,6 @@ class CreateBillingCron extends Command
             }
         }
 
-        \Log::info("Cron is working fine!");
+        Log::info("Cron is working fine!");
     }
 }
