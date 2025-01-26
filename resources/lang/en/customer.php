@@ -87,6 +87,7 @@ return [
         'disconnect-client-button' => 'Dont disconnect client after update secret?',
         'internet_service' => 'Internet Service',
         'price' => 'Price',
+        'paket' => 'Paket',
         'responsibility' => 'Admin',
         'vlan_id' => 'VLAN ID',
     ],

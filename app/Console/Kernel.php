@@ -30,20 +30,13 @@ class Kernel extends ConsoleKernel
 
         // $schedule->command('inspire')->hourly();
         // $schedule->command('create_billing:cron')->everyMinute();
-        // $schedule->command('messages:send')->cron('0 9 15-20 * *')->when(function () {
-        //     Log::info("Scheduling messages:send command");
-        //     return true;
-        // });
         $schedule->command('messages:send')
-            ->cron('* * * * *')  // Menjalankan setiap menit untuk pengujian
+            ->withoutOverlapping() // Mencegah eksekusi ganda jika belum selesai
+            ->onOneServer()        // Hanya dijalankan pada satu server jika menggunakan load balancer
             ->when(function () {
-                return true;  // Perintah ini akan selalu dijalankan
+                // Kondisi agar hanya dijalankan saat diperlukan
+                return true; // Logika bisa disesuaikan
             });
-        // $schedule->call(function () {
-        //     DB::table('billing_periodes')->create([
-        //         'name' => 'Test'
-        //     ]);
-        // })->everyMinute();
     }
 
     /**

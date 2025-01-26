@@ -75,44 +75,24 @@
                         </span>
                     </div>
                 </div>
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <span title="{{ trans('whatsapp.gateway.tooltips.edit') }}" data-bs-toggle="tooltip"
-                            data-bs-placement="top">
-                            <a class="btn btn-sm btn-success me-2"
-                                href="{{ route('whatsappgateway.edit_number', $gateway->slug) }}">
-                                <i class="fa fa-edit"></i>
-                                {!! trans('whatsapp.button.edit') !!}
-                            </a>
-                        </span>
-                        <span title="{{ trans('whatsapp.gateway.label.manual-sending') }}" data-bs-toggle="tooltip"
-                            data-bs-placement="top">
-                            <a class="btn btn-sm btn-outline-primary" href="{{ route('trigger-job') }}">
-                                <i class="fa fa-bullhorn"></i>
-                                {!! trans('whatsapp.gateway.label.manual-sending') !!}
-                            </a>
-                        </span>
-                    </div>
-                    <div>
-                        <span title="{{ trans('whatsapp.gateway.label.dead-bill') }}" data-bs-toggle="tooltip"
-                            data-bs-placement="top">
-                            <a class="btn btn-sm btn-warning" href="">
-                                {{-- <a class="btn btn-sm btn-danger me-2" href="{{ route('trigger-dead-bill') }}"> --}}
-                                <i class="fa fa-exclamation-circle"></i>
-                                {!! trans('whatsapp.gateway.label.dead-bill') !!}
-                            </a>
-                        </span>
-                        <span title="{{ trans('whatsapp.gateway.label.past-due-warning') }}" data-bs-toggle="tooltip"
-                            data-bs-placement="top">
-                            <a class="btn btn-sm btn-danger me-2" href="">
-                                {{-- <a class="btn btn-sm btn-warning" href="{{ route('trigger-past-due-warning') }}"> --}}
-                                <i class="fa fa-clock"></i>
-                                {!! trans('whatsapp.gateway.label.past-due-warning') !!}
-                            </a>
-                        </span>
-                    </div>
-                </div>
+                <span title="{{ trans('whatsapp.gateway.tooltips.edit') }}" data-bs-toggle="tooltip"
+                    data-bs-placement="top">
+
+                    <a class="btn btn-sm btn-success"
+                        href="{{ route('whatsappgateway.edit_number', $gateway->slug) }}">
+                        <i class="fa fa-edit"></i>
+                        {!! trans('whatsapp.button.edit') !!}</a>
+                </span>
+                <span title="{{ trans('whatsapp.gateway.label.manual-sending') }}" data-bs-toggle="tooltip"
+                    data-bs-placement="top">
+
+                    <a class="btn btn-sm btn-outline-primary pull-right" href="{{ route('trigger-job') }}">
+                        <i class="fa fa-bullhorn"></i>
+                        {!! trans('whatsapp.gateway.label.manual-sending') !!}</a>
+                </span>
             </div>
+
+
 
             <div class="card-header">
                 <div style="display: flex; justify-content: space-between; align-items: center;">

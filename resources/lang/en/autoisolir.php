@@ -109,6 +109,7 @@ return [
         'nat_dst_address_list' => 'Dst Address List:',
         'proxy_access_src_address' => 'Access Src Address:',
         'proxy-access-action' => 'Action',
+        'address_list_isolir' => 'Address List Isolir',
     ],
 
 

@@ -93,13 +93,12 @@
                 <strong>Pembayaran dapat dilakukan dengan cara:</strong><br>
                 1. Cash/Tunai.<br>
                 2. Pembayaran Online.<br>
-                3. Transfer ke rekening kami atas nama <span class="badge bg-primary text-white">Dian Ardiansyah</span><br>
+                3. Transfer ke rekening admin area Purwakarta <span class="badge bg-primary text-white">Dian Ardiansyah</span><br>
                     - <span class="badge bg-success text-white">Bank BCA : 299 040 7315</span><br>
                     - <span class="badge bg-success text-white">Bank Mandiri : 173-00-1269590-5</span><br>
                 <br>
-                4. Transfer ke rekening <span class="badge bg-primary text-white">PT. Global Sarana Elektronika</span><br>
-                    - <span class="badge bg-success text-white">Bank BCA : 231 711 1157</span><br>
-                    - <span class="badge bg-success text-white">Bank BRI : 0075-01-001957-30-4</span><br>
+                4. Transfer ke rekening admin area Babakancikao <span class="badge bg-primary text-white">Budi Kosasih</span><br>
+                    - <span class="badge bg-success text-white">Bank Mandiri : 173-00-1265603-0</span><br>
                 <br>
                 Silahkan konfirmasi ke nomor WhatsApp <span class="badge bg-primary text-white">0878 1804 0024</span>
                 setelah melakukan pembayaran dengan mengirimkan bukti transfer.

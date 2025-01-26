@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -10,6 +11,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Carbon;
 use App\Models\WhatsappGateway\WhatsappGateway;
 use App\Models\Billing\Billing;
+use App\Models\Customer;
 use App\Models\MessageLog;
 use App\Services\WhatsappMessageService;
 use Illuminate\Support\Facades\Log;
@@ -34,7 +36,6 @@ class SendPaymentReminderJob implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::info("==================== Start Job Send WhatsApp Message Bill Reminder  ====================");
         $today = Carbon::today();
         $allowedDates = [10, 14, 15, 16, 20];
 
@@ -44,6 +45,7 @@ class SendPaymentReminderJob implements ShouldQueue
             return;
         }
 
+        Log::info("==================== Start Job Send WhatsApp Message Bill Reminder  ====================");
         $gateways = WhatsappGateway::where('disabled', false)
             ->get();
 
