@@ -81,7 +81,7 @@ class InstallController extends Controller
 
         Artisan::call('db:seed --class=PermissionTableSeeder');
         Artisan::call('db:seed --class=CreatePppTypeSeeder');
-        Artisan::call('db:seed --class=WebsystemSeeder');
+        // Artisan::call('db:seed --class=WebsystemSeeder');
         Artisan::call('db:seed --class=WhatsappGatewayTableSeeder');
         Artisan::call('db:seed --class=WhatsappMessageTableSeeder');
         return redirect()->route('installCreateAdmin');
