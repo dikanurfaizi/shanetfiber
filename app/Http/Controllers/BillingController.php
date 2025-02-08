@@ -36,6 +36,7 @@ use Barryvdh\DomPDF\Facade\PDF;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use App\Jobs\SendBillingToWhatsAppJob;
+use Illuminate\Support\Facades\DB;
 
 use Illuminate\Contracts\Database\Eloquent\Builder;
 //use Barryvdh\DomPDF\PDF;
@@ -73,19 +74,21 @@ class BillingController extends Controller
         $searchStatus = $request->search_status;
         $searchAddress = $request->search_address;
         $searchDuedate = $request->duedate;
-
-        // Tentukan user_id berdasarkan admin_name
-        if ($request->admin_name == 'Not Linked User' || $request->admin_name == 0) {
-            $searchUserId = null;
-        } elseif ($request->admin_name) {
-            $searchUserId = User::where('name', $request->admin_name)
-                ->orWhere('id', $request->admin_name)
-                ->value('id');
-        } else {
-            $searchUserId = false;
-        }
-
+        $searchUserId = $request->admin_name;
         $customer = $request->customer;
+
+        // Log parameter pencarian
+        // Log::info("Search Parameters: ", [
+        //     'searchName' => $searchName,
+        //     'searchMonth' => $searchMonth,
+        //     'searchYear' => $searchYear,
+        //     'searchPeriode' => $searchPeriode,
+        //     'searchStatus' => $searchStatus,
+        //     'searchAddress' => $searchAddress,
+        //     'searchDuedate' => $searchDuedate,
+        //     'searchUserId' => $searchUserId,
+        //     'customer' => $customer
+        // ]);
 
         // Tentukan periode default jika semua parameter pencarian kosong
         if (!$customer && !$searchName && !$searchMonth && !$searchYear && !$searchStatus && !$searchAddress && !$searchDuedate) {
@@ -93,19 +96,23 @@ class BillingController extends Controller
             $searchPeriode = $latestPeriode;
             $searchMonth = Carbon::parse($latestPeriode)->format('F');
             $searchYear = Carbon::parse($latestPeriode)->format('Y');
+            //Log::info("Default search period applied: ", ['periode' => $searchPeriode]);
         }
 
         // Query utama untuk billings
         $billingsQuery = Billing::query()
             ->when($searchName, function ($query) use ($searchName) {
+                //Log::info("Filtering by customer name: {$searchName}");
                 $query->where('customer_name', 'like', "%{$searchName}%");
             })
             ->when($customer, function ($query) use ($customer) {
+                //Log::info("Filtering by customer slug: {$customer}");
                 $query->whereHas('customer', function ($q) use ($customer) {
                     $q->where('slug', $customer);
                 });
             })
             ->when($searchAddress, function ($query) use ($searchAddress) {
+                //Log::info("Filtering by address: {$searchAddress}");
                 $query->whereHas('customer', function ($q) use ($searchAddress) {
                     if ($searchAddress == 'no-address') {
                         $q->whereNull('address');
@@ -115,20 +122,13 @@ class BillingController extends Controller
                 });
             })
             ->when($searchPeriode, function ($query) use ($searchPeriode) {
+                //Log::info("Filtering by billing period: {$searchPeriode}");
                 $query->whereHas('billing_periode', function ($q) use ($searchPeriode) {
                     $q->where('name', 'like', "%{$searchPeriode}%");
                 });
             })
-            ->when($searchUserId !== false, function ($query) use ($searchUserId) {
-                $query->whereHas('customer', function ($q) use ($searchUserId) {
-                    if ($searchUserId) {
-                        $q->where('user_id', $searchUserId);
-                    } else {
-                        $q->whereNull('user_id');
-                    }
-                });
-            })
             ->when($searchStatus, function ($query) use ($searchStatus, $searchDuedate) {
+                //Log::info("Filtering by status: {$searchStatus}, Duedate: {$searchDuedate}");
                 if ($searchStatus == '!LS') {
                     $query->where('status', '!=', 'LS');
                     if ($searchDuedate) {
@@ -142,6 +142,35 @@ class BillingController extends Controller
                     }
                 }
             })
+            ->when($searchUserId, function ($query) use ($searchUserId, $request) {
+                if ($searchUserId === 'Not Linked User' || $searchUserId === 0) {
+                    //Log::info("Filtering by Not Linked User or User ID = 0");
+                    $query->whereHas('customer', function ($q) {
+                        $q->whereColumn('billings.customer_id', 'customers.id') // Relasi utama
+                            ->whereNull('customers.user_id') // Kondisi `user_id IS NULL`
+                            ->whereNull('customers.deleted_at'); // Kondisi tambahan
+                    });
+                } elseif (empty($request->admin_name)) {
+                    //Log::info("Filtering by empty admin_name");
+                    $query->whereHas('customer', function ($q) {
+                        $q->whereColumn('billings.customer_id', 'customers.id') // Relasi utama
+                            ->whereNull('customers.deleted_at'); // Kondisi tambahan
+                    });
+                } else {
+                    Log::info("Filtering by User ID or Admin Name: {$searchUserId}");
+                    $query->whereHas('customer', function ($q) use ($searchUserId) {
+                        $q->whereColumn('billings.customer_id', 'customers.id') // Relasi utama
+                            ->where('customers.user_id', function ($subQuery) use ($searchUserId) {
+                                $subQuery->select('id') // Subquery untuk mendapatkan user ID
+                                    ->from('users')
+                                    ->where('name', $searchUserId) // Mencari berdasarkan nama pengguna
+                                    ->limit(1);
+                            })
+                            ->whereNull('customers.deleted_at'); // Kondisi tambahan
+                    });
+                    Log::info("Search User ID retrieved: " . ($searchUserId ?: '[Not Found]'));
+                }
+            })
             ->orderBy(
                 BillingPeriode::select('created_at')
                     ->whereColumn('billing_periodes.id', 'billings.billing_periode_id'),
@@ -152,6 +181,8 @@ class BillingController extends Controller
                     ->whereColumn('customers.id', 'billings.customer_id')
             )
             ->orderBy('customer_name', 'ASC');
+
+        // Log::info("Query built successfully", ['sql' => $billingsQuery->toSql(), 'bindings' => $billingsQuery->getBindings()]);
 
         // Dapatkan data untuk view
         $totalPrice = $billingsQuery->sum('paket_price');
@@ -210,22 +241,22 @@ class BillingController extends Controller
      */
     public function store(Request $request)
     {
+        // Log::info('Billing store process started.', ['request' => $request->all()]);
+
         $periode = $request->name ?? Carbon::now()->format('F Y');
         $periodeExplode = explode(' ', $periode);
         $monthPeriode = $periodeExplode[0];
         $yearPeriode = $periodeExplode[1];
 
         try {
+            // Log::info('Validating request.', ['periode' => $periode]);
             $this->validate(
                 $request,
-                [
-                    'name' => 'unique:billing_periodes',
-                ],
-                [
-                    'name.unique' => 'Periode ' . $request->name . ' already exists.',
-                ]
+                ['name' => 'unique:billing_periodes'],
+                ['name.unique' => 'Periode ' . $request->name . ' already exists.']
             );
         } catch (\Exception $e) {
+            Log::error('Validation failed.', ['error' => $e->getMessage()]);
             return redirect()->back()->withErrors(['msg' => $e->getMessage()]);
         }
 
@@ -234,13 +265,18 @@ class BillingController extends Controller
             'month' => $monthPeriode,
             'year' => $yearPeriode,
         ]);
-        $newBillingPeriode = $billingPeriode->fresh();
 
+        Log::info('Billing period created.', ['billing_periode' => $periode]);
+        $newBillingPeriode = $billingPeriode->fresh();
         $websystem = Websystem::where('slug', 'websystem')->first();
         $totalBillingCreated = 0;
         $routers = Mikrotik::where('disabled', 'false')->get();
 
+        // Log::info('Processing routers.', ['total_routers' => $routers->count()]);
+
         foreach ($routers as $router) {
+            // Log::info('Processing router.', ['router_id' => $router->id]);
+
             $customers = Customer::where('disabled', 'false')
                 ->where('activation', 'true')
                 ->where('mikrotik_id', $router->id)
@@ -264,10 +300,10 @@ class BillingController extends Controller
                     ? ceil($customerPriceAfterDiscount * ($websystem->tax_rate / 100))
                     : 0;
 
-                $customerActivationDate = Carbon::parse($customer->activation_date)->format('d');
+                // $customerActivationDate = Carbon::parse($customer->activation_date)->format('d');
                 $periodeName = $newBillingPeriode->name;
 
-                $nextMonth = Carbon::parse($periodeName)->addMonth()->format('m_Y');
+                // $nextMonth = Carbon::parse($periodeName)->addMonth()->format('m_Y');
 
                 if ($autoIsolir && $autoIsolir->disabled == 'false') {
                     try {
@@ -280,7 +316,9 @@ class BillingController extends Controller
                         } else if ($customer->internet_service == 'ip_static') {
                             dispatch(new CreateBillingIpStaticJob($router, $customer->simpleque_id, $comment))->onQueue('default');
                         }
+                        Log::info('Billing job dispatched.', ['customer_id' => $customer->id]);
                     } catch (\Exception $e) {
+                        Log::error('Failed to dispatch billing job.', ['error' => $e->getMessage()]);
                         $billingPeriode->delete();
                         return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your router.']);
                     }
@@ -297,14 +335,32 @@ class BillingController extends Controller
                     'tax' => $customerTax,
                     'created_name' => auth()->user()->name,
                     'status' => $customerPriceAfterDiscount > 0 ? 'BL' : 'LS',
-                    'due_date' => Carbon::parse($customerActivationDate . ' ' . Carbon::parse($billingPeriode->name)->format('F Y')),
+                    'due_date' => Carbon::createFromFormat('d F Y', "15 " . Carbon::parse($billingPeriode->name)->format('F Y'))
+                        ->startOfDay(),
+                ]);
+
+                Log::info('Billing record created.', [
+                    'customer_id' => $customer->id,
+                    'customer_name' => $customer->name,
+                    'price_after_discount' => $customerPriceAfterDiscount,
+                    'tax' => $customerTax,
                 ]);
 
                 $totalBillingCreated++;
             }
         }
 
-        BillingController::sendBillingReminder($totalBillingCreated);
+        Log::info('Billing process completed.', ['total_billing_created' => $totalBillingCreated]);
+
+        try {
+            BillingController::sendBillingReminder();
+        } catch (\Exception $e) {
+            Log::error("Error while sending billing reminder: " . $e->getMessage());
+        }
+
+        // Tetap lanjutkan dengan redirect tanpa terganggu oleh error di atas
+        return redirect()->route('billings.index')
+            ->with('success', "{$totalBillingCreated} Billing created successfully.");
     }
 
     public function store_one(BillingStoreRequest $request)
@@ -404,40 +460,51 @@ class BillingController extends Controller
                     'tax' => $customerTax,
                     'created_name' => auth()->user()->name,
                     'status' => $statusPayment,
-                    'due_date' => Carbon::parse($dueDate),
+                    // 'due_date' => Carbon::parse($dueDate),
+                    'due_date' => Carbon::createFromFormat('d F Y', "15 " . Carbon::parse($billingPeriode->name)->format('F Y'))
+                        ->startOfDay(),
                 ]);
+
+                Log::info('Billing record created.', [
+                    'customer_id' => $customer->id,
+                    'customer_name' => $customer->name,
+                    'price_after_discount' => $customerPriceAfterDiscount,
+                    'tax' => $customerTax,
+                ]);
+
                 $totalBillingCreated++;
             }
         }
 
-        // return redirect()->route('billings.index')
-        //     ->with('success', $totalBillingCreated . ' Billing created successfully.');
+        Log::info('Billing process completed.', ['total_billing_created' => $totalBillingCreated]);
 
-        BillingController::sendBillingReminder($totalBillingCreated);
+        try {
+            BillingController::sendBillingReminder();
+        } catch (\Exception $e) {
+            Log::error("Error while sending billing reminder: " . $e->getMessage());
+        }
+
+        // Tetap lanjutkan dengan redirect tanpa terganggu oleh error di atas
+        return redirect()->route('billings.index')
+            ->with('success', "{$totalBillingCreated} Billing created successfully.");
     }
 
-    public function sendBillingReminder($totalBillingCreated)
+    public function sendBillingReminder()
     {
         try {
             // Cek gateway WhatsApp
             $gateway = WhatsappGateway::where('slug', 'gateway')->first();
 
             if (!$gateway || $gateway->disabled !== 0) {
-                return "WhatsApp Gateway is either disabled or not found.";
+                Log::warning("WhatsApp Gateway is either disabled or not found.");
             }
 
             // Dispatch ke background job
             dispatch(new SendBillingToWhatsAppJob(app(WhatsappMessageService::class)));
-            // Kembalikan respons dengan pesan
-            return redirect()->route('billings.index')
-                ->with('success', "{$totalBillingCreated} Billing created successfully.");
+
+            Log::info("Billing reminder dispatched successfully.");
         } catch (\Exception $e) {
-            Log::error("Error occurred in processBillingInBackground: {$e->getMessage()}", [
-                'exception' => $e,
-            ]);
-            $message = "An error occurred while processing the billing: {$e->getMessage()}";
-            return redirect()->route('billings.index')
-                ->with('error', "{$message}");
+            Log::error("Failed to dispatch SendBillingToWhatsAppJob: " . $e->getMessage());
         }
     }
 

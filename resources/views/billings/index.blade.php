@@ -126,17 +126,18 @@
             <div style="overflow-x: auto;">
                 <table id="billingsTable" cellspacing="0" width="100%"
                     class="table table-sm table-bordered table-striped table-hover">
-                    <thead class="thead-dark text-center">
-                        <tr>
-                            <th>{{ __('billing.table.no') }}</th>
-                            <th>{{ __('billing.table.customer-name') }}</th>
-                            <th>{{ __('billing.table.customer_id') }}</th>
-                            <th>{{ __('billing.table.address') }}</th>
-                            <th>{{ __('billing.table.periode') }}</th>
-                            <th>{{ __('billing.table.bill') }}</th>
-                            <th>{{ __('billing.table.bill-state') }}</th>
-                            <th>{{ __('Payment Methode') }}</th>
-                            <th>{{ __('customer.table.action') }}</th>
+                    <thead class="thead-dark">
+                        <tr class="text-center align-middle">
+                            <th class="text-center align-middle">{{ __('billing.table.no') }}</th>
+                            <th class="text-center align-middle">{{ __('billing.table.customer-name') }}</th>
+                            <th class="text-center align-middle">{{ __('billing.table.customer_id') }}</th>
+                            <th class="text-center align-middle">{{ __('billing.table.address') }}</th>
+                            <th class="text-center align-middle">{{ __('billing.table.activation') }}</th>
+                            <th class="text-center align-middle">{{ __('billing.table.periode') }}</th>
+                            <th class="text-center align-middle">{{ __('billing.table.bill') }}</th>
+                            <th class="text-center align-middle">{{ __('billing.table.bill-state') }}</th>
+                            <th class="text-center align-middle">{{ __('Payment Methode') }}</th>
+                            <th class="text-center align-middle">{{ __('customer.table.action') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -156,6 +157,9 @@
                                 </td>
                                 <td><span
                                         class="badge text-primary">{{ $billing->customer->address ?? 'no address' }}</span>
+                                </td>
+                                <td><span
+                                        class="badge text-primary">{{ Carbon\Carbon::parse($billing->customer->activation_date)->format('d M Y') ?? 'inactive' }}</span>
                                 </td>
                                 <td><span
                                         class="badge text-primary">{{ Carbon\Carbon::parse($billing->billing_periode->name)->translatedFormat('M Y') ?? 'no periode' }}</span>

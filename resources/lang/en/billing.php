@@ -10,13 +10,14 @@ return [
         'periode' => 'Periode',
         'address' => 'Address',
         'paket-name' => 'Paket',
+        'activation' => 'Activation',
         'bill' => 'Bill',
-        'bill-state' => 'State',
+        'bill-state' => 'Billing Status',
         'paket-price' => 'Price',
         'action' => 'Action',
         'payment-methode' => 'Payment Methode',
         'duedate' => 'Due Date',
-        'customer_id' => 'Customer ID'
+        'customer_id' => 'Cust ID'
 
     ],
     'placeholder' => [
@@ -43,7 +44,7 @@ return [
         'edit' => 'Edit Billing',
         'show' => 'View Billing',
         'create-one' => 'Add New Billing',
-
+        'delete' => 'Delete Billing Periode',
     ],
     'header' => [
         'index' => 'Billings List',

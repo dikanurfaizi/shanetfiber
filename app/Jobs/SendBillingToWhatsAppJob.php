@@ -33,6 +33,7 @@ class SendBillingToWhatsAppJob implements ShouldQueue
     public function handle(): void
     {
         try {
+            Log::info("Message Service start to running.");
             $this->messageService->create_billing();
         } catch (\Exception $e) {
             Log::error("Failed to execute job send WhatsApp message. Error: {$e->getMessage()}");

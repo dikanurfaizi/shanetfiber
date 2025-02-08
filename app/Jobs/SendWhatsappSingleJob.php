@@ -62,21 +62,21 @@ class SendWhatsappSingleJob implements ShouldQueue
 
     public function handle(): void
     {
-        // Ambil informasi dari gateway
-        $apikey = $this->gateway->api_key;
-        //$certfile = $this->gateway->cert_file;
-        $url = $this->gateway->url_callback;
-        $sender_number = $this->gateway->whatsapp_number->number;
-        $formattedReceiver = $this->receiver . '@s.whatsapp.net';
-        $customer_name = $this->customer_name;
-
-        // Buat payload hanya untuk body
-        $payload = [
-            'phone' => $formattedReceiver,
-            'message' => $this->message,
-        ];
-
         try {
+            // Ambil informasi dari gateway
+            $apikey = $this->gateway->api_key;
+            //$certfile = $this->gateway->cert_file;
+            $url = $this->gateway->url_callback;
+            $sender_number = $this->gateway->whatsapp_number->number;
+            $formattedReceiver = $this->receiver . '@s.whatsapp.net';
+            $customer_name = $this->customer_name;
+
+            // Buat payload hanya untuk body
+            $payload = [
+                'phone' => $formattedReceiver,
+                'message' => $this->message,
+            ];
+
             // Log::info('Trying to sent message.', [
             //     'receiver' => $this->receiver,
             //     'sender' => $sender_number,
