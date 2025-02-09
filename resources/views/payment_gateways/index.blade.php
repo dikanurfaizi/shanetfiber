@@ -26,7 +26,7 @@
                         <td><span class="fw-normal">{{ $paymentGateway->name }}</span></td>
                         <td>
                             <span id="mikrotik-host" class="fw-normal">
-                                @if ($paymentGateway->disabled === 'false')
+                                @if ($paymentGateway->payment_gateway_statuses === 'false')
                                 {{ __('Enable') }}
                                 @else
                                 {{ __('Disable') }}

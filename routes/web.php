@@ -1,8 +1,5 @@
 <?php
 
-use App\Models\Midtran;
-use App\Models\Websystem;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HomeController;
@@ -19,9 +16,7 @@ use App\Http\Controllers\InstallController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DropdownController;
-use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\AutoIsolirController;
-use App\Http\Controllers\TestCommandController;
 use App\Http\Controllers\Midtran\OrderController;
 use App\Http\Controllers\TestConnectionController;
 use App\Http\Controllers\Mikrotik\SystemController;
@@ -43,9 +38,6 @@ use App\Http\Controllers\Paket\PppProfileController;
 use App\Http\Controllers\WhatsappGatewayController;
 use App\Http\Controllers\WhatsappMessageController;
 use App\Http\Controllers\WhatsappNumberController;
-// use App\Http\Controllers\WhatsappServiceController;
-use App\Jobs\SendPaymentReminderJob;
-use App\Services\WhatsappMessageService;
 
 /*
 |--------------------------------------------------------------------------
@@ -186,8 +178,8 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('settings/payment-gateway/{paymentGateway:slug}', [PaymentGatewayController::class, 'edit'])->name('paymentgateway.edit');
         Route::get('settings/payment-gateway/1/{midtran:slug}', [MidtranController::class, 'edit'])->name('paymentgateway.midtran.edit');
         Route::patch('settings/payment-gateway/1/{midtran:slug}/update', [MidtranController::class, 'update'])->name('paymentgateway.midtran.update');
-        // Route::get('settings/payment-gateway/1/{tripay:slug}', [TripayController::class, 'edit'])->name('paymentgateway.tripay.edit');
-        //Route::patch ('settings/payment-gateway/1/{tripay:slug}/update', [TripayController::class, 'update'])->name('paymentgateway.tripay.update');
+        Route::get('settings/payment-gateway/2/{tripay:slug}', [TripayController::class, 'edit'])->name('paymentgateway.tripay.edit');
+        Route::patch('settings/payment-gateway/2/{tripay:slug}/update', [TripayController::class, 'update'])->name('paymentgateway.tripay.update');
 
         // WhatsApp Gateway
         Route::get('settings/whatsapp-gateway', [WhatsappGatewayController::class, 'index'])->name('whatsapp-gateway.index'); // Menampilkan daftar WhatsApp Gateway

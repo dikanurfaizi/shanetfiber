@@ -6,6 +6,8 @@ use App\Models\Websystem;
 use Illuminate\Http\Request;
 use App\Models\PaymentGateway;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class PaymentGatewayController extends Controller
 {
@@ -21,6 +23,26 @@ class PaymentGatewayController extends Controller
         $paymentGateways = PaymentGateway::paginate(10);
         //$paymentGatewayStatus = Websystem::where('slug', 'websystem')->value('payment_gateway');
         $webSystem = Websystem::where('slug', 'websystem')->first();
+
+        // Menampung status masing-masing payment gateway
+        $gatewayStatuses = [];
+
+        foreach ($paymentGateways as $gateway) {
+            $tableName = $gateway->slug; // Slug merepresentasikan nama tabel
+
+            // Cek apakah tabel ada di database sebelum query
+            if (Schema::hasTable($tableName)) {
+                // Ambil nilai `disabled` dari tabel terkait
+                $status = DB::table($tableName)->value('disabled');
+
+                // Konversi status ke "Enable" atau "Disable"
+                $gatewayStatuses[$tableName] = $status ? 'Disabled' : 'Enabled';
+            }
+        }
+
+        // Tambahkan hasil ke dalam webSystem response
+        $paymentGateways->payment_gateway_statuses = $gatewayStatuses;
+
         return view('payment_gateways.index', compact('paymentGateways', 'webSystem'))
             ->with('i', (request()->input('page', 1) - 1) * 10);
     }
@@ -57,6 +79,8 @@ class PaymentGatewayController extends Controller
         $slug = $paymentGateway->slug;
         if ($slug == 'midtrans') {
             return redirect()->route('paymentgateway.midtran.edit', $slug);
+        } else if ($slug == 'tripays') {
+            return redirect()->route('paymentgateway.tripay.edit', $slug);
         } else if ($slug == 'OY') {
             return dd('OY Access');
         }

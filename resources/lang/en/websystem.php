@@ -54,6 +54,18 @@ return [
         'cancel' => 'Cancel',
     ],
 
+    'common' => [
+        'name' => 'Name',
+        'merchant_id' => 'Merchant Id',
+        'development-mode' => 'Development Mode',
+        'production-mode' => 'Production Mode',
+        'disable' => 'Disable',
+        'enable' => 'Enable',
+        'placeholder' => [
+            'name' => 'Name',
+        ],
+    ],
+
     'midtran' => [
         'header-edit' => 'Configuration Midtrans',
         'name' => 'Name',
@@ -62,17 +74,40 @@ return [
         'client_key' => 'Production Client Key',
         'sandbox_server_key' => 'Sandbox Server Key',
         'sandbox_client_key' => 'Sandbox Client Key',
+        'development-mode' => 'Development Mode',
         'production-mode' => 'Production Mode',
         'disable' => 'Disable',
-        'placeholder' => [
-            'name' => 'Name',
-            'merchant_id' => 'Gxxxxxxxxxx',
-            'server_key' => 'Mid-server-xxxxxxxxxxx',
-            'client_key' => 'Mid-client-xxxxxxxxxxx',
-            'sandbox_server_key' => 'SB-Mid-server-xxxxxxxxxxx',
-            'sandbox_client_key' => 'SB-Mid-client-xxxxxxxxxxx',
-        ],
-    ]
+        'enable' => 'Enable',
+        'placeholder' => array_merge(
+            ['merchant_id' => 'Gxxxxxxxxxx'],
+            ['server_key' => 'Mid-server-xxxxxxxxxxx'],
+            ['client_key' => 'Mid-client-xxxxxxxxxxx'],
+            ['sandbox_server_key' => 'SB-Mid-server-xxxxxxxxxxx'],
+            ['sandbox_client_key' => 'SB-Mid-client-xxxxxxxxxxx'],
+            ['name' => 'Name']
+        ),
+    ],
 
+    'tripay' => [
+        'header-edit' => 'Configuration Tripays',
+        'name' => 'Name',
+        'merchat_id' => 'Merchant Id',
+        'private_key' => 'Production Private Key',
+        'api_key' => 'Production API Key',
+        'sandbox_private_key' => 'Sandbox Private Key',
+        'sandbox_api_key' => 'Sandbox API Key',
+        'development-mode' => 'Development Mode',
+        'production-mode' => 'Production Mode',
+        'disable' => 'Disable',
+        'enable' => 'Enable',
+        'placeholder' => array_merge(
+            ['merchant_id' => 'Txxxxx'],
+            ['private_key' => 'xxxxx-xxxxx-xxxxx-xxxxx-xxxxx'],
+            ['api_key' => 'PROD-xxxxxxxxxx'],
+            ['sandbox_private_key' => 'xxxxx-xxxxx-xxxxx-xxxxx-xxxxx'],
+            ['sandbox_api_key' => 'DEV-xxxxxxxxxx'],
+            ['name' => 'Name']
+        ),
+    ]
 
 ];
