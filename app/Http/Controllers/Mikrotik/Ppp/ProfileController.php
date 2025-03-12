@@ -10,7 +10,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Pppoe\ProfileResource;
 use App\Services\Routerboard\Ppp\SecretService;
 use Illuminate\Support\Str;
-
+use App\Helpers\LogHelper;
+use Exception;
 
 class ProfileController extends Controller
 {
@@ -30,6 +31,7 @@ class ProfileController extends Controller
     {
         $allProfiles = $this->secretService->getPppProfile($mikrotik);
         $Profiles = ProfileResource::collection($allProfiles);
+
         return view('mikrotiks.ppp.profiles.index', [
             'mikrotik' => $mikrotik,
             'profiles' => $Profiles,
@@ -38,34 +40,56 @@ class ProfileController extends Controller
 
     public function clone_profile(Request $request, Mikrotik $mikrotik)
     {
-        $mikrotikId = $mikrotik->id;
-        $allProfiles = $this->secretService->getPppProfile($mikrotik);
-        $Profiles = ProfileResource::collection($allProfiles);
-        $profileName = $Profiles->pluck(['name'])->toArray();
-        $profileNames = collect($profileName);
+        try {
+            $mikrotikId = $mikrotik->id;
+            $allProfiles = $this->secretService->getPppProfile($mikrotik);
+            $Profiles = ProfileResource::collection($allProfiles);
 
-        $pakets = Paket::where('mikrotik_id', $mikrotikId)->pluck('profile')->toArray();
-        $paketsProfileNames = collect($pakets);
+            $profileName = $Profiles->pluck('name')->toArray();
+            $profileNames = collect($profileName);
 
-        $profileNonPaket = $profileNames->diff($paketsProfileNames);
-        $profileAddPaket =  $Profiles->whereIn(['name'], $profileNonPaket)
-            ->toArray();
+            $pakets = Paket::where('mikrotik_id', $mikrotikId)->pluck('profile')->toArray();
+            $paketsProfileNames = collect($pakets);
 
-        foreach ($profileAddPaket as $profile) {
+            $profileNonPaket = $profileNames->diff($paketsProfileNames);
+            $profileAddPaket = $Profiles->whereIn('name', $profileNonPaket)->toArray();
 
-            Paket::create([
+            LogHelper::logInfo(null, [
                 'mikrotik_id' => $mikrotikId,
-                'name' => $profile['name'],
-                'profile' => $profile['name'],
-                'slug' => str($profile['name'] . '-' . Str::random(4))->slug(),
-                'disabled' => 'false',
-                'description' => $profile['name'],
-                'price' => 0,
-            ]);
+                'profile_count' => count($profileAddPaket),
+            ], 200, 'Starting profile cloning process');
+
+            foreach ($profileAddPaket as $profile) {
+                Paket::create([
+                    'mikrotik_id' => $mikrotikId,
+                    'name' => $profile['name'],
+                    'profile' => $profile['name'],
+                    'slug' => str($profile['name'] . '-' . Str::random(4))->slug(),
+                    'disabled' => 'false',
+                    'description' => $profile['name'],
+                    'price' => 0,
+                ]);
+
+                LogHelper::logInfo(null, [
+                    'mikrotik_id' => $mikrotikId,
+                    'profile' => $profile['name'],
+                ], 200, 'Successfully added profile to Paket');
+            }
+
+            LogHelper::logInfo(null, [
+                'mikrotik_id' => $mikrotikId,
+                'total_added' => count($profileAddPaket),
+            ], 200, 'Successfully cloned profiles to Paket');
+
+            return redirect()->route('packets.index')
+                ->with('success', 'Import profile to paket successfully.');
+        } catch (Exception $e) {
+            LogHelper::logError(null, [
+                'mikrotik_id' => $mikrotik->id,
+                'error' => $e->getMessage(),
+            ], 500, 'Failed to clone profiles');
+
+            return redirect()->back()->withErrors(['msg' => 'Failed to clone profiles: ' . $e->getMessage()]);
         }
-
-
-        return redirect()->route('packets.index')
-            ->with('success', 'Import profile to paket successfully.');
     }
 }

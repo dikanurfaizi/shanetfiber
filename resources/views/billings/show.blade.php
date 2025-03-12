@@ -52,7 +52,49 @@
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
-                <strong>Price:</strong>
+                <strong>Package Price:</strong>
+                @if ($billing->customer->paket->price === 0)
+                    {{ __('Free') }}
+                @else
+                    @moneyIDR($billing->customer->paket->price)
+                @endif
+            </div>
+        </div>
+        <div class="col-xs-12 col-sm-12 col-md-12">
+            <div class="form-group">
+                <strong>Registered as:</strong>
+                @php
+                    $member = 'Non Member';
+                    if (
+                        $billing->customer->billing_option === 1 ||
+                        ($billing->customer->billing_option === 2 &&
+                            $billing->customer->billing_period === $billing->billing_period->name)
+                    ) {
+                        $member = $billing->customer->member->type;
+                    }
+                @endphp
+                {{ $member }}
+            </div>
+        </div>
+        <div class="col-xs-12 col-sm-12 col-md-12">
+            <div class="form-group">
+                <strong>Discount:</strong>
+                @php
+                    $discount = 0.0;
+                    if (
+                        $billing->customer->billing_option === 1 ||
+                        ($billing->customer->billing_option === 2 &&
+                            $billing->customer->billing_period === $billing->billing_period->name)
+                    ) {
+                        $discount = $billing->customer->member->discount;
+                    }
+                @endphp
+                @moneyIDR($discount)
+            </div>
+        </div>
+        <div class="col-xs-12 col-sm-12 col-md-12">
+            <div class="form-group">
+                <strong>Total Price:</strong>
                 @if ($billing->paket_price === 0)
                     {{ __('Free') }}
                 @else

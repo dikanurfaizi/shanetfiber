@@ -12,6 +12,8 @@ use RouterOS\Exceptions\ClientException;
 use RouterOS\Exceptions\ConfigException;
 use RouterOS\Exceptions\ConnectException;
 use RouterOS\Exceptions\QueryException;
+use Exception;
+use App\Helpers\LogHelper;
 
 class SystemController extends Controller
 {
@@ -31,11 +33,26 @@ class SystemController extends Controller
      */
     public function routerResource(Mikrotik $mikrotik)
     {
-        $spec = $this->systemService->getAllResources($mikrotik);
-        $resources = RouterboardResource::collection($spec);
-        return response()->json([
-            'resources' => $resources,
-        ]);
+        try {
+            $spec = $this->systemService->getAllResources($mikrotik);
+            $resources = RouterboardResource::collection($spec);
+            $logBody = [
+                'mikrotik_id' => $mikrotik->id,
+                'spec' => $spec,
+                'resources' => $resources
+            ];
+            LogHelper::logInfo(null, $logBody, 200, 'Successfully to get mikrotik interface');
+            return response()->json([
+                'resources' => $resources,
+            ]);
+        } catch (Exception $e) {
+            LogHelper::logError(null, ['error' => $e->getMessage()], 503, 'Failed to retrieve Mikrotik resources');
+
+            return response()->json([
+                'error' => 'Failed to retrieve Mikrotik resources',
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -47,7 +64,17 @@ class SystemController extends Controller
      */
     public function mikrotikTrafficInterface(Mikrotik $mikrotik)
     {
-        return $this->systemService->monitoringTraffic($mikrotik);
+        try {
+            $response = $this->systemService->monitoringTraffic($mikrotik);
+            LogHelper::logInfo(null, ['mikrotik' => $mikrotik->id], 200, 'Successfully to retrieve mikrotik traffic interface');
+            return $response;
+        } catch (Exception $e) {
+            LogHelper::logError(null, ['error' => $e->getMessage()], 503, 'Failed to retrieve mikrotik traffic interface');
+            return response()->json([
+                'error' => 'Failed to retrieve Mikrotik traffic interface',
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -59,10 +86,27 @@ class SystemController extends Controller
      */
     public function getTimeRouter(Mikrotik $mikrotik)
     {
-        $tm = $this->systemService->getTime($mikrotik);
-        $time = RouterboardTimeResource::collection($tm);
-        return response()->json([
-            'time' => $time,
-        ]);
+        try {
+            $tm = $this->systemService->getTime($mikrotik);
+            $time = RouterboardTimeResource::collection($tm);
+
+            $logBody = [
+                'mikrotik_id' => $mikrotik->id,
+                'time' => $time,
+            ];
+
+            LogHelper::logInfo(null, $logBody, 200, 'Successfully retrieved Mikrotik time');
+
+            return response()->json([
+                'time' => $time,
+            ]);
+        } catch (Exception $e) {
+            LogHelper::logError(null, ['error' => $e->getMessage()], 503, 'Failed to retrieve Mikrotik time');
+
+            return response()->json([
+                'error' => 'Failed to retrieve Mikrotik time',
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 }

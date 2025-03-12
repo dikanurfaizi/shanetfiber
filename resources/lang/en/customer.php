@@ -90,6 +90,7 @@ return [
         'paket' => 'Paket',
         'responsibility' => 'Admin',
         'vlan_id' => 'VLAN ID',
+        'member' => 'Member Type',
     ],
     'placeholder' => [
         'name' => 'Insert customer name',
@@ -110,7 +111,8 @@ return [
         'select-type-router' => 'Select Type Router',
         'select-address' => 'All Address',
         'without-address' => 'Without Address',
-        'discount' => 'ex. 50',
+        'discount' => '00',
+        'discount_nominal' => '0',
         'paket' => 'Select Paket',
         'caller-id' => 'Caller ID',
         'all-internet-service' => 'All Internet Service',

@@ -25,6 +25,12 @@
                 <a class="collapse-item @if (request()->routeIs('customers.index')) active @endif"
                     href="{{ route('customers.index') }}">{{ __('navigation.customers.index') }}</a>
             </div>
+            @canany(['customer-list', 'customer-edit', 'customer-delete'])
+                <div class="bg-white py-2 collapse-inner rounded">
+                    <a class="collapse-item @if (request()->routeIs('customers.member')) active @endif"
+                        href="{{ route('members.index') }}">{{ __('navigation.members.index') }}</a>
+                </div>
+            @endcanany
         </div>
     </li>
 @endcanany

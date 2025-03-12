@@ -50,6 +50,9 @@ return [
             'manual-sending' => 'Manual Broadcast',
             'dead-bill' => 'Dead Bill',
             'past-due-warning' => 'Past Due Warning',
+            'auth-username' => 'Auth Username',
+            'auth-password' => 'Auth Password',
+            'auth-disabled' => 'Basic Authentication'
         ],
 
         'ph' => [
@@ -63,6 +66,8 @@ return [
             'schedule-time' => '00',
             'no-number' => 'No Number',
             'test-number' => 'Input number WA to test',
+            'basic_auth_username' => 'Username',
+            'basic_auth_password' => 'Password'
         ],
         'button' => [
             'edit'     => 'Edit',

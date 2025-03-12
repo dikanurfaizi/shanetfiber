@@ -82,7 +82,7 @@ return [
         'cancelled' => 'Cancelled',
         'paid-off' => 'Paid Off',
         'unpaid' => 'Unpaid',
-        'create-order' => 'Order',
+        'create-order' => 'Bayar Sekarang',
         'view-order' => 'View Order',
         'pay-later' => 'Pay Later',
         'activation' => 'Activation',

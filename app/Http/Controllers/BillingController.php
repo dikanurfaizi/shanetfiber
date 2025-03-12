@@ -37,6 +37,9 @@ use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use App\Jobs\SendBillingToWhatsAppJob;
 use Illuminate\Support\Facades\DB;
+use App\Helpers\LogHelper;
+use Exception;
+use Illuminate\Database\QueryException;
 
 use Illuminate\Contracts\Database\Eloquent\Builder;
 //use Barryvdh\DomPDF\PDF;
@@ -157,7 +160,7 @@ class BillingController extends Controller
                             ->whereNull('customers.deleted_at'); // Kondisi tambahan
                     });
                 } else {
-                    Log::info("Filtering by User ID or Admin Name: {$searchUserId}");
+                    //Log::info("Filtering by User ID or Admin Name: {$searchUserId}");
                     $query->whereHas('customer', function ($q) use ($searchUserId) {
                         $q->whereColumn('billings.customer_id', 'customers.id') // Relasi utama
                             ->where('customers.user_id', function ($subQuery) use ($searchUserId) {
@@ -168,7 +171,7 @@ class BillingController extends Controller
                             })
                             ->whereNull('customers.deleted_at'); // Kondisi tambahan
                     });
-                    Log::info("Search User ID retrieved: " . ($searchUserId ?: '[Not Found]'));
+                    //Log::info("Search User ID retrieved: " . ($searchUserId ?: '[Not Found]'));
                 }
             })
             ->orderBy(
@@ -226,6 +229,8 @@ class BillingController extends Controller
         }
         $data = BillingPeriode::paginate(12);
 
+        //dd($billingPeriodes, $data);
+
         return view('billings.create', compact('data', 'billingPeriodes'))
             ->with('i', (request()->input('page', 1) - 1) * 12);
     }
@@ -239,272 +244,497 @@ class BillingController extends Controller
      * Store a newly created resource in storage.
      * Add Comment "Belum Lunas" on User Secret Mikrotik
      */
+    // public function store(Request $request)
+    // {
+    //     // Log::info('Billing store process started.', ['request' => $request->all()]);
+
+    //     $periode = $request->name ?? Carbon::now()->format('F Y');
+    //     $periodeExplode = explode(' ', $periode);
+    //     $monthPeriode = $periodeExplode[0];
+    //     $yearPeriode = $periodeExplode[1];
+
+    //     try {
+    //         // Log::info('Validating request.', ['periode' => $periode]);
+    //         $this->validate(
+    //             $request,
+    //             ['name' => 'unique:billing_periodes'],
+    //             ['name.unique' => 'Periode ' . $request->name . ' already exists.']
+    //         );
+    //     } catch (\Exception $e) {
+    //         Log::error('Validation failed.', ['error' => $e->getMessage()]);
+    //         return redirect()->back()->withErrors(['msg' => $e->getMessage()]);
+    //     }
+
+    //     $billingPeriode = BillingPeriode::create([
+    //         'name' => $periode,
+    //         'month' => $monthPeriode,
+    //         'year' => $yearPeriode,
+    //     ]);
+
+    //     LogHelper::logInfo(
+    //         null,
+    //         [
+    //             'name' => $periode
+    //         ],
+    //         200, // OK
+    //         "Billing period created"
+    //     );
+    //     $newBillingPeriode = $billingPeriode->fresh();
+    //     $websystem = Websystem::where('slug', 'websystem')->first();
+    //     $totalBillingCreated = 0;
+    //     $routers = Mikrotik::where('disabled', 'false')->get();
+
+    //     // Log::info('Processing routers.', ['total_routers' => $routers->count()]);
+
+    //     foreach ($routers as $router) {
+    //         // Log::info('Processing router.', ['router_id' => $router->id]);
+
+    //         $customers = Customer::where('disabled', 'false')
+    //             ->where('activation', 'true')
+    //             ->where('mikrotik_id', $router->id)
+    //             ->get();
+
+    //         $billing = Billing::select('customer_id')
+    //             ->where('billing_periode_id', $newBillingPeriode->id)
+    //             ->get();
+
+    //         $customersUnbilling = $customers->diff(
+    //             Customer::whereIn('id', $billing)->get()
+    //         );
+
+    //         $autoIsolir = AutoIsolir::where('mikrotik_id', $router->id)->first();
+
+    //         foreach ($customersUnbilling as $customer) {
+    //             // $customerActivationDate = Carbon::parse($customer->activation_date)->format('d');
+    //             $periodeName = $newBillingPeriode->name;
+
+    //             $paket_price = $customer->paket->price;
+    //             $discount = optional($customer->member)->discount ?? 0;
+    //             $customerPriceAfterDiscount = $paket_price;
+
+    //             if ($customer->billing_option == 2 && $customer->billing_period === $periodeName) {
+    //                 $customerPriceAfterDiscount -= $discount;
+    //             } elseif ($customer->billing_option == 1) {
+    //                 $customerPriceAfterDiscount -= $discount;
+    //             }
+    //             //$discountPrice = $customer->paket->price * ($customer->discount / 100);
+    //             //$customerPriceAfterDiscount = ceil($customer->paket->price - $discountPrice);
+
+    //             $customerTax = $websystem->enable_tax == 'true'
+    //                 ? ceil($customerPriceAfterDiscount * ($websystem->tax_rate / 100))
+    //                 : 0;
+
+    //             // $nextMonth = Carbon::parse($periodeName)->addMonth()->format('m_Y');
+
+    //             if ($autoIsolir && $autoIsolir->disabled == 'false') {
+    //                 try {
+    //                     $comment = $customerPriceAfterDiscount > 0
+    //                         ? $autoIsolir->comment_unpayment
+    //                         : $autoIsolir->comment_payment;
+
+    //                     if ($customer->internet_service == 'ppp') {
+    //                         //dispatch(new CreateBillingJob($router, $comment, $customer->secret_id))->onQueue('default');
+    //                     } else if ($customer->internet_service == 'ip_static') {
+    //                         //dispatch(new CreateBillingIpStaticJob($router, $customer->simpleque_id, $comment))->onQueue('default');
+    //                     }
+    //                 } catch (\Exception $e) {
+    //                     Log::error('Failed to dispatch billing job.', ['error' => $e->getMessage()]);
+    //                     $billingPeriode->delete();
+    //                     return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your router.']);
+    //                 }
+    //             }
+
+    //             Billing::create([
+    //                 'billing_periode_id' => $billingPeriode->id,
+    //                 'slug' => str($customer->id . '-' . Str::random(4))->slug(),
+    //                 'billing_number' => str($customer->id . '-' . Str::random(4) . '-' . Carbon::parse($newBillingPeriode->name)->format('m') . '-' . Carbon::parse($newBillingPeriode->name)->format('Y'))->slug(),
+    //                 'customer_id' => $customer->id,
+    //                 'customer_name' => $customer->name,
+    //                 'paket_name' => $customer->paket->name,
+    //                 'paket_price' => $customerPriceAfterDiscount,
+    //                 'tax' => $customerTax,
+    //                 'created_name' => auth()->user()->name,
+    //                 'status' => $customerPriceAfterDiscount > 0 ? 'BL' : 'LS',
+    //                 'due_date' => Carbon::createFromFormat('d F Y', "15 " . Carbon::parse($billingPeriode->name)->format('F Y'))
+    //                     ->endOfDay(),
+    //             ]);
+
+    //             LogHelper::logInfo(
+    //                 null,
+    //                 [
+    //                     'customer_id' => $customer->id,
+    //                     'customer_name' => $customer->name,
+    //                     'price_after_discount' => $customerPriceAfterDiscount,
+    //                     'tax' => $customerTax,
+    //                 ],
+    //                 200, // OK
+    //                 "Billing record created"
+    //             );
+
+    //             $totalBillingCreated++;
+    //         }
+    //     }
+
+    //     LogHelper::logInfo(
+    //         null,
+    //         ['total_billing_created' => $totalBillingCreated],
+    //         200, // OK
+    //         "Billing process completed"
+    //     );
+
+    //     try {
+    //         $this->sendBillingReminder();
+    //     } catch (\Exception $e) {
+    //         Log::error("Error while sending billing reminder: " . $e->getMessage());
+    //     }
+
+    //     // Tetap lanjutkan dengan redirect tanpa terganggu oleh error di atas
+    //     return redirect()->route('billings.index')
+    //         ->with('success', "{$totalBillingCreated} Billing created successfully.");
+    // }
+
+    // public function store_one(BillingStoreRequest $request)
+    // {
+    //     $billingPeriodeId = $request->name;
+    //     $billingPeriode = BillingPeriode::where('id', $billingPeriodeId)->first();
+    //     $websystem = Websystem::where('slug', 'websystem')->first();
+    //     $totalBillingCreated = 0;
+    //     //$routers = Mikrotik::all();
+    //     $routers = Mikrotik::where('disabled', 'false')->get();
+    //     foreach ($routers as $router) {
+    //         $customers = Customer::where('disabled', 'false')->where('mikrotik_id', $router->id)->where('activation', 'true')->get();
+    //         $billing = Billing::select('customer_id')
+    //             ->where('billing_periode_id', $billingPeriodeId)
+    //             ->get();
+    //         $customersUnbilling = $customers->diff(
+    //             Customer::whereIn('id', $billing)
+    //                 ->get()
+    //         );
+    //         foreach ($customersUnbilling as $customer) {
+    //             // $customerPriceAfterDiscount = $customer->paket->price * ((100 - $customer->discount) / 100);
+
+    //             // $discountPrice = $customer->paket->price * ($customer->discount / 100);
+    //             // $customerPriceAfterDiscount = ceil($customer->paket->price - $discountPrice);
+
+    //             //$periodeName = BillingPeriode::where('id', $billingPeriodeId)->value('name');
+    //             $periodeName = $billingPeriode->name;
+    //             $nextMonth = Carbon::parse($periodeName)->addMonth()->format('m_Y');
+
+    //             $paket_price = $customer->paket->price;
+    //             $discount = optional($customer->member)->discount ?? 0;
+    //             $customerPriceAfterDiscount = $paket_price;
+
+    //             if ($customer->billing_option == 2 && $customer->billing_period === $periodeName) {
+    //                 $customerPriceAfterDiscount -= $discount;
+    //             } elseif ($customer->billing_option == 1) {
+    //                 $customerPriceAfterDiscount -= $discount;
+    //             }
+
+    //             if ($websystem->enable_tax == 'true') {
+    //                 $customerTax = ceil($customerPriceAfterDiscount * ($websystem->tax_rate / 100));
+    //             } else {
+    //                 $customerTax = 0;
+    //             }
+
+    //             $customerActivationDate = Carbon::parse($customer->activation_date)->format('d');
+
+    //             $totalDaysInMonth = Carbon::now()->addMonth()->daysInMonth;
+    //             if ($customerActivationDate > $totalDaysInMonth) {
+    //                 $customerActivationDate = $totalDaysInMonth;
+    //             }
+
+    //             $internet_service = $customer->internet_service;
+    //             $secretId = $customer->secret_id;
+    //             $simplequeId = $customer->simpleque_id;
+
+    //             // $mikrotikId = $customer->mikrotik_id;
+    //             // $router = Mikrotik::where('id', $mikrotikId)->first();
+    //             $autoIsolir = AutoIsolir::where('mikrotik_id', $router->id)->first();
+    //             //  if ($router->disabled == 'false') {
+    //             if ($autoIsolir != NULL) {
+    //                 if ($autoIsolir->disabled == 'false') {
+    //                     if ($autoIsolir->activation_date == 'false') {
+    //                         if ($customerPriceAfterDiscount > 0) {
+    //                             $comment = $autoIsolir->comment_unpayment;
+    //                         } else {
+    //                             $comment = $autoIsolir->comment_payment;
+    //                         }
+    //                         try {
+    //                             if ($internet_service == 'ppp') {
+    //                                 //dispatch(new CreateBillingJob($router, $comment, $secretId))->onQueue('default');
+    //                             } else if ($internet_service == 'ip_static') {
+    //                                 //dispatch(new CreateBillingIpStaticJob($router, $simplequeId, $comment))->onQueue('default');
+    //                             }
+    //                         } catch (\Exception $e) {
+    //                             return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your router.']);
+    //                         }
+    //                     } else {
+    //                         if ($customerPriceAfterDiscount == 0.0) {
+    //                             // $comment = $autoIsolir->comment_payment;
+    //                             $comment = $autoIsolir->comment_unpayment . '_' . $customerActivationDate . '_' . $nextMonth;
+    //                             try {
+    //                                 if ($internet_service == 'ppp') {
+    //                                     //dispatch(new CreateBillingJob($router, $comment, $secretId))->onQueue('default');
+    //                                 } else if ($internet_service == 'ip_static') {
+    //                                     //dispatch(new CreateBillingIpStaticJob($router, $simplequeId, $comment))->onQueue('default');
+    //                                 }
+    //                             } catch (\Exception $e) {
+    //                                 return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your router.']);
+    //                             }
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //             // }
+
+    //             if ($customerPriceAfterDiscount > 0) {
+    //                 $statusPayment = 'BL';
+    //             } else {
+    //                 $statusPayment = 'LS';
+    //             }
+    //             $dueDate = $customerActivationDate . ' ' . Carbon::parse($periodeName)->format('F Y');
+    //             Billing::create([
+    //                 'billing_periode_id' => $billingPeriodeId,
+    //                 'slug' => str($customer->id . '-' . Str::random(4))->slug(),
+    //                 'billing_number' => str($customer->id . '-' . Str::random(4)  . '-' . Carbon::parse($billingPeriode->name)->format('m') . '-' . Carbon::parse($billingPeriode->name)->format('Y'))->slug(),
+    //                 'customer_id' => $customer->id,
+    //                 'customer_name' => $customer->name,
+    //                 'paket_name' => $customer->paket->name,
+    //                 'paket_price' => $customerPriceAfterDiscount,
+    //                 'tax' => $customerTax,
+    //                 'created_name' => auth()->user()->name,
+    //                 'status' => $statusPayment,
+    //                 // 'due_date' => Carbon::parse($dueDate),
+    //                 'due_date' => Carbon::createFromFormat('d F Y', "15 " . Carbon::parse($billingPeriode->name)->format('F Y'))
+    //                     ->startOfDay(),
+    //             ]);
+
+    //             LogHelper::logInfo(
+    //                 null,
+    //                 [
+    //                     'customer_id' => $customer->id,
+    //                     'customer_name' => $customer->name,
+    //                     'price_after_discount' => $customerPriceAfterDiscount,
+    //                     'tax' => $customerTax,
+    //                 ],
+    //                 200, // OK
+    //                 "Billing record created"
+    //             );
+
+    //             $totalBillingCreated++;
+    //         }
+    //     }
+
+    //     LogHelper::logInfo(
+    //         null,
+    //         ['total_billing_created' => $totalBillingCreated],
+    //         200, // OK
+    //         "Billing process completed"
+    //     );
+
+    //     try {
+    //         $this->sendBillingReminder();
+    //     } catch (\Exception $e) {
+    //         Log::error("Error while sending billing reminder: " . $e->getMessage());
+    //     }
+
+    //     // Tetap lanjutkan dengan redirect tanpa terganggu oleh error di atas
+    //     return redirect()->route('billings.index')
+    //         ->with('success', "{$totalBillingCreated} Billing created successfully.");
+    // }
+
     public function store(Request $request)
     {
-        // Log::info('Billing store process started.', ['request' => $request->all()]);
-
-        $periode = $request->name ?? Carbon::now()->format('F Y');
-        $periodeExplode = explode(' ', $periode);
-        $monthPeriode = $periodeExplode[0];
-        $yearPeriode = $periodeExplode[1];
-
         try {
-            // Log::info('Validating request.', ['periode' => $periode]);
-            $this->validate(
-                $request,
-                ['name' => 'unique:billing_periodes'],
-                ['name.unique' => 'Periode ' . $request->name . ' already exists.']
-            );
-        } catch (\Exception $e) {
-            Log::error('Validation failed.', ['error' => $e->getMessage()]);
-            return redirect()->back()->withErrors(['msg' => $e->getMessage()]);
+            $periode = $request->name ?? Carbon::now()->format('F Y');
+            $billingPeriode = $this->createBillingPeriode($periode);
+            $totalBillingCreated = $this->processRouters($billingPeriode);
+            $this->sendBillingReminder();
+            $this->logBillingCompletion($totalBillingCreated);
+            $message = "{$totalBillingCreated} Billing for {$periode} have been successfully created.";
+            return redirect()->route('billings.index')
+                ->with('success', $message);
+        } catch (QueryException $e) {
+            $message = "Database error: {$e->getMessage()}";
+            LogHelper::logInfo(null, null, 500, $message);
+            return redirect()->route('billings.index')->with('error', 'Terjadi Kesalahan Pada Proses Store Data.');
+        } catch (Exception $e) {
+            $message = "Something went wrong: {$e->getMessage()}";
+            LogHelper::logInfo(null, null, 500, $message);
+            return redirect()->route('billings.index')->with('error', 'Terjadi Kesalahan, Silakan Periksa Kembali Inputan Atau Hubungi Tim IT.');
         }
+    }
 
-        $billingPeriode = BillingPeriode::create([
+    public function store_one(BillingStoreRequest $request)
+    {
+        try {
+            $billingPeriode = BillingPeriode::where('id', $request->name)->first();
+            if (!$billingPeriode) {
+                throw new Exception('Billing period not found');
+            }
+            $totalBillingCreated = $this->processRouters($billingPeriode);
+            $this->sendBillingReminder();
+            $this->logBillingCompletion($totalBillingCreated);
+            $message = "{$totalBillingCreated} Billing for {$billingPeriode->name} have been successfully created.";
+            return redirect()->route('billings.index')
+                ->with('success', $message);
+        } catch (QueryException $e) {
+            $message = "Database error: {$e->getMessage()}";
+            LogHelper::logInfo(null, null, 500, $message);
+            return redirect()->route('billings.index')->with('error', 'Terjadi Kesalahan Pada Proses Store Data.');
+        } catch (Exception $e) {
+            $message = "Something went wrong: {$e->getMessage()}";
+            LogHelper::logInfo(null, null, 500, $message);
+            return redirect()->route('billings.index')->with('error', 'Terjadi Kesalahan, Silakan Periksa Kembali Inputan Atau Hubungi Tim IT.');
+        }
+    }
+
+    private function createBillingPeriode($periode)
+    {
+        $periodeExplode = explode(' ', $periode);
+        return BillingPeriode::create([
             'name' => $periode,
-            'month' => $monthPeriode,
-            'year' => $yearPeriode,
+            'month' => $periodeExplode[0],
+            'year' => $periodeExplode[1],
         ]);
+    }
 
-        Log::info('Billing period created.', ['billing_periode' => $periode]);
-        $newBillingPeriode = $billingPeriode->fresh();
-        $websystem = Websystem::where('slug', 'websystem')->first();
+    private function processRouters($billingPeriode)
+    {
         $totalBillingCreated = 0;
+        $websystem = Websystem::where('slug', 'websystem')->first();
         $routers = Mikrotik::where('disabled', 'false')->get();
 
-        // Log::info('Processing routers.', ['total_routers' => $routers->count()]);
-
         foreach ($routers as $router) {
-            // Log::info('Processing router.', ['router_id' => $router->id]);
-
             $customers = Customer::where('disabled', 'false')
                 ->where('activation', 'true')
                 ->where('mikrotik_id', $router->id)
                 ->get();
 
             $billing = Billing::select('customer_id')
-                ->where('billing_periode_id', $newBillingPeriode->id)
+                ->where('billing_periode_id', $billingPeriode->id)
                 ->get();
 
             $customersUnbilling = $customers->diff(
                 Customer::whereIn('id', $billing)->get()
             );
 
-            $autoIsolir = AutoIsolir::where('mikrotik_id', $router->id)->first();
-
-            foreach ($customersUnbilling as $customer) {
-                $discountPrice = $customer->paket->price * ($customer->discount / 100);
-                $customerPriceAfterDiscount = ceil($customer->paket->price - $discountPrice);
-
-                $customerTax = $websystem->enable_tax == 'true'
-                    ? ceil($customerPriceAfterDiscount * ($websystem->tax_rate / 100))
-                    : 0;
-
-                // $customerActivationDate = Carbon::parse($customer->activation_date)->format('d');
-                $periodeName = $newBillingPeriode->name;
-
-                // $nextMonth = Carbon::parse($periodeName)->addMonth()->format('m_Y');
-
-                if ($autoIsolir && $autoIsolir->disabled == 'false') {
-                    try {
-                        $comment = $customerPriceAfterDiscount > 0
-                            ? $autoIsolir->comment_unpayment
-                            : $autoIsolir->comment_payment;
-
-                        if ($customer->internet_service == 'ppp') {
-                            dispatch(new CreateBillingJob($router, $comment, $customer->secret_id))->onQueue('default');
-                        } else if ($customer->internet_service == 'ip_static') {
-                            dispatch(new CreateBillingIpStaticJob($router, $customer->simpleque_id, $comment))->onQueue('default');
-                        }
-                        Log::info('Billing job dispatched.', ['customer_id' => $customer->id]);
-                    } catch (\Exception $e) {
-                        Log::error('Failed to dispatch billing job.', ['error' => $e->getMessage()]);
-                        $billingPeriode->delete();
-                        return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your router.']);
-                    }
-                }
-
-                Billing::create([
-                    'billing_periode_id' => $billingPeriode->id,
-                    'slug' => str($customer->id . '-' . Str::random(4))->slug(),
-                    'billing_number' => str($customer->id . '-' . Str::random(4) . '-' . Carbon::parse($newBillingPeriode->name)->format('m') . '-' . Carbon::parse($newBillingPeriode->name)->format('Y'))->slug(),
-                    'customer_id' => $customer->id,
-                    'customer_name' => $customer->name,
-                    'paket_name' => $customer->paket->name,
-                    'paket_price' => $customerPriceAfterDiscount,
-                    'tax' => $customerTax,
-                    'created_name' => auth()->user()->name,
-                    'status' => $customerPriceAfterDiscount > 0 ? 'BL' : 'LS',
-                    'due_date' => Carbon::createFromFormat('d F Y', "15 " . Carbon::parse($billingPeriode->name)->format('F Y'))
-                        ->startOfDay(),
-                ]);
-
-                Log::info('Billing record created.', [
-                    'customer_id' => $customer->id,
-                    'customer_name' => $customer->name,
-                    'price_after_discount' => $customerPriceAfterDiscount,
-                    'tax' => $customerTax,
-                ]);
-
-                $totalBillingCreated++;
-            }
+            $totalBillingCreated += $this->createBillings($customersUnbilling, $billingPeriode, $websystem, $router);
         }
 
-        Log::info('Billing process completed.', ['total_billing_created' => $totalBillingCreated]);
-
-        try {
-            BillingController::sendBillingReminder();
-        } catch (\Exception $e) {
-            Log::error("Error while sending billing reminder: " . $e->getMessage());
-        }
-
-        // Tetap lanjutkan dengan redirect tanpa terganggu oleh error di atas
-        return redirect()->route('billings.index')
-            ->with('success', "{$totalBillingCreated} Billing created successfully.");
+        return $totalBillingCreated;
     }
 
-    public function store_one(BillingStoreRequest $request)
+    private function createBillings($customersUnbilling, $billingPeriode, $websystem, $router)
     {
-        $billingPeriodeId = $request->name;
-        $billingPeriode = BillingPeriode::where('id', $billingPeriodeId)->first();
-        $websystem = Websystem::where('slug', 'websystem')->first();
         $totalBillingCreated = 0;
-        //$routers = Mikrotik::all();
-        $routers = Mikrotik::where('disabled', 'false')->get();
-        foreach ($routers as $router) {
-            $customers = Customer::where('disabled', 'false')->where('mikrotik_id', $router->id)->where('activation', 'true')->get();
-            $billing = Billing::select('customer_id')
-                ->where('billing_periode_id', $billingPeriodeId)
-                ->get();
-            $customersUnbilling = $customers->diff(
-                Customer::whereIn('id', $billing)
-                    ->get()
-            );
-            foreach ($customersUnbilling as $customer) {
-                // $customerPriceAfterDiscount = $customer->paket->price * ((100 - $customer->discount) / 100);
+        $autoIsolir = AutoIsolir::where('mikrotik_id', $router->id)->first();
 
-                $discountPrice = $customer->paket->price * ($customer->discount / 100);
-                $customerPriceAfterDiscount = ceil($customer->paket->price - $discountPrice);
-                if ($websystem->enable_tax == 'true') {
-                    $customerTax = ceil($customerPriceAfterDiscount * ($websystem->tax_rate / 100));
-                } else {
-                    $customerTax = 0;
+        foreach ($customersUnbilling as $customer) {
+            $customerPriceAfterDiscount = $this->calculateCustomerPrice($customer, $billingPeriode->name);
+            $customerTax = $websystem->enable_tax == 'true'
+                ? ceil($customerPriceAfterDiscount * ($websystem->tax_rate / 100))
+                : 0;
+
+            if ($autoIsolir && $autoIsolir->disabled == 'false') {
+                try {
+                    $comment = $customerPriceAfterDiscount > 0
+                        ? $autoIsolir->comment_unpayment
+                        : $autoIsolir->comment_payment;
+
+                    $this->dispatchBillingJob($customer, $router, $comment);
+                } catch (\Exception $e) {
+                    Log::error('Failed to dispatch billing job.', ['error' => $e->getMessage()]);
+                    $billingPeriode->delete();
+                    return 0;
                 }
-
-                $customerActivationDate = Carbon::parse($customer->activation_date)->format('d');
-                $periodeName = BillingPeriode::where('id', $billingPeriodeId)->value('name');
-                $nextMonth = Carbon::parse($periodeName)->addMonth()->format('m_Y');
-                $totalDaysInMonth = Carbon::now()->addMonth()->daysInMonth;
-                if ($customerActivationDate > $totalDaysInMonth) {
-                    $customerActivationDate = $totalDaysInMonth;
-                }
-
-                $internet_service = $customer->internet_service;
-                $secretId = $customer->secret_id;
-                $simplequeId = $customer->simpleque_id;
-
-                // $mikrotikId = $customer->mikrotik_id;
-                // $router = Mikrotik::where('id', $mikrotikId)->first();
-                $autoIsolir = AutoIsolir::where('mikrotik_id', $router->id)->first();
-                //  if ($router->disabled == 'false') {
-                if ($autoIsolir != NULL) {
-                    if ($autoIsolir->disabled == 'false') {
-                        if ($autoIsolir->activation_date == 'false') {
-                            if ($customerPriceAfterDiscount > 0) {
-                                $comment = $autoIsolir->comment_unpayment;
-                            } else {
-                                $comment = $autoIsolir->comment_payment;
-                            }
-                            try {
-                                if ($internet_service == 'ppp') {
-                                    dispatch(new CreateBillingJob($router, $comment, $secretId))->onQueue('default');
-                                } else if ($internet_service == 'ip_static') {
-                                    dispatch(new CreateBillingIpStaticJob($router, $simplequeId, $comment))->onQueue('default');
-                                }
-                            } catch (\Exception $e) {
-                                return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your router.']);
-                            }
-                        } else {
-                            if ($customerPriceAfterDiscount == 0.0) {
-                                // $comment = $autoIsolir->comment_payment;
-                                $comment = $autoIsolir->comment_unpayment . '_' . $customerActivationDate . '_' . $nextMonth;
-                                try {
-                                    if ($internet_service == 'ppp') {
-                                        dispatch(new CreateBillingJob($router, $comment, $secretId))->onQueue('default');
-                                    } else if ($internet_service == 'ip_static') {
-                                        dispatch(new CreateBillingIpStaticJob($router, $simplequeId, $comment))->onQueue('default');
-                                    }
-                                } catch (\Exception $e) {
-                                    return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your router.']);
-                                }
-                            }
-                        }
-                    }
-                }
-                // }
-
-                if ($customerPriceAfterDiscount > 0) {
-                    $statusPayment = 'BL';
-                } else {
-                    $statusPayment = 'LS';
-                }
-                $dueDate = $customerActivationDate . ' ' . Carbon::parse($periodeName)->format('F Y');
-                Billing::create([
-                    'billing_periode_id' => $billingPeriodeId,
-                    'slug' => str($customer->id . '-' . Str::random(4))->slug(),
-                    'billing_number' => str($customer->id . '-' . Str::random(4)  . '-' . Carbon::parse($billingPeriode->name)->format('m') . '-' . Carbon::parse($billingPeriode->name)->format('Y'))->slug(),
-                    'customer_id' => $customer->id,
-                    'customer_name' => $customer->name,
-                    'paket_name' => $customer->paket->name,
-                    'paket_price' => $customerPriceAfterDiscount,
-                    'tax' => $customerTax,
-                    'created_name' => auth()->user()->name,
-                    'status' => $statusPayment,
-                    // 'due_date' => Carbon::parse($dueDate),
-                    'due_date' => Carbon::createFromFormat('d F Y', "15 " . Carbon::parse($billingPeriode->name)->format('F Y'))
-                        ->startOfDay(),
-                ]);
-
-                Log::info('Billing record created.', [
-                    'customer_id' => $customer->id,
-                    'customer_name' => $customer->name,
-                    'price_after_discount' => $customerPriceAfterDiscount,
-                    'tax' => $customerTax,
-                ]);
-
-                $totalBillingCreated++;
             }
+
+            Billing::create([
+                'billing_periode_id' => $billingPeriode->id,
+                'slug' => str($customer->id . '-' . Str::random(4))->slug(),
+                'billing_number' => str($customer->id . '-' . Str::random(4) . '-' . Carbon::parse($billingPeriode->name)->format('m') . '-' . Carbon::parse($billingPeriode->name)->format('Y'))->slug(),
+                'customer_id' => $customer->id,
+                'customer_name' => $customer->name,
+                'paket_name' => $customer->paket->name,
+                'paket_price' => $customerPriceAfterDiscount,
+                'tax' => $customerTax,
+                'created_name' => auth()->user()->name,
+                'status' => $customerPriceAfterDiscount > 0 ? 'BL' : 'LS',
+                'due_date' => Carbon::createFromFormat('d F Y', "15 " . Carbon::parse($billingPeriode->name)->format('F Y'))
+                    ->endOfDay(),
+            ]);
+
+            $totalBillingCreated++;
         }
 
-        Log::info('Billing process completed.', ['total_billing_created' => $totalBillingCreated]);
-
-        try {
-            BillingController::sendBillingReminder();
-        } catch (\Exception $e) {
-            Log::error("Error while sending billing reminder: " . $e->getMessage());
-        }
-
-        // Tetap lanjutkan dengan redirect tanpa terganggu oleh error di atas
-        return redirect()->route('billings.index')
-            ->with('success', "{$totalBillingCreated} Billing created successfully.");
+        return $totalBillingCreated;
     }
 
-    public function sendBillingReminder()
+    private function calculateCustomerPrice($customer, $periodeName)
+    {
+        $paket_price = $customer->paket->price;
+        $discount = optional($customer->member)->discount ?? 0;
+
+        if ($customer->billing_option == 2 && $customer->billing_period === $periodeName) {
+            return $paket_price - $discount;
+        } elseif ($customer->billing_option == 1) {
+            return $paket_price - $discount;
+        }
+
+        return $paket_price;
+    }
+
+    private function dispatchBillingJob($customer, $router, $comment)
+    {
+        if ($customer->internet_service == 'ppp') {
+            //dispatch(new CreateBillingJob($router, $comment, $customer->secret_id))->onQueue('default');
+        } else if ($customer->internet_service == 'ip_static') {
+            //dispatch(new CreateBillingIpStaticJob($router, $customer->simpleque_id, $comment))->onQueue('default');
+        }
+    }
+
+    private function logBillingCompletion($totalBillingCreated)
+    {
+        LogHelper::logInfo(
+            null,
+            ['total_billing_created' => $totalBillingCreated],
+            200,
+            "Billing have been successfully created."
+        );
+    }
+
+    private function sendBillingReminder()
     {
         try {
             // Cek gateway WhatsApp
             $gateway = WhatsappGateway::where('slug', 'gateway')->first();
 
             if (!$gateway || $gateway->disabled !== 0) {
-                Log::warning("WhatsApp Gateway is either disabled or not found.");
+                LogHelper::logWarning(
+                    null,
+                    null,
+                    404, // OK
+                    "WhatsApp Gateway is either disabled or not found"
+                );
             }
 
             // Dispatch ke background job
             dispatch(new SendBillingToWhatsAppJob(app(WhatsappMessageService::class)));
 
-            Log::info("Billing reminder dispatched successfully.");
+            LogHelper::logInfo(
+                null,
+                null,
+                200, // OK
+                "Billing reminder dispatched successfully"
+            );
         } catch (\Exception $e) {
-            Log::error("Failed to dispatch SendBillingToWhatsAppJob: " . $e->getMessage());
+            LogHelper::logError(
+                null,
+                ['errorMessage' => $e->getMessage()],
+                500, // OK
+                "Failed to dispatch SendBillingToWhatsAppJob"
+            );
         }
     }
 
@@ -521,6 +751,7 @@ class BillingController extends Controller
         $totalPrice = Billing::where('customer_id', $billingCustomerId)
             ->where('status', '!=', 'LS')
             ->sum('paket_price');
+        // dd($billing, $totalPrice, $websystem);
         return view('billings.show', compact('billing', 'totalPrice', 'websystem'), [
             'billings' => $billings,
         ]);
@@ -568,9 +799,9 @@ class BillingController extends Controller
                 if ($userSecretId != 'error') {
                     $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
                     if ($secretProfiles == $customerProfile) {
-                        dispatch(new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerSecretId))->onQueue('default');
+                        //dispatch(new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerSecretId))->onQueue('default');
                     } else {
-                        dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername))->onQueue('default');
+                        //dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername))->onQueue('default');
                     }
                 } else {
                     return redirect()->back()->withErrors(['msg' => $customerSecretId . '! Canot find user "' . $customer->username . '" on server ' . $router->name . '.']);
@@ -590,12 +821,12 @@ class BillingController extends Controller
                 if (isset($address_list_customer[0]['list'])) {
                     if ($address_list_customer[0]['list'] == $address_list_isolir) {
                         // $address_list_id = $address_list[0]['.id'];
-                        dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
+                        //dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
                     } else {
-                        dispatch(new AddPaymentBeforeDueDateJob($router, $simpleque_id, $comment_payment))->onQueue('default');
+                        //dispatch(new AddPaymentBeforeDueDateJob($router, $simpleque_id, $comment_payment))->onQueue('default');
                     }
                 } else {
-                    dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
+                    //dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
                 }
             }
         }
@@ -617,7 +848,7 @@ class BillingController extends Controller
             // Pastikan gateway tidak dalam keadaan disabled dan customer memiliki contact
             if ($gatewayStatus == false && $customer->contact) {
                 // Panggil method payment_paket
-                $this->messageService->payment_paket($billing, 'paylater');
+                $this->messageService->payment_paket($billing, null, 'paylater');
             } else {
                 if ($gatewayStatus) {
                     Log::warning("Whatsapp Gateway is disabled.");
@@ -726,9 +957,9 @@ class BillingController extends Controller
                     if ($userSecretId != 'error') {
                         $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
                         if ($secretProfiles == $customerProfile) {
-                            dispatch(new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerSecretId))->onQueue('default');
+                            //dispatch(new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerSecretId))->onQueue('default');
                         } else {
-                            dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername))->onQueue('default');
+                            //dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername))->onQueue('default');
                         }
                     } else {
                         return redirect()->back()->withErrors(['msg' => $customerSecretId . '! Canot find user "' . $customer->username . '" on server ' . $router->name . '.']);
@@ -748,12 +979,12 @@ class BillingController extends Controller
                     if (isset($address_list_customer[0]['list'])) {
                         if ($address_list_customer[0]['list'] == $address_list_isolir) {
                             // $address_list_id = $address_list[0]['.id'];
-                            dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
+                            //dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
                         } else {
-                            dispatch(new AddPaymentBeforeDueDateJob($router, $simpleque_id, $comment_payment))->onQueue('default');
+                            //dispatch(new AddPaymentBeforeDueDateJob($router, $simpleque_id, $comment_payment))->onQueue('default');
                         }
                     } else {
-                        dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
+                        //dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
                     }
                 }
             }
@@ -765,6 +996,20 @@ class BillingController extends Controller
                 $numberReceipt = (int)$receipt[1];
                 $numberReceipt++;
             }
+
+            $discount = 0;
+            $price_after_discount = $customer->paket->price;
+            $member = 'Non Member / Tidak Ada';
+
+            if (
+                $customer->billing_option == 1 ||
+                ($customer->billing_option == 2 && $billing->billing_periode->name === $customer->billing_period)
+            ) {
+                $discount = $customer->member->discount ?? 0;
+                $price_after_discount = $customer->paket->price - $discount;
+                $member = $customer->member->type;
+            }
+
             $receipt = Receipt::create([
                 'slug' => $billing->slug,
                 'periode' => $billing->billing_periode->name,
@@ -774,7 +1019,11 @@ class BillingController extends Controller
                 'customer_name' => $customer->name,
                 'customer_address' => $customer->address,
                 'paket_name' => $customer->paket->name,
-                'paket_price' => $customer->paket->price * ((100 - $customer->discount) / 100),
+                // 'paket_price' => $customer->paket->price * ((100 - $customer->discount) / 100),
+                'paket_price' => $customer->paket->price,
+                'discount' => $discount,
+                'price_after_discount' => $price_after_discount,
+                'member_type' => $member,
                 'created_name' => auth()->user()->name,
                 'teller_name' => auth()->user()->name,
                 'payment_time' => Carbon::now(),
@@ -796,7 +1045,7 @@ class BillingController extends Controller
                 'receipt_id' => $getReceipt->id,
             ]);
             if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
-                $this->messageService->payment_paket($billing, $payment);
+                $this->messageService->payment_paket($billing, $getReceipt, $payment);
             }
             return redirect()->back()->with('success', 'Payment ' . $billing->customer_name . ' successfully.');
         }
@@ -829,9 +1078,9 @@ class BillingController extends Controller
                 try {
                     // dispatch(new TestConnectionJob($router))->onQueue('default');
                     if ($day <= $dueDate) {
-                        dispatch(new CancelPaymentBeforeDueDateJob($router, $comment_unpayment, $secretId))->onQueue('default');
+                        //dispatch(new CancelPaymentBeforeDueDateJob($router, $comment_unpayment, $secretId))->onQueue('default');
                     } else {
-                        dispatch(new CancelPaymentAfterDueDateJob($router, $comment_unpayment, $profileIsolir, $secretId, $username))->onQueue('default');
+                        //dispatch(new CancelPaymentAfterDueDateJob($router, $comment_unpayment, $profileIsolir, $secretId, $username))->onQueue('default');
                     }
                 } catch (\Exception $e) {
                     return redirect()->back()->withErrors(['msg' => 'Cant connect to server ' . $router->name . '.']);
@@ -842,28 +1091,33 @@ class BillingController extends Controller
                 try {
                     if ($day <= $dueDate) {
                         // return dd('tes');
-                        dispatch(new CancelPaymentIpStaticBeforeDueDateJob($router, $simpleque_id, $comment_unpayment))->onQueue('default');
+                        //dispatch(new CancelPaymentIpStaticBeforeDueDateJob($router, $simpleque_id, $comment_unpayment))->onQueue('default');
                     } else {
                         $ip_address = $customer->ip_static;
                         $address_list_isolir = $autoIsolir->address_list_isolir;
                         $comment = $customer->username . '_' . $comment_unpayment;
-                        dispatch(new CancelPaymentIpStaticAfterDueDateJob($router, $address_list_isolir, $ip_address, $simpleque_id, $comment))->onQueue('default');
+                        //dispatch(new CancelPaymentIpStaticAfterDueDateJob($router, $address_list_isolir, $ip_address, $simpleque_id, $comment))->onQueue('default');
                     }
                 } catch (\Exception $e) {
                     return redirect()->back()->withErrors(['msg' => 'Cant connect to Server ' . $router->name . '.']);
                 }
             }
         }
-
         $receipt = Receipt::where('id', $billing->receipt_id);
+
+        // Simpan receipt_id sebelum di-null
+        $originalReceipt = $receipt->first();
+
         $billing->update([
             'teller_name' => auth()->user()->name,
             'status' => 'BL',
-            'receipt_id' => null,
+            'receipt_id' => null, // Diubah jadi null
         ]);
+
         $receipt->delete();
+
         if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
-            $this->messageService->payment_paket($billing, 'unpayment');
+            $this->messageService->payment_paket($billing, $originalReceipt, 'unpayment');
         }
 
         return redirect()->back()->with('success', 'Cancel payment successfully.');

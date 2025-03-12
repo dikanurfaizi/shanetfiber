@@ -10416,3 +10416,8 @@ body.sidebar-toggled footer.sticky-footer {
     height: 100%;
     border: 0;
 }
+
+#member-dropdown option:disabled {
+    color: #b0b0b0 !important;
+    background-color: #f0f0f0 !important;
+}

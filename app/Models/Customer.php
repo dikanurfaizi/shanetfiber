@@ -85,10 +85,15 @@ class Customer extends Authenticatable
     {
         return $this->hasMany(Billing::class);
     }
-    
+
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function member()
+    {
+        return $this->belongsTo(Member::class);
     }
 
     // public function user(): BelongsTo

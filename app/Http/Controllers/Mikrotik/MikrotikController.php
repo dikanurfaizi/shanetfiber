@@ -6,6 +6,7 @@ use App\Models\Mikrotik;
 use App\Http\Controllers\Controller;
 use App\Services\Routerboard\SystemService;
 use App\Services\Routerboard\TestConnectionService;
+use App\Helpers\LogHelper;
 
 class MikrotikController extends Controller
 {
@@ -22,8 +23,13 @@ class MikrotikController extends Controller
     {
         try {
             $interfaces = $this->systemService->mikrotikInterface($mikrotik);
+            LogHelper::logInfo(null, [
+                'mikrotik' => $mikrotik->toArray(),
+                'interface' => $interfaces->toArray()
+            ], 200, 'Successfully to get mikrotik interface');
             return view('mikrotiks.show', compact('mikrotik', 'interfaces'));
         } catch (\Exception $e) {
+            LogHelper::logError(null, ['error' => $e->getMessage()], 503, 'Failed to get mikrotik interface');
             return redirect()->back()->withErrors(['msg' => 'Router offline, please check your router.']);
         }
     }

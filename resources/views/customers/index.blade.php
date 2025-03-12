@@ -199,7 +199,11 @@
                         </td>
                         <td>
                             <span class="badge bg-danger-soft">
-                                @moneyIDR($customer->paket->price * ((100 - $customer->discount) / 100))
+                                @if ($customer->billing_option === 1 || ($customer->billing_option === 2 && $customer->billing_period === $periodeName))
+                                    @moneyIDR(optional($customer->paket)->price - optional($customer->member)->discount)
+                                @else
+                                    @moneyIDR(optional($customer->paket)->price)
+                                @endif
                             </span>
                         </td>
 

@@ -9,6 +9,8 @@ use App\Models\WhatsappGateway\WhatsappNumber;
 use App\Services\WhatsappMessageService;
 use Illuminate\Support\Facades\Log;
 use App\Jobs\SendPaymentReminderJob;
+use App\Helpers\LogHelper;
+use Illuminate\Support\Facades\Crypt;
 
 class WhatsappGatewayController extends Controller
 {
@@ -30,7 +32,9 @@ class WhatsappGatewayController extends Controller
 
     public function edit_gateway(WhatsappGateway $whatsappgateway)
     {
-
+        if ($whatsappgateway->basic_auth_password) {
+            $whatsappgateway->basic_auth_password = Crypt::decryptString($whatsappgateway->basic_auth_password);
+        }
         return view('whatsapp_gateways.gateways.edit_gateway', [
             'data' => $whatsappgateway
         ]);
@@ -109,6 +113,9 @@ class WhatsappGatewayController extends Controller
                     'url_callback' => 'required|url',
                     'api_key' => 'nullable',
                     'cert_file' => 'nullable',
+                    'auth_disabled' => 'required|in:true,false',
+                    'basic_auth_username' => $request->input('auth_disabled') === 'true' ? 'required|string' : 'nullable',
+                    'basic_auth_password' => $request->input('auth_disabled') === 'true' ? 'required|string' : 'nullable',
                 ]
             );
 
@@ -116,6 +123,13 @@ class WhatsappGatewayController extends Controller
             $whatsappgateway->url_callback = $request->input('url_callback');
             $whatsappgateway->api_key = $request->input('api_key');
             $whatsappgateway->cert_file = $request->input('cert_file');
+            $whatsappgateway->auth_disabled = $request->input('auth_disabled');
+            $whatsappgateway->basic_auth_username = $request->input('basic_auth_username') ? $request->input('basic_auth_username') : null;
+            if ($request->input('basic_auth_password')) {
+                $whatsappgateway->basic_auth_password = Crypt::encryptString($request->input('basic_auth_password'));
+            } else {
+                $whatsappgateway->basic_auth_password = null;
+            }
 
             // Simpan perubahan ke database
             $whatsappgateway->save();
@@ -135,51 +149,65 @@ class WhatsappGatewayController extends Controller
     public function test_gateway(Request $request, WhatsappGateway $whatsappgateway)
     {
         try {
-            //Log::info('Testing gateway for WhatsappGateway ID: ' . $whatsappgateway->id);
-
-            if (!$whatsappgateway->disabled) {
-                Log::info('Gateway is enabled. Proceeding with validation.');
-                Log::info('Value Whatsapp gateway: ' . $whatsappgateway);
-
-                // Validasi jika url_callbak tidak boleh null
-                if (empty(trim($whatsappgateway->url_callback))) {
-                    Log::error('Validation failed: url_callback is required.');
-                    return redirect()->route('whatsappgateway.index')
-                        ->withErrors(['url_callback' => trans('whatsapp.gateway.notify.error-callback')]);
-                }
-
-                $this->validate(
-                    $request,
-                    [
-                        'test_number' => 'required|numeric',
-                    ]
+            if ($whatsappgateway->disabled) {
+                LogHelper::logWarning(
+                    null,
+                    ['gateway' => $whatsappgateway ?? null],
+                    503, // Service Unavailable
+                    "WhatsApp gateway is temporarily disabled"
                 );
-                Log::info('Validation passed.');
-
-                $receive_number = $request->input('test_number');
-                //Log::info('Input number received: ' . $receive_number);
-
-                if (substr($receive_number, 0, 1) == '0') {
-                    $receive_number = preg_replace('/^0?/', $whatsappgateway->country_code, $receive_number);
-                    //Log::info('Formatted number: ' . $receive_number);
-                }
-
-                $sender_number = $whatsappgateway->whatsapp_number->number ?? 'N/A';
-                //Log::info('Using sender number: ' . $sender_number);
-
-                $this->messageService->test_gateway($receive_number, $sender_number);
-                //Log::info('Message sent successfully to: ' . $receive_number);
-
-                return redirect()->route('whatsappgateway.index')
-                    ->with('success', trans('whatsapp.gateway.notify.test-success'));
-            } else {
-                Log::warning('Gateway is disabled for WhatsappGateway ID: ' . $whatsappgateway->id);
                 return redirect()->route('whatsappgateway.index')
                     ->with('error', trans('whatsapp.gateway.notify.test-error'));
             }
+
+            if (blank($whatsappgateway->url_callback)) {
+                LogHelper::logError(
+                    null,
+                    ['url_callback' => $whatsappgateway->url_callback ?? null],
+                    400, // Bad Request
+                    "Validation failed: url_callback is required."
+                );
+                return redirect()->route('whatsappgateway.index')
+                    ->withErrors(['url_callback' => trans('whatsapp.gateway.notify.error-callback')]);
+            }
+
+            $request->validate(['test_number' => 'required|numeric']);
+
+            $receive_number = $request->input('test_number');
+            if (str_starts_with($receive_number, '0')) {
+                $receive_number = preg_replace('/^0/', $whatsappgateway->country_code, $receive_number);
+            }
+
+            $sender_number = $whatsappgateway->whatsapp_number->number ?? 'N/A';
+
+            $this->messageService->test_gateway($whatsappgateway, $receive_number, $sender_number);
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'gateway_id' => $whatsappgateway->id,
+                    'receiver' => $receive_number,
+                    'sender' => $sender_number
+                ],
+                200, // OK
+                "Test message successfully sent via WhatsApp gateway"
+            );
+
+            return redirect()->route('whatsappgateway.index')
+                ->with('success', trans('whatsapp.gateway.notify.test-success'));
         } catch (\Exception $e) {
-            Log::error('Error occurred during test_gateway: ' . $e->getMessage());
-            Log::debug('Exception trace: ' . $e->getTraceAsString());
+            LogHelper::logError(
+                null,
+                ['message_error' => $e->getMessage()],
+                500,
+                "Error to send whatsapp test message."
+            );
+            LogHelper::logWarning(
+                null,
+                ['trace_as_string' => $e->getTraceAsString()],
+                500,
+                "Exception trace."
+            );
 
             return redirect()->route('whatsappgateway.index')
                 ->with('error', 'An error occurred while testing the gateway. Please check logs for details.');

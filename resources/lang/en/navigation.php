@@ -8,6 +8,7 @@ return [
         'show-online' => 'Online Customers',
         'show-isolir' => 'Isolir Customers',
         'create' => 'Add New Customer',
+        'member' => 'Member List',
     ],
 
     'billings' => [
@@ -29,6 +30,9 @@ return [
             'create' => 'Create Profile',
             'index' => 'Profile',
         ],
+    ],
+    'members' => [
+        'index' => 'Member List',
     ],
 
 ];

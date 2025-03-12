@@ -13,6 +13,44 @@ use App\Models\WhatsappGateway\WhatsappGateway;
 
 class WhatsappNumberController extends Controller
 {
+    public function formatPhoneNumber($number, $gateway)
+    {
+        // Default country code ke 62 jika null
+        $country_code = $gateway->country_code ?? '62';
+
+        // Hapus semua karakter non-digit kecuali "+"
+        $number = preg_replace('/[^\d+]/', '', $number);
+
+        // Jika nomor diawali dengan "+", hapus "+" untuk diproses lebih lanjut
+        if (str_starts_with($number, '+')) {
+            $number = substr($number, 1);
+        }
+
+        // Hapus semua tanda "-" jika ada
+        $number = str_replace('-', '', $number);
+
+        // Jika nomor diawali dengan "62", ubah ke country_code
+        if (str_starts_with($number, '62')) {
+            $number = preg_replace('/^62/', $country_code, $number);
+        }
+        // Jika nomor diawali dengan "0", ubah ke format country_code
+        elseif (str_starts_with($number, '0')) {
+            $number = preg_replace('/^0/', $country_code, $number);
+        }
+        // Jika nomor tidak diawali "62" atau "0", berarti kemungkinan typo atau salah format
+        else {
+            $number = $country_code . $number;
+        }
+
+        return $number;
+    }
+
+    private function getGateway()
+    {
+        $gateway = WhatsappGateway::where('slug', 'gateway')->first();
+        return $gateway;
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -49,18 +87,8 @@ class WhatsappNumberController extends Controller
             ]
         );
 
-
-
-
-        $gateway = WhatsappGateway::where('slug', 'gateway')->first();
-
-
-        $number = $request->input('number');
-        if (substr($number, 0, 2) == '62') {
-            $number = preg_replace('/^62?/', $gateway->country_code, $number);
-        } else if (substr($number, 0, 1) == '0') {
-            $number = preg_replace('/^0?/', $gateway->country_code, $number);
-        }
+        $gateway = $this->getGateway();
+        $number = $this->formatPhoneNumber($request->input('number'), $gateway);
         $header_name = 'Shanet-Signature';
         $number = WhatsappNumber::create([
             'slug'          => str(Str::random(5))->slug(),
@@ -118,13 +146,8 @@ class WhatsappNumberController extends Controller
 
             ]
         );
-        $gateway_country_code = WhatsappGateway::where('slug', 'gateway')->value('country_code');
-        $number = $request->input('number');
-        if (substr($number, 0, 2) == '62') {
-            $number = preg_replace('/^62?/', $gateway_country_code, $number);
-        } else if (substr($number, 0, 1) == '0') {
-            $number = preg_replace('/^0?/', $gateway_country_code, $number);
-        }
+        $gateway = $this->getGateway();
+        $number = $this->formatPhoneNumber($request->input('number'), $gateway);
         $whatsappnumber->name = $request->input('name');
         $whatsappnumber->number = $number;
         $whatsappnumber->description = $request->input('description');

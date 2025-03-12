@@ -59,8 +59,8 @@
                     </div>
                 @endif
                 <!-- Main page content-->
-                <div class="container-fluid">
-                    <div class="card shadow mb-4">
+                <div class="container-fluid container-payment">
+                    <div class="card rounded-3 shadow mb-4">
 
                         {{ $slot }}
                     </div>

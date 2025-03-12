@@ -4,12 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Billing\BillingPeriode;
 use App\Models\Receipt;
-use PDF;
 use Thermal;
 use Illuminate\Http\Request;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use App\Models\Customer;
 use App\Models\Websystem;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Log;
 
 //use Barryvdh\DomPDF\PDF;
@@ -104,7 +104,7 @@ class ReceiptController extends Controller
         ]);
         return $pdf->download($receipt->number . str($receipt->customer_name)->slug() . '_' . str($receipt->customer_address)->slug() . '_' . str($receipt->month)->slug() . '_' . $receipt->year . '.pdf');
     }
-    
+
     public function thermalPrint(Receipt $receipt)
     {
         $websystem = Websystem::where('slug', 'websystem')->first();
@@ -115,6 +115,7 @@ class ReceiptController extends Controller
             'websystem' => $websystem
         ])->setPaper([0, 0, 155.43, 283.5], 'portrait'); // 55mm x 100mm dalam satuan point
 
+        // dd(gd_info());
         //return $pdf->download($receipt->number . '_thermal_' . str($receipt->customer_name)->slug() . '_' . str($receipt->customer_address)->slug() . '_' . str($receipt->month)->slug() . '_' . $receipt->year . '.pdf');
         return $pdf->stream($receipt->number . '_thermal_' . str($receipt->customer_name)->slug() . '_' . str($receipt->customer_address)->slug() . '_' . str($receipt->month)->slug() . '_' . $receipt->year . '.pdf');
     }

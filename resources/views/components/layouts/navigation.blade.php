@@ -21,11 +21,28 @@
     <!-- Nav Item - Tables -->
     @canany(['customer-list', 'customer-edit', 'customer-delete', 'customer-create', 'secret-edit'])
         <li class="nav-item @if (request()->routeIs('customers*')) active @endif">
-            <a class="nav-link collapsed" href="{{ route('customers.index') }}" style="padding-top: inherit;">
+            {{-- <a class="nav-link collapsed" href="{{ route('customers.index') }}" data-target="#collapseBilling" --}}
+            <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseCustomer"
+                aria-expanded="true" aria-controls="collapseCustomer" style="padding-top: inherit;">
                 <i class="fas fa-fw fa-users"></i>
                 <span>{{ __('navigation.customers.nav-item') }}</span>
             </a>
-
+            <div id="collapseCustomer" class="collapse" aria-labelledby="headingCustomer" data-parent="#accordionSidebar">
+                <div class="bg-white py-2 collapse-inner rounded">
+                    @can('customer-create')
+                        <a class="collapse-item @if (request()->routeIs('customers.create')) active @endif"
+                            href="{{ route('customers.create') }}">{{ __('navigation.customers.create') }}</a>
+                    @endcan
+                    <a class="collapse-item @if (request()->routeIs('customers.index')) active @endif"
+                        href="{{ route('customers.index') }}">{{ __('navigation.customers.index') }}</a>
+                </div>
+                @canany(['customer-list', 'customer-edit', 'customer-delete'])
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item @if (request()->routeIs('customers.member')) active @endif"
+                            href="{{ route('members.index') }}">{{ __('navigation.members.index') }}</a>
+                    </div>
+                @endcanany
+            </div>
         </li>
     @endcanany
     @canany(['billing-list', 'billing-create', 'billing-edit', 'billing-delete'])

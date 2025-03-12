@@ -7,6 +7,9 @@ use App\Models\Billing\Billing;
 use App\Http\Controllers\Controller;
 use App\Models\Billing\BillingPeriode;
 use App\Models\Websystem;
+use App\Models\PaymentGateway;
+use App\Http\Controllers\PaymentGateway\TripayController;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
@@ -57,20 +60,26 @@ class PaymentController extends Controller
      */
     public function show(Billing $billing)
     {
-        // $orderId = Order::where('billing_id', $billing->id)->value('id');
-        // return dd($orderId);
-        // $order = '';
-        //if ($orderId == NULL) {
-        //    $orderStatus = 'NOTFOUND';
-        // } else {
-        //     $orderStatus = 'FOUND';
-        //      $order = Order::where('id', $orderId)->first();
-        //   }
-        //$order = Order::where('id', $orderId)->first();
-        // return view('customers.pages.payments.show', compact('billing', 'orderStatus', 'order'));
         $websystem = Websystem::where('slug', 'websystem')->first();
-        // $paymentGateway = Websystem::where('slug', 'websystem')->value('payment_gateway');
-        return view('customers.pages.payments.show', compact('billing', 'websystem'));
+        if ($websystem->payment_gateway === 'enable') {
+            $payment_gateways = PaymentGateway::where('disabled', 'false')->get();
+
+            foreach ($payment_gateways as $gateway) {
+                if ($gateway->slug === 'midtrans') {
+                    // Action untuk midtrans
+                    return view('customers.pages.payments.show', compact('billing', 'websystem'));
+                } elseif ($gateway->slug === 'tripays') {
+                    // Action untuk tripays
+                    $tripay = new TripayController();
+                    $channels = $tripay->getPaymentChannels();
+                    // dd($channels);
+                    return view('customers.pages.payments.tripays.show', compact('billing', 'websystem', 'gateway', 'channels'));
+                } else {
+                    // Action default jika ada yang lain
+                    return view('errors.notfound');
+                }
+            }
+        }
     }
 
     /**

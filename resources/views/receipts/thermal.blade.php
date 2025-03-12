@@ -4,6 +4,7 @@
     <div class="container">
         <!-- Watermark -->
         <div class="watermark">
+            {{ strtoupper(str_replace(['MANAGEMENT', 'Management'], '', $websystem->title)) }} </br>
             Payment Received
         </div>
 
@@ -19,7 +20,7 @@
                 Created: {{ Carbon\Carbon::parse($receipt->created_at)->translatedFormat('l, d M Y') ?? 'No Created Time' }}
             </div>
         </div>
-        <div class="content">
+        <div class="content" style="font-size: 10px">
             <div class="section">
                 <div class="label">
                     Bill to :
@@ -37,7 +38,7 @@
             <table class="table table-margin-top">
                 <tr>
                     <th>Paket</th>
-                    <th>Price</th>
+                    <th>Price (Rp)</th>
                 </tr>
                 <tr>
                     <td>{{ $receipt->paket_name }} - {{ $receipt->periode }}</td>
@@ -47,10 +48,18 @@
             <table class="table">
                 <tr>
                     <td class="right">
+                        Discount:
+                    </td>
+                    <td class="right">
+                        @moneyIDR($receipt->discount ?? 0)
+                    </td>
+                </tr>
+                <tr>
+                    <td class="right">
                         Sub Total:
                     </td>
                     <td class="right">
-                        @moneyIDR($receipt->paket_price)
+                        @moneyIDR($receipt->price_after_discount)
                     </td>
                 </tr>
                 <tr>
@@ -69,55 +78,65 @@
                     </td>
                     <td class="right">
                         <strong>
-                            @moneyIDR($receipt->paket_price + $receipt->tax)
+                            @moneyIDR($receipt->price_after_discount + $receipt->tax)
                         </strong>
                     </td>
                 </tr>
             </table>
-            <div class="section section-margin">
-                <div class="label">Payment Method:</div>
-                <div class="value">{{ ucfirst($receipt->payment_methode) }}</div>
-            </div>
-            @if ($receipt->payment_methode === 'transfer')
-                <div class="section">
-                    <div class="label">Bank:</div>
-                    <div class="value">{{ $receipt->bank_name }}</div>
-                </div>
-                <div class="section">
-                    <div class="label">Account Name:</div>
-                    <div class="value">{{ $receipt->account_name }}</div>
-                </div>
-                <div class="section">
-                    <div class="label">Account Number:</div>
-                    <div class="value">{{ $receipt->account_number }}</div>
-                </div>
-                <div class="section">
-                    <div class="label">Reference Id:</div>
-                    <div class="value">{{ $receipt->reference_id }}</div>
-                </div>
-            @elseif ($receipt->payment_methode === 'online')
-                <div class="section">
-                    <div class="label">Bank:</div>
-                    <div class="value">{{ $receipt->bank_name }}</div>
-                </div>
-                <div class="section">
-                    <div class="label">Account Name:</div>
-                    <div class="value">{{ $receipt->account_name }}</div>
-                </div>
-                <div class="section">
-                    <div class="label">Account Number:</div>
-                    <div class="value">{{ $receipt->account_number }}</div>
-                </div>
-            @elseif ($receipt->payment_methode === 'cash')
-                <div class="section">
-                    <div class="label">Teller:</div>
-                    <div class="value">{{ $receipt->teller_name }}</div>
-                </div>
-            @endif
-
+            <table class="table" style="border-collapse: collapse; border: none;">
+                <tr>
+                    <td class="label" style="border: none;">Payment Method:</td>
+                    <td class="value" style="border: none;">{{ ucfirst($receipt->payment_methode) }}</td>
+                </tr>
+                @if ($receipt->payment_methode === 'transfer')
+                    <tr>
+                        <td class="label" style="border: none;">Bank:</td>
+                        <td class="value" style="border: none;">{{ $receipt->bank_name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label" style="border: none;">Account Name:</td>
+                        <td class="value" style="border: none;">{{ $receipt->account_name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label" style="border: none;">Account Number:</td>
+                        <td class="value" style="border: none;">{{ $receipt->account_number }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label" style="border: none;">Reference Id:</td>
+                        <td class="value" style="border: none;">{{ $receipt->billing_number }}</td>
+                    </tr>
+                @elseif ($receipt->payment_methode === 'online')
+                    <tr>
+                        <td class="label" style="border: none;">Bank:</td>
+                        <td class="value" style="border: none;">{{ $receipt->bank_name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label" style="border: none;">Account Name:</td>
+                        <td class="value" style="border: none;">{{ $receipt->account_name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label" style="border: none;">Account Number:</td>
+                        <td class="value" style="border: none;">{{ $receipt->account_number }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label" style="border: none;">Reference Id:</td>
+                        <td class="value" style="border: none;">{{ $receipt->billing_number }}</td>
+                    </tr>
+                @elseif ($receipt->payment_methode === 'cash')
+                    <tr>
+                        <td class="label" style="border: none;">Teller:</td>
+                        <td class="value" style="border: none;">{{ $receipt->teller_name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label" style="border: none;">Reference Id:</td>
+                        <td class="value" style="border: none;">{{ $receipt->billing_number }}</td>
+                    </tr>
+                @endif
+            </table>
         </div>
         <div class="footer">
-            Struk ini merupakan bukti pembayaran yang sah dari {{ $websystem->title }} dan tidak diperlukan tanda tangan
+            Struk ini merupakan bukti pembayaran yang sah dari {{ strtoupper($websystem->title) }} dan tidak diperlukan
+            tanda tangan
             basah. <br /> <br /> ~~~ Terimakasih ~~~
         </div>
     </div>

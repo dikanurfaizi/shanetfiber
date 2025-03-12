@@ -17,7 +17,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DropdownController;
 use App\Http\Controllers\AutoIsolirController;
-use App\Http\Controllers\Midtran\OrderController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\TestConnectionController;
 use App\Http\Controllers\Mikrotik\SystemController;
 use App\Http\Controllers\Customer\PaymentController;
@@ -38,6 +38,7 @@ use App\Http\Controllers\Paket\PppProfileController;
 use App\Http\Controllers\WhatsappGatewayController;
 use App\Http\Controllers\WhatsappMessageController;
 use App\Http\Controllers\WhatsappNumberController;
+use App\Http\Controllers\MemberController;
 
 /*
 |--------------------------------------------------------------------------
@@ -82,6 +83,9 @@ Route::group(['prefix' => 'customer', 'namespace' => 'Customer'], function () {
         Route::get('billings/orders/{order:id}/view', [OrderController::class, 'show'])->name('customer.order.show');
         Route::post('billings/orders/{order:id}/update', [OrderController::class, 'update'])->name('customerOrder.update');
         Route::get('billings/orders/{billing:id}/create', [OrderController::class, 'create'])->name('customer.order.create');
+        //================================TRIPAY==================================================================================
+        Route::post('billings/orders/create/{billing:id}', [OrderController::class, 'tripayCreate'])->name('customer.tripays.order.create');
+        Route::get('billings/orders/{order:id}/view', [OrderController::class, 'tripayShow'])->name('customer.pages.order.tripays.show');
     });
 });
 
@@ -133,6 +137,9 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('/customers/{customer:slug}/router/edit', [CustomerController::class, 'editRouter'])->name('customers.edit.router');
         Route::patch('/customers/{customer:slug}/router/update', [CustomerController::class, 'updateRouter'])->name('customers.update.router');
         Route::put('/customers/{customer:slug}/activation', [CustomerController::class, 'activation'])->name('customers.activation');
+        //========================ROUTE Member================================
+        Route::resource('members', MemberController::class);
+        Route::get('/members/{member:slug}/delete', [MemberController::class, 'delete'])->name('members.delete');
         //========================ROUTE Billing===============================
         Route::delete('billing/periode/{billingperiode:id}/destroy', [BillingController::class, 'destroyPeriode'])->name('billing.periode.destroy');
         Route::get('billing/periode/{billingperiode:id}/delete', [BillingController::class, 'deletePeriode'])->name('billing.periode.delete');

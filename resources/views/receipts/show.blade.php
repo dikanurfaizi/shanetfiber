@@ -37,12 +37,40 @@
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
-                <strong>Price:</strong>
+                <strong>Package Price:</strong>
                 @if ($receipt->paket_price === 0)
                     {{ __('Free') }}
                 @else
                     @moneyIDR($receipt->paket_price)
                 @endif
+            </div>
+        </div>
+        <div class="col-xs-12 col-sm-12 col-md-12">
+            <div class="form-group">
+                <strong>Registered as:</strong>
+                @php
+                    $member = 'Non Member';
+                    if (
+                        $receipt->customer->billing_option === 1 ||
+                        ($receipt->customer->billing_option === 2 &&
+                            $receipt->customer->billing_period === $receipt->customer->billing->billing_period->name)
+                    ) {
+                        $member = $receipt->member_type;
+                    }
+                @endphp
+                {{ $member }}
+            </div>
+        </div>
+        <div class="col-xs-12 col-sm-12 col-md-12">
+            <div class="form-group">
+                <strong>Discount:</strong>
+                @moneyIDR($receipt->discount == 0 || is_null($receipt->discount) ? 0.0 : $receipt->discount)
+            </div>
+        </div>
+        <div class="col-xs-12 col-sm-12 col-md-12">
+            <div class="form-group">
+                <strong>Total Price:</strong>
+                @moneyIDR($receipt->price_after_discount ?: $receipt->paket_price)
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">

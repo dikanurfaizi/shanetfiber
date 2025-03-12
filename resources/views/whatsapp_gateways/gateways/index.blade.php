@@ -143,6 +143,34 @@
                         </span>
                     </div>
                 </div>
+                <div class="form-group row mb-2">
+                    <div class="col-md-3">
+                        <label for="auth_username">{!! trans('whatsapp.gateway.label.auth-username') !!}</label>
+                    </div>
+                    <div class="col-md-8">
+                        : <span class="auth-username">
+                            @if ($gateway->basic_auth_username)
+                                {{ $gateway->basic_auth_username }}
+                            @else
+                                {{ trans('whatsapp.status.not-set') }}
+                            @endif
+                        </span>
+                    </div>
+                </div>
+                <div class="form-group row mb-2">
+                    <div class="col-md-3">
+                        <label for="auth_password">{!! trans('whatsapp.gateway.label.auth-password') !!}</label>
+                    </div>
+                    <div class="col-md-8">
+                        : <span class="auth-password">
+                            @if ($gateway->basic_auth_password)
+                                *****
+                            @else
+                                {{ trans('whatsapp.status.not-set') }}
+                            @endif
+                        </span>
+                    </div>
+                </div>
                 <span title="{{ trans('whatsapp.gateway.tooltips.edit') }}" data-bs-toggle="tooltip"
                     data-bs-placement="top">
                     <a class="btn btn-sm btn-success"

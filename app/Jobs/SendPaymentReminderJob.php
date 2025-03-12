@@ -16,6 +16,7 @@ use App\Models\MessageLog;
 use App\Services\WhatsappMessageService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use App\Helpers\LogHelper;
 
 class SendPaymentReminderJob implements ShouldQueue
 {
@@ -41,7 +42,12 @@ class SendPaymentReminderJob implements ShouldQueue
 
         // Pengecekan apakah hari ini bukan termasuk tanggal yang diperbolehkan
         if (!in_array($today->day, $allowedDates)) {
-            Log::info("Today's date ({$today->format('Y-m-d')}) is not in the allowed dates. Job will not proceed.");
+            LogHelper::logError(
+                null,
+                null,
+                400, // Bad Request
+                "Job will not proceed: date not in allowed list. The allowed list is " . json_encode($allowedDates) . " but today is {$today->format('Y-m-d')}"
+            );
             return;
         }
 
@@ -50,19 +56,24 @@ class SendPaymentReminderJob implements ShouldQueue
             ->get();
 
         if ($gateways->isEmpty()) {
-            Log::info("No active gateways found.");
+            LogHelper::logWarning(
+                null,
+                null,
+                204, // Bad Request
+                "No active gateways found"
+            );
             return;
         }
 
         foreach ($gateways as $gateway) {
             // Log::info("Processing gateway {$gateway->name} with remaining day: {$gateway->remaining_day}");
-            $remainingDays = $gateway->remaining_day;
 
             // Query untuk masing-masing kategori tagihan
             $billingsPastDue = Billing::query()
                 ->join('customers', 'billings.customer_id', '=', 'customers.id')
                 ->select(
-                    'customers.customer_id',
+                    'billings.customer_id', // Alias untuk customer_id dari billings
+                    'customers.customer_id as customer_unique_id', // Alias untuk customer_id dari customers
                     'customers.name as customer_name',
                     'customers.contact as customer_contact',
                     'customers.address as customer_address',
@@ -81,13 +92,20 @@ class SendPaymentReminderJob implements ShouldQueue
                                 ->whereDate('billings.pay_later', '<', $today);
                         });
                 })
-                ->groupBy('customers.address', 'billings.customer_id', 'customers.name', 'customers.contact')
+                ->groupBy(
+                    'billings.customer_id',
+                    'customers.customer_id',
+                    'customers.name',
+                    'customers.contact',
+                    'customers.address'
+                )
                 ->cursor();
 
             $billingsDueToday = Billing::query()
                 ->join('customers', 'billings.customer_id', '=', 'customers.id')
                 ->select(
-                    'customers.customer_id',
+                    'billings.customer_id', // Alias untuk customer_id dari billings
+                    'customers.customer_id as customer_unique_id', // Alias untuk customer_id dari customers
                     'customers.name as customer_name',
                     'customers.contact as customer_contact',
                     'customers.address as customer_address',
@@ -106,13 +124,20 @@ class SendPaymentReminderJob implements ShouldQueue
                                 ->whereDate('billings.pay_later', $today);
                         });
                 })
-                ->groupBy('customers.address', 'billings.customer_id', 'customers.name', 'customers.contact')
+                ->groupBy(
+                    'billings.customer_id',
+                    'customers.customer_id',
+                    'customers.name',
+                    'customers.contact',
+                    'customers.address'
+                )
                 ->cursor();
 
             $billingsUpcoming = Billing::query()
                 ->join('customers', 'billings.customer_id', '=', 'customers.id')
                 ->select(
-                    'customers.customer_id',
+                    'billings.customer_id', // Alias untuk customer_id dari billings
+                    'customers.customer_id as customer_unique_id', // Alias untuk customer_id dari customers
                     'customers.name as customer_name',
                     'customers.contact as customer_contact',
                     'customers.address as customer_address',
@@ -135,11 +160,11 @@ class SendPaymentReminderJob implements ShouldQueue
                 })
                 ->groupBy(
                     'billings.customer_id',
+                    'customers.customer_id',
                     'customers.name',
                     'customers.contact',
                     'customers.address'
                 )
-                ->orderBy('customers.name')
                 ->cursor();
 
             //Log::info("Billing Lewat Jatuh Tempo: $billingsPastDue");
@@ -168,7 +193,15 @@ class SendPaymentReminderJob implements ShouldQueue
                 ->exists();
 
             if ($alreadySent) {
-                Log::info("Skipping redundant message for : {$billing->customer_name} with type {$messageType}.");
+                LogHelper::logWarning(
+                    null,
+                    [
+                        'customer_name' => $billing->customer_name,
+                        'message_type' => $messageType,
+                    ],
+                    208, // Bad Request
+                    "Skipping redundant message for {$billing->customer_name} with type {$messageType}."
+                );
                 continue;
             }
 
@@ -189,28 +222,61 @@ class SendPaymentReminderJob implements ShouldQueue
 
     private function sendMessagesInBatch($batch, $messageType, $gateway)
     {
-        foreach ($batch as $billing) {
-            //Log::info("Billing in SendMessagesInBatch: $billing");
+        $batchSize = 5; // Jumlah pesan per batch
+        $pauseDuration = 60; // Jeda antar batch dalam detik (1 menit)
 
-            if ($billing) {
+        $chunks = array_chunk($batch, $batchSize);
+
+        foreach ($chunks as $chunk) {
+            foreach ($chunk as $billing) {
+                if (!$billing) {
+                    LogHelper::logWarning(
+                        null,
+                        null,
+                        404, // Not Found
+                        "No customer billing found."
+                    );
+                    continue;
+                }
+
                 try {
-                    Log::info("Trying to send WhatsApp message to {$billing->customer_name} (Contact: {$billing->customer_contact}) with type {$messageType}");
-
                     // Kirim pesan
                     $this->messageService->bill_info($billing, $messageType);
 
-                    // Simpan log sebelum mengirim
+                    // Simpan log setelah berhasil mengirim
                     MessageLog::create([
                         'customer_id' => $billing->customer_id,
                         'message_type' => $messageType,
                         'gateway_id' => $gateway->id,
                     ]);
+
+                    LogHelper::logInfo(
+                        null,
+                        [
+                            'customer_name' => $billing->customer_name,
+                            'customer_contact' => $billing->customer_contact,
+                            'message_type' => $messageType,
+                        ],
+                        200, // OK
+                        "Successfully sent WhatsApp message."
+                    );
                 } catch (\Exception $e) {
-                    Log::error("Failed to send WhatsApp message to {$billing->customer_name}. Error: {$e->getMessage()}");
+                    // Log kegagalan jika ada error di dalam proses pengiriman
+                    LogHelper::logError(
+                        null,
+                        [
+                            'customer_name' => $billing->customer_name,
+                            'customer_contact' => $billing->customer_contact,
+                            'message_type' => $messageType,
+                        ],
+                        500,
+                        "Failed to send WhatsApp message: " . $e->getMessage()
+                    );
                 }
-            } else {
-                Log::warning("No customer billing found for customer name: {$billing->customer_name}");
             }
+
+            // Tunggu sebelum mengirim batch berikutnya
+            sleep($pauseDuration);
         }
     }
 }
