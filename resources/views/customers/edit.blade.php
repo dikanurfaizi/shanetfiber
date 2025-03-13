@@ -317,7 +317,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         calculateNominal();
         toggleDiscountField()
-        updateMemberDropdown(document.getElementById('paket-dropdown').value);
+        // updateMemberDropdown(document.getElementById('paket-dropdown').value);
     });
 
     function calculateNominal() {

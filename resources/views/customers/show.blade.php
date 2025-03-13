@@ -1,5 +1,4 @@
 <x-layouts.cpanel.customers.app-layout title="Detail Customer">
-
     <div class="card-header py-3">
         <h5 class="m-0 font-weight-bold text-primary">{{ __('customer.header.show') }}</h5>
     </div>
@@ -33,7 +32,13 @@
                 </tr>
                 <tr class="table-borderless">
                     <td class="py-1"><strong>{{ __('customer.label.package') }}</strong></td>
-                    <td class="py-1">{{ __(':') }} {{ $customer->paket->name ?? 'No Data' }}</td>
+                    <td class="py-1">{{ __(':') }} {{ $customer->paket->name ?? 'No Data' }} -
+                        @if (!empty($customer->paket->price))
+                            @moneyIDR($customer->paket->price)
+                        @else
+                            @moneyIDR(0)
+                        @endif
+                    </td>
 
                     <td class="py-1"><strong>{{ __('customer.label.activation-date') }}</strong></td>
                     <td class="py-1">{{ __(':') }}
@@ -45,22 +50,50 @@
                     </td>
                 </tr>
                 <tr class="table-borderless">
+                    <td class="py-1"><strong>{{ __('customer.label.discount') }}</strong></td>
+                    <td class="py-1">{{ __(':') }}
+                        @if ($customer->billing_option != 0 || !empty($discount))
+                            @if ($customer->billing_option == 1)
+                                @moneyIDR($discount)
+                            @elseif ($customer->billing_option == 2 && $customer->billing_periode === $billingPeriods)
+                                @moneyIDR($discount)
+                            @else
+                                {{ __('No Discount') }}
+                            @endif
+                        @else
+                            {{ __('No Discount') }}
+                        @endif
+                    </td>
+                    <td class="py-1"><strong>{{ __('customer.label.not-yet-paid') }}</strong></td>
+                    <td class="py-1">{{ __(':') }}
+                        @if ($notYetPaid > 0)
+                            <strong>
+                                @moneyIDR($notYetPaid)
+                            </strong>
+                        @else
+                            @moneyIDR(0)
+                        @endif
+                    </td>
+                </tr>
+                <tr class="table-borderless">
                     <td class="py-1"><strong>{{ __('customer.label.bill') }}</strong></td>
                     <td class="py-1">{{ __(':') }}
                         <strong>
-                            @if ($customer->paket->price * ((100 - $customer->discount) / 100) > 0)
-                                @moneyIDR($customer->paket->price * ((100 - $customer->discount) / 100))
+                            @if ($customer->paket->price - $discount > 0)
+                                @moneyIDR($customer->paket->price - $discount)
                             @else
                                 {{ __('Free') }}
                             @endif
                         </strong>
                     </td>
-                    <td class="py-1"><strong>{{ __('customer.label.discount') }}</strong></td>
+                    <td class="py-1"><strong>{{ __('customer.label.already-paid') }}</strong></td>
                     <td class="py-1">{{ __(':') }}
-                        @if ($customer->discount > 0)
-                            {{ $customer->discount ?? 'No Data' }} %
+                        @if ($notYetPaid = 0)
+                            <strong>
+                                @moneyIDR($customer->paket->price - $discount)
+                            </strong>
                         @else
-                            {{ __('No Discount') }}
+                            @moneyIDR(0)
                         @endif
                     </td>
                 </tr>
@@ -86,14 +119,6 @@
                         </td>
                     </tr>
                 @endif
-                @if ($notYetPaid > 0)
-                    <tr class="table-borderless">
-                        <td class="py-1"><strong>{{ __('customer.label.not-yet-paid') }}</strong></td>
-                        <td class="py-1">{{ __(':') }}
-                            @moneyIDR($notYetPaid)
-                        </td>
-                    </tr>
-                @endif
             </table>
         </div>
         <div class="row align-items-center">
@@ -109,7 +134,7 @@
         </div>
     </div>
 
-    @if ($serverDisconnect == 'false')
+    {{-- @if ($serverDisconnect == 'false')
         @if ($customer->internet_service == 'ppp')
             <div class="card-header py-3">
                 <h5 class="m-0 font-weight-bold text-primary">{{ __('customer.header.show-server') }}</h5>
@@ -376,7 +401,7 @@
                 @endcanany
             </div>
         </div>
-    @endif
+    @endif --}}
 
     <div class="card-header py-3">
         <h5 class="m-0 font-weight-bold text-primary">{{ __('customer.header.show-ont') }}</h5>

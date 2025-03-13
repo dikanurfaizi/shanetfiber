@@ -91,6 +91,7 @@ return [
         'responsibility' => 'Admin',
         'vlan_id' => 'VLAN ID',
         'member' => 'Member Type',
+        'already-paid' => 'Already Paid',
     ],
     'placeholder' => [
         'name' => 'Insert customer name',

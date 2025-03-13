@@ -627,7 +627,20 @@ class CustomerController extends Controller
             ->where('status', 'LS')
             ->latest('payment_time')
             ->first();
-        $unpaid = Billing::where('customer_id', $customer->id)->where('status', '!=', 'LS')->get();
+        $data = Billing::where('billings.customer_id', $customer->id)
+            ->join('billing_periodes as bp', 'billings.billing_periode_id', '=', 'bp.id')
+            ->join('customers as c', 'billings.customer_id', '=', 'c.id')
+            ->leftJoin('members as m', 'c.member_id', '=', 'm.id')
+            ->orderBy('bp.created_at', 'DESC')
+            ->select('bp.name as billing_period_name', 'm.discount')
+            ->first();
+
+        $billingPeriods = $data->billing_period_name ?? null;
+        $discount = $data->discount ?? null;
+        $unpaid = Billing::where('customer_id', $customer->id)
+            ->where('status', '!=', 'LS')
+            ->orderByRaw('COALESCE(pay_later, due_date) DESC')
+            ->get();
         $notYetPaid = collect($unpaid)->sum('paket_price');
         $router = Mikrotik::where('id', $customer->mikrotik_id)->first();
         $ont = CustomerOnt::where('customer_id', $customer->id)->first();
@@ -660,6 +673,8 @@ class CustomerController extends Controller
             'notYetPaid' => $notYetPaid,
             'serverDisconnect' => $serverDisconnect,
             'info_msg' => $message,
+            'billingPeriode' => $billingPeriods,
+            'discount' => $discount,
         ]);
     }
 
