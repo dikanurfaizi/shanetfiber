@@ -623,6 +623,7 @@ class CustomerController extends Controller
      */
     public function show(Customer $customer)
     {
+        $billingPeriodeActive = BillingPeriode::latest('created_at')->first();
         $billingLastPayment = Billing::where('customer_id', $customer->id)
             ->where('status', 'LS')
             ->latest('payment_time')
@@ -632,7 +633,7 @@ class CustomerController extends Controller
             ->join('customers as c', 'billings.customer_id', '=', 'c.id')
             ->leftJoin('members as m', 'c.member_id', '=', 'm.id')
             ->orderBy('bp.created_at', 'DESC')
-            ->select('bp.name as billing_period_name', 'm.discount')
+            ->select('c.billing_period as billing_period_name', 'm.discount')
             ->first();
 
         $billingPeriods = $data->billing_period_name ?? null;
@@ -661,7 +662,7 @@ class CustomerController extends Controller
             $serverDisconnect = 'true';
             $message = 'Server ' . $router->name . ' offline, data displayed is local data. You cannot change this information.';
         }
-        // dd($customer);
+        // dd($customer, $billingPeriods, $billingLastPayment, $billingPeriodeActive);
         return view('customers.show', [
             'customer' => $customer,
             'customer_contact' => $this->formatContact($customer->contact, false),
@@ -673,8 +674,9 @@ class CustomerController extends Controller
             'notYetPaid' => $notYetPaid,
             'serverDisconnect' => $serverDisconnect,
             'info_msg' => $message,
-            'billingPeriode' => $billingPeriods,
+            'billingPeriods' => $billingPeriods,
             'discount' => $discount,
+            'billingPeriodeActive' => $billingPeriodeActive,
         ]);
     }
 

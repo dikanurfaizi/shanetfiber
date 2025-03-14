@@ -79,18 +79,24 @@
                     <td class="py-1"><strong>{{ __('customer.label.bill') }}</strong></td>
                     <td class="py-1">{{ __(':') }}
                         <strong>
-                            @if ($customer->paket->price - $discount > 0)
-                                @moneyIDR($customer->paket->price - $discount)
+                            @if ($customer->billing_option != 0 || !empty($discount))
+                                @if (
+                                    $customer->billing_option == 1 ||
+                                        ($customer->billing_option == 2 && $customer->billing_periode === $billingPeriods))
+                                    @moneyIDR($customer->paket->price - $discount)
+                                @else
+                                    @moneyIDR($customer->paket->price)
+                                @endif
                             @else
-                                {{ __('Free') }}
+                                @moneyIDR($customer->paket->price)
                             @endif
                         </strong>
                     </td>
                     <td class="py-1"><strong>{{ __('customer.label.already-paid') }}</strong></td>
                     <td class="py-1">{{ __(':') }}
-                        @if ($notYetPaid = 0)
+                        @if (!empty($billingLastPayment && $billingLastPayment->billing_periode_id == $billingPeriodeActive->id))
                             <strong>
-                                @moneyIDR($customer->paket->price - $discount)
+                                @moneyIDR($billingLastPayment->paket_price)
                             </strong>
                         @else
                             @moneyIDR(0)
@@ -134,7 +140,7 @@
         </div>
     </div>
 
-    {{-- @if ($serverDisconnect == 'false')
+    @if ($serverDisconnect == 'false')
         @if ($customer->internet_service == 'ppp')
             <div class="card-header py-3">
                 <h5 class="m-0 font-weight-bold text-primary">{{ __('customer.header.show-server') }}</h5>
@@ -401,7 +407,7 @@
                 @endcanany
             </div>
         </div>
-    @endif --}}
+    @endif
 
     <div class="card-header py-3">
         <h5 class="m-0 font-weight-bold text-primary">{{ __('customer.header.show-ont') }}</h5>
