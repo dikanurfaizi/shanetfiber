@@ -58,6 +58,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Helpers\LogHelper;
 use App\Models\Member;
+use App\Services\WhatsappMessageService;
 
 //use ArielMejiaDev\LarapexCharts\Facades\LarapexChart;
 use ArielMejiaDev\LarapexCharts\LarapexChart;
@@ -78,15 +79,16 @@ class CustomerController extends Controller
     private SystemService $systemService;
     private QueueService $queueService;
     private IpStaticService $ipStaticService;
+    private WhatsappMessageService $messageService;
 
-
-    public function __construct(SecretService $secretService, TestConnectionService $testConnectionService, SystemService $systemService, QueueService $queueService, IpStaticService $ipStaticService)
+    public function __construct(SecretService $secretService, TestConnectionService $testConnectionService, SystemService $systemService, QueueService $queueService, IpStaticService $ipStaticService, WhatsappMessageService $messageService)
     {
         $this->secretService = $secretService;
         $this->testConnectionService = $testConnectionService;
         $this->systemService = $systemService;
         $this->queueService = $queueService;
         $this->ipStaticService = $ipStaticService;
+        $this->messageService = $messageService;
         $this->middleware('permission:customer-list|customer-create|customer-edit|customer-delete|secret-disable|secret-edit', ['only' => ['index', 'show']]);
         $this->middleware('permission:customer-create', ['only' => ['create', 'store', 'activation']]);
         $this->middleware('permission:customer-edit', ['only' => ['edit', 'update', 'activation', 'editRouter', 'updateRouter']]);
@@ -514,18 +516,18 @@ class CustomerController extends Controller
             $password = $customer->password_ppp;
             $serviceName = PppType::where('id', $customer->ppp_type_id)->value('name');
             try {
-                $createSecret = $this->secretService->createSecret($router, $username, $password, $serviceName, $profile, $comment_payment);
+                //$createSecret = $this->secretService->createSecret($router, $username, $password, $serviceName, $profile, $comment_payment);
                 if (isset($createSecret['after']['message'])) {
                     return redirect()->back()->withErrors(['msg' => 'Cant create user ppp on server ' . $router->name . '.']);
                 } else {
-                    $secretId = $createSecret['after']['ret'];
+                    // $secretId = $createSecret['after']['ret'];
                     $customer->update([
                         'activation_date' => $activationDate,
                         'activation' => 'true',
                         'disabled' => 'false',
-                        'secret_id' => $secretId,
+                        // 'secret_id' => $secretId,
                     ]);
-                    $this->secretService->enableSecret($router, $username);
+                    // $this->secretService->enableSecret($router, $username);
                 }
             } catch (\Exception $e) {
                 return redirect()->back()->withErrors(['msg' => 'Cant connect to the server ' . $router->name . '.']);
@@ -614,6 +616,9 @@ class CustomerController extends Controller
             'status' => 'LS',
             'receipt_id' => $getReceipt->id,
         ]);
+        if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
+            $this->messageService->activation($customer, 'activation_customer');
+        }
         return redirect()->back()
             ->with('success', 'Customer activated.');
     }

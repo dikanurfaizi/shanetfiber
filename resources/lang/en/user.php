@@ -29,12 +29,14 @@ return [
         'password' => 'Password:',
         'confirm-password' => 'Confirm Password:',
         'roles' => 'Roles:',
+        'contact' => 'Contact:',
     ],
     'placeholder' => [
         'name' => 'Insert your name',
         'email' => 'Insert your email:',
         'password' => 'Password:',
         'confirm-password' => 'Confirm your password',
+        'contact' => '8123456789',
     ],
     'button' => [
         'create' => 'Create a user',

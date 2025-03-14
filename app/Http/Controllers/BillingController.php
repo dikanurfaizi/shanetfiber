@@ -1001,13 +1001,27 @@ class BillingController extends Controller
             $price_after_discount = $customer->paket->price;
             $member = 'Non Member / Tidak Ada';
 
-            if (
-                $customer->billing_option == 1 ||
-                ($customer->billing_option == 2 && $billing->billing_periode->name === $customer->billing_period)
-            ) {
+            if ($customer->billing_option == 1) {
                 $discount = $customer->member->discount ?? 0;
                 $price_after_discount = $customer->paket->price - $discount;
                 $member = $customer->member->type;
+            } else if ($customer->billing_option == 2 && $billing->billing_periode->name === $customer->billing_period) {
+                $discount = $customer->member->discount ?? 0;
+                $price_after_discount = $customer->paket->price - $discount;
+                $member = $customer->member->type;
+                $customer->update([
+                    'billing_option' => '0',
+                    'billing_period' => null,
+                    'member_id' => null,
+                    'discount' => '0'
+                ]);
+            } else {
+                $customer->update([
+                    'billing_option' => '0',
+                    'billing_period' => null,
+                    'member_id' => null,
+                    'discount' => '0'
+                ]);
             }
 
             $receipt = Receipt::create([
@@ -1044,9 +1058,9 @@ class BillingController extends Controller
                 'status' => 'LS',
                 'receipt_id' => $getReceipt->id,
             ]);
-            if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
-                $this->messageService->payment_paket($billing, $getReceipt, $payment);
-            }
+            // if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
+            //     $this->messageService->payment_paket($billing, $getReceipt, $payment);
+            // }
             return redirect()->back()->with('success', 'Payment ' . $billing->customer_name . ' successfully.');
         }
     }

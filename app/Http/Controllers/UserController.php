@@ -6,8 +6,8 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Spatie\Permission\Models\Role;
-use DB;
-use Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Arr;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -61,11 +61,13 @@ class UserController extends Controller
             'name' => 'required',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|same:confirm-password',
-            'roles' => 'required'
+            'roles' => 'required',
+            'contact' => 'required|numeric|regex:/^8[0-9]{7,}$/',
         ]);
 
         $input = $request->all();
         $input['password'] = Hash::make($input['password']);
+        $input['contact'] = '62' . $request->contact;
 
         $user = User::create($input);
         $user->assignRole($request->input('roles'));
@@ -96,12 +98,12 @@ class UserController extends Controller
     public function edit($id): View
     {
         $user = User::find($id);
+        $user->contact = preg_replace('/^62/', '', $user->contact); // Hilangkan prefix 62
         $roles = Role::pluck('name', 'name')->all();
         $userRole = $user->roles->pluck('name', 'name')->all();
 
         return view('users.edit', compact('user', 'roles', 'userRole'));
     }
-
     /**
      * Update the specified resource in storage.
      *
@@ -115,7 +117,8 @@ class UserController extends Controller
             'name' => 'required',
             'email' => 'required|email|unique:users,email,' . $id,
             'password' => 'same:confirm-password',
-            'roles' => 'required'
+            'roles' => 'required',
+            'contact' => 'required|numeric|regex:/^8[0-9]{7,}$/',
         ]);
 
         $input = $request->all();
@@ -124,6 +127,7 @@ class UserController extends Controller
         } else {
             $input = Arr::except($input, array('password'));
         }
+        $input['contact'] = '62' . $request->contact;
 
         $user = User::find($id);
         $user->update($input);

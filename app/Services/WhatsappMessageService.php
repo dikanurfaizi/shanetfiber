@@ -8,6 +8,7 @@ use Illuminate\Support\Carbon;
 use App\Models\WhatsappGateway\WhatsappNumber;
 use App\Models\WhatsappGateway\WhatsappGateway;
 use App\Models\WhatsappGateway\WhatsappMessage;
+use App\Models\User;
 use App\Models\Bank;
 use App\Models\Customer;
 use App\Models\Billing\Billing;
@@ -304,6 +305,8 @@ class WhatsappMessageService
                     $replace['%admin%'] = $admin;
 
                     return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('create_new_bill'));
+                case 'activation_customer':
+                    return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('activation_customer'));
                 default:
                     LogHelper::logWarning(
                         null,
@@ -372,6 +375,83 @@ class WhatsappMessageService
                 "Error replacing message placeholders: {$e->getMessage()}"
             );
             return $message; // Jika gagal, return pesan asli agar tidak blank
+        }
+    }
+
+    public function activation($customers, $action)
+    {
+        $admin_number = null;
+        try {
+            $gateway = $this->getGateway();
+            $customer_contact = $this->manipulateContactBillInfo($customers->contact, 'broadcast');
+
+            if (!$gateway || !$customer_contact) {
+                LogHelper::logWarning(
+                    null,
+                    [
+                        'customer_id' => $customers->id,
+                        'gateway' => $gateway ? 'Available' : 'Not Available',
+                        'customer_contact' => $customer_contact ? 'Available' : 'Not Available',
+                    ],
+                    400, // Bad Request
+                    "Gateway atau kontak pelanggan tidak tersedia untuk billing ID: {$customers->id}."
+                );
+                return;
+            }
+
+            $admin = User::Where('id', $customers->user_id)->first();
+            $admin_number = '-';
+            if (!empty($admin->contact)) {
+                $admin_number = $this->manipulateContactBillInfo($admin->contact, null);
+            }
+
+            $replace = [
+                '%name%' => $customers->name,
+                '%address%' => $customers->address,
+                '%email%' => $customers->email ?? '-',
+                '%customer_service%' => $admin_number,
+                '%customer_id%' => $customers->customer_id,
+                '%admin%' => $admin->name,
+                '%paket%' => $customers->paket->name,
+                '%bill%' => 'Rp. ' . number_format($customers->paket->price, 2, ',', '.'),
+            ];
+
+            $message = $this->getDefaultMessage($action);
+            if (!$message) {
+                LogHelper::logWarning(
+                    null,
+                    [
+                        'id' => $customers->id,
+                        'name' => $customers->name,
+                        'address' => $customers->address,
+                        'email' => $customers->email ?? '-',
+                        'customer_service' => $admin_number,
+                        'customer_id' => $customers->customer_id,
+                        'action' => $action,
+                    ],
+                    404, // Not Found
+                    "Template pesan untuk aksi '{$action}' tidak ditemukan untuk customer ID: {$customers->id}"
+                );
+                return;
+            }
+
+            $message = $this->replaceMessagePlaceholders($message, $replace);
+            $this->sendWhatsappSingleJob($customers->name, $customer_contact, $gateway, $message);
+        } catch (\Exception $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'id' => $customers->id,
+                    'name' => $customers->name,
+                    'address' => $customers->address,
+                    'email' => $customers->email ?? '-',
+                    'customer_service' => $admin_number,
+                    'customer_id' => $customers->customer_id,
+                    'action' => $action,
+                ],
+                500, // Internal Error
+                "Terjadi kesalahan dalam {$action}: " . $e->getMessage()
+            );
         }
     }
 
