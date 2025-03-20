@@ -280,13 +280,7 @@ class WhatsappMessageService
     private function getMessageTemplate($action, $pakets, $admin)
     {
         try {
-            $today = Carbon::today();
-            $targetDay = Carbon::createFromDate(null, null, 20);
             $replace = ['%count-bill%' => $pakets->count()];
-
-            if ($today->isSameDay($targetDay)) {
-                return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('deadline_bill'));
-            }
 
             switch ($action) {
                 case 'warning_bill':
