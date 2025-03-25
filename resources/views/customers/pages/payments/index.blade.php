@@ -30,7 +30,13 @@
                         <tr>
                             <td>{{ ++$i }}</td>
                             <td>#{{ $billing->billing_number }}</td>
-                            <td>@moneyIDR(ceil($billing->paket_price + $billing->paket_price * ($websystem->tax_rate / 100)))</td>
+                            <td>
+                                @if ($websystem->enable_tax == 0)
+                                    @moneyIDR(ceil($billing->paket_price))
+                                @else
+                                    @moneyIDR(ceil($billing->paket_price + $billing->paket_price * ($websystem->tax_rate / 100)))
+                                @endif
+                            </td>
                             <td>
                                 @if ($billing->status == 'LS')
                                     {{ __('billing.state.lunas') }}

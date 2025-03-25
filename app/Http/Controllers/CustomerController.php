@@ -59,6 +59,8 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Helpers\LogHelper;
 use App\Models\Member;
 use App\Services\WhatsappMessageService;
+use App\Exports\CustomersExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 //use ArielMejiaDev\LarapexCharts\Facades\LarapexChart;
 use ArielMejiaDev\LarapexCharts\LarapexChart;
@@ -99,247 +101,317 @@ class CustomerController extends Controller
     /**
      * Display a listing of the resource.
      */
+    // public function index(Request $request)
+    // {
+    //     // Log::info('Starting Customer Index method.');
+    //     $paginate = 25;
+    //     $searchName = $request->search_name;
+    //     $searchAddress = $request->search_address;
+    //     $searchServer = $request->server_search;
+    //     $searchPaket = $request->search_paket;
+    //     $searchStatus = $request->status;
+    //     $searchAdmin = $request->search_admin;
+
+    //     // Log::info('Search parameters retrieved.', [
+    //     //     'search_name' => $searchName,
+    //     //     'search_address' => $searchAddress,
+    //     //     'search_server' => $searchServer,
+    //     //     'search_paket' => $searchPaket,
+    //     //     'search_status' => $searchStatus,
+    //     //     'search_admin' => $searchAdmin,
+    //     // ]);
+
+    //     $routersEnable = Mikrotik::where('disabled', 'false')
+    //         ->when($searchServer, function ($query) use ($searchServer) {
+    //             $query->where('id', $searchServer);
+    //         })
+    //         ->get();
+
+    //     if ($searchStatus == 'isolir' || $searchStatus == 'offline' || $searchStatus == 'online') {
+    //         $status = $searchStatus;
+    //         $dataCustomers = array();
+    //         if (count($routersEnable) == 0) {
+    //             LogHelper::logWarning(
+    //                 null,
+    //                 null,
+    //                 200,
+    //                 "No enabled routers found."
+    //             );
+    //             return redirect()->route('customers.index')->withErrors(['msg' => 'All server disable, please check your server setting.', 'Or you dont have server data.']);
+    //         }
+    //         foreach ($routersEnable as $router) {
+    //             LogHelper::logInfo(
+    //                 null,
+    //                 ['router' => $router->name],
+    //                 200,
+    //                 "Processing router."
+    //             );
+
+    //             try {
+    //                 $this->testConnectionService->checkOnline($router);
+    //                 LogHelper::logInfo(
+    //                     null,
+    //                     ['router' => $router->name],
+    //                     200,
+    //                     "Router connection successful."
+    //                 );
+    //             } catch (\Exception $e) {
+    //                 LogHelper::logError(
+    //                     null,
+    //                     ['router' => $router->name, 'error' => $e->getMessage()],
+    //                     500,
+    //                     "Router connection failed."
+    //                 );
+    //                 return redirect()->route('customers.index')->withErrors(['msg' => 'Server ' . $router->name . ' Offline.', 'Please enable first or check your configuration!']);
+    //             }
+    //             if ($status == 'isolir') {
+    //                 $profileIsolir = AutoIsolir::where('mikrotik_id', $router->id)->value('profile_id');
+    //                 LogHelper::logInfo(
+    //                     null,
+    //                     ['profile_id' => $profileIsolir],
+    //                     200,
+    //                     "Retrieved isolir profile."
+    //                 );
+    //                 if ($profileIsolir) {
+    //                     $getSecretStatus = $this->secretService->getSecretByProfile($router, $profileIsolir);
+    //                     $collectionSecretStatus = SecretResource::collection($getSecretStatus)->where('disabled', 'false');
+    //                     $secretIsolir = $collectionSecretStatus->pluck(['name'])->toArray();
+    //                     $secretsStatus = $secretIsolir;
+    //                     LogHelper::logInfo(
+    //                         null,
+    //                         ['secrets' => $secretsStatus],
+    //                         200,
+    //                         "Isolir secrets retrieved."
+    //                     );
+    //                 } else {
+    //                     LogHelper::logWarning(
+    //                         null,
+    //                         ['router' => $router->name],
+    //                         200,
+    //                         "Isolir profile not configured for router."
+    //                     );
+    //                     return redirect()->route('customers.index')->withErrors(['msg' => 'Please config auto isolir on Server ' . $router->name . ' first.']);
+    //                 }
+    //             } else {
+    //                 $getAllSecretActive = $this->secretService->getPppActive($router);
+    //                 $collectionSecretActive = SecretResource::collection($getAllSecretActive);
+    //                 $secretActive = $collectionSecretActive->pluck(['name'])->toArray();
+    //                 LogHelper::logInfo(
+    //                     null,
+    //                     ['secrets' => $secretActive],
+    //                     200,
+    //                     "Active secrets retrieved."
+    //                 );
+
+    //                 if ($status == 'offline') {
+    //                     $usernameCustomers = Customer::where('mikrotik_id', $router->id)
+    //                         ->where('disabled', 'false')
+    //                         ->pluck('username')
+    //                         ->toArray();
+    //                     $collectCustomerUsernames = collect($usernameCustomers);
+    //                     $secretsStatus = $collectCustomerUsernames->diff($secretActive);
+    //                     LogHelper::logInfo(
+    //                         null,
+    //                         ['offline_customers' => $secretsStatus],
+    //                         200,
+    //                         "Offline customers calculated."
+    //                     );
+    //                 } else {
+    //                     $secretsStatus = $secretActive;
+    //                 }
+    //             }
+    //             foreach ($secretsStatus as $secretName) {
+    //                 $customers = Customer::where('username', $secretName)->first();
+    //                 LogHelper::logInfo(
+    //                     null,
+    //                     ['secret' => $secretName, 'customer' => $customers],
+    //                     200,
+    //                     "Customer retrieved by secret."
+    //                 );
+    //                 $dataCustomers[] = $customers;
+    //                 $dataCustomers = collect($dataCustomers)
+    //                     ->filter(function ($customers) use ($searchAddress) {
+    //                         if ($searchAddress == 'NULL') {
+    //                             return $customers->address == null;
+    //                         } else if (isset($searchAddress)) {
+    //                             return $customers->address == $searchAddress;
+    //                         } else {
+    //                             return (!isset($searchAddress));
+    //                         }
+    //                     })
+    //                     ->filter(function ($customers) use ($searchServer) {
+    //                         if (isset($searchServer)) {
+    //                             return $customers->mikrotik_id == $searchServer;
+    //                         } else {
+    //                             return (!isset($searchServer));
+    //                         }
+    //                     })
+    //                     ->filter(function ($customers) use ($searchPaket) {
+    //                         if (isset($searchPaket)) {
+    //                             return $customers->paket_id == $searchPaket;
+    //                         } else {
+    //                             return (!isset($searchPaket));
+    //                         }
+    //                     })
+    //                     ->where('activation', 'true')
+    //                     ->sortBy('name');
+    //             }
+    //         }
+
+    //         //Get current page form url e.g. &page=6
+    //         $currentPage = LengthAwarePaginator::resolveCurrentPage();
+    //         $collection = new Collection($dataCustomers);
+    //         $currentPageSearchResults = $collection->slice(($currentPage - 1) * $paginate, $paginate)->all();
+    //         $paginatedSearchResults = new LengthAwarePaginator($currentPageSearchResults, count($collection), $paginate);
+    //         $paginatedSearchResults->setPath($request->url());
+    //         $paginatedSearchResults->appends($request->except(['page']));
+    //         return view('customers.offline', [
+    //             'data' => $paginatedSearchResults,
+    //             'status' => $status,
+    //             'dataCustomers' => $dataCustomers,
+    //         ])->with('i', (request()->input('page', 1) - 1) * $paginate);
+    //         // $loop->iteration
+    //     } else {
+    //         // Log::info('Default customer query logic executed.');
+    //         $customers = Customer::with(['user'])
+    //             ->when($searchName, function ($query) use ($searchName) {
+    //                 $query->where('name', 'like', "%{$searchName}%");
+    //             })
+    //             ->when($searchAddress, function ($query) use ($searchAddress) {
+    //                 if ($searchAddress == 'NULL') {
+    //                     $query->where('address', NULL);
+    //                 } else {
+    //                     $query->where('address', $searchAddress);
+    //                 }
+    //             })
+    //             ->when($searchAdmin, function ($query) use ($searchAdmin) {
+    //                 if ($searchAdmin == 'NULL') {
+    //                     $query->where('user_id', NULL);
+    //                 } else {
+    //                     $query->where('user_id', $searchAdmin);
+    //                 }
+    //             })
+    //             ->when($searchStatus, function ($query) use ($searchStatus) {
+    //                 if ($searchStatus == 'deactivated') {
+    //                     $query->where('activation', 'false');
+    //                     Log::info('Filter deactivated applied');
+    //                 } else if ($searchStatus == 'free') {
+    //                     $query->where('discount', 100);
+    //                     Log::info('Filter free applied');
+    //                 } else {
+    //                     $query->where('disabled', $searchStatus);
+    //                     $query->where('activation', 'true');
+    //                     Log::info("Filter applied: $searchStatus");
+    //                 }
+    //             })
+    //             ->when($searchServer, function ($query) use ($searchServer) {
+    //                 $query->where('mikrotik_id', $searchServer);
+    //             })
+    //             ->when($searchPaket, function ($query) use ($searchPaket) {
+    //                 $query->where('paket_id', $searchPaket);
+    //             })
+    //             ->orderBy('address', 'ASC')
+    //             ->orderBy('name', 'ASC');
+
+    //         $data = $customers->paginate($paginate);
+
+    //         $data->getCollection()->transform(function ($customer) {
+    //             $customer->contact = $this->formatContact($customer->contact, false);  // false berarti ubah ke format '08'
+    //             return $customer;
+    //         });
+
+    //         $totalIncoming = 0;
+
+    //         $addressUnique = $data->getCollection()->unique('address');
+    //         $address = $addressUnique->pluck('address', 'address');
+    //         $allServers = Mikrotik::where('disabled', 'false')->orderBy('name', 'ASC')->pluck('name', 'id');
+    //         $allAdmin = User::where('disabled', 'false')->orderBy('name', 'ASC')->pluck('name', 'id');
+    //         $periodeName = BillingPeriode::latest('created_at')->value('name');
+
+    //         // Menghitung totalIncoming berdasarkan paket yang sudah diformat
+    //         foreach ($data as $customer) {
+    //             $totalIncoming += $customer->paket->price * ((100 - $customer->discount) / 100);
+    //         }
+
+    //         if (count($data) == 0) {
+    //             return view('customers.index', compact('data', 'totalIncoming', 'address', 'allServers', 'allAdmin', 'periodeName'), [
+    //                 'message' => 'No customer found. Try to search again !',
+    //             ]);
+    //         } else {
+    //             return view('customers.index', compact('data', 'totalIncoming', 'address', 'allServers', 'allAdmin', 'periodeName'))
+    //                 ->with('i', (request()->input('page', 1) - 1) * $paginate);
+    //         }
+    //     }
+    // }
+
     public function index(Request $request)
     {
-        // Log::info('Starting Customer Index method.');
-        $paginate = 25;
-        $searchName = $request->search_name;
-        $searchAddress = $request->search_address;
-        $searchServer = $request->server_search;
-        $searchPaket = $request->search_paket;
-        $searchStatus = $request->status;
-        $searchAdmin = $request->search_admin;
+        $perPage = $request->input('perPage', 25); // Default 25
+        $searchParams = $request->only([
+            'search_name',
+            'search_address',
+            'server_search',
+            'search_paket',
+            'status',
+            'search_admin'
+        ]);
 
-        // Log::info('Search parameters retrieved.', [
-        //     'search_name' => $searchName,
-        //     'search_address' => $searchAddress,
-        //     'search_server' => $searchServer,
-        //     'search_paket' => $searchPaket,
-        //     'search_status' => $searchStatus,
-        //     'search_admin' => $searchAdmin,
-        // ]);
-
+        // Ambil semua router yang aktif
         $routersEnable = Mikrotik::where('disabled', 'false')
-            ->when($searchServer, function ($query) use ($searchServer) {
-                $query->where('id', $searchServer);
-            })
+            ->when($searchParams['server_search'] ?? null, fn($query, $server) => $query->where('id', $server))
             ->get();
 
-        if ($searchStatus == 'isolir' || $searchStatus == 'offline' || $searchStatus == 'online') {
-            $status = $searchStatus;
-            $dataCustomers = array();
-            if (count($routersEnable) == 0) {
-                LogHelper::logWarning(
-                    null,
-                    null,
-                    200,
-                    "No enabled routers found."
-                );
-                return redirect()->route('customers.index')->withErrors(['msg' => 'All server disable, please check your server setting.', 'Or you dont have server data.']);
-            }
-            foreach ($routersEnable as $router) {
-                LogHelper::logInfo(
-                    null,
-                    ['router' => $router->name],
-                    200,
-                    "Processing router."
-                );
-
-                try {
-                    $this->testConnectionService->checkOnline($router);
-                    LogHelper::logInfo(
-                        null,
-                        ['router' => $router->name],
-                        200,
-                        "Router connection successful."
-                    );
-                } catch (\Exception $e) {
-                    LogHelper::logError(
-                        null,
-                        ['router' => $router->name, 'error' => $e->getMessage()],
-                        500,
-                        "Router connection failed."
-                    );
-                    return redirect()->route('customers.index')->withErrors(['msg' => 'Server ' . $router->name . ' Offline.', 'Please enable first or check your configuration!']);
-                }
-                if ($status == 'isolir') {
-                    $profileIsolir = AutoIsolir::where('mikrotik_id', $router->id)->value('profile_id');
-                    LogHelper::logInfo(
-                        null,
-                        ['profile_id' => $profileIsolir],
-                        200,
-                        "Retrieved isolir profile."
-                    );
-                    if ($profileIsolir) {
-                        $getSecretStatus = $this->secretService->getSecretByProfile($router, $profileIsolir);
-                        $collectionSecretStatus = SecretResource::collection($getSecretStatus)->where('disabled', 'false');
-                        $secretIsolir = $collectionSecretStatus->pluck(['name'])->toArray();
-                        $secretsStatus = $secretIsolir;
-                        LogHelper::logInfo(
-                            null,
-                            ['secrets' => $secretsStatus],
-                            200,
-                            "Isolir secrets retrieved."
-                        );
-                    } else {
-                        LogHelper::logWarning(
-                            null,
-                            ['router' => $router->name],
-                            200,
-                            "Isolir profile not configured for router."
-                        );
-                        return redirect()->route('customers.index')->withErrors(['msg' => 'Please config auto isolir on Server ' . $router->name . ' first.']);
-                    }
-                } else {
-                    $getAllSecretActive = $this->secretService->getPppActive($router);
-                    $collectionSecretActive = SecretResource::collection($getAllSecretActive);
-                    $secretActive = $collectionSecretActive->pluck(['name'])->toArray();
-                    LogHelper::logInfo(
-                        null,
-                        ['secrets' => $secretActive],
-                        200,
-                        "Active secrets retrieved."
-                    );
-
-                    if ($status == 'offline') {
-                        $usernameCustomers = Customer::where('mikrotik_id', $router->id)
-                            ->where('disabled', 'false')
-                            ->pluck('username')
-                            ->toArray();
-                        $collectCustomerUsernames = collect($usernameCustomers);
-                        $secretsStatus = $collectCustomerUsernames->diff($secretActive);
-                        LogHelper::logInfo(
-                            null,
-                            ['offline_customers' => $secretsStatus],
-                            200,
-                            "Offline customers calculated."
-                        );
-                    } else {
-                        $secretsStatus = $secretActive;
-                    }
-                }
-                foreach ($secretsStatus as $secretName) {
-                    $customers = Customer::where('username', $secretName)->first();
-                    LogHelper::logInfo(
-                        null,
-                        ['secret' => $secretName, 'customer' => $customers],
-                        200,
-                        "Customer retrieved by secret."
-                    );
-                    $dataCustomers[] = $customers;
-                    $dataCustomers = collect($dataCustomers)
-                        ->filter(function ($customers) use ($searchAddress) {
-                            if ($searchAddress == 'NULL') {
-                                return $customers->address == null;
-                            } else if (isset($searchAddress)) {
-                                return $customers->address == $searchAddress;
-                            } else {
-                                return (!isset($searchAddress));
-                            }
-                        })
-                        ->filter(function ($customers) use ($searchServer) {
-                            if (isset($searchServer)) {
-                                return $customers->mikrotik_id == $searchServer;
-                            } else {
-                                return (!isset($searchServer));
-                            }
-                        })
-                        ->filter(function ($customers) use ($searchPaket) {
-                            if (isset($searchPaket)) {
-                                return $customers->paket_id == $searchPaket;
-                            } else {
-                                return (!isset($searchPaket));
-                            }
-                        })
-                        ->where('activation', 'true')
-                        ->sortBy('name');
-                }
-            }
-
-            //Get current page form url e.g. &page=6
-            $currentPage = LengthAwarePaginator::resolveCurrentPage();
-            $collection = new Collection($dataCustomers);
-            $currentPageSearchResults = $collection->slice(($currentPage - 1) * $paginate, $paginate)->all();
-            $paginatedSearchResults = new LengthAwarePaginator($currentPageSearchResults, count($collection), $paginate);
-            $paginatedSearchResults->setPath($request->url());
-            $paginatedSearchResults->appends($request->except(['page']));
-            return view('customers.offline', [
-                'data' => $paginatedSearchResults,
-                'status' => $status,
-                'dataCustomers' => $dataCustomers,
-            ])->with('i', (request()->input('page', 1) - 1) * $paginate);
-            // $loop->iteration
-        } else {
-            // Log::info('Default customer query logic executed.');
-            $customers = Customer::with(['user'])
-                ->when($searchName, function ($query) use ($searchName) {
-                    $query->where('name', 'like', "%{$searchName}%");
-                })
-                ->when($searchAddress, function ($query) use ($searchAddress) {
-                    if ($searchAddress == 'NULL') {
-                        $query->where('address', NULL);
-                    } else {
-                        $query->where('address', $searchAddress);
-                    }
-                })
-                ->when($searchAdmin, function ($query) use ($searchAdmin) {
-                    if ($searchAdmin == 'NULL') {
-                        $query->where('user_id', NULL);
-                    } else {
-                        $query->where('user_id', $searchAdmin);
-                    }
-                })
-                ->when($searchStatus, function ($query) use ($searchStatus) {
-                    if ($searchStatus == 'deactivated') {
-                        $query->where('activation', 'false');
-                        Log::info('Filter deactivated applied');
-                    } else if ($searchStatus == 'free') {
-                        $query->where('discount', 100);
-                        Log::info('Filter free applied');
-                    } else {
-                        $query->where('disabled', $searchStatus);
-                        $query->where('activation', 'true');
-                        Log::info("Filter applied: $searchStatus");
-                    }
-                })
-                ->when($searchServer, function ($query) use ($searchServer) {
-                    $query->where('mikrotik_id', $searchServer);
-                })
-                ->when($searchPaket, function ($query) use ($searchPaket) {
-                    $query->where('paket_id', $searchPaket);
-                })
-                ->orderBy('address', 'ASC')
-                ->orderBy('name', 'ASC');
-
-            $data = $customers->paginate($paginate);
-
-            $data->getCollection()->transform(function ($customer) {
-                $customer->contact = $this->formatContact($customer->contact, false);  // false berarti ubah ke format '08'
-                return $customer;
-            });
-
-            $totalIncoming = 0;
-
-            $addressUnique = $data->getCollection()->unique('address');
-            $address = $addressUnique->pluck('address', 'address');
-            $allServers = Mikrotik::where('disabled', 'false')->orderBy('name', 'ASC')->pluck('name', 'id');
-            $allAdmin = User::where('disabled', 'false')->orderBy('name', 'ASC')->pluck('name', 'id');
-            $periodeName = BillingPeriode::latest('created_at')->value('name');
-
-            // Menghitung totalIncoming berdasarkan paket yang sudah diformat
-            foreach ($data as $customer) {
-                $totalIncoming += $customer->paket->price * ((100 - $customer->discount) / 100);
-            }
-
-            if (count($data) == 0) {
-                return view('customers.index', compact('data', 'totalIncoming', 'address', 'allServers', 'allAdmin', 'periodeName'), [
-                    'message' => 'No customer found. Try to search again !',
-                ]);
-            } else {
-                return view('customers.index', compact('data', 'totalIncoming', 'address', 'allServers', 'allAdmin', 'periodeName'))
-                    ->with('i', (request()->input('page', 1) - 1) * $paginate);
-            }
+        if (in_array($searchParams['status'] ?? null, ['isolir', 'offline', 'online'])) {
+            return $this->filterCustomersByStatus($request, $routersEnable, $searchParams, $perPage);
         }
+
+        // Query pelanggan
+        $customers = Customer::with(['user'])
+            ->when($searchParams['search_name'] ?? null, fn($query, $name) => $query->where('name', 'like', "%{$name}%"))
+            ->when($searchParams['search_address'] ?? null, function ($query, $address) {
+                $query->whereNull('address', $address == 'NULL' ? true : false)->orWhere('address', $address);
+            })
+            ->when($searchParams['search_admin'] ?? null, function ($query, $admin) {
+                $query->whereNull('user_id', $admin == 'NULL' ? true : false)->orWhere('user_id', $admin);
+            })
+            ->when($searchParams['status'] ?? null, fn($query, $status) => $this->applyStatusFilter($query, $status))
+            ->when($searchParams['server_search'] ?? null, fn($query, $server) => $query->where('mikrotik_id', $server))
+            ->when($searchParams['search_paket'] ?? null, fn($query, $paket) => $query->where('paket_id', $paket))
+            ->orderBy('address')->orderBy('name');
+
+        Log::info($customers->toSql(), $customers->getBindings());
+
+        $data = $customers->paginate($perPage)->appends($request->query());
+
+        // Hitung total pemasukan
+        $totalIncoming = $data->sum(fn($customer) => $customer->paket->price * ((100 - $customer->discount) / 100));
+
+        return view('customers.index', [
+            'data' => $data,
+            'totalIncoming' => $totalIncoming,
+            'address' => Customer::select('address')->distinct()->pluck('address', 'address'),
+            'allServers' => Mikrotik::where('disabled', 'false')->orderBy('name')->pluck('name', 'id'),
+            'allAdmin' => User::where('disabled', 'false')->orderBy('name')->pluck('name', 'id'),
+            'periodeName' => BillingPeriode::latest('created_at')->value('name'),
+            'perPage' => $perPage
+        ])->with('i', (request()->input('page', 1) - 1) * $perPage);
+    }
+
+    private function applyStatusFilter($query, $status)
+    {
+        return match ($status) {
+            'deactivated' => $query->where('activation', 'false'),
+            'free' => $query->where('discount', 100),
+            default => $query->where('disabled', $status)->where('activation', 'true'),
+        };
+    }
+
+    public function export()
+    {
+        $timestamp = now()->format('Ymd_His'); // Format: YYYYMMDD_HHMMSS
+        $fileName = "customers_{$timestamp}.xlsx"; // Contoh: customers_20250325_143530.xlsx
+
+        return Excel::download(new CustomersExport, $fileName);
     }
 
     /**

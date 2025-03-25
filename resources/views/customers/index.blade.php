@@ -102,7 +102,35 @@
 
 
     <div class="card-body">
-        {{ $data->withQueryString()->links() }}
+        {{-- {{ $data->withQueryString()->links() }} --}}
+        <div class="d-flex justify-content-between align-items-center">
+            <!-- Pagination -->
+            <div>
+                {{ $data->appends(['perPage' => request('perPage')])->links() }}
+            </div>
+
+            <!-- Dropdown untuk memilih jumlah data per halaman -->
+            <form method="GET" id="paginationForm" class="d-flex align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <span for="perPage" class="font-weight-bold text-primary"
+                        style="margin-right: 10px; font-size: 16px;">
+                        Show
+                    </span>
+                    <select name="perPage" id="perPage" class="form-control" onchange="updatePerPage()"
+                        style="width: auto; min-width: 60px; height: 35px; padding: 2px 8px; text-align: center;">
+                        <option value="25" {{ request('perPage') == 25 ? 'selected' : '' }}>25</option>
+                        <option value="50" {{ request('perPage') == 50 ? 'selected' : '' }}>50</option>
+                        <option value="100" {{ request('perPage') == 100 ? 'selected' : '' }}>100</option>
+                    </select>
+                </div>
+
+                <!-- Export Button -->
+                <a href="{{ route('customers.export') }}" class="btn btn-success btn-sm d-flex align-items-center"
+                    style="margin-left: 10px; height: 35px;">
+                    <i class="fas fa-file-excel" style="margin-right: 5px;"></i> Export to Excel
+                </a>
+            </form>
+        </div>
         <div style="overflow-x: auto;">
             <table id="customersTable" cellspacing="0" width="100%"
                 class="table table-bordered table-striped table-hover">
@@ -314,7 +342,17 @@
                 @endforeach
             </table>
         </div>
-        {{ $data->withQueryString()->links() }}
+        {{-- {{ $data->withQueryString()->links() }} --}}
+        {{ $data->appends(['perPage' => request('perPage')])->links() }}
     </div>
 
 </x-layouts.cpanel.customers.app-layout>
+
+<script>
+    function updatePerPage() {
+        let perPage = document.getElementById('perPage').value;
+        let url = new URL(window.location.href);
+        url.searchParams.set('perPage', perPage);
+        window.location.href = url.toString();
+    }
+</script>

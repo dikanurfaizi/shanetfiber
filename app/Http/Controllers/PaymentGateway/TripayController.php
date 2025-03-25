@@ -173,6 +173,10 @@ class TripayController extends Controller
             ? $tripay->tripays_sandbox_api_key
             : $tripay->tripays_api_key;
 
+        $SSLVerif = $tripay->tripays_is_production === 'false'
+            ? false
+            : true;
+
         $curl = curl_init();
 
         curl_setopt_array($curl, array(
@@ -183,8 +187,8 @@ class TripayController extends Controller
             CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey],
             CURLOPT_FAILONERROR    => false,
             CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
-            CURLOPT_SSL_VERIFYPEER => false, // Disable SSL verification
-            CURLOPT_SSL_VERIFYHOST => false,  // Disable SSL host verification
+            CURLOPT_SSL_VERIFYPEER => $SSLVerif,
+            CURLOPT_SSL_VERIFYHOST => $SSLVerif,
             CURLOPT_TIMEOUT        => 5,  // Timeout total request (5 detik)
             CURLOPT_CONNECTTIMEOUT => 3,  // Timeout saat mencoba koneksi (3 detik)
         ));
@@ -224,7 +228,7 @@ class TripayController extends Controller
         return $signature;
     }
 
-    public function requestTransaction(Order $order)
+    public function requestTransaction(Order $order, $name, $mail, $phone)
     {
         $tripay = $this->getTripayData();
 
@@ -236,13 +240,17 @@ class TripayController extends Controller
             ? $tripay->tripays_sandbox_api_key
             : $tripay->tripays_api_key;
 
+        $SSLVerif = $tripay->tripays_is_production === 'false'
+            ? false
+            : true;
+
         $data = [
-            'method'         => $order->payment_channel_code,
+            'method'         => $order->payment_method,
             'merchant_ref'   => $order->number,
             'amount'         => $order->total_price,
-            'customer_name'  => $order->customer_name,
-            'customer_email' => $order->customer_email,
-            'customer_phone' => $this->manipulateContact($order->customer_phone) ?? null,
+            'customer_name'  => $name,
+            'customer_email' => $mail,
+            'customer_phone' => $this->manipulateContact($phone) ?? null,
             'order_items'    => [
                 [
                     'name'     => $order->package,
@@ -250,7 +258,8 @@ class TripayController extends Controller
                     'quantity' => 1,
                 ]
             ],
-            'expired_time' => time() + (24 * 60 * 60), // 24 jam
+            'expired_time' => \Carbon\Carbon::parse($order->created_at)->addDays(3)->timestamp,
+            // 'expired_time' => time() + (24 * 60 * 60), // 24 jam
             'signature'    => $order->signature,
         ];
 
@@ -262,8 +271,8 @@ class TripayController extends Controller
             CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey, 'Content-Type: application/json'],
             CURLOPT_POST           => true,
             CURLOPT_POSTFIELDS     => json_encode($data),
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_SSL_VERIFYPEER => $SSLVerif,
+            CURLOPT_SSL_VERIFYHOST => $SSLVerif,
             CURLOPT_TIMEOUT        => 5,
             CURLOPT_CONNECTTIMEOUT => 3
         ]);
@@ -290,5 +299,121 @@ class TripayController extends Controller
         }
 
         return $decodedResponse['data'];
+    }
+
+    public function getInstruction(Order $order)
+    {
+        $tripay = $this->getTripayData();
+
+        $tripayUri = $tripay->tripays_is_production === 'false'
+            ? config('tripay.sandbox_url') . '/payment/instruction?'
+            : config('tripay.production_url') . '/payment/instruction?';
+
+        $apiKey = $tripay->tripays_is_production === 'false'
+            ? $tripay->tripays_sandbox_api_key
+            : $tripay->tripays_api_key;
+
+        $SSLVerif = $tripay->tripays_is_production === 'false'
+            ? false
+            : true;
+
+        $payload = ['code' => $order->payment_method];
+
+        $curl = curl_init();
+
+        curl_setopt_array($curl, [
+            CURLOPT_FRESH_CONNECT  => true,
+            CURLOPT_URL            => $tripayUri . http_build_query($payload),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HEADER         => false,
+            CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey],
+            CURLOPT_FAILONERROR    => false,
+            CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
+            CURLOPT_SSL_VERIFYPEER => $SSLVerif,
+            CURLOPT_SSL_VERIFYHOST => $SSLVerif,
+            CURLOPT_TIMEOUT        => 5,
+            CURLOPT_CONNECTTIMEOUT => 3
+        ]);
+
+        $response = curl_exec($curl);
+        $error = curl_error($curl);
+        curl_close($curl);
+
+        if ($error) {
+            return response()->json(['error' => 'cURL Error: ' . $error], 500);
+        }
+
+        $decodedResponse = json_decode($response, true);
+
+        if (!$decodedResponse || !isset($decodedResponse['data'])) {
+            return response()->json(['error' => 'Invalid response from Tripay'], 500);
+        }
+
+        // Ganti semua {{pay_code}} dengan $order->va_number
+        array_walk_recursive($decodedResponse['data'], function (&$value) use ($order) {
+            $value = str_replace('{{pay_code}}', $order->va_number, $value);
+        });
+
+        return response()->json($decodedResponse);
+    }
+
+    public function getStatusTransaction(Order $order)
+    {
+        $tripay = $this->getTripayData();
+
+        $tripayUri = $tripay->tripays_is_production === 'false'
+            ? config('tripay.sandbox_url') . '/transaction/check-status?'
+            : config('tripay.production_url') . '/transaction/check-status?';
+
+        $apiKey = $tripay->tripays_is_production === 'false'
+            ? $tripay->tripays_sandbox_api_key
+            : $tripay->tripays_api_key;
+
+        $SSLVerif = $tripay->tripays_is_production === 'false'
+            ? false
+            : true;
+
+        $payload = [
+            'reference' => $order->reference,
+        ];
+
+        $curl = curl_init();
+
+        curl_setopt_array($curl, [
+            CURLOPT_FRESH_CONNECT  => true,
+            CURLOPT_URL            => $tripayUri . http_build_query($payload),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HEADER         => false,
+            CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey],
+            CURLOPT_FAILONERROR    => false,
+            CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
+            CURLOPT_SSL_VERIFYPEER => $SSLVerif,
+            CURLOPT_SSL_VERIFYHOST => $SSLVerif,
+            CURLOPT_TIMEOUT        => 5,
+            CURLOPT_CONNECTTIMEOUT => 3
+        ]);
+
+        Log::info('Tripay cURL Initialized', ['url' => $tripayUri . http_build_query($payload)]);
+
+        $response = curl_exec($curl);
+        $error = curl_error($curl);
+        curl_close($curl);
+
+        if ($error) {
+            Log::error('Tripay cURL Error', ['error' => $error]);
+            return response()->json(['error' => 'cURL Error: ' . $error], 500);
+        }
+
+        Log::info('Tripay Raw Response', ['response' => $response]);
+
+        // Coba decode response JSON dari Tripay
+        $decodedResponse = json_decode($response, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            Log::error('Invalid JSON Response from Tripay', ['raw' => $response]);
+            return response()->json(['error' => 'Invalid response from Tripay', 'raw' => $response], 500);
+        }
+
+        return response()->json($decodedResponse);
     }
 }

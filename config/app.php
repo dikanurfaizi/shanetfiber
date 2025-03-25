@@ -173,6 +173,7 @@ return [
         Yajra\DataTables\DataTablesServiceProvider::class,
         Barryvdh\DomPDF\ServiceProvider::class,
         Jenssegers\Agent\AgentServiceProvider::class,
+        Maatwebsite\Excel\ExcelServiceProvider::class,
     ])->toArray(),
 
     /*
@@ -190,6 +191,7 @@ return [
         // 'Example' => App\Facades\Example::class,
         'PDF' => Barryvdh\DomPDF\Facade::class,
         'Agent' => Jenssegers\Agent\Facades\Agent::class,
+        'Excel' => Maatwebsite\Excel\Facades\Excel::class,
     ])->toArray(),
 
     /*

@@ -58,34 +58,35 @@
                 </tr>
             </table>
         </div>
-        @php
-            $channels = collect($channels);
-        @endphp
-
-        @if ($channels->isNotEmpty())
-            <div class="col-12 mb-3">
-                <div class="d-flex justify-content-between align-items-center alert alert-info mb-0">
-                    <div>
-                        Nikmati kemudahan pembayaran melalui beberapa channel pembayaran
-                    </div>
-                </div>
-            </div>
+        @if ($billing->status !== 'LS')
             @php
-                $vaChannels = $channels->where('group', 'Virtual Account');
-                $csChannels = $channels->where('group', 'Convenience Store');
-                $ewalletChannels = $channels->where('group', 'E-Wallet');
+                $channels = collect($channels);
             @endphp
 
-            @if ($vaChannels->isNotEmpty())
-                <x-payment-channel title="Virtual Account" group="Virtual Account" :channels="$vaChannels" />
-            @endif
+            @if ($channels->isNotEmpty())
+                <div class="col-12 mb-3">
+                    <div class="d-flex justify-content-between align-items-center alert alert-info mb-0">
+                        <div>
+                            Nikmati kemudahan pembayaran melalui beberapa channel pembayaran
+                        </div>
+                    </div>
+                </div>
 
-            @if ($csChannels->isNotEmpty())
-                <x-payment-channel title="Gerai Offline" group="Convenience Store" :channels="$csChannels" />
-            @endif
+                @php
+                    $groupedChannels = $channels->groupBy('group');
+                @endphp
 
-            @if ($ewalletChannels->isNotEmpty())
-                <x-payment-channel title="Dompet Digital" group="E-Wallet" :channels="$ewalletChannels" />
+                @if ($groupedChannels->has('Virtual Account'))
+                    <x-payment-channel title="Virtual Account" group="Virtual Account" :channels="$groupedChannels['Virtual Account']" />
+                @endif
+
+                @if ($groupedChannels->has('Convenience Store'))
+                    <x-payment-channel title="Gerai Offline" group="Convenience Store" :channels="$groupedChannels['Convenience Store']" />
+                @endif
+
+                @if ($groupedChannels->has('E-Wallet'))
+                    <x-payment-channel title="Dompet Digital" group="E-Wallet" :channels="$groupedChannels['E-Wallet']" />
+                @endif
             @endif
         @endif
 

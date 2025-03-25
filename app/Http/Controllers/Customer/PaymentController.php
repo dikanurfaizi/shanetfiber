@@ -9,7 +9,7 @@ use App\Models\Billing\BillingPeriode;
 use App\Models\Websystem;
 use App\Models\PaymentGateway;
 use App\Http\Controllers\PaymentGateway\TripayController;
-use Illuminate\Support\Facades\Log;
+use App\Models\Order;
 
 class PaymentController extends Controller
 {
@@ -72,8 +72,17 @@ class PaymentController extends Controller
                     // Action untuk tripays
                     $tripay = new TripayController();
                     $channels = $tripay->getPaymentChannels();
+                    $order = Order::join('billings', 'orders.billing_id', '=', 'billings.id')
+                        ->where('orders.customer_id', $billing->customer_id)
+                        ->where('orders.billing_id', $billing->id)
+                        ->select('orders.*')
+                        ->first();
                     // dd($channels);
-                    return view('customers.pages.payments.tripays.show', compact('billing', 'websystem', 'gateway', 'channels'));
+                    if ($order !== NULL && $order->payment_status !== "2") {
+                        return view('customers.pages.orders.tripays.show', compact('order'));
+                    } else {
+                        return view('customers.pages.payments.tripays.show', compact('billing', 'websystem', 'gateway', 'channels'));
+                    }
                 } else {
                     // Action default jika ada yang lain
                     return view('errors.notfound');

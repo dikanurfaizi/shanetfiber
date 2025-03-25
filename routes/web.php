@@ -80,12 +80,13 @@ Route::group(['prefix' => 'customer', 'namespace' => 'Customer'], function () {
         Route::get('billings/payments/{billing:id}/view', [PaymentController::class, 'show'])->name('customer.payment.show');
         Route::get('billings/orders', [OrderController::class, 'index'])->name('customer.order.index');
         Route::get('billings/orders/{status}/show', [OrderController::class, 'index'])->name('customer.order.state');
-        Route::get('billings/orders/{order:id}/view', [OrderController::class, 'show'])->name('customer.order.show');
-        Route::post('billings/orders/{order:id}/update', [OrderController::class, 'update'])->name('customerOrder.update');
+        Route::post('billings/orders/{order:id}/update', [OrderController::class, 'update'])->name('customer.order.update');
         Route::get('billings/orders/{billing:id}/create', [OrderController::class, 'create'])->name('customer.order.create');
         //================================TRIPAY==================================================================================
         Route::post('billings/orders/create/{billing:id}', [OrderController::class, 'tripayCreate'])->name('customer.tripays.order.create');
         Route::get('billings/orders/{order:id}/view', [OrderController::class, 'tripayShow'])->name('customer.pages.order.tripays.show');
+        Route::get('billings/orders/{order:id}/instruction', [OrderController::class, 'paymentInstruction'])->name('customer.tripay.instruction');
+        Route::get('billings/orders/{order:id}/detail', [OrderController::class, 'show'])->name('customer.order.show');
     });
 });
 
@@ -137,6 +138,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('/customers/{customer:slug}/router/edit', [CustomerController::class, 'editRouter'])->name('customers.edit.router');
         Route::patch('/customers/{customer:slug}/router/update', [CustomerController::class, 'updateRouter'])->name('customers.update.router');
         Route::put('/customers/{customer:slug}/activation', [CustomerController::class, 'activation'])->name('customers.activation');
+        Route::get('/customers/file/export', [CustomerController::class, 'export'])->name('customers.export');
         //========================ROUTE Member================================
         Route::resource('members', MemberController::class);
         Route::get('/members/{member:slug}/delete', [MemberController::class, 'delete'])->name('members.delete');

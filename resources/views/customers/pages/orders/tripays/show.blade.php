@@ -1,5 +1,9 @@
 <x-layouts.customers.app-layout title="Order #{{ $order->number }}">
 
+    @php
+        $expiredAt = $order->expired_time * 1000; // Konversi ke milidetik
+    @endphp
+
     <div class="card-header py-3">
         <h5 class="m-0 font-weight-bold text-primary">{{ __('Data Order #') }}{{ $order->number }}</h5>
     </div>
@@ -11,36 +15,87 @@
         <div class="d-flex justify-content-center align-items-center">
             <div class="py-3 px-3 border rounded w-100" style="max-width: 500px;">
                 <div class="text-center d-flex flex-column align-items-center gap-0">
-                    <p class="head-section">Selesaikan Pembayaran Dalam</p>
-                    <p class="timer text-danger font-weight-bold">23 : 59 : 45</p>
+                    <p class="head-section">Selesaikan pembayaran dalam</b>
+                    </p>
+                    <p class="timer text-danger font-weight-bold" id="countdown"></p>
                     <p class="end-payment">Batas Akhir Pembayaran</p>
-                    <p class="end-date">16 Feb 2025, 13:08 WIB</p>
+                    <p class="end-date">
+                        {{ \Carbon\Carbon::createFromTimestamp($order->expired_time)->translatedFormat('d F Y, H:i') }}
+                        WIB
+                    </p>
                 </div>
 
                 <div class="info mt-2">
                     <div class="virt-number">
-                        <p class="label">BNI Virtual Account</p>
-                        <img class="image-logo" src="https://images.tokopedia.net/img/toppay/payment-logo/bni-va.png"
-                            alt="BNI Virtual Account">
+                        <p class="label">{{ $order->payment_name }}</p>
+                        <img class="image-logo" src="{{ $order->icon_url }}" alt="{{ $order->payment_name }}">
                     </div>
                     <div class="number-section">
-                        <p class="label">Nomor Virtual Account</p>
+                        <p class="label">Nama Pelanggan</p>
                         <div class="detail-virt-number">
-                            <p class="value">8277708983249628</p>
-                            <div class="css-ee7rfg" data-testid="copy-content">Salin<img src="/images/salin.svg"
-                                    alt="Copy Icon" width="18" height="18">
+                            <p class="value">{{ $order->customer->name }}</p>
+                        </div>
+                        <p class="label">No. HP</p>
+                        <div class="detail-virt-number">
+                            <p class="value">{{ preg_replace('/^628/', '08', $order->customer->contact) }}</p>
+                        </div>
+                        <p class="label">Email</p>
+                        <div class="detail-virt-number">
+                            <p class="value">{{ $order->customer->email }}</p>
+                        </div>
+                        <p class="label">Rincian Transaksi</p>
+                        {{-- @foreach ($reqTransaction['order_items'] as $item) --}}
+                        <div class="row">
+                            <div class="col-8">
+                                + <a href="{{ $order->package ?? '#!' }}" target="_blank">{{ $order->package }}</a>
+                                <br>
+                                <small class="ml-3 font-weight-bold" style="color: #17a2b8;">
+                                    Rp {{ number_format($order->total_price, 0, ',', '.') }} x {{ $order->quantity }}
+                                </small>
+                            </div>
+                            <div class="col-4 text-right font-weight-bold" style="color: #17a2b8;">
+                                Rp {{ number_format($order->total_price, 0, ',', '.') }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-8">
+                                + Biaya Administrasi
+                            </div>
+                            <div class="col-4 text-right font-weight-bold" style="color: #17a2b8;">
+                                Rp {{ number_format($order->total_fee, 0, ',', '.') }}
+                            </div>
+                        </div>
+                        {{-- @endforeach --}}
+                    </div>
+                    <div class="number-section">
+                        <div class="tot-tagihan">
+                            <p class="label">Nomor Referensi</p>
+                            <div class="detail-virt-number">
+                                <p class="value">{{ $order->number }}</p>
+                            </div>
+
+                        </div>
+                        <p class="label">Kode Bayar/Nomor VA</p>
+                        <div class="detail-virt-number">
+                            <p class="value" id="va-number">{{ $order->va_number }}</p>
+                            <div class="css-ee7rfg" data-testid="copy-content" onclick="copyToClipboard()">
+                                Salin <img src="/images/salin.svg" alt="Copy Icon" width="18" height="18">
                             </div>
                         </div>
                         <div class="tot-tagihan">
-                            <p class="label">Total Pembayaran</p>
+                            <p class="label">Jumlah Pembayaran</p>
                             <div class="detail-virt-number">
-                                <p class="value">Rp43.107</p>
+                                <p class="value">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</p>
                             </div>
 
                         </div>
                         <div class="note text-muted">
-                            <p><b>Penting:</b> Transfer Virtual Account hanya bisa dilakukan dari <b>bank yang kamu
-                                    pilih</b></p>
+                            <p><b>Penting:</b></p>
+                            <ol>
+                                <li>Transfer Virtual Account hanya bisa dilakukan dari <b>bank yang kamu pilih</b></li>
+                                <li>Pastikan Anda melakukan pembayaran sebelum melewati batas pembayaran dan dengan
+                                    nominal yang tepat</li>
+                            </ol>
                         </div>
                     </div>
                 </div>
@@ -65,8 +120,9 @@
             <button class="btn btn-outline-success m-2 btn-how-payment" data-toggle="modal"
                 data-target="#statusModal">Lihat Detail
             </button>
-            <button class="btn btn-success m-2 btn-custom" data-toggle="modal" data-target="#statusModal">Cara
-                Pembayaran
+            <button class="btn btn-success m-2 btn-custom" id="paymentInstructionBtn" data-toggle="modal"
+                data-target="#howToPaymentModal">
+                Cara Pembayaran
             </button>
         @endif
     </div>
@@ -129,6 +185,128 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="howToPaymentModal" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Instruksi Pembayaran</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="paymentInstructions">
+                    <p>Memuat instruksi pembayaran...</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" data-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var expiredAt = {{ $expiredAt }}; // Waktu order kedaluwarsa dalam milidetik
+
+        function updateCountdown() {
+            var now = Date.now(); // Waktu sekarang dalam milidetik
+            var remainingTime = Math.max(0, Math.floor((expiredAt - now) / 1000)); // Sisa waktu dalam detik
+
+            if (remainingTime <= 0) {
+                document.getElementById("countdown").innerText = "Waktu habis!";
+                clearInterval(countdownInterval); // Hentikan interval saat waktu habis
+                return;
+            }
+
+            var days = Math.floor(remainingTime / (24 * 3600));
+            var hours = Math.floor((remainingTime % (24 * 3600)) / 3600);
+            var minutes = Math.floor((remainingTime % 3600) / 60);
+            var seconds = remainingTime % 60;
+
+            document.getElementById("countdown").innerText =
+                days + " hari, " +
+                ('0' + hours).slice(-2) + " jam, " +
+                ('0' + minutes).slice(-2) + " menit, " +
+                ('0' + seconds).slice(-2) + " detik";
+        }
+
+        var countdownInterval = setInterval(updateCountdown, 1000);
+        updateCountdown(); // Jalankan langsung saat halaman dimuat
+
+        // copy to clipboard
+        function copyToClipboard() {
+            var copyText = document.getElementById("va-number").innerText;
+
+            // Buat elemen input sementara
+            var tempInput = document.createElement("input");
+            tempInput.value = copyText;
+            document.body.appendChild(tempInput);
+
+            // Pilih dan salin teks
+            tempInput.select();
+            tempInput.setSelectionRange(0, 99999); // Untuk perangkat mobile
+            document.execCommand("copy");
+
+            // Hapus elemen input sementara
+            document.body.removeChild(tempInput);
+
+            // Tampilkan notifikasi dengan SweetAlert
+            Swal.fire({
+                icon: "success",
+                title: "Berhasil!",
+                text: "Nomor Virtual Account berhasil disalin!",
+                confirmButtonColor: "#3085d6",
+                confirmButtonText: "OK"
+            });
+        }
+
+        document.getElementById("paymentInstructionBtn").addEventListener("click", function() {
+            var orderId = "{{ $order->id }}"; // Pastikan orderId sudah tersedia di Blade template
+            var url = "{{ url('customer/billings/orders') }}/" + orderId + "/instruction";
+
+            fetch(url)
+                .then(response => response.json()) // Konversi ke JSON
+                .then(data => {
+                    if (!data || !data.data || data.data.length === 0) {
+                        document.getElementById("paymentInstructions").innerHTML =
+                            `<p class="text-danger">Tidak ada instruksi pembayaran.</p>`;
+                        return;
+                    }
+
+                    let instructions = data.data; // Ambil array dari `data.data`
+                    let content = "";
+
+                    instructions.forEach((method, index) => {
+                        let isActive = index === 0 ? "show" : ""; // Hanya item pertama yang terbuka
+
+                        content += `
+                    <div class="card">
+                        <div class="card-header">
+                            <button class="btn btn-link" data-toggle="collapse" data-target="#collapse${index}">
+                                ${method.title}
+                            </button>
+                        </div>
+                        <div id="collapse${index}" class="collapse ${isActive}">
+                            <div class="card-body">
+                                <ol>
+                                    ${method.steps.map(step => `<li>${step}</li>`).join("")}
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                    });
+
+                    document.getElementById("paymentInstructions").innerHTML = content;
+                })
+                .catch(error => {
+                    console.error("Fetch error:", error);
+                    document.getElementById("paymentInstructions").innerHTML =
+                        `<p class="text-danger">Gagal memuat instruksi pembayaran.</p>`;
+                });
+        });
+    </script>
 
     <style>
         .table-bordered {
