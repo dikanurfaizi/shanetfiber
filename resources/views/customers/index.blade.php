@@ -113,7 +113,7 @@
             <form method="GET" id="paginationForm" class="d-flex align-items-center" style="margin: 5px;">
                 <div class="d-flex align-items-center gap-2">
                     <span class="font-weight-bold text-primary">Show</span>
-                    <select name="perPage" id="perPage" class="form-control"
+                    <select name="perPage" id="perPage" class="form-control" onchange="updatePerPage()"
                         style="width: auto; min-width: 70px; height: 35px; padding: 2px 8px; text-align: center; margin-right: 10px; margin-left: 10px;">
                         <option value="25" {{ request('perPage') == 25 ? 'selected' : '' }}>25</option>
                         <option value="50" {{ request('perPage') == 50 ? 'selected' : '' }}>50</option>
