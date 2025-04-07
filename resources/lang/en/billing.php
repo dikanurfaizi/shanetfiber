@@ -86,6 +86,7 @@ return [
         'view-order' => 'View Order',
         'pay-later' => 'Pay Later',
         'activation' => 'Activation',
+        'continue-payment' => 'Lanjutkan Pembayaran'
     ],
 
     'action' => [

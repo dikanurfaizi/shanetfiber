@@ -72,17 +72,14 @@ class PaymentController extends Controller
                     // Action untuk tripays
                     $tripay = new TripayController();
                     $channels = $tripay->getPaymentChannels();
-                    $order = Order::join('billings', 'orders.billing_id', '=', 'billings.id')
-                        ->where('orders.customer_id', $billing->customer_id)
+                    $order = Order::where('orders.customer_id', $billing->customer_id)
                         ->where('orders.billing_id', $billing->id)
-                        ->select('orders.*')
+                        ->where('orders.payment_status', \App\Models\Order::STATUS_UNPAID) // atau langsung 1
                         ->first();
-                    // dd($channels);
-                    if ($order !== NULL && $order->payment_status !== "2") {
-                        return view('customers.pages.orders.tripays.show', compact('order'));
-                    } else {
-                        return view('customers.pages.payments.tripays.show', compact('billing', 'websystem', 'gateway', 'channels'));
-                    }
+
+                    // dd($order);
+
+                    return view('customers.pages.payments.tripays.show', compact('billing', 'websystem', 'gateway', 'channels', 'order'));
                 } else {
                     // Action default jika ada yang lain
                     return view('errors.notfound');

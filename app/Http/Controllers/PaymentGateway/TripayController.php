@@ -349,10 +349,7 @@ class TripayController extends Controller
             return response()->json(['error' => 'Invalid response from Tripay'], 500);
         }
 
-        // Ganti semua {{pay_code}} dengan $order->va_number
-        array_walk_recursive($decodedResponse['data'], function (&$value) use ($order) {
-            $value = str_replace('{{pay_code}}', $order->va_number, $value);
-        });
+        $this->replacePlaceholders($decodedResponse['data'], $order);
 
         return response()->json($decodedResponse);
     }
@@ -415,5 +412,19 @@ class TripayController extends Controller
         }
 
         return response()->json($decodedResponse);
+    }
+
+    private function replacePlaceholders(&$array, $order)
+    {
+        $formattedAmount = number_format($order->total_amount, 0, ',', '.');
+
+        foreach ($array as &$item) {
+            if (is_array($item)) {
+                $this->replacePlaceholders($item, $order);
+            } elseif (is_string($item)) {
+                $item = str_replace('{{pay_code}}', $order->va_number, $item);
+                $item = str_replace('{{amount}}', $formattedAmount, $item);
+            }
+        }
     }
 }

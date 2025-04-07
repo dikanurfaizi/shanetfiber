@@ -22,4 +22,9 @@ class Order extends Model
     {
         return $this->belongsTo(Billing::class);
     }
+
+    const STATUS_UNPAID = 1;
+    const STATUS_PAID = 2;
+    const STATUS_EXPIRED = 3;
+    const STATUS_CANCELED = 4;
 }

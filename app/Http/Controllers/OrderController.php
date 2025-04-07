@@ -142,12 +142,12 @@ class OrderController extends Controller
 
     private function handleTripayPayment($order)
     {
-        $websystem = Websystem::where('slug', 'websystem')->first();
-        $gateway = PaymentGateway::where('disabled', 'false')->first();
-        $tripay = new TripayController();
         $billing = Billing::find($order->billing_id);
-        $channels = $tripay->getPaymentChannels();
+        $websystem = Websystem::firstWhere('slug', 'websystem');
+        $gateway = PaymentGateway::firstWhere('disabled', 'false');
+        $tripay = new TripayController();
 
+        // Ambil status transaksi dari Tripay
         $statusResponse = $tripay->getStatusTransaction($order);
         $statusArray = json_decode($statusResponse->getContent(), true);
 
@@ -158,10 +158,10 @@ class OrderController extends Controller
 
         $paymentStatus = $this->getPaymentStatus($statusArray['message']);
 
-        // dd($paymentStatus);
-
+        // Update status pembayaran jika berubah
         if (!is_null($paymentStatus) && $order->payment_status !== $paymentStatus) {
             $order->update(['payment_status' => $paymentStatus]);
+
             Log::info('Order Payment Status Updated', [
                 'order_id' => $order->id,
                 'new_status' => $paymentStatus
@@ -174,9 +174,22 @@ class OrderController extends Controller
             }
         }
 
-        return $paymentStatus === 2
-            ? redirect()->route('customer.payment.show', ['billing' => $order->billing_id])
-            : view('customers.pages.payments.tripays.show', compact('billing', 'websystem', 'gateway', 'channels', 'order'));
+        // Jika status masih UNPAID (1), ambil ulang order dengan join billing
+        if ($paymentStatus === 1) {
+            $order = Order::where('orders.customer_id', $billing->customer_id)
+                ->where('orders.billing_id', $billing->id)
+                ->first();
+
+            return view('customers.pages.orders.tripays.show', compact('order'));
+        }
+
+        if ($billing->status == 'LS') {
+            // Jika status PAID atau lainnya
+            return view('customers.pages.payments.tripays.show', compact('billing', 'websystem', 'gateway', 'order'));
+        } else {
+            $channels = $tripay->getPaymentChannels();
+            return view('customers.pages.payments.tripays.show', compact('billing', 'websystem', 'gateway', 'order', 'channels'));
+        }
     }
 
     private function getPaymentStatus($message)
@@ -396,5 +409,14 @@ class OrderController extends Controller
                 'message' => 'Error: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    public function cancelPayment(Order $order)
+    {
+        $order->update([
+            'payment_status' => '4'
+        ]);
+
+        return redirect()->route('customer.payment.index')->with('success', 'Successfully cancel payment');
     }
 }

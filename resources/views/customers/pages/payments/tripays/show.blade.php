@@ -1,108 +1,93 @@
 <x-layouts.customers.app-layout title="Billing #{{ $billing->billing_number }}">
 
-    <form method="POST" action="{{ route('customer.tripays.order.create', $billing->id) }}">
-        @csrf
-        <div class="card-header py-3">
-            <h5 class="m-0 font-weight-bold text-primary">{{ __('Bill Number #') }}{{ $billing->billing_number }}</h5>
-        </div>
+    <div class="card-header py-3">
+        <h5 class="m-0 font-weight-bold text-primary">{{ __('Bill Number #') }}{{ $billing->billing_number }}</h5>
+    </div>
 
-        <!-- Hidden input untuk payment_channel -->
-        <input type="hidden" name="payment_channel" value="{{ $gateway->slug }}">
+    <x-billing-info :billing="$billing" :websystem="$websystem" />
 
-        <div class="table-responsive">
-            <table class="table table-hover table-condensed">
-                <tr>
-                    <td>ID</td>
-                    <td><b>#{{ $billing->billing_number }}</b></td>
-                </tr>
-                <tr>
-                    <td>Nama</td>
-                    <td><b>{{ $billing->customer_name }}</b></td>
-                </tr>
-                <tr>
-                    <td>Periode</td>
-                    <td><b>{{ $billing->billing_periode->name }}</b></td>
-                </tr>
-                <tr>
-                    <td>Paket</td>
-                    <td><b>{{ $billing->paket_name }}</b></td>
-                </tr>
-                @if ($websystem->enable_tax === 'true')
-                    <tr>
-                        <td>Harga</td>
-                        <td><b>@moneyIDR($billing->paket_price)</b></td>
-                    </tr>
-                    <tr>
-                        <td>PPN </td>
-                        <td><b>@moneyIDR($billing->tax)</b></td>
-                    </tr>
-                @endif
-                <tr>
-                    <td>Total Price </td>
-                    <td><b>@moneyIDR($billing->paket_price + $billing->tax)</b></td>
-                </tr>
+    @if ($billing->status !== 'LS')
 
-                <tr>
-                    <td>Status Pembayaran</td>
-                    <td><b>
-                            @if ($billing->status == 'BL')
-                                {{ __('billing.state.belum-lunas') }}
-                            @else
-                                {{ __('billing.state.lunas') }}
-                            @endif
-                        </b></td>
-                </tr>
-                <tr>
-                    <td>Tanggal</td>
-                    <td><b>{{ $billing->created_at->format('d M Y H:i') }}</b></td>
-                </tr>
-            </table>
-        </div>
-        @if ($billing->status !== 'LS')
-            @php
-                $channels = collect($channels);
-            @endphp
+        @php
+            $channels = collect($channels);
+        @endphp
 
-            @if ($channels->isNotEmpty())
-                <div class="col-12 mb-3">
-                    <div class="d-flex justify-content-between align-items-center alert alert-info mb-0">
-                        <div>
-                            Nikmati kemudahan pembayaran melalui beberapa channel pembayaran
+        {{-- Metode Pembayaran belum dipilih --}}
+        @if (empty($order->payment_method))
+            <form method="POST" action="{{ route('customer.tripays.order.create', $billing->id) }}">
+                @csrf
+                {{-- Tampilkan channel pembayaran --}}
+                @if ($channels->isNotEmpty())
+                    <div class="col-12 mb-3">
+                        <div class="d-flex justify-content-between align-items-center alert alert-info mb-0">
+                            <div>
+                                Nikmati kemudahan pembayaran melalui beberapa channel pembayaran
+                            </div>
                         </div>
                     </div>
+
+                    <x-payment-channel-list :channels="$channels" />
+                @endif
+
+                <div class="card-footer">
+                    @if ($billing->status == 'BL' && $websystem->payment_gateway == 'enable')
+                        <form method="POST" action="{{ route('customer.tripays.order.create', $billing->id) }}">
+                            @csrf
+                            <!-- Hidden input untuk payment_channel -->
+                            <input type="hidden" name="payment_channel" value="{{ $gateway->slug }}">
+                            <button type="submit" class="order-button btn btn-success">
+                                <i class="fas fa-shield-alt"></i> {{ __('billing.button.create-order') }}
+                            </button>
+                        </form>
+                        <p></p>
+                        <p><i>Untuk pembayaran online klik {{ __('billing.button.create-order') }}</i></p>
+                    @endif
                 </div>
+            </form>
 
-                @php
-                    $groupedChannels = $channels->groupBy('group');
-                @endphp
+            {{-- Jika ada order dan payment_status belum lunas (tidak sama dengan 2) --}}
+        @elseif (
+            $order->payment_status != \App\Models\Order::STATUS_PAID &&
+                $order->payment_status != \App\Models\Order::STATUS_EXPIRED)
+            {{-- Tampilkan komponen aksi pembayaran --}}
+            <x-payment-action :order="$order" :gateway="$gateway" :websystem="$websystem" />
+        @elseif ($order->payment_status == \App\Models\Order::STATUS_EXPIRED)
+            <form method="POST" action="{{ route('customer.tripays.order.create', $billing->id) }}">
+                @csrf
+                {{-- Tampilkan kembali channel pembayaran --}}
+                @if ($channels->isNotEmpty())
+                    <div class="col-12 mb-3">
+                        <div class="d-flex justify-content-between align-items-center alert alert-info mb-0">
+                            <div>
+                                Metode pembayaran Anda sebelumnya menggunakan
+                                <strong>{{ $order->payment_name }}</strong> telah
+                                <strong>kadaluwarsa</strong>,
+                                silakan memilih metode pembayaran yang baru.
+                            </div>
+                        </div>
+                    </div>
 
-                @if ($groupedChannels->has('Virtual Account'))
-                    <x-payment-channel title="Virtual Account" group="Virtual Account" :channels="$groupedChannels['Virtual Account']" />
+                    <x-payment-channel-list :channels="$channels" />
                 @endif
 
-                @if ($groupedChannels->has('Convenience Store'))
-                    <x-payment-channel title="Gerai Offline" group="Convenience Store" :channels="$groupedChannels['Convenience Store']" />
-                @endif
-
-                @if ($groupedChannels->has('E-Wallet'))
-                    <x-payment-channel title="Dompet Digital" group="E-Wallet" :channels="$groupedChannels['E-Wallet']" />
-                @endif
-            @endif
+                <div class="card-footer">
+                    @if ($billing->status == 'BL' && $websystem->payment_gateway == 'enable')
+                        <!-- Hidden input untuk payment_channel -->
+                        <input type="hidden" name="payment_channel" value="{{ $gateway->slug }}">
+                        <button type="submit" class="order-button btn btn-success">
+                            <i class="fas fa-shield-alt"></i> {{ __('billing.button.create-order') }}
+                        </button>
+                        <p></p>
+                        <p><i>Untuk pembayaran online klik {{ __('billing.button.create-order') }}</i></p>
+                    @endif
+                </div>
+            </form>
         @endif
 
-        <!-- Hidden Input untuk icon_url -->
-        <input type="hidden" name="icon_url" id="icon_url">
+    @endif
 
-        <div class="card-footer">
-            @if ($billing->status == 'BL' && $websystem->payment_gateway == 'enable')
-                <button type="submit" class="order-button btn btn-success">
-                    <i class="fas fa-shield-alt"></i> {{ __('billing.button.create-order') }}
-                </button>
-                <p></p>
-                <p><i>Untuk pembayaran online klik {{ __('billing.button.create-order') }}</i></p>
-            @endif
-        </div>
-    </form>
+    <!-- Hidden Input untuk icon_url -->
+    <input type="hidden" name="icon_url" id="icon_url">
 
     @section('custom_scripts')
         @if ($message = Session::get('success'))
