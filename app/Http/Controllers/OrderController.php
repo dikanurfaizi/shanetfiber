@@ -143,6 +143,7 @@ class OrderController extends Controller
     private function handleTripayPayment($order)
     {
         $billing = Billing::find($order->billing_id);
+        $order_id = $order->id;
         $websystem = Websystem::firstWhere('slug', 'websystem');
         $gateway = PaymentGateway::firstWhere('disabled', 'false');
         $tripay = new TripayController();
@@ -169,7 +170,7 @@ class OrderController extends Controller
 
             if ($paymentStatus === 2) {
                 $this->processPaymentSuccess($order, $billing);
-            } else {
+            } else if ($paymentStatus === 1) {
                 $this->processPaymentUnpaid($order, $billing);
             }
         }
@@ -178,6 +179,7 @@ class OrderController extends Controller
         if ($paymentStatus === 1) {
             $order = Order::where('orders.customer_id', $billing->customer_id)
                 ->where('orders.billing_id', $billing->id)
+                ->where('orders.id', $order_id)
                 ->first();
 
             return view('customers.pages.orders.tripays.show', compact('order'));
@@ -378,6 +380,8 @@ class OrderController extends Controller
             optional($customer)->contact
         );
 
+        // dd($reqTransaction);
+
         if (!is_array($reqTransaction)) {
             throw new \Exception("Invalid transaction response");
         }
@@ -392,6 +396,8 @@ class OrderController extends Controller
             'total_fee'               => $reqTransaction['total_fee'],
             'quantity'                => $reqTransaction['order_items'][0]['quantity'] ?? 1,
             'total_amount'            => $reqTransaction['total_fee'] + $order->total_price,
+            'qr_string'               => $reqTransaction['qr_string'] ?? null,
+            'qr_url'                  => $reqTransaction['qr_url'] ?? null
         ]);
 
         return redirect()->route('customer.pages.order.tripays.show', $order->fresh()->id)

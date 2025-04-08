@@ -74,7 +74,7 @@ class PaymentController extends Controller
                     $channels = $tripay->getPaymentChannels();
                     $order = Order::where('orders.customer_id', $billing->customer_id)
                         ->where('orders.billing_id', $billing->id)
-                        ->where('orders.payment_status', \App\Models\Order::STATUS_UNPAID) // atau langsung 1
+                        ->orderBy('created_at', 'desc')
                         ->first();
 
                     // dd($order);

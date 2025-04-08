@@ -2,16 +2,20 @@
 
     @php
         $expiredAt = $order->expired_time * 1000; // Konversi ke milidetik
+
+        $shouldShow = !in_array($order->payment_method, ['SHOPEEPAY', 'DANA', 'QRIS', 'QRISC', 'QRIS2']);
+        $isOVO = $order->payment_method === 'OVO';
+        $contact = $order->billing->customer->contact ?? null;
+        if ($isOVO && !is_null($contact)) {
+            $contact = preg_replace('/^628/', '08', $contact);
+        }
+        $vaNumber = $isOVO && !is_null($contact) ? $contact : $order->va_number;
     @endphp
 
     <div class="card-header py-3">
         <h5 class="m-0 font-weight-bold text-primary">{{ __('Data Order #') }}{{ $order->number }}</h5>
     </div>
     <div class="card-body p-1 shadow">
-        {{-- <div class="row"> --}}
-        <!-- Bagian Bayar Sebelum -->
-        {{-- <div class="mb-3 mb-md-0">
-            <div class="p-3 border rounded"> --}}
         <div class="d-flex justify-content-center align-items-center">
             <div class="py-3 px-3 border rounded w-100" style="max-width: 500px;">
                 <div class="text-center d-flex flex-column align-items-center gap-0">
@@ -44,7 +48,6 @@
                             <p class="value">{{ $order->customer->email }}</p>
                         </div>
                         <p class="label">Rincian Transaksi</p>
-                        {{-- @foreach ($reqTransaction['order_items'] as $item) --}}
                         <div class="row">
                             <div class="col-8">
                                 + <a href="{{ $order->package ?? '#!' }}" target="_blank">{{ $order->package }}</a>
@@ -65,7 +68,6 @@
                                 Rp {{ number_format($order->total_fee, 0, ',', '.') }}
                             </div>
                         </div>
-                        {{-- @endforeach --}}
                     </div>
                     <div class="number-section">
                         <div class="tot-tagihan">
@@ -75,20 +77,40 @@
                             </div>
 
                         </div>
-                        <p class="label">Kode Bayar/Nomor VA</p>
-                        <div class="detail-virt-number">
-                            <p class="value" id="va-number">{{ $order->va_number }}</p>
-                            <div class="css-ee7rfg" data-testid="copy-content" onclick="copyToClipboard()">
-                                Salin <img src="/images/salin.svg" alt="Copy Icon" width="18" height="18">
+                        @if ($shouldShow)
+                            <p class="label">
+                                {{ Str::startsWith($vaNumber, '08') ? 'Masukkan nomor ' . $order->payment_name : 'Kode Bayar/Nomor VA' }}
+                            </p>
+                            <div class="detail-virt-number">
+                                <p class="value" id="va-number">{{ $vaNumber }}</p>
+                                <div class="css-ee7rfg" data-testid="copy-content" onclick="copyToClipboard()">
+                                    Salin <img src="/images/salin.svg" alt="Copy Icon" width="18" height="18">
+                                </div>
                             </div>
-                        </div>
+                        @endif
                         <div class="tot-tagihan">
                             <p class="label">Jumlah Pembayaran</p>
                             <div class="detail-virt-number">
                                 <p class="value">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</p>
                             </div>
-
                         </div>
+                        @if (in_array($order->payment_method, ['QRIS', 'QRISC', 'QRIS2']))
+                            <div class="tot-tagihan text-center">
+                                <p class="label">* Klik untuk memperbesar atau download kode QR</p>
+
+                                <div class="detail-virt-number d-flex justify-content-center align-items-center">
+                                    <img src="{{ $order->qr_url }}" alt="QR Code Pembayaran"
+                                        style="width: 160px; height: 160px; object-fit: contain; cursor: pointer; transition: transform 0.2s;"
+                                        data-toggle="modal" data-target="#qrModal"
+                                        onmouseover="this.style.transform='scale(1.05)'"
+                                        onmouseout="this.style.transform='scale(1)'">
+                                </div>
+
+                                <a href="{{ $order->qr_url }}" download="qr-code.png" class="btn btn-primary mt-3">
+                                    Download QR Code
+                                </a>
+                            </div>
+                        @endif
                         <div class="note text-muted">
                             <p><b>Penting:</b></p>
                             <ol>
@@ -101,30 +123,40 @@
                 </div>
             </div>
         </div>
-        {{-- </div> --}}
     </div>
-
-    {{-- <div class="card-footer">
-        @if ($order->payment_status == 1)
-            <button class="btn" id="pay-button"><i class="far fa-money-bill-alt"></i> Cek Status
-                Pembayaran</button>
-        @elseif ($order->payment_status == 2)
-
-        @elseif ($order->payment_status == 3)
-        @endif
-    </div> --}}
 
     <!-- Tombol untuk membuka modal -->
     <div class="card-footer-custom">
         @if ($order->payment_status == 1)
-            <button class="btn btn-outline-success m-2 btn-how-payment" data-toggle="modal"
+            <button class="btn btn-outline-success m-1 btn-how-payment" data-toggle="modal"
                 data-target="#statusModal">Lihat Detail
             </button>
-            <button class="btn btn-success m-2 btn-custom" id="paymentInstructionBtn" data-toggle="modal"
+            <button class="btn btn-success m-1 btn-custom" id="paymentInstructionBtn" data-toggle="modal"
                 data-target="#howToPaymentModal">
                 Cara Pembayaran
             </button>
         @endif
+    </div>
+
+    <!-- Modal QR -->
+    <div id="qrModal" class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="statusModalLabel">Detail Pembayaran</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body d-flex justify-content-center">
+                    <img src="{{ $order->qr_url }}" alt="QR Besar"
+                        style="width: 200px; height: 200px; object-fit: contain;">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" data-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Modal Bootstrap -->
@@ -306,6 +338,35 @@
                         `<p class="text-danger">Gagal memuat instruksi pembayaran.</p>`;
                 });
         });
+    </script>
+
+    <script>
+        function openQrModal() {
+            document.getElementById('qrModal').classList.remove('hidden');
+        }
+
+        function closeQrModal() {
+            document.getElementById('qrModal').classList.add('hidden');
+        }
+
+        function downloadQr() {
+            const imageUrl = 'https://tripay.co.id/qr/DEV-T34508218811AC6IO';
+
+            fetch(imageUrl)
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = 'qr-code-pembayaran.png'; // nama file
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                })
+                .catch(() => alert('Gagal mendownload QR code'));
+        }
     </script>
 
     <style>

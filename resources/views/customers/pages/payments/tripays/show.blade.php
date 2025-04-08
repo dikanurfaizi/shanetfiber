@@ -7,87 +7,45 @@
     <x-billing-info :billing="$billing" :websystem="$websystem" />
 
     @if ($billing->status !== 'LS')
-
         @php
-            $channels = collect($channels);
+            Log::info("Billing Status: {$billing->status} not LS");
         @endphp
-
-        {{-- Metode Pembayaran belum dipilih --}}
-        @if (empty($order->payment_method))
-            <form method="POST" action="{{ route('customer.tripays.order.create', $billing->id) }}">
-                @csrf
-                {{-- Tampilkan channel pembayaran --}}
-                @if ($channels->isNotEmpty())
-                    <div class="col-12 mb-3">
-                        <div class="d-flex justify-content-between align-items-center alert alert-info mb-0">
-                            <div>
-                                Nikmati kemudahan pembayaran melalui beberapa channel pembayaran
-                            </div>
-                        </div>
-                    </div>
-
-                    <x-payment-channel-list :channels="$channels" />
-                @endif
-
-                <div class="card-footer">
-                    @if ($billing->status == 'BL' && $websystem->payment_gateway == 'enable')
-                        <form method="POST" action="{{ route('customer.tripays.order.create', $billing->id) }}">
-                            @csrf
-                            <!-- Hidden input untuk payment_channel -->
-                            <input type="hidden" name="payment_channel" value="{{ $gateway->slug }}">
-                            <button type="submit" class="order-button btn btn-success">
-                                <i class="fas fa-shield-alt"></i> {{ __('billing.button.create-order') }}
-                            </button>
-                        </form>
-                        <p></p>
-                        <p><i>Untuk pembayaran online klik {{ __('billing.button.create-order') }}</i></p>
-                    @endif
-                </div>
-            </form>
-
-            {{-- Jika ada order dan payment_status belum lunas (tidak sama dengan 2) --}}
-        @elseif (
-            $order->payment_status != \App\Models\Order::STATUS_PAID &&
-                $order->payment_status != \App\Models\Order::STATUS_EXPIRED)
-            {{-- Tampilkan komponen aksi pembayaran --}}
+        @if (!$order)
+            {{-- Case: Order belum pernah dibuat --}}
+            @include('partials.create-order-form', [
+                'channels' => $channels,
+                'billing' => $billing,
+                'websystem' => $websystem,
+                'gateway' => $gateway,
+            ])
+        @elseif (in_array($order->payment_status, [\App\Models\Order::STATUS_CANCELED]))
+            @php
+                Log::info('Customer membuka halaman ulang karena order sebelumnya dibatalkan.');
+            @endphp
+            @include('partials.create-order-form', [
+                'channels' => $channels,
+                'billing' => $billing,
+                'websystem' => $websystem,
+                'gateway' => $gateway,
+            ])
+        @elseif (in_array($order->payment_status, [\App\Models\Order::STATUS_UNPAID]))
+            @php
+                Log::info('Order masih UNPAID. Menampilkan komponen aksi pembayaran.');
+            @endphp
             <x-payment-action :order="$order" :gateway="$gateway" :websystem="$websystem" />
-        @elseif ($order->payment_status == \App\Models\Order::STATUS_EXPIRED)
-            <form method="POST" action="{{ route('customer.tripays.order.create', $billing->id) }}">
-                @csrf
-                {{-- Tampilkan kembali channel pembayaran --}}
-                @if ($channels->isNotEmpty())
-                    <div class="col-12 mb-3">
-                        <div class="d-flex justify-content-between align-items-center alert alert-info mb-0">
-                            <div>
-                                Metode pembayaran Anda sebelumnya menggunakan
-                                <strong>{{ $order->payment_name }}</strong> telah
-                                <strong>kadaluwarsa</strong>,
-                                silakan memilih metode pembayaran yang baru.
-                            </div>
-                        </div>
-                    </div>
-
-                    <x-payment-channel-list :channels="$channels" />
-                @endif
-
-                <div class="card-footer">
-                    @if ($billing->status == 'BL' && $websystem->payment_gateway == 'enable')
-                        <!-- Hidden input untuk payment_channel -->
-                        <input type="hidden" name="payment_channel" value="{{ $gateway->slug }}">
-                        <button type="submit" class="order-button btn btn-success">
-                            <i class="fas fa-shield-alt"></i> {{ __('billing.button.create-order') }}
-                        </button>
-                        <p></p>
-                        <p><i>Untuk pembayaran online klik {{ __('billing.button.create-order') }}</i></p>
-                    @endif
-                </div>
-            </form>
+        @elseif (in_array($order->payment_status, [\App\Models\Order::STATUS_EXPIRED]))
+            @php
+                Log::info('Order kadaluwarsa. Menampilkan ulang channel pembayaran.');
+            @endphp
+            @include('partials.expired-order-form', [
+                'channels' => $channels,
+                'billing' => $billing,
+                'websystem' => $websystem,
+                'gateway' => $gateway,
+                'order' => $order,
+            ])
         @endif
-
     @endif
-
-    <!-- Hidden Input untuk icon_url -->
-    <input type="hidden" name="icon_url" id="icon_url">
 
     @section('custom_scripts')
         @if ($message = Session::get('success'))
@@ -98,16 +56,6 @@
                 })
             </script>
         @endif
-
-        {{-- <script>
-            document.querySelector("form").addEventListener("submit", function(event) {
-                let hiddenIconUrl = document.getElementById("icon_url").value;
-                if (!hiddenIconUrl) {
-                    event.preventDefault(); // Cegah submit jika kosong
-                    alert("Silakan pilih metode pembayaran terlebih dahulu.");
-                }
-            });
-        </script> --}}
     @endsection
 
     <style>
