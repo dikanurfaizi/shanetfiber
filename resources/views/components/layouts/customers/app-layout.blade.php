@@ -18,7 +18,8 @@
     <link href="{{ asset('assets/vendor/datatables/datatables.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
     <link href="{{ asset('css/mobile.css') }}" rel="stylesheet">
-
+    <!-- jQuery dulu -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Custom styles for this template-->
     <link href="{{ asset('css/sb-admin-2.min.css') }}" rel="stylesheet">
     <!-- Custom styles for this Page-->

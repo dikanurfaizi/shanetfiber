@@ -48,7 +48,7 @@
                                 @endif
                             </td>
                             <td>
-                                <a href="{{ route('customer.order.show', $order->id) }}"
+                                <a href="{{ route('customer.pages.order.tripays.show', $order->id) }}"
                                     class="btn btn-success btn-sm">
                                     <i class="far fa-eye me-2 text-white"></i>
                                     {{ __('billing.button.view') }}

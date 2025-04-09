@@ -17,6 +17,7 @@ use App\Models\PaymentGateway;
 use Illuminate\Support\Carbon;
 use App\Models\Bank;
 use App\Models\Receipt;
+use App\Helpers\LogHelper;
 
 class OrderController extends Controller
 {
@@ -32,7 +33,7 @@ class OrderController extends Controller
     public function index()
     {
 
-        $websystem = Websystem::where('slug', 'websystem')->first();
+        $websystem = $this->getWebsystem();
         if ($websystem->payment_gateway == 'enable') {
             $customerId = (auth()->guard('customer')->user()->id);
             // $orders = Order::where('customer_id', $customerId)->paginate(10);
@@ -62,7 +63,7 @@ class OrderController extends Controller
     public function create(Billing $billing)
     {
         // return dd($billing);
-        $websystem = Websystem::where('slug', 'websystem')->first();
+        $websystem = $this->getWebsystem();
         if ($websystem->payment_gateway == 'enable') {
             $order = Order::create([
                 'customer_id' => $billing->customer_id,
@@ -101,13 +102,6 @@ class OrderController extends Controller
      */
     public function show(Order $order)
     {
-        $paymentGateway = Websystem::where('slug', 'websystem')->value('payment_gateway');
-
-        if ($paymentGateway !== 'enable') {
-            return redirect()->route('customer.dashboard')
-                ->with('error', 'You cannot use payment gateway');
-        }
-
         $midtrans = Midtran::where('slug', 'midtrans')->first();
         if ($midtrans && $midtrans->disable === 'true') {
             return $this->handleMidtransPayment($order, $midtrans);
@@ -142,13 +136,37 @@ class OrderController extends Controller
 
     private function handleTripayPayment($order)
     {
-        $billing = Billing::find($order->billing_id);
-        $order_id = $order->id;
-        $websystem = Websystem::firstWhere('slug', 'websystem');
-        $gateway = PaymentGateway::firstWhere('disabled', 'false');
-        $tripay = new TripayController();
+        $billing = $order->biling;
 
-        // Ambil status transaksi dari Tripay
+        // Refresh order untuk memastikan relasi benar
+        $order = Order::where([
+            ['customer_id', $billing->customer_id],
+            ['billing_id', $billing->id],
+            ['id', $order->id]
+        ])->first();
+
+        $viewData = $this->getViewData($order);
+
+        // Tentukan tampilan berdasarkan status pembayaran
+        if (in_array($billing->status, ['BL', 'PL']) && $order->payment_status == 1) {
+            return view('customers.pages.orders.tripays.show', $viewData);
+        }
+
+        if ($billing->status == 'LS' && $order->payment_status == 2) {
+            return view('customers.pages.payments.tripays.show', $viewData);
+        }
+
+        // Jika belum termasuk kondisi di atas, tampilkan halaman dengan channels
+        $tripay = new TripayController();
+        $viewData['channels'] = $tripay->getPaymentChannels();
+
+        return view('customers.pages.payments.tripays.show', $viewData);
+    }
+
+    public function checkStatus(Order $order)
+    {
+        // dd($order);
+        $tripay = new TripayController();
         $statusResponse = $tripay->getStatusTransaction($order);
         $statusArray = json_decode($statusResponse->getContent(), true);
 
@@ -159,39 +177,58 @@ class OrderController extends Controller
 
         $paymentStatus = $this->getPaymentStatus($statusArray['message']);
 
-        // Update status pembayaran jika berubah
-        if (!is_null($paymentStatus) && $order->payment_status !== $paymentStatus) {
-            $order->update(['payment_status' => $paymentStatus]);
+        if (is_null($paymentStatus) || $order->payment_status === $paymentStatus) {
+            return; // Tidak ada perubahan status
+        }
 
-            Log::info('Order Payment Status Updated', [
-                'order_id' => $order->id,
-                'new_status' => $paymentStatus
+        $order->update(['payment_status' => $paymentStatus]);
+
+        Log::info('Order Payment Status Updated', [
+            'order_id'   => $order->id,
+            'new_status' => $paymentStatus
+        ]);
+
+        switch ($paymentStatus) {
+            case 1:
+                $this->processPaymentUnpaid($order, $order->billing);
+                break;
+            case 2:
+                $this->processPaymentSuccess($order, $order->billing);
+                break;
+            case 3:
+                $this->processUpdatePaymentStatus($order, 3);
+                break;
+            default:
+                $this->processUpdatePaymentStatus($order, 4);
+                break;
+        }
+
+        $viewData = $this->getViewData($order);
+
+        // Kalau getViewData() mungkin return redirect, perlu dicek dulu
+        if ($viewData instanceof \Illuminate\Http\RedirectResponse) {
+            return response()->json([
+                'redirect' => $viewData->getTargetUrl(),
             ]);
-
-            if ($paymentStatus === 2) {
-                $this->processPaymentSuccess($order, $billing);
-            } else if ($paymentStatus === 1) {
-                $this->processPaymentUnpaid($order, $billing);
-            }
         }
 
-        // Jika status masih UNPAID (1), ambil ulang order dengan join billing
-        if ($paymentStatus === 1) {
-            $order = Order::where('orders.customer_id', $billing->customer_id)
-                ->where('orders.billing_id', $billing->id)
-                ->where('orders.id', $order_id)
-                ->first();
+        return response()->json([
+            'html' => view('customers.components.payment-status', ['order' => $order])->render()
+                . view('customers.components.payment-section', [
+                    'order'      => $order,
+                    'shouldShow' => $viewData['shouldShow'],
+                    'vaNumber'   => $viewData['vaNumber'],
+                ])->render(),
 
-            return view('customers.pages.orders.tripays.show', compact('order'));
-        }
+            'modal' => view('customers.components.order-status-modal', [
+                'order'     => $order,
+                'billing'   => $viewData['billing'],
+                'websystem' => $viewData['websystem'],
+                'gateway'   => $viewData['paymentGateway'],
+            ])->render(),
 
-        if ($billing->status == 'LS') {
-            // Jika status PAID atau lainnya
-            return view('customers.pages.payments.tripays.show', compact('billing', 'websystem', 'gateway', 'order'));
-        } else {
-            $channels = $tripay->getPaymentChannels();
-            return view('customers.pages.payments.tripays.show', compact('billing', 'websystem', 'gateway', 'order', 'channels'));
-        }
+            'footer' => view('customers.components.payment-footer', ['order' => $order])->render(),
+        ]);
     }
 
     private function getPaymentStatus($message)
@@ -215,9 +252,6 @@ class OrderController extends Controller
     private function processPaymentUnpaid($order, $billing)
     {
         $customer = Customer::find($order->customer_id);
-        $discount = $customer->member->discount ?? 0;
-        $price_after_discount = $customer->paket->price - $discount;
-        $member = $customer->member?->type ?? 'Non Member / Tidak Ada';
 
         if ($customer->billing_option == 2 && $billing->billing_periode->name === $customer->billing_period) {
             $customer->update([
@@ -242,7 +276,7 @@ class OrderController extends Controller
     private function processPaymentSuccess($order, $billing)
     {
         $customer = Customer::find($order->customer_id);
-        $discount = $customer->member->discount ?? 0;
+        $discount = $customer->member?->discount ?? 0;
         $price_after_discount = $customer->paket->price - $discount;
         $member = $customer->member?->type ?? 'Non Member / Tidak Ada';
 
@@ -299,6 +333,64 @@ class OrderController extends Controller
         return sprintf("KWT-%05d-%s-%s", $number, Carbon::now()->format('F'), Carbon::now()->format('Y'));
     }
 
+    private function processUpdatePaymentStatus($order, $status)
+    {
+        $order->update([
+            'payment_status' => $status
+        ]);
+    }
+
+    private function setView(Order $order)
+    {
+        $shouldShow = !in_array($order->payment_method, ['SHOPEEPAY', 'DANA', 'QRIS', 'QRISC', 'QRIS2']);
+        $isOVO = $order->payment_method === 'OVO';
+        $contact = $order->billing->customer->contact ?? null;
+
+        if ($isOVO && !is_null($contact)) {
+            $contact = preg_replace('/^628/', '08', $contact);
+        }
+
+        $vaNumber = $isOVO && !is_null($contact) ? $contact : $order->va_number;
+
+        return (object)[
+            'shouldShow' => $shouldShow,
+            'vaNumber'   => $vaNumber,
+        ];
+    }
+
+    private function getWebsystem()
+    {
+        return Websystem::firstWhere('slug', 'websystem');;
+    }
+
+    private function getPaymentGateway()
+    {
+        return PaymentGateway::firstWhere('disabled', 'false');
+    }
+
+    private function getViewData(Order $order)
+    {
+        $websystem = $this->getWebsystem();
+        if ($websystem->payment_gateway !== 'enable') {
+            return redirect()->route('customer.dashboard')->with('error', 'You cannot use the payment gateway.');
+        }
+
+        $paymentGateway = $this->getPaymentGateway();
+        if (!$paymentGateway) {
+            return redirect()->route('customer.dashboard')->with('error', 'There is no active payment gateway.');
+        }
+
+        $setView = $this->setView($order);
+        $expiredAt = $order->expired_time * 1000;
+        $billing = $order->billing;
+
+        return compact('billing', 'websystem', 'paymentGateway', 'order', 'expiredAt') + [
+            'shouldShow' => $setView->shouldShow,
+            'vaNumber'   => $setView->vaNumber,
+        ];
+    }
+
+
     /**
      * Show the form for editing the specified resource.
      *
@@ -335,13 +427,8 @@ class OrderController extends Controller
 
     public function tripayShow(Order $order)
     {
-        if (Websystem::where('slug', 'websystem')->value('payment_gateway') !== 'enable') {
-            return redirect()->route('customer.dashboard')->with('error', 'You cannot use the payment gateway.');
-        }
-
-        // dd($order);
-
-        return view('customers.pages.orders.tripays.show', compact('order'));
+        $viewData = $this->getViewData($order);
+        return view('customers.pages.orders.tripays.show', $viewData);
     }
 
     public function tripayCreate(Request $request, Billing $billing)
@@ -350,17 +437,22 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Billing not found.');
         }
 
-        $request->validate(['payment_method' => 'required|string']);
+        $request->validate([
+            'payment_method' => 'required|string',
+        ]);
 
-        $websystem = Websystem::where('slug', 'websystem')->first();
-        if ($websystem->payment_gateway !== 'enable') {
-            return redirect()->route('customer.dashboard')->with('error', 'You cannot use the payment gateway.');
-        }
 
-        $order = Order::create([
+
+        $customer = Customer::find($billing->customer_id);
+
+        // Generate order number terlebih dahulu
+        $orderNumber = rand(10000000, 99999999) . str_pad($billing->customer_id . $billing->id, 5, STR_PAD_LEFT);
+
+        // Buat objek sementara order (belum simpan ke DB)
+        $tempOrder = new Order([
             'customer_id'     => $billing->customer_id,
             'billing_id'      => $billing->id,
-            'number'          => rand(10000000, 99999999) . str_pad($billing->customer_id . $billing->id, 5, STR_PAD_LEFT),
+            'number'          => $orderNumber,
             'package'         => $billing->paket_name,
             'total_price'     => $billing->paket_price + $billing->tax,
             'payment_status'  => 1,
@@ -370,37 +462,63 @@ class OrderController extends Controller
         ]);
 
         $tripay = new TripayController();
-        $order->update(['signature' => $tripay->getSignature($order)]);
+        $signature = $tripay->getSignature($tempOrder);
+        $tempOrder->signature = $signature;
 
-        $customer = Customer::find($order->customer_id);
+        // Kirim request ke Tripay
         $reqTransaction = $tripay->requestTransaction(
-            $order,
+            $tempOrder,
             optional($customer)->name,
             optional($customer)->email,
             optional($customer)->contact
         );
 
-        // dd($reqTransaction);
-
+        // Jika gagal
         if (!is_array($reqTransaction)) {
-            throw new \Exception("Invalid transaction response");
+            LogHelper::logError(
+                null,
+                [
+                    'customer_id' => $customer?->id,
+                    'billing_id'  => $billing->id,
+                    'payment_method' => $request->input('payment_method'),
+                    'payment_channel' => $request->input('payment_channel'),
+                    'raw_response' => json_encode($reqTransaction),
+                    'error' => 'Tripay transaction response is not valid.'
+                ],
+                500,
+                "Gagal membuat transaksi Tripay."
+            );
+
+            return redirect()->back()->with('error', 'Gagal membuat transaksi.');
         }
 
-        $order->update([
-            'reference'               => $reqTransaction['reference'],
-            'payment_selection_type'  => $reqTransaction['payment_selection_type'],
-            'va_number'               => $reqTransaction['pay_code'],
-            'expired_time'            => $reqTransaction['expired_time'],
-            'checkout_url'            => $reqTransaction['checkout_url'],
-            'payment_name'            => $reqTransaction['payment_name'],
-            'total_fee'               => $reqTransaction['total_fee'],
-            'quantity'                => $reqTransaction['order_items'][0]['quantity'] ?? 1,
-            'total_amount'            => $reqTransaction['total_fee'] + $order->total_price,
-            'qr_string'               => $reqTransaction['qr_string'] ?? null,
-            'qr_url'                  => $reqTransaction['qr_url'] ?? null
+
+        // Kalau berhasil, simpan order ke DB
+        $order = Order::create([
+            'customer_id'     => $billing->customer_id,
+            'billing_id'      => $billing->id,
+            'number'          => $orderNumber,
+            'package'         => $billing->paket_name,
+            'total_price'     => $billing->paket_price + $billing->tax,
+            'payment_status'  => 1,
+            'payment_method'  => $request->input('payment_method'),
+            'payment_gateway' => $request->input('payment_channel'),
+            'icon_url'        => $request->input('icon_url'),
+            'signature'       => $signature,
+            'reference'       => $reqTransaction['reference'],
+            'payment_selection_type' => $reqTransaction['payment_selection_type'],
+            'va_number'       => $reqTransaction['pay_code'],
+            'expired_time'    => $reqTransaction['expired_time'],
+            'checkout_url'    => $reqTransaction['checkout_url'],
+            'payment_name'    => $reqTransaction['payment_name'],
+            'total_fee'       => $reqTransaction['total_fee'],
+            'quantity'        => $reqTransaction['order_items'][0]['quantity'] ?? 1,
+            'total_amount'    => ($reqTransaction['total_fee'] ?? 0) + $billing->paket_price + $billing->tax,
+            'qr_string'       => $reqTransaction['qr_string'] ?? null,
+            'qr_url'          => $reqTransaction['qr_url'] ?? null
         ]);
 
-        return redirect()->route('customer.pages.order.tripays.show', $order->fresh()->id)
+        return redirect()->route('customer.pages.order.tripays.show', $order->id)
             ->with('success', 'Order created successfully.');
     }
 

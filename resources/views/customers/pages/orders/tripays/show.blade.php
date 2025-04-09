@@ -1,141 +1,80 @@
 <x-layouts.customers.app-layout title="Order #{{ $order->number }}">
 
-    @php
-        $expiredAt = $order->expired_time * 1000; // Konversi ke milidetik
-
-        $shouldShow = !in_array($order->payment_method, ['SHOPEEPAY', 'DANA', 'QRIS', 'QRISC', 'QRIS2']);
-        $isOVO = $order->payment_method === 'OVO';
-        $contact = $order->billing->customer->contact ?? null;
-        if ($isOVO && !is_null($contact)) {
-            $contact = preg_replace('/^628/', '08', $contact);
-        }
-        $vaNumber = $isOVO && !is_null($contact) ? $contact : $order->va_number;
-    @endphp
-
     <div class="card-header py-3">
         <h5 class="m-0 font-weight-bold text-primary">{{ __('Data Order #') }}{{ $order->number }}</h5>
     </div>
     <div class="card-body p-1 shadow">
-        <div class="d-flex justify-content-center align-items-center">
-            <div class="py-3 px-3 border rounded w-100" style="max-width: 500px;">
-                <div class="text-center d-flex flex-column align-items-center gap-0">
-                    <p class="head-section">Selesaikan pembayaran dalam</b>
-                    </p>
-                    <p class="timer text-danger font-weight-bold" id="countdown"></p>
-                    <p class="end-payment">Batas Akhir Pembayaran</p>
-                    <p class="end-date">
-                        {{ \Carbon\Carbon::createFromTimestamp($order->expired_time)->translatedFormat('d F Y, H:i') }}
-                        WIB
-                    </p>
+        {{-- <div class="d-flex justify-content-center align-items-start"> --}}
+        <div class="d-flex flex-column align-items-center w-100">
+            <div class="d-flex flex-column border rounded p-3" id="payment-status-wrapper">
+                @include('customers.components.payment-status', ['order' => $order])
+            </div>
+
+            <div class="info mt-2 {{ $order->status != 1 ? 'is-paid' : '' }}">
+                <div class="virt-number">
+                    <p class="label">{{ $order->payment_name }}</p>
+                    <img class="image-logo" src="{{ $order->icon_url }}" alt="{{ $order->payment_name }}">
                 </div>
-
-                <div class="info mt-2">
-                    <div class="virt-number">
-                        <p class="label">{{ $order->payment_name }}</p>
-                        <img class="image-logo" src="{{ $order->icon_url }}" alt="{{ $order->payment_name }}">
+                <div class="number-section">
+                    <p class="label">Nama Pelanggan</p>
+                    <div class="detail-virt-number">
+                        <p class="value">{{ $order->customer->name }}</p>
                     </div>
-                    <div class="number-section">
-                        <p class="label">Nama Pelanggan</p>
-                        <div class="detail-virt-number">
-                            <p class="value">{{ $order->customer->name }}</p>
+                    <p class="label">No. HP</p>
+                    <div class="detail-virt-number">
+                        <p class="value">{{ preg_replace('/^628/', '08', $order->customer->contact) }}</p>
+                    </div>
+                    <p class="label">Email</p>
+                    <div class="detail-virt-number">
+                        <p class="value">{{ $order->customer->email }}</p>
+                    </div>
+                    <p class="label">Rincian Transaksi</p>
+                    <div class="row">
+                        <div class="col-8">
+                            + <a href="{{ $order->package ?? '#!' }}" target="_blank">{{ $order->package }}</a>
+                            <br>
+                            <small class="ml-3 font-weight-bold" style="color: #17a2b8;">
+                                Rp {{ number_format($order->total_price, 0, ',', '.') }} x {{ $order->quantity }}
+                            </small>
                         </div>
-                        <p class="label">No. HP</p>
-                        <div class="detail-virt-number">
-                            <p class="value">{{ preg_replace('/^628/', '08', $order->customer->contact) }}</p>
-                        </div>
-                        <p class="label">Email</p>
-                        <div class="detail-virt-number">
-                            <p class="value">{{ $order->customer->email }}</p>
-                        </div>
-                        <p class="label">Rincian Transaksi</p>
-                        <div class="row">
-                            <div class="col-8">
-                                + <a href="{{ $order->package ?? '#!' }}" target="_blank">{{ $order->package }}</a>
-                                <br>
-                                <small class="ml-3 font-weight-bold" style="color: #17a2b8;">
-                                    Rp {{ number_format($order->total_price, 0, ',', '.') }} x {{ $order->quantity }}
-                                </small>
-                            </div>
-                            <div class="col-4 text-right font-weight-bold" style="color: #17a2b8;">
-                                Rp {{ number_format($order->total_price, 0, ',', '.') }}
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-8">
-                                + Biaya Administrasi
-                            </div>
-                            <div class="col-4 text-right font-weight-bold" style="color: #17a2b8;">
-                                Rp {{ number_format($order->total_fee, 0, ',', '.') }}
-                            </div>
+                        <div class="col-4 text-right font-weight-bold" style="color: #17a2b8;">
+                            <span style="float: left;">Rp</span>
+                            <span style="float: right;">{{ number_format($order->total_price, 0, ',', '.') }}</span>
                         </div>
                     </div>
-                    <div class="number-section">
-                        <div class="tot-tagihan">
-                            <p class="label">Nomor Referensi</p>
-                            <div class="detail-virt-number">
-                                <p class="value">{{ $order->number }}</p>
-                            </div>
-
+                    <div class="row">
+                        <div class="col-8">
+                            + Biaya Administrasi
                         </div>
-                        @if ($shouldShow)
-                            <p class="label">
-                                {{ Str::startsWith($vaNumber, '08') ? 'Masukkan nomor ' . $order->payment_name : 'Kode Bayar/Nomor VA' }}
-                            </p>
-                            <div class="detail-virt-number">
-                                <p class="value" id="va-number">{{ $vaNumber }}</p>
-                                <div class="css-ee7rfg" data-testid="copy-content" onclick="copyToClipboard()">
-                                    Salin <img src="/images/salin.svg" alt="Copy Icon" width="18" height="18">
-                                </div>
-                            </div>
-                        @endif
-                        <div class="tot-tagihan">
-                            <p class="label">Jumlah Pembayaran</p>
-                            <div class="detail-virt-number">
-                                <p class="value">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</p>
-                            </div>
-                        </div>
-                        @if (in_array($order->payment_method, ['QRIS', 'QRISC', 'QRIS2']))
-                            <div class="tot-tagihan text-center">
-                                <p class="label">* Klik untuk memperbesar atau download kode QR</p>
-
-                                <div class="detail-virt-number d-flex justify-content-center align-items-center">
-                                    <img src="{{ $order->qr_url }}" alt="QR Code Pembayaran"
-                                        style="width: 160px; height: 160px; object-fit: contain; cursor: pointer; transition: transform 0.2s;"
-                                        data-toggle="modal" data-target="#qrModal"
-                                        onmouseover="this.style.transform='scale(1.05)'"
-                                        onmouseout="this.style.transform='scale(1)'">
-                                </div>
-
-                                <a href="{{ $order->qr_url }}" download="qr-code.png" class="btn btn-primary mt-3">
-                                    Download QR Code
-                                </a>
-                            </div>
-                        @endif
-                        <div class="note text-muted">
-                            <p><b>Penting:</b></p>
-                            <ol>
-                                <li>Transfer Virtual Account hanya bisa dilakukan dari <b>bank yang kamu pilih</b></li>
-                                <li>Pastikan Anda melakukan pembayaran sebelum melewati batas pembayaran dan dengan
-                                    nominal yang tepat</li>
-                            </ol>
+                        <div class="col-4 text-right font-weight-bold" style="color: #17a2b8;">
+                            <span style="float: left;">Rp</span>
+                            <span style="float: right;">{{ number_format($order->total_fee, 0, ',', '.') }}</span>
                         </div>
                     </div>
+                    <div class="row">
+                        <div class="col-8">
+                            + Jumlah Pembayaran
+                        </div>
+                        <div class="col-4 text-right font-weight-bold" style="color: #17a2b8;">
+                            <span style="float: left;">Rp</span>
+                            <span style="float: right;">{{ number_format($order->total_amount, 0, ',', '.') }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="number-section">
+                    @include('customers.components.payment-section', [
+                        'order' => $order,
+                        'shouldShow' => $shouldShow,
+                        'vaNumber' => $vaNumber,
+                    ])
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Tombol untuk membuka modal -->
-    <div class="card-footer-custom">
-        @if ($order->payment_status == 1)
-            <button class="btn btn-outline-success m-1 btn-how-payment" data-toggle="modal"
-                data-target="#statusModal">Lihat Detail
-            </button>
-            <button class="btn btn-success m-1 btn-custom" id="paymentInstructionBtn" data-toggle="modal"
-                data-target="#howToPaymentModal">
-                Cara Pembayaran
-            </button>
-        @endif
+    <div id="payment-footer">
+        @include('customers.components.payment-footer', ['order' => $order])
     </div>
 
     <!-- Modal QR -->
@@ -165,54 +104,21 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="statusModalLabel">Detail Pembayaran</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close" onclick="$('#statusModal').modal('hide')" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="modal-body">
-                    <table class="table table-hover table-bordered">
-                        <tr>
-                            <td>ID</td>
-                            <td><b>#{{ $order->number }}</b></td>
-                        </tr>
-                        <tr>
-                            <td>Nama</td>
-                            <td><b>{{ $order->billing->customer_name }}</b></td>
-                        </tr>
-                        <tr>
-                            <td>Periode</td>
-                            <td><b>{{ $order->billing->billing_periode->name }}</b></td>
-                        </tr>
-                        <tr>
-                            <td>Paket</td>
-                            <td><b>{{ $order->billing->paket_name }}</b></td>
-                        </tr>
-                        <tr>
-                            <td>Harga</td>
-                            <td><b>@moneyIDR($order->total_price)</b></td>
-                        </tr>
-                        <tr>
-                            <td>Status Pembayaran</td>
-                            <td><b>
-                                    @if ($order->payment_status == 1)
-                                        {{ __('billing.status.waiting-payment') }}
-                                    @elseif ($order->payment_status == 2)
-                                        {{ __('billing.status.paid-off') }}
-                                    @elseif ($order->payment_status == 3)
-                                        {{ __('billing.status.expired') }}
-                                    @else
-                                        {{ __('billing.status.cancelled') }}
-                                    @endif
-                                </b></td>
-                        </tr>
-                        <tr>
-                            <td>Tanggal</td>
-                            <td><b>{{ $order->created_at->format('d M Y H:i') }}</b></td>
-                        </tr>
-                    </table>
+                <div class="modal-body" id="statusModalBody">
+                    <!-- AJAX akan isi bagian ini -->
+                    <div class="text-center">
+                        <div class="spinner-border text-success" role="status">
+                            <span class="sr-only">Memuat...</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-success" data-dismiss="modal">Tutup</button>
+                    <button type="button" class="btn btn-success"
+                        onclick="$('#statusModal').modal('hide')">Tutup</button>
                 </div>
             </div>
         </div>
@@ -238,138 +144,11 @@
         </div>
     </div>
 
-    <script>
-        var expiredAt = {{ $expiredAt }}; // Waktu order kedaluwarsa dalam milidetik
-
-        function updateCountdown() {
-            var now = Date.now(); // Waktu sekarang dalam milidetik
-            var remainingTime = Math.max(0, Math.floor((expiredAt - now) / 1000)); // Sisa waktu dalam detik
-
-            if (remainingTime <= 0) {
-                document.getElementById("countdown").innerText = "Waktu habis!";
-                clearInterval(countdownInterval); // Hentikan interval saat waktu habis
-                return;
-            }
-
-            var days = Math.floor(remainingTime / (24 * 3600));
-            var hours = Math.floor((remainingTime % (24 * 3600)) / 3600);
-            var minutes = Math.floor((remainingTime % 3600) / 60);
-            var seconds = remainingTime % 60;
-
-            document.getElementById("countdown").innerText =
-                days + " hari, " +
-                ('0' + hours).slice(-2) + " jam, " +
-                ('0' + minutes).slice(-2) + " menit, " +
-                ('0' + seconds).slice(-2) + " detik";
-        }
-
-        var countdownInterval = setInterval(updateCountdown, 1000);
-        updateCountdown(); // Jalankan langsung saat halaman dimuat
-
-        // copy to clipboard
-        function copyToClipboard() {
-            var copyText = document.getElementById("va-number").innerText;
-
-            // Buat elemen input sementara
-            var tempInput = document.createElement("input");
-            tempInput.value = copyText;
-            document.body.appendChild(tempInput);
-
-            // Pilih dan salin teks
-            tempInput.select();
-            tempInput.setSelectionRange(0, 99999); // Untuk perangkat mobile
-            document.execCommand("copy");
-
-            // Hapus elemen input sementara
-            document.body.removeChild(tempInput);
-
-            // Tampilkan notifikasi dengan SweetAlert
-            Swal.fire({
-                icon: "success",
-                title: "Berhasil!",
-                text: "Nomor Virtual Account berhasil disalin!",
-                confirmButtonColor: "#3085d6",
-                confirmButtonText: "OK"
-            });
-        }
-
-        document.getElementById("paymentInstructionBtn").addEventListener("click", function() {
-            var orderId = "{{ $order->id }}"; // Pastikan orderId sudah tersedia di Blade template
-            var url = "{{ url('customer/billings/orders') }}/" + orderId + "/instruction";
-
-            fetch(url)
-                .then(response => response.json()) // Konversi ke JSON
-                .then(data => {
-                    if (!data || !data.data || data.data.length === 0) {
-                        document.getElementById("paymentInstructions").innerHTML =
-                            `<p class="text-danger">Tidak ada instruksi pembayaran.</p>`;
-                        return;
-                    }
-
-                    let instructions = data.data; // Ambil array dari `data.data`
-                    let content = "";
-
-                    instructions.forEach((method, index) => {
-                        let isActive = index === 0 ? "show" : ""; // Hanya item pertama yang terbuka
-
-                        content += `
-                    <div class="card">
-                        <div class="card-header">
-                            <button class="btn btn-link" data-toggle="collapse" data-target="#collapse${index}">
-                                ${method.title}
-                            </button>
-                        </div>
-                        <div id="collapse${index}" class="collapse ${isActive}">
-                            <div class="card-body">
-                                <ol>
-                                    ${method.steps.map(step => `<li>${step}</li>`).join("")}
-                                </ol>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                    });
-
-                    document.getElementById("paymentInstructions").innerHTML = content;
-                })
-                .catch(error => {
-                    console.error("Fetch error:", error);
-                    document.getElementById("paymentInstructions").innerHTML =
-                        `<p class="text-danger">Gagal memuat instruksi pembayaran.</p>`;
-                });
-        });
-    </script>
-
-    <script>
-        function openQrModal() {
-            document.getElementById('qrModal').classList.remove('hidden');
-        }
-
-        function closeQrModal() {
-            document.getElementById('qrModal').classList.add('hidden');
-        }
-
-        function downloadQr() {
-            const imageUrl = 'https://tripay.co.id/qr/DEV-T34508218811AC6IO';
-
-            fetch(imageUrl)
-                .then(response => response.blob())
-                .then(blob => {
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    a.download = 'qr-code-pembayaran.png'; // nama file
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                })
-                .catch(() => alert('Gagal mendownload QR code'));
-        }
-    </script>
-
     <style>
+        .card-body.p-1 {
+            padding: 1.25rem !important;
+        }
+
         .table-bordered {
             border: none !important;
             /* Hilangkan border di tabel */
@@ -432,6 +211,20 @@
                 font-size: 0.75rem;
                 /* Ukuran lebih kecil untuk layar kecil */
                 line-height: 16px;
+            }
+        }
+
+        /* Untuk layout full-width saat desktop dan status PAID */
+        @media (min-width: 768px) {
+            .full-paid-wrapper {
+                width: 100vw;
+                max-width: 100vw;
+                margin-left: -1.5rem;
+                /* kompensasi padding container-fluid */
+                margin-right: -1.5rem;
+                padding-left: 1.5rem;
+                padding-right: 1.5rem;
+                border-radius: 0 !important;
             }
         }
 
@@ -506,7 +299,80 @@
         }
 
         .number-section {
-            padding: 16px;
+            padding: 7px;
+        }
+
+        @media (min-width: 768px) {
+            .is-paid {
+                width: 100%;
+                max-width: 1024px;
+            }
+
+            .is-paid .virt-number,
+            .is-paid .number-section {
+                padding-left: 32px;
+                padding-right: 32px;
+            }
+
+            .is-paid .row {
+                padding-left: 32px;
+                padding-right: 32px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            /* .number-section .row>div {
+                font-size: 13px;
+            }
+
+            .number-section .font-weight-bold {
+                font-size: 14px;
+            }
+
+            .number-section .label {
+                font-size: 14px;
+            }
+
+            .number-section .value {
+                font-size: 15px;
+                word-break: break-word;
+            }
+
+            .number-section {
+                padding: 12px;
+            }
+
+            .number-section .row {
+                margin-bottom: 6px;
+            }
+
+            .number-section .text-right {
+                text-align: right !important;
+            } */
+
+            .number-section {
+                padding: 8px 12px;
+                /* Lebih rapat kiri-kanan */
+            }
+
+            .number-section .row {
+                margin-left: 0;
+                margin-right: 0;
+            }
+
+            .number-section .col-8,
+            .number-section .col-4 {
+                padding-left: 4px;
+                padding-right: 4px;
+            }
+
+            /* .number-section .col-4.text-right span {
+                font-size: 13px;
+            } */
+            .number-section .font-weight-bold span {
+                font-size: 13px !important;
+            }
+
         }
 
         .label {
@@ -528,20 +394,26 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            /* Memisahkan nomor dan tombol salin */
             flex-wrap: wrap;
-            /* Agar elemen turun ke bawah jika tidak cukup */
             gap: 8px;
-            /* Jarak antar elemen */
             max-width: 100%;
-            /* Pastikan tidak keluar dari parent */
         }
 
         .detail-virt-number .value {
             font-size: 1.2rem;
             word-break: break-word;
-            /* Mencegah overflow */
             overflow-wrap: break-word;
+            white-space: normal;
+            /* Pastikan teks bisa turun baris */
+            flex: 1 1 100%;
+            /* Supaya ambil 100% lebar saat dibutuhkan */
+        }
+
+        @media (max-width: 576px) {
+            .detail-virt-number .value {
+                font-size: 0.9rem;
+                /* Lebih kecil di layar kecil */
+            }
         }
 
         .css-ee7rfg {
@@ -678,5 +550,148 @@
             margin: 0;
         }
     </style>
+
+    <script>
+        (function() {
+            // Countdown
+            const countdownElement = document.getElementById("countdown");
+            const expiredAt = {{ $expiredAt ?? 'null' }};
+            if (countdownElement && expiredAt) {
+                function updateCountdown() {
+                    const now = Date.now();
+                    const remaining = Math.max(0, Math.floor((expiredAt - now) / 1000));
+
+                    if (remaining <= 0) {
+                        countdownElement.innerText = "Waktu habis!";
+                        clearInterval(interval);
+                        return;
+                    }
+
+                    const d = Math.floor(remaining / 86400);
+                    const h = Math.floor((remaining % 86400) / 3600);
+                    const m = Math.floor((remaining % 3600) / 60);
+                    const s = remaining % 60;
+
+                    countdownElement.innerText = `${d} hari, ${pad(h)} jam, ${pad(m)} menit, ${pad(s)} detik`;
+                }
+
+                const pad = num => ('0' + num).slice(-2);
+                const interval = setInterval(updateCountdown, 1000);
+                updateCountdown();
+            }
+
+            // Copy to clipboard
+            window.copyToClipboard = function() {
+                const va = document.getElementById("va-number");
+                if (!va) return;
+
+                const temp = document.createElement("input");
+                temp.value = va.innerText;
+                document.body.appendChild(temp);
+                temp.select();
+                document.execCommand("copy");
+                document.body.removeChild(temp);
+
+                Swal.fire({
+                    icon: "success",
+                    title: "Berhasil!",
+                    text: "Nomor Virtual Account berhasil disalin!",
+                    confirmButtonColor: "#3085d6"
+                });
+            };
+
+            // Load instructions
+            const btnInstruction = document.getElementById("paymentInstructionBtn");
+            if (btnInstruction) {
+                btnInstruction.addEventListener("click", function() {
+                    const orderId = "{{ $order->id }}";
+                    const url = `{{ url('customer/billings/orders') }}/${orderId}/instruction`;
+
+                    fetch(url)
+                        .then(r => r.json())
+                        .then(res => {
+                            const wrapper = document.getElementById("paymentInstructions");
+                            if (!wrapper) return;
+
+                            if (!res?.data?.length) {
+                                wrapper.innerHTML =
+                                    `<p class="text-danger">Tidak ada instruksi pembayaran.</p>`;
+                                return;
+                            }
+
+                            const html = res.data.map((method, i) => `
+                            <div class="card">
+                                <div class="card-header">
+                                    <button class="btn btn-link" data-toggle="collapse" data-target="#collapse${i}">
+                                        ${method.title}
+                                    </button>
+                                </div>
+                                <div id="collapse${i}" class="collapse ${i === 0 ? 'show' : ''}">
+                                    <div class="card-body">
+                                        <ol>${method.steps.map(s => `<li>${s}</li>`).join("")}</ol>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join("");
+
+                            wrapper.innerHTML = html;
+                        })
+                        .catch(err => {
+                            console.error("Fetch error:", err);
+                            document.getElementById("paymentInstructions").innerHTML =
+                                `<p class="text-danger">Gagal memuat instruksi pembayaran.</p>`;
+                        });
+                });
+            }
+
+            // QR Modal functions
+            window.openQrModal = () => document.getElementById('qrModal')?.classList.remove('hidden');
+            window.closeQrModal = () => document.getElementById('qrModal')?.classList.add('hidden');
+
+            window.downloadQr = () => {
+                const imageUrl = '{{ $order->qr_url ?? '' }}';
+                if (!imageUrl) return;
+
+                fetch(imageUrl)
+                    .then(res => res.blob())
+                    .then(blob => {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'qr-code-pembayaran.png';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    })
+                    .catch(() => alert('Gagal mendownload QR code'));
+            };
+
+            // Payment status modal (jQuery)
+            $(document).ready(function() {
+                $(document).on('click', '.btn-how-payment', function() {
+                    const orderId = $(this).data('order-id');
+                    const url = `/customer/billings/orders/${orderId}/status`;
+
+                    $('#statusModalBody').html(`
+                    <div class="text-center">
+                        <div class="spinner-border text-success" role="status"><span class="sr-only">Memuat...</span></div>
+                    </div>
+                `);
+                    $('#statusModal').modal('show');
+
+                    $.get(url, function(data) {
+                        $('#payment-status-wrapper').html(data.html);
+                        $('#statusModalBody').html(data.modal);
+                        $('#payment-footer').html(data.footer);
+                    }).fail(function() {
+                        $('#statusModalBody').html(
+                            '<div class="alert alert-danger">Gagal memuat detail status pembayaran.</div>'
+                        );
+                    });
+                });
+            });
+        })();
+    </script>
 
 </x-layouts.customers.app-layout>

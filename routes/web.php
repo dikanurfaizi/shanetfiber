@@ -88,6 +88,7 @@ Route::group(['prefix' => 'customer', 'namespace' => 'Customer'], function () {
         Route::get('billings/orders/{order:id}/instruction', [OrderController::class, 'paymentInstruction'])->name('customer.tripay.instruction');
         Route::get('billings/orders/{order:id}/detail', [OrderController::class, 'show'])->name('customer.order.show');
         Route::patch('billings/orders/cancel/payment/{order:id}', [OrderController::class, 'cancelPayment'])->name('customer.order.tripays.cancel');
+        Route::get('billings/orders/{order:id}/status', [OrderController::class, 'checkStatus'])->name('customer.order.tripays.status');
     });
 });
 

@@ -13,6 +13,8 @@
     <link href="{{ asset('assets/vendor/datatables/datatables.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
     <link href="{{ asset('css/mobile.css') }}" rel="stylesheet">
+    <!-- jQuery dulu -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     @yield('custom_styles')
 </head>
 

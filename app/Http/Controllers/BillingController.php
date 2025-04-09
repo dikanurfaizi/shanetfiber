@@ -1002,25 +1002,29 @@ class BillingController extends Controller
             $member = 'Non Member / Tidak Ada';
 
             if ($customer->billing_option == 1) {
-                $discount = $customer->member->discount ?? 0;
+                $discount = optional($customer->member)->discount ?? 0;
                 $price_after_discount = $customer->paket->price - $discount;
-                $member = $customer->member->type;
-            } else if ($customer->billing_option == 2 && $billing->billing_periode->name === $customer->billing_period) {
-                $discount = $customer->member->discount ?? 0;
+                $member = optional($customer->member)->type;
+            } elseif (
+                $customer->billing_option == 2 &&
+                $billing->billing_periode->name === $customer->billing_period
+            ) {
+                $discount = optional($customer->member)->discount ?? 0;
                 $price_after_discount = $customer->paket->price - $discount;
-                $member = $customer->member->type;
+                $member = optional($customer->member)->type;
+
                 $customer->update([
                     'billing_option' => '0',
                     'billing_period' => null,
-                    'member_id' => null,
-                    'discount' => '0'
+                    'member_id'      => null,
+                    'discount'       => '0',
                 ]);
             } else {
                 $customer->update([
                     'billing_option' => '0',
                     'billing_period' => null,
-                    'member_id' => null,
-                    'discount' => '0'
+                    'member_id'      => null,
+                    'discount'       => '0',
                 ]);
             }
 

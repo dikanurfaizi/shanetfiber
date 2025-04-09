@@ -12,7 +12,7 @@
         @endphp
         @if (!$order)
             {{-- Case: Order belum pernah dibuat --}}
-            @include('partials.create-order-form', [
+            @include('customers.components.partials.create-order-form', [
                 'channels' => $channels,
                 'billing' => $billing,
                 'websystem' => $websystem,
@@ -22,7 +22,7 @@
             @php
                 Log::info('Customer membuka halaman ulang karena order sebelumnya dibatalkan.');
             @endphp
-            @include('partials.create-order-form', [
+            @include('customers.components.partials.create-order-form', [
                 'channels' => $channels,
                 'billing' => $billing,
                 'websystem' => $websystem,
@@ -37,7 +37,7 @@
             @php
                 Log::info('Order kadaluwarsa. Menampilkan ulang channel pembayaran.');
             @endphp
-            @include('partials.expired-order-form', [
+            @include('customers.components.partials.expired-order-form', [
                 'channels' => $channels,
                 'billing' => $billing,
                 'websystem' => $websystem,

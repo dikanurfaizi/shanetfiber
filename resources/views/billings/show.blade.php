@@ -64,14 +64,12 @@
             <div class="form-group">
                 <strong>Registered as:</strong>
                 @php
-                    $member = 'Non Member';
-                    if (
+                    $member =
                         $billing->customer->billing_option === 1 ||
                         ($billing->customer->billing_option === 2 &&
                             $billing->customer->billing_period === $billing->billing_period->name)
-                    ) {
-                        $member = $billing->customer->member->type;
-                    }
+                            ? $billing->customer->member?->type ?? 'Non Member'
+                            : 'Non Member';
                 @endphp
                 {{ $member }}
             </div>
@@ -80,14 +78,12 @@
             <div class="form-group">
                 <strong>Discount:</strong>
                 @php
-                    $discount = 0.0;
-                    if (
+                    $discount =
                         $billing->customer->billing_option === 1 ||
                         ($billing->customer->billing_option === 2 &&
                             $billing->customer->billing_period === $billing->billing_period->name)
-                    ) {
-                        $discount = $billing->customer->member->discount;
-                    }
+                            ? $billing->customer->member?->discount ?? 0
+                            : 0;
                 @endphp
                 @moneyIDR($discount)
             </div>
