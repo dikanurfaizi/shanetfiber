@@ -52,13 +52,13 @@ use App\Http\Controllers\MemberController;
 */
 
 //Silahkan dihapus setelah melakukan instalasi
-Route::get('install', [InstallController::class, 'install'])->name('install');
-Route::get('install/start', [InstallController::class, 'start'])->name('installStart');
-Route::get('install/seeder', [InstallController::class, 'seeder'])->name('installSeeder');
-Route::get('install/create/seeder', [InstallController::class, 'create_seeder'])->name('installCreateSeeder');
-Route::get('install/create', [InstallController::class, 'create_admin'])->name('installCreateAdmin');
-Route::post('install/store', [InstallController::class, 'store_admin'])->name('installStoreAdmin');
-Route::get('install/finish', [InstallController::class, 'finish'])->name('installFinish');
+// Route::get('install', [InstallController::class, 'install'])->name('install');
+// Route::get('install/start', [InstallController::class, 'start'])->name('installStart');
+// Route::get('install/seeder', [InstallController::class, 'seeder'])->name('installSeeder');
+// Route::get('install/create/seeder', [InstallController::class, 'create_seeder'])->name('installCreateSeeder');
+// Route::get('install/create', [InstallController::class, 'create_admin'])->name('installCreateAdmin');
+// Route::post('install/store', [InstallController::class, 'store_admin'])->name('installStoreAdmin');
+// Route::get('install/finish', [InstallController::class, 'finish'])->name('installFinish');
 //Batas akhir hapus setelah instalasi
 
 
@@ -254,6 +254,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('api/fetch-type-routers', [DropdownController::class, 'fetchTypeRouter']);
     Route::post('api/fetch-account-bank', [DropdownController::class, 'fetchAccountBank'])->name('fetch.account.bank');
     Route::post('api/fetch-interfaces', [DropdownController::class, 'fetchInterface'])->name('fetch.interface');
+    Route::post('api/fetch-monthly-summary', [HomeController::class, 'getSummaryBillingMonthly'])->name('monthly.summary');
     // Route::post('api/send-whatsapp', [WhatsAppGatewayController::class, 'sendMessage']);
     // Route::post('api/send-broadcast', [WhatsAppGatewayController::class, 'sendBroadcastMessage']);
 });

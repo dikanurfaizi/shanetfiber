@@ -1,3 +1,16 @@
+@php
+    $user = auth()->user();
+    $isAdmin = $user->hasRole('Admin');
+
+    if ($isAdmin) {
+        $billingsToShow = $billings->where('status', '!=', 'LS');
+    } else {
+        $billingsToShow = $billings->filter(function ($billing) use ($user) {
+            return $billing->customer->user_id == $user->id && $billing->status != 'LS';
+        });
+    }
+@endphp
+
 <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
     <!-- Sidenav Toggle Button (Titik Tiga Vertikal) -->
     <button class="btn btn-icon btn-transparent-dark order-1 order-lg-0 me-2 ms-lg-2 me-lg-0" id="sidebarToggle">
@@ -13,11 +26,11 @@
     <!-- Topbar Navbar -->
     <ul class="navbar-nav ml-auto">
         <!-- Link Billings (Hanya tampil di layar besar) -->
-        @if ($billings->where('status', '!=', 'LS')->count() > 0)
+        @if ($billingsToShow->count() > 0)
             <li class="nav-item d-none d-md-block">
                 <a class="nav-link" href="{{ route('billings.index', 'search_status=!LS') }}">
                     <span class="badge bg-danger text-white">You have
-                        {{ $billings->where('status', '!=', 'LS')->count() }} bill in all periode</span>
+                        {{ $billingsToShow->count() }} bill in all period</span>
                 </a>
             </li>
         @endif
@@ -31,10 +44,10 @@
             <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
                 aria-labelledby="mobileMenuDropdown">
                 <!-- Link Billings -->
-                @if ($billings->where('status', '!=', 'LS')->count() > 0)
+                @if ($billingsToShow->count() > 0)
                     <a class="dropdown-item" href="{{ route('billings.index', 'search_status=!LS') }}">
                         <span class="badge bg-danger text-white">You have
-                            {{ $billings->where('status', '!=', 'LS')->count() }} bill in all periode</span>
+                            {{ $billingsToShow->count() }} bill in all period</span>
                     </a>
                 @endif
             </div>

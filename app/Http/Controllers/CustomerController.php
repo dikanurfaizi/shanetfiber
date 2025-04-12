@@ -64,6 +64,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 //use ArielMejiaDev\LarapexCharts\Facades\LarapexChart;
 use ArielMejiaDev\LarapexCharts\LarapexChart;
+use Illuminate\Support\Facades\DB;
 
 use function Laravel\Prompts\error;
 
@@ -365,23 +366,42 @@ class CustomerController extends Controller
             return $this->filterCustomersByStatus($request, $routersEnable, $searchParams, $perPage);
         }
 
+        DB::enableQueryLog();
+
         // Query pelanggan
         $customers = Customer::with(['user'])
             ->when($searchParams['search_name'] ?? null, fn($query, $name) => $query->where('name', 'like', "%{$name}%"))
             ->when($searchParams['search_address'] ?? null, function ($query, $address) {
-                $query->whereNull('address', $address == 'NULL' ? true : false)->orWhere('address', $address);
+                if ($address === 'NULL') {
+                    $query->whereNull('address');
+                } else {
+                    $query->where('address', $address);
+                }
             })
             ->when($searchParams['search_admin'] ?? null, function ($query, $admin) {
-                $query->whereNull('user_id', $admin == 'NULL' ? true : false)->orWhere('user_id', $admin);
+                if ($admin === 'NULL') {
+                    $query->whereNull('user_id');
+                } else {
+                    $query->where('user_id', $admin);
+                }
             })
             ->when($searchParams['status'] ?? null, fn($query, $status) => $this->applyStatusFilter($query, $status))
             ->when($searchParams['server_search'] ?? null, fn($query, $server) => $query->where('mikrotik_id', $server))
             ->when($searchParams['search_paket'] ?? null, fn($query, $paket) => $query->where('paket_id', $paket))
             ->orderBy('address')->orderBy('name');
 
-        Log::info($customers->toSql(), $customers->getBindings());
-
         $data = $customers->paginate($perPage)->appends($request->query());
+
+        $queries = DB::getQueryLog();
+        LogHelper::logInfo(
+            null,
+            [
+                'queries' => $queries,
+                'params' => $searchParams,
+            ],
+            200,
+            'Debug customer query'
+        );
 
         // Hitung total pemasukan
         $totalIncoming = $data->sum(fn($customer) => $customer->paket->price * ((100 - $customer->discount) / 100));

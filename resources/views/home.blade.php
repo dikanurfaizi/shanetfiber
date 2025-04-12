@@ -305,10 +305,10 @@
                                                 @moneyIDR($totalBilling)
                                             </h6>
                                         </div>
-                                        <hr>
-                                        <h6 class="m-0 font-weight-bold text-primary mb-3">
-                                            Details Per Admin</h6>
-                                        @if ($adminBillingSummary->count() > 0)
+                                        @if ($adminBillingSummary && $adminBillingSummary->count() > 0)
+                                            <hr>
+                                            <h6 class="m-0 font-weight-bold text-primary mb-3">
+                                                Details Per Admin</h6>
                                             <ul class="list-group">
                                                 @foreach ($adminBillingSummary as $adminData)
                                                     <li class="list-group-item">
@@ -335,8 +335,6 @@
                                                     </li>
                                                 @endforeach
                                             </ul>
-                                        @else
-                                            <p>No data available</p>
                                         @endif
                                     </div>
                                     <div class="ms-2">
@@ -385,10 +383,10 @@
                                                 @moneyIDR($totalPaid)
                                             </h6>
                                         </div>
-                                        <hr>
-                                        <h6 class="m-0 font-weight-bold text-primary mb-3">
-                                            Details Per Admin</h6>
-                                        @if ($adminBillingSummary->count() > 0)
+                                        @if ($adminBillingSummary && $adminBillingSummary->count() > 0)
+                                            <hr>
+                                            <h6 class="m-0 font-weight-bold text-primary mb-3">
+                                                Details Per Admin</h6>
                                             <ul class="list-group">
                                                 @foreach ($adminBillingSummary as $adminData)
                                                     <li class="list-group-item">
@@ -416,8 +414,6 @@
                                                     </li>
                                                 @endforeach
                                             </ul>
-                                        @else
-                                            <p>No data available</p>
                                         @endif
                                     </div>
                                     <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200"
@@ -462,13 +458,13 @@
                                         </div>
                                         <div id="all-ppp-secrets-active-count" class="h5">
                                             <h6 class="m-0 font-weight-bold text-primary">
-                                                @moneyIDR($totalPayLater)
+                                                @moneyIDR($totalPaylater)
                                             </h6>
                                         </div>
-                                        <hr>
-                                        <h6 class="m-0 font-weight-bold text-primary mb-3">
-                                            Details Per Admin</h6>
-                                        @if ($adminBillingSummary->count() > 0)
+                                        @if ($adminBillingSummary && $adminBillingSummary->count() > 0)
+                                            <hr>
+                                            <h6 class="m-0 font-weight-bold text-primary mb-3">
+                                                Details Per Admin</h6>
                                             <ul class="list-group">
                                                 @foreach ($adminBillingSummary as $adminData)
                                                     <li class="list-group-item">
@@ -496,8 +492,6 @@
                                                     </li>
                                                 @endforeach
                                             </ul>
-                                        @else
-                                            <p>No data available</p>
                                         @endif
                                     </div>
                                     <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200"
@@ -546,10 +540,10 @@
                                                 @moneyIDR($totalUnpaid)
                                             </h6>
                                         </div>
-                                        <hr>
-                                        <h6 class="m-0 font-weight-bold text-primary mb-3">
-                                            Details Per Admin</h6>
-                                        @if ($adminBillingSummary->count() > 0)
+                                        @if ($adminBillingSummary && $adminBillingSummary->count() > 0)
+                                            <hr>
+                                            <h6 class="m-0 font-weight-bold text-primary mb-3">
+                                                Details Per Admin</h6>
                                             <ul class="list-group">
                                                 @foreach ($adminBillingSummary as $adminData)
                                                     <li class="list-group-item">
@@ -577,8 +571,6 @@
                                                     </li>
                                                 @endforeach
                                             </ul>
-                                        @else
-                                            <p>No data available</p>
                                         @endif
                                     </div>
                                     <div class="ms-2"><svg class="svg-inline--fa fa-dollar-sign fa-2x text-gray-200"
@@ -601,7 +593,7 @@
         </div>
     @endif
 
-    <div id="chartWrapper"></div>
+    <div id="chartWrapper1"></div>
 
     @foreach ($routersEnable as $mikrotik)
         <div class="card-header py-3">
@@ -678,100 +670,130 @@
 
     @section('custom_scripts')
         <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+        {{-- <script src="{{ asset('assets/vendor/apexcharts/apexcharts.min.js') }}"></script> --}}
         <script>
-            // Data dari controller
-            const chartData = @json($data);
+            // Global chart variable
+            let chart;
 
-            // Extract data untuk grafik
-            const months = chartData.map(item => item.month_name);
-            const totalNominal = chartData.map(item => parseFloat(item.total_nominal));
-            const totalPaid = chartData.map(item => parseFloat(item.total_paid));
-            const totalUnpaid = chartData.map(item => parseFloat(item.total_unpaid));
-            const totalCustomers = chartData.map(item => item.total_customers || 0);
+            // Function untuk mengambil data bulanan dari backend
+            async function fetchMonthlySummary() {
+                try {
+                    const response = await fetch('/api/fetch-monthly-summary', {
+                        method: 'POST', // Menentukan method POST
+                        headers: {
+                            'Content-Type': 'application/json', // Memberitahu server bahwa data yang dikirimkan adalah JSON
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute(
+                                'content') // CSRF token untuk Laravel
+                        }
+                    });
+                    const chartData = await response.json();
+                    // console.log(chartData);
 
-            // Siapkan anotasi untuk label di atas balok
-            const annotations = totalNominal.map((nominal, index) => ({
-                x: months[index],
-                y: nominal, // Total nominal (Paid + Unpaid)
-                label: {
-                    text: `Rp ${nominal.toLocaleString('id-ID')} dari ${totalCustomers[index]} Pelanggan`,
-                    borderColor: '#FF0000',
-                    style: {
-                        color: '#FF0000',
-                        fontSize: '12px',
-                        background: '#FFFFFF'
-                    },
-                    position: 'top'
+                    // Extract data untuk grafik
+                    const months = chartData.map(item => item.month_name);
+                    const totalNominal = chartData.map(item => parseFloat(item.total_nominal));
+                    const totalPaid = chartData.map(item => parseFloat(item.total_paid));
+                    const totalUnpaid = chartData.map(item => parseFloat(item.total_unpaid));
+                    const totalCustomers = chartData.map(item => item.total_customers || 0);
+
+                    // Siapkan anotasi untuk label di atas balok
+                    const annotations = totalNominal.map((nominal, index) => ({
+                        x: months[index],
+                        y: nominal, // Total nominal (Paid + Unpaid)
+                        label: {
+                            text: `Rp ${nominal.toLocaleString('id-ID')} dari ${totalCustomers[index]} Pelanggan`,
+                            borderColor: '#FF0000',
+                            style: {
+                                color: '#FF0000',
+                                fontSize: '12px',
+                                background: '#FFFFFF'
+                            },
+                            position: 'top'
+                        }
+                    }));
+
+                    // Menentukan nilai maksimal untuk sumbu Y dengan buffer 25% dari total nominal terbesar
+                    const maxNominal = Math.max(...totalNominal);
+                    const yAxisMax = Math.max(0, maxNominal + (0.25 * maxNominal));
+
+                    // Konfigurasi grafik
+                    const options = {
+                        chart: {
+                            type: 'bar',
+                            height: 350,
+                            stacked: true, // Aktifkan mode stacked
+                            toolbar: {
+                                show: false
+                            },
+                        },
+                        title: {
+                            text: 'Customer Billing',
+                            align: 'center',
+                            style: {
+                                fontSize: '18px',
+                                fontWeight: 'bold',
+                                color: '#333'
+                            }
+                        },
+                        series: [{
+                                name: 'Belum Lunas',
+                                data: totalUnpaid,
+                                color: '#dc3545'
+                            },
+                            {
+                                name: 'Lunas',
+                                data: totalPaid,
+                                color: '#28a745'
+                            }
+                        ],
+                        xaxis: {
+                            categories: months,
+                            labels: {
+                                rotate: -45
+                            }
+                        },
+                        yaxis: {
+                            min: 0,
+                            max: yAxisMax,
+                            labels: {
+                                formatter: value => `Rp ${value.toLocaleString('id-ID')}`
+                            }
+                        },
+                        tooltip: {
+                            y: {
+                                formatter: value => `Rp ${value.toLocaleString('id-ID')}`
+                            }
+                        },
+                        dataLabels: {
+                            enabled: false
+                        },
+                        annotations: {
+                            points: annotations
+                        },
+                        legend: {
+                            position: 'top',
+                            horizontalAlign: 'center'
+                        }
+                    };
+
+                    // Hapus grafik lama jika ada
+                    if (chart) {
+                        chart.destroy();
+                    }
+
+                    // Render grafik baru
+                    chart = new ApexCharts(document.querySelector("#chartWrapper1"), options);
+                    chart.render();
+                } catch (error) {
+                    console.error('Error fetching data: ', error);
                 }
-            }));
+            }
 
-            // Menentukan nilai maksimal untuk sumbu Y dengan buffer 25% dari total nominal terbesar
-            const maxNominal = Math.max(...totalNominal); // Menemukan total nominal terbesar
-            const yAxisMax = Math.max(0, maxNominal + (0.25 * maxNominal)); // Pastikan nilai Y tidak kurang dari 0
+            // Panggil fungsi untuk pertama kali
+            fetchMonthlySummary();
 
-            // Konfigurasi grafik
-            const options = {
-                chart: {
-                    type: 'bar',
-                    height: 350,
-                    stacked: true, // Aktifkan mode stacked
-                    toolbar: {
-                        show: false // Hilangkan toolbar untuk tampilan yang lebih bersih
-                    },
-                },
-                title: {
-                    text: 'Customer Billing',
-                    align: 'center',
-                    style: {
-                        fontSize: '18px',
-                        fontWeight: 'bold',
-                        color: '#333'
-                    }
-                },
-                series: [{
-                        name: 'Belum Lunas',
-                        data: totalUnpaid,
-                        color: '#dc3545' // Warna batang tagihan belum lunas
-                    },
-                    {
-                        name: 'Lunas',
-                        data: totalPaid,
-                        color: '#28a745' // Warna batang tagihan lunas
-                    }
-                ],
-                xaxis: {
-                    categories: months,
-                    labels: {
-                        rotate: -45 // Label sumbu X miring agar tidak tumpang tindih
-                    }
-                },
-                yaxis: {
-                    min: 0,
-                    max: yAxisMax,
-                    labels: {
-                        formatter: value => `Rp ${value.toLocaleString('id-ID')}` // Format Rupiah pada sumbu Y
-                    }
-                },
-                tooltip: {
-                    y: {
-                        formatter: value => `Rp ${value.toLocaleString('id-ID')}` // Format Rupiah di tooltip
-                    }
-                },
-                dataLabels: {
-                    enabled: false // Nonaktifkan label data bawaan
-                },
-                annotations: {
-                    points: annotations // Tambahkan anotasi untuk label di atas balok
-                },
-                legend: {
-                    position: 'top',
-                    horizontalAlign: 'center'
-                }
-            };
-
-            // Render grafik
-            const chart = new ApexCharts(document.querySelector("#chartWrapper"), options);
-            chart.render();
+            // Set interval untuk memperbarui data setiap 5 menit
+            setInterval(fetchMonthlySummary, 300000); // 10000 ms = 5 menit
         </script>
 
         <script>
@@ -898,29 +920,42 @@
                                 url: "{{ route('mikrotik.resources', ['mikrotik' => $onlineRouter]) }}",
                                 method: "GET",
                                 success: function(response) {
+                                    // console.log("API Response:", response); // log seluruh response ke console
 
-                                    const resource = response.resources[0];
-                                    const memoryUse = resource.totalMemory - resource.freeMemory;
-                                    const memoryPercentUse = Math.round(memoryUse / resource.totalMemory * 100);
-                                    const hddUse = resource.totalHdd - resource.freeHdd;
-                                    const hddPercentUse = Math.round(hddUse / resource.totalHdd * 100);
-                                    const uptimeRouter = resource.uptime;
-                                    $('#cpu-{{ $onlineRouter->slug }}').css('width', resource.cpuLoad + '%').html(
-                                        resource.cpuLoad + '%' + ' ' + resource.cpuFrequency + 'Mhz');
-                                    $('#memory-{{ $onlineRouter->slug }}').css('width', memoryPercentUse + '%')
-                                        .html(resource.memoryUsage + '/' + resource.totalMemorySpace);
-                                    $('#hdd-{{ $onlineRouter->slug }}').css('width', hddPercentUse + '%').html(
-                                        resource.hddUsage + '/' + resource.totalHddSpace);
-                                    $('#frequency').html(resource.cpuFrequency)
-                                    $('#boardname-{{ $onlineRouter->slug }}').html(resource.boardName)
-                                    $('#uptime-{{ $onlineRouter->slug }}').html(uptimeRouter)
-                                    $("#status-{{ $onlineRouter->slug }}").removeClass("text-danger");
-                                    $("#status-{{ $onlineRouter->slug }}").addClass("text-success");
+                                    if (response.resources && response.resources.length > 0) {
+                                        const resource = response.resources[0];
+                                        // console.log("First Resource:", resource); // log data resource pertama
+
+                                        const memoryUse = resource.totalMemory - resource.freeMemory;
+                                        const memoryPercentUse = Math.round(memoryUse / resource.totalMemory * 100);
+                                        const hddUse = resource.totalHdd - resource.freeHdd;
+                                        const hddPercentUse = Math.round(hddUse / resource.totalHdd * 100);
+                                        const uptimeRouter = resource.uptime;
+
+                                        $('#cpu-{{ $onlineRouter->slug }}').css('width', resource.cpuLoad + '%')
+                                            .html(resource.cpuLoad + '%' + ' ' + resource.cpuFrequency + 'Mhz');
+
+                                        $('#memory-{{ $onlineRouter->slug }}').css('width', memoryPercentUse + '%')
+                                            .html(resource.memoryUsage + '/' + resource.totalMemorySpace);
+
+                                        $('#hdd-{{ $onlineRouter->slug }}').css('width', hddPercentUse + '%')
+                                            .html(resource.hddUsage + '/' + resource.totalHddSpace);
+
+                                        $('#frequency').html(resource.cpuFrequency);
+                                        $('#boardname-{{ $onlineRouter->slug }}').html(resource.boardName);
+                                        $('#uptime-{{ $onlineRouter->slug }}').html(uptimeRouter);
+                                        $("#status-{{ $onlineRouter->slug }}").removeClass("text-danger").addClass(
+                                            "text-success");
+                                    } else {
+                                        console.warn("No resources found in response:", response);
+                                    }
                                 },
                                 global: false,
                                 dataType: 'json',
                                 error: function(xhr, status, error) {
-                                    console.error(error);
+                                    console.error("AJAX Error:", error);
+                                    console.error("XHR:", xhr);
+                                    console.error("Status:", status);
                                 }
                             });
                         }
@@ -1009,21 +1044,62 @@
                         const updateChart = function() {
                             const iface = $('#interface-{{ $onlineRouter->slug }}').val();
                             const url = "{{ route('mikrotik.traffic_interface', $onlineRouter) }}";
+
                             $.ajax({
                                 url: url,
                                 data: {
                                     'interface': iface
                                 },
                                 success: function(response) {
-                                    chart.appendData([{
-                                            name: 'Download',
-                                            data: response[0].Rx
-                                        },
-                                        {
-                                            name: 'Upload',
-                                            data: response[0].Tx
-                                        },
-                                    ])
+                                    // Periksa jika response ada dan memiliki data yang diperlukan
+                                    if (response && Array.isArray(response) && response.length > 0) {
+                                        const data = response[0]; // Ambil data pertama
+                                        // console.log("Rx (Download):", data.Rx); // Pastikan ada data 'Rx'
+                                        // console.log("Tx (Upload):", data.Tx); // Pastikan ada data 'Tx'
+
+                                        // Jika data Rx atau Tx tidak ada atau null, set default value ke 0
+                                        const downloadData = data.Rx !== null && data.Rx !== undefined ? data
+                                            .Rx : 0;
+                                        const uploadData = data.Tx !== null && data.Tx !== undefined ? data.Tx :
+                                            0;
+
+                                        // Cek jika elemen grafik sudah ada sebelum mencoba merender
+                                        const chartWrapper = document.querySelector("#chartWrapper2");
+                                        if (chartWrapper) {
+                                            // Pastikan chart hanya dirender sekali
+                                            if (typeof chart === 'undefined') {
+                                                chart = new ApexCharts(chartWrapper, options);
+                                                chart.render();
+                                            } else {
+                                                chart.appendData([{
+                                                        name: 'Download',
+                                                        data: downloadData
+                                                    },
+                                                    {
+                                                        name: 'Upload',
+                                                        data: uploadData
+                                                    },
+                                                ]);
+                                            }
+                                        } else {
+                                            console.error('Elemen chartWrapper tidak ditemukan di DOM.');
+                                        }
+                                    } else {
+                                        // console.error("Data response tidak sesuai atau kosong:", response);
+                                        // Jika data tidak sesuai, tampilkan grafik kosong atau data default
+                                        const chartWrapper = document.querySelector("#chartWrapper2");
+                                        if (chartWrapper && typeof chart !== 'undefined') {
+                                            chart.appendData([{
+                                                    name: 'Download',
+                                                    data: [0]
+                                                },
+                                                {
+                                                    name: 'Upload',
+                                                    data: [0]
+                                                },
+                                            ]);
+                                        }
+                                    }
                                 },
                                 global: false,
                                 dataType: 'json',
@@ -1037,7 +1113,7 @@
                         }
                         updateData()
                             .then(() => {
-                                console.log("Data update completed.");
+                                //console.log("Data update completed.");
                             })
                             .catch((error) => {
                                 console.error("An error occurred while updating data:", error);
@@ -1062,6 +1138,5 @@
                 </script>
             @endforeach
         @endif
-        <script src="{{ asset('assets/vendor/apexcharts/apexcharts.min.js') }}"></script>
     @endsection
 </x-layouts.app-layout>

@@ -66,7 +66,7 @@ class SystemController extends Controller
     {
         try {
             $response = $this->systemService->monitoringTraffic($mikrotik);
-            LogHelper::logInfo(null, ['mikrotik' => $mikrotik->id], 200, 'Successfully to retrieve mikrotik traffic interface');
+            LogHelper::logInfo(null, ['mikrotik' => $mikrotik->id, 'response' => $response], 200, 'Successfully to retrieve mikrotik traffic interface');
             return $response;
         } catch (Exception $e) {
             LogHelper::logError(null, ['error' => $e->getMessage()], 503, 'Failed to retrieve mikrotik traffic interface');
