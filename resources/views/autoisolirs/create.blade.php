@@ -157,7 +157,7 @@
                     </div>
                 </div>
 
-                
+
                 <div class="card-footer">
                     <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> &nbsp
                         {{ __('autoisolir.button.save') }}</button>
@@ -179,7 +179,6 @@
                     var idServer = this.value;
                     $("#profile-isolir-dropdown").html('');
                     $.ajax({
-
                         url: "{{ url('api/fetch-profiles') }}",
                         type: "POST",
                         data: {
@@ -188,17 +187,19 @@
                         },
                         dataType: 'json',
                         success: function(result_server) {
+                            // console.log("✅ Success:", result_server);
                             $('#profile-isolir-dropdown').html(
                                 '<option value="">Select Profile</option>');
                             $.each(result_server, function(key, value) {
                                 $("#profile-isolir-dropdown").append('<option value="' +
-                                    value.name + '">' + value.name + '</option>');
+                                    key + '">' + value + '</option>');
                             });
+                        },
+                        error: function(xhr, status, error) {
+                            console.error("❌ Error:", status, error);
+                            console.log("Response:", xhr.responseText);
                         }
-
                     });
-
-
                 });
 
                 $('#auto-isolir-option').on('change', function() {

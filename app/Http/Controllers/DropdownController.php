@@ -37,7 +37,7 @@ class DropdownController extends Controller
 
     /**
      * Write code on Method
-     * 
+     *
      * @return response()
      */
     public function fetchPaket(Request $request)
@@ -51,9 +51,9 @@ class DropdownController extends Controller
 
     public function fetchProfile(Request $request)
     {
-        $router = Mikrotik::where('id', $request->mikrotik_id)->first();
+        $router = Mikrotik::where('id', $request->mikrotik_id)->first();;
         $profiles = $this->secretService->getPppProfile($router);
-        $pppProfiles = ProfileResource::collection($profiles);
+        $pppProfiles = ProfileResource::collection($profiles)->pluck('name', 'name');
         return response()->json($pppProfiles);
     }
 
