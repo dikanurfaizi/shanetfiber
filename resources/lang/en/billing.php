@@ -36,6 +36,7 @@ return [
             'unpaid' => 'Unpaid',
             'periode' => 'Please select periode',
             'paylater' => 'Pay Later',
+            'notactive' => 'Not Active Period'
         ],
     ],
     'title' => [
@@ -108,7 +109,7 @@ return [
         'lunas' => 'Paid Of',
         'paylater' => 'Pay Later',
         'belum-lunas-lainnya' => 'and :count_bill_unpaid more bills unpaid',
-
+        'tidak-ada-pemakaian' => 'Not Active Period'
     ],
     'status' => [
         'waiting-payment' => 'Waiting Payment',

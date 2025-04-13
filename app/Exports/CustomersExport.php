@@ -11,14 +11,29 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Illuminate\Support\Carbon;
+use App\Helpers\UserAuth;
 
 class CustomersExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting, WithStyles
 {
+    private function getUserAuthData()
+    {
+        return UserAuth::getUserDetails();
+    }
+
     /**
      * Ambil data dari database
      */
     public function collection()
     {
+        $auth = $this->getUserAuthData();
+        $user = $auth['user'];
+
+        if ($user && $user->can('view-customers-widget-related')) {
+            return Customer::query()
+                ->where('user_id', $user->id)
+                ->get();
+        }
+
         return Customer::all();
     }
 

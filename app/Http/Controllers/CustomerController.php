@@ -65,6 +65,7 @@ use Maatwebsite\Excel\Facades\Excel;
 //use ArielMejiaDev\LarapexCharts\Facades\LarapexChart;
 use ArielMejiaDev\LarapexCharts\LarapexChart;
 use Illuminate\Support\Facades\DB;
+use App\Helpers\UserAuth;
 
 use function Laravel\Prompts\error;
 
@@ -345,9 +346,16 @@ class CustomerController extends Controller
     //     }
     // }
 
+    private function getUserAuthData()
+    {
+        return UserAuth::getUserDetails();
+    }
+
     public function index(Request $request)
     {
         $perPage = $request->input('perPage', 25); // Default 25
+        $auth = $this->getUserAuthData();
+        $user = $auth['user'];
         $searchParams = $request->only([
             'search_name',
             'search_address',
@@ -364,6 +372,10 @@ class CustomerController extends Controller
 
         if (in_array($searchParams['status'] ?? null, ['isolir', 'offline', 'online'])) {
             return $this->filterCustomersByStatus($request, $routersEnable, $searchParams, $perPage);
+        }
+
+        if (empty($searchParams['search_admin']) && $user && $user->can('view-customers-widget-related')) {
+            $searchParams['search_admin'] = $user->id;
         }
 
         DB::enableQueryLog();

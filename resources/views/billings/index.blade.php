@@ -66,26 +66,29 @@
                                     <option value="!LS">{{ __('billing.placeholder.select.unpaid') }}</option>
                                     <option value="PL">{{ __('billing.placeholder.select.paylater') }}</option>
                                     <option value="LS">{{ __('billing.placeholder.select.paid') }}</option>
+                                    <option value="NP">{{ __('billing.placeholder.select.notactive') }}</option>
                                 </select>
                             </div>
                         </div>
 
                         <!-- Admin and Due Date with margin top -->
-                        <div class="row gx-3 gy-2 mt-3">
-                            <!-- Search Admin -->
-                            <div class="col-md-4 col-lg-3">
-                                {!! Form::select('admin_name', $userAdmin, null, [
-                                    'placeholder' => __('billing.placeholder.search-admin'),
-                                    'class' => 'form-control',
-                                ]) !!}
-                            </div>
+                        @canany(['view-customers-widget-total'])
+                            <div class="row gx-3 gy-2 mt-3">
+                                <!-- Search Admin -->
+                                <div class="col-md-4 col-lg-3">
+                                    {!! Form::select('admin_name', $userAdmin, null, [
+                                        'placeholder' => __('billing.placeholder.search-admin'),
+                                        'class' => 'form-control',
+                                    ]) !!}
+                                </div>
 
-                            <!-- Due Date -->
-                            <div class="col-md-4 col-lg-3">
-                                <input id="select-date" type="datetime-local" class="form-control" name="duedate"
-                                    placeholder="Due Date">
+                                <!-- Due Date -->
+                                <div class="col-md-4 col-lg-3">
+                                    <input id="select-date" type="datetime-local" class="form-control" name="duedate"
+                                        placeholder="Due Date">
+                                </div>
                             </div>
-                        </div>
+                        @endcanany
 
                         <!-- Additional Options -->
                         <div class="row gx-3 gy-2 mt-3">
@@ -166,7 +169,13 @@
                                 </td>
                                 <td>
                                     <span
-                                        class="badge bg-blue-soft @if ($billing->status === 'LS') text-success @else text-danger @endif">
+                                        class="badge bg-blue-soft
+                                            @if ($billing->status === 'LS') text-success
+                                            @elseif ($billing->status === 'NP')
+                                                bg-secondary text-white
+                                            @else
+                                                text-danger @endif
+                                    ">
                                         @if ($billing->paket_price === 0)
                                             {{ __('Free') }}
                                         @else
@@ -195,9 +204,14 @@
                                             $result = $nowDate->gt($otherDate);
                                         @endphp
                                         <span
-                                            class="badge  @if ($result) bg-danger @else bg-warning @endif text-white">
+                                            class="badge @if ($result) bg-danger @else bg-warning @endif text-white">
                                             <i class="fas fa-ban"></i>
                                             {{ __('billing.state.paylater') . ' ' . Carbon\Carbon::parse($billing->pay_later)->translatedFormat('d M Y') }}
+                                        </span>
+                                    @elseif ($billing->status === 'NP')
+                                        <span class="badge bg-secondary text-white">
+                                            <i class="fas fa-info-circle"></i>
+                                            {{ __('billing.state.tidak-ada-pemakaian') }}
                                         </span>
                                     @else
                                         @php
@@ -235,7 +249,13 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @if ($billing->status != 'LS' && $billing->paket_price > 0)
+                                    @if ($billing->status === 'NP')
+                                        <span class="badge bg-secondary text-white">
+                                            <i class="fas fa-times-circle"></i>
+                                            {{ __('Updated') }} on
+                                            {{ Carbon\Carbon::parse($billing->updated_at)->translatedFormat('M Y') }}
+                                        </span>
+                                    @elseif ($billing->status != 'LS' && $billing->paket_price > 0)
                                         {!! Form::model($billing, [
                                             'method' => 'PATCH',
                                             'route' => ['billings.payment', $billing->slug],
@@ -247,8 +267,8 @@
                                             @if (count($bank))
                                                 <option value="transfer">Transfer</option>
                                             @endif
-
                                             <option value="paylater">Pay Later</option>
+                                            <option value="not-active-periode">Not Active Period</option>
                                         </select>
                                         {!! Form::close() !!}
                                     @elseif ($billing->status === 'LS' && $billing->paket_price > 0)
@@ -259,10 +279,24 @@
                                         </span>
                                     @endif
                                 </td>
-
                                 <td class="items-center justify-content-end text-center">
                                     @can('billing-edit')
-                                        @if ($billing->status != 'LS')
+                                        @if ($billing->status === 'NP')
+                                            <span class="badge bg-secondary text-white">
+                                                <i class="fas fa-info-circle"></i>
+                                                {{ __('Marked') }}
+                                            </span>
+                                            {{-- Tombol revert status jika ingin ubah kembali jadi unpaid --}}
+                                            {{--
+                                            {!! Form::model($billing, ['method' => 'PATCH', 'route' => ['billings.resetStatus', $billing->slug]]) !!}
+                                                <a class="btn btn-warning btn-sm"
+                                                    onclick="event.preventDefault(); this.closest('form').submit();">
+                                                    <i class="fas fa-undo text-white"></i>
+                                                    {{ __('billing.button.reset_status') }}
+                                                </a>
+                                            {!! Form::close() !!}
+                                            --}}
+                                        @elseif ($billing->status != 'LS')
                                             @if ($billing->customer->activation === 'true')
                                                 <a class="btn btn-success btn-sm"
                                                     onclick="document.getElementById('form-pay-{{ $billing->slug }}').submit();">

@@ -56,13 +56,15 @@
                                 </select>
                             </div>
                             <!-- Kolom Admin -->
-                            <div class="col-md-2 col-12 mb-2">
-                                {!! Form::select('search_admin', ['NULL' => 'Not Linked User'] + $allAdmin->toArray(), null, [
-                                    'placeholder' => __('customer.placeholder.all-responsibility') ?? 'All Admin',
-                                    'class' => 'form-control',
-                                    'id' => 'admin-dropdown',
-                                ]) !!}
-                            </div>
+                            @canany(['view-customers-widget-total'])
+                                <div class="col-md-2 col-12 mb-2">
+                                    {!! Form::select('search_admin', ['NULL' => 'Not Linked User'] + $allAdmin->toArray(), null, [
+                                        'placeholder' => __('customer.placeholder.all-responsibility') ?? 'All Admin',
+                                        'class' => 'form-control',
+                                        'id' => 'admin-dropdown',
+                                    ]) !!}
+                                </div>
+                            @endcanany
                             <!-- Kolom Server -->
                             <div class="col-md-2 col-12 mb-2">
                                 {!! Form::select('server_search', $allServers, null, [

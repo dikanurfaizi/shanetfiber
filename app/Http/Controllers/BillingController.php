@@ -40,6 +40,7 @@ use Illuminate\Support\Facades\DB;
 use App\Helpers\LogHelper;
 use Exception;
 use Illuminate\Database\QueryException;
+use App\Helpers\UserAuth;
 
 use Illuminate\Contracts\Database\Eloquent\Builder;
 //use Barryvdh\DomPDF\PDF;
@@ -61,118 +62,89 @@ class BillingController extends Controller
         $this->middleware('permission:billing-delete', ['only' => ['deletePeriode', 'destroyPeriode']]);
         $this->messageService = app(WhatsappMessageService::class);
     }
+
+    private function getUserAuthData()
+    {
+        return UserAuth::getUserDetails();
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
         $paginate = 25;
+        $auth = $this->getUserAuthData();
+        $user = $auth['user'];
         $print = $request->cetak_pdf;
 
-        // Ambil parameter pencarian
+        // Parameter pencarian
         $searchName = $request->search_name;
         $searchMonth = $request->search_month;
         $searchYear = $request->search_year;
-        $searchPeriode = $searchMonth && $searchYear ? "{$searchMonth} {$searchYear}" : null;
+        $searchPeriode = ($searchMonth && $searchYear) ? "{$searchMonth} {$searchYear}" : null;
         $searchStatus = $request->search_status;
         $searchAddress = $request->search_address;
         $searchDuedate = $request->duedate;
-        $searchUserId = $request->admin_name;
-        $customer = $request->customer;
+        $customerSlug = $request->customer;
 
-        // Log parameter pencarian
-        // Log::info("Search Parameters: ", [
-        //     'searchName' => $searchName,
-        //     'searchMonth' => $searchMonth,
-        //     'searchYear' => $searchYear,
-        //     'searchPeriode' => $searchPeriode,
-        //     'searchStatus' => $searchStatus,
-        //     'searchAddress' => $searchAddress,
-        //     'searchDuedate' => $searchDuedate,
-        //     'searchUserId' => $searchUserId,
-        //     'customer' => $customer
-        // ]);
+        // Konversi admin_name (ID -> nama user)
+        $searchUserId = null;
+        if ($request->filled('admin_name')) {
+            $userById = User::find($request->admin_name);
+            $searchUserId = $userById?->name;
+        }
 
-        // Tentukan periode default jika semua parameter pencarian kosong
-        if (!$customer && !$searchName && !$searchMonth && !$searchYear && !$searchStatus && !$searchAddress && !$searchDuedate) {
+        // Fallback: jika tidak ada dari request, pakai user yang login jika punya izin
+        if (empty($searchUserId) && $user && $user->can('view-customers-widget-related')) {
+            $searchUserId = auth()->user()->name;
+        }
+
+        // Default periode jika tidak ada filter
+        if (!$customerSlug && !$searchName && !$searchMonth && !$searchYear && !$searchStatus && !$searchAddress && !$searchDuedate) {
             $latestPeriode = BillingPeriode::latest('created_at')->value('name');
             $searchPeriode = $latestPeriode;
             $searchMonth = Carbon::parse($latestPeriode)->format('F');
             $searchYear = Carbon::parse($latestPeriode)->format('Y');
-            //Log::info("Default search period applied: ", ['periode' => $searchPeriode]);
         }
 
-        // Query utama untuk billings
+        // Query utama
         $billingsQuery = Billing::query()
-            ->when($searchName, function ($query) use ($searchName) {
-                //Log::info("Filtering by customer name: {$searchName}");
-                $query->where('customer_name', 'like', "%{$searchName}%");
-            })
-            ->when($customer, function ($query) use ($customer) {
-                //Log::info("Filtering by customer slug: {$customer}");
-                $query->whereHas('customer', function ($q) use ($customer) {
-                    $q->where('slug', $customer);
-                });
-            })
+            ->when($searchName, fn($query) => $query->where('customer_name', 'like', "%{$searchName}%"))
+            ->when($customerSlug, fn($query) => $query->whereHas('customer', fn($q) => $q->where('slug', $customerSlug)))
             ->when($searchAddress, function ($query) use ($searchAddress) {
-                //Log::info("Filtering by address: {$searchAddress}");
                 $query->whereHas('customer', function ($q) use ($searchAddress) {
-                    if ($searchAddress == 'no-address') {
-                        $q->whereNull('address');
-                    } else {
-                        $q->where('address', $searchAddress);
-                    }
+                    $searchAddress === 'no-address'
+                        ? $q->whereNull('address')
+                        : $q->where('address', $searchAddress);
                 });
             })
-            ->when($searchPeriode, function ($query) use ($searchPeriode) {
-                //Log::info("Filtering by billing period: {$searchPeriode}");
-                $query->whereHas('billing_periode', function ($q) use ($searchPeriode) {
-                    $q->where('name', 'like', "%{$searchPeriode}%");
-                });
-            })
+            ->when($searchPeriode, fn($query) => $query->whereHas('billing_periode', fn($q) => $q->where('name', 'like', "%{$searchPeriode}%")))
             ->when($searchStatus, function ($query) use ($searchStatus, $searchDuedate) {
-                //Log::info("Filtering by status: {$searchStatus}, Duedate: {$searchDuedate}");
-                if ($searchStatus == '!LS') {
+                if ($searchStatus === '!LS') {
                     $query->where('status', '!=', 'LS');
-                    if ($searchDuedate) {
-                        $query->where('due_date', 'like', "%{$searchDuedate}%");
-                    }
+                    if ($searchDuedate) $query->where('due_date', 'like', "%{$searchDuedate}%");
                 } else {
                     $query->where('status', $searchStatus);
                     if ($searchDuedate) {
-                        $field = $searchStatus == 'LS' ? 'payment_time' : 'pay_later';
+                        $field = $searchStatus === 'LS' ? 'payment_time' : 'pay_later';
                         $query->where($field, 'like', "%{$searchDuedate}%");
                     }
                 }
             })
-            ->when($searchUserId, function ($query) use ($searchUserId, $request) {
-                if ($searchUserId === 'Not Linked User' || $searchUserId === 0) {
-                    //Log::info("Filtering by Not Linked User or User ID = 0");
-                    $query->whereHas('customer', function ($q) {
-                        $q->whereColumn('billings.customer_id', 'customers.id') // Relasi utama
-                            ->whereNull('customers.user_id') // Kondisi `user_id IS NULL`
-                            ->whereNull('customers.deleted_at'); // Kondisi tambahan
-                    });
-                } elseif (empty($request->admin_name)) {
-                    //Log::info("Filtering by empty admin_name");
-                    $query->whereHas('customer', function ($q) {
-                        $q->whereColumn('billings.customer_id', 'customers.id') // Relasi utama
-                            ->whereNull('customers.deleted_at'); // Kondisi tambahan
-                    });
-                } else {
-                    //Log::info("Filtering by User ID or Admin Name: {$searchUserId}");
-                    $query->whereHas('customer', function ($q) use ($searchUserId) {
-                        $q->whereColumn('billings.customer_id', 'customers.id') // Relasi utama
-                            ->where('customers.user_id', function ($subQuery) use ($searchUserId) {
-                                $subQuery->select('id') // Subquery untuk mendapatkan user ID
-                                    ->from('users')
-                                    ->where('name', $searchUserId) // Mencari berdasarkan nama pengguna
-                                    ->limit(1);
-                            })
-                            ->whereNull('customers.deleted_at'); // Kondisi tambahan
-                    });
-                    //Log::info("Search User ID retrieved: " . ($searchUserId ?: '[Not Found]'));
-                }
+            ->when($searchUserId, function ($query) use ($searchUserId) {
+                $query->whereHas('customer', function ($q) use ($searchUserId) {
+                    $q->whereColumn('billings.customer_id', 'customers.id')
+                        ->whereNull('customers.deleted_at');
+
+                    if ($searchUserId === 'Not Linked User' || $searchUserId === 0) {
+                        $q->whereNull('customers.user_id');
+                    } else {
+                        $q->where('customers.user_id', function ($subQuery) use ($searchUserId) {
+                            $subQuery->select('id')->from('users')->where('name', $searchUserId)->limit(1);
+                        });
+                    }
+                });
             })
             ->orderBy(
                 BillingPeriode::select('created_at')
@@ -180,42 +152,56 @@ class BillingController extends Controller
                 'DESC'
             )
             ->orderBy(
-                Customer::select('address')
-                    ->whereColumn('customers.id', 'billings.customer_id')
+                Customer::select('address')->whereColumn('customers.id', 'billings.customer_id')
             )
             ->orderBy('customer_name', 'ASC');
 
-        // Log::info("Query built successfully", ['sql' => $billingsQuery->toSql(), 'bindings' => $billingsQuery->getBindings()]);
-
-        // Dapatkan data untuk view
         $totalPrice = $billingsQuery->sum('paket_price');
         $data = $billingsQuery->paginate($paginate);
 
-        // Data untuk dropdown dan filter
-        $bank = Bank::orderBy('name', 'ASC')->where('disabled', 'false')->pluck('name', 'id');
+        // Data dropdown dan filter
+        $bank = Bank::orderBy('name')->where('disabled', 'false')->pluck('name', 'id');
         $address = Customer::whereNotNull('address')->pluck('address', 'address');
         $billingsPeriode = BillingPeriode::all();
         $months = BillingPeriode::pluck('month', 'month');
         $years = BillingPeriode::pluck('year', 'year');
-        $userAdmin = Customer::orderBy('user_id', 'ASC')->get()->mapWithKeys(function ($customer) {
-            if ($customer->user_id) {
-                $user = User::find($customer->user_id);
-                return [$user->id => $user->name];
-            }
-            return [0 => 'Not Linked User'];
-        });
+
+        $userAdmin = Customer::orderBy('user_id')
+            ->get()
+            ->mapWithKeys(function ($customer) {
+                if ($customer->user_id) {
+                    $user = User::find($customer->user_id);
+                    return [$user->id => $user->name];
+                }
+                return [0 => 'Not Linked User'];
+            });
+
         $tellers = User::pluck('name', 'name');
 
-        // Jika cetak PDF
-        if ($print == 'true') {
+        // Cetak PDF
+        if ($print === 'true') {
             $dataPrint = $billingsQuery->get();
-            $pdf = PDF::loadView('print.billing', ['dataPrint' => $dataPrint, 'search' => compact('searchMonth', 'searchYear', 'searchStatus', 'searchName', 'searchAddress')]);
+            $pdf = PDF::loadView('print.billing', [
+                'dataPrint' => $dataPrint,
+                'search' => compact('searchMonth', 'searchYear', 'searchStatus', 'searchName', 'searchAddress')
+            ]);
             return $pdf->download("Tagihan_{$searchName}_{$searchAddress}_{$searchStatus}_{$months}_{$years}.pdf");
         }
 
-        // Jika bukan cetak PDF, kembalikan ke view
-        return view('billings.index', compact('data', 'totalPrice', 'months', 'years', 'searchStatus', 'searchName', 'searchAddress', 'bank', 'address', 'tellers', 'userAdmin', 'billingsPeriode'))
-            ->with('i', (request()->input('page', 1) - 1) * $paginate);
+        return view('billings.index', compact(
+            'data',
+            'totalPrice',
+            'months',
+            'years',
+            'searchStatus',
+            'searchName',
+            'searchAddress',
+            'bank',
+            'address',
+            'tellers',
+            'userAdmin',
+            'billingsPeriode'
+        ))->with('i', (request()->input('page', 1) - 1) * $paginate);
     }
 
     public function create()
@@ -757,7 +743,6 @@ class BillingController extends Controller
         ]);
     }
 
-
     public function paylater(Request $request, Billing $billing)
     {
         $billingCustomerId = $billing->customer_id;
@@ -885,6 +870,12 @@ class BillingController extends Controller
             return redirect()->route('billings.transfer', $billing->slug);
         } else if ($paymentMethode == 'paylater') {
             return redirect()->route('billings.paylater', $billing->slug);
+        } else if ($paymentMethode == 'not-active-periode') {
+            $billing->update([
+                'teller_name' => auth()->user()->name,
+                'status' => 'NP',
+            ]);
+            return redirect()->back()->with('success', 'The billing status for ' . $billing->customer_name . ' has been marked as No Usage for this period.');
         } else {
             $payment = 'cash';
             $bankName = null;
