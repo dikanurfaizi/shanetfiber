@@ -601,7 +601,10 @@
         </div>
     @endif
 
-    <div id="chartWrapper1"></div>
+    @canany(['view-billings-chart-nominal-total', 'view-billings-chart-nominal-related',
+        'view-billings-chart-customer-count'])
+        <div id="chartWrapper1"></div>
+    @endcanany
 
     @foreach ($routersEnable as $mikrotik)
         <div class="card-header py-3">
@@ -675,7 +678,6 @@
         </div>
     @endforeach
 
-
     @section('custom_scripts')
         <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
         {{-- <script src="{{ asset('assets/vendor/apexcharts/apexcharts.min.js') }}"></script> --}}
@@ -697,6 +699,12 @@
                     const {
                         billingSummary = [], permissions = []
                     } = data ?? {};
+
+                    if (!permissions.length) {
+                        document.querySelector("#chartWrapper1").innerHTML =
+                            "<div class='text-center p-4 text-muted'>Tidak ada data yang bisa ditampilkan.</div>";
+                        return;
+                    }
 
                     // Extract billing summary data
                     const months = billingSummary.map(item => item.month_name || '');

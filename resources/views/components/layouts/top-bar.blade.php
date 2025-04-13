@@ -3,7 +3,7 @@
 
     if ($user->can('view-bill-top-bar-total')) {
         $billingsToShow = $billings->where('status', '!=', 'LS');
-    } elseif ($user->can('view-bill-top-bar-related')) {
+    } else {
         $billingsToShow = $billings->filter(function ($billing) use ($user) {
             return $billing->customer->user_id == $user->id && $billing->status != 'LS';
         });
@@ -25,14 +25,13 @@
     <!-- Topbar Navbar -->
     <ul class="navbar-nav ml-auto">
         <!-- Link Billings (Hanya tampil di layar besar) -->
-        @if ($billingsToShow->count() > 0)
-            <li class="nav-item d-none d-md-block">
-                <a class="nav-link" href="{{ route('billings.index', 'search_status=!LS') }}">
-                    <span class="badge bg-danger text-white">You have
-                        {{ $billingsToShow->count() }} bill in all period</span>
-                </a>
-            </li>
-        @endif
+        <li class="nav-item d-none d-md-block">
+            <a class="nav-link" href="{{ route('billings.index', 'search_status=!LS') }}">
+                <span class="badge text-white {{ $billingsToShow->count() > 0 ? 'bg-danger' : 'bg-success' }}">
+                    {{ $billingsToShow->count() > 0 ? "You have {$billingsToShow->count()} bill in all period" : 'No outstanding bills at this time.' }}
+                </span>
+            </a>
+        </li>
 
         <!-- Dropdown Menu untuk layar kecil -->
         <li class="nav-item dropdown d-block d-md-none">
@@ -43,12 +42,11 @@
             <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
                 aria-labelledby="mobileMenuDropdown">
                 <!-- Link Billings -->
-                @if ($billingsToShow->count() > 0)
-                    <a class="dropdown-item" href="{{ route('billings.index', 'search_status=!LS') }}">
-                        <span class="badge bg-danger text-white">You have
-                            {{ $billingsToShow->count() }} bill in all period</span>
-                    </a>
-                @endif
+                <a class="dropdown-item" href="{{ route('billings.index', 'search_status=!LS') }}">
+                    <span class="badge text-white {{ $billingsToShow->count() > 0 ? 'bg-danger' : 'bg-success' }}">
+                        {{ $billingsToShow->count() > 0 ? "You have {$billingsToShow->count()} bill in all period" : 'No outstanding bills at this time.' }}
+                    </span>
+                </a>
             </div>
         </li>
 

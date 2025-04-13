@@ -177,6 +177,7 @@
                 ====================================================*/
                 $('#server-dropdown').on('change', function() {
                     var idServer = this.value;
+                    console.log("Server: ", idServer);
                     $("#profile-isolir-dropdown").html('');
                     $.ajax({
                         url: "{{ url('api/fetch-profiles') }}",
@@ -187,7 +188,7 @@
                         },
                         dataType: 'json',
                         success: function(result_server) {
-                            // console.log("✅ Success:", result_server);
+                            console.log("✅ Success:", result_server);
                             $('#profile-isolir-dropdown').html(
                                 '<option value="">Select Profile</option>');
                             $.each(result_server, function(key, value) {

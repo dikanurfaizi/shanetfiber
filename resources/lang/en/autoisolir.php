@@ -37,6 +37,7 @@ return [
         'nat_dst_address_list' => 'IP that is allowed to access the internet when isolated',
         'proxy_access_src_address' => 'IP address pool pppoe isolir. ex: 192.168.7.0/24',
         'select-proxy-access-action' => 'Select Redirect or Deny',
+        'addresslist' => 'Address list isolir without space',
     ],
     'title' => [
         'index' => 'Auto Isolir',
@@ -67,6 +68,7 @@ return [
         'back' => 'Back',
         'enable' => 'Enable',
         'disable' => 'Disable',
+        'edit-nat' => 'Edit Nat',
     ],
 
     'action' => [
@@ -111,8 +113,4 @@ return [
         'proxy-access-action' => 'Action',
         'address_list_isolir' => 'Address List Isolir',
     ],
-
-
-
-
 ];

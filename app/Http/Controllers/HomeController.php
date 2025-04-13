@@ -53,32 +53,36 @@ class HomeController extends Controller
         $userId = $auth['userId'];
 
         if ($this->version != $this->newVersion) {
+            Log::warning('Version mismatch', ['current_version' => $this->version, 'required_version' => $this->newVersion]);
             return redirect()->route('settings.update.index')->with('error', 'Please update first!');
         }
 
-        if ($user->can('view-customers-widget-related')) {
-            $routersEnable = Mikrotik::whereIn('id', Customer::where('user_id', $userId)->pluck('mikrotik_id'))
-                ->where('disabled', 'false')
-                ->get();
-        } else {
-            $routersEnable = Mikrotik::where('disabled', 'false')->get();
-        }
+        // Fetch active Mikrotik routers based on permissions
+        $routersEnable = $user->can('view-customers-widget-total') ?
+            Mikrotik::where('disabled', 'false')->get() :
+            Mikrotik::whereIn('id', Customer::where('user_id', $userId)->pluck('mikrotik_id'))
+            ->where('disabled', 'false')
+            ->get();
 
-        // Proses router dan dapatkan statistik
-        $routerStats = $this->processRouters($routersEnable, $user, $userId);
-        extract($routerStats); // Extract ke dalam variabel seperti $sumCustomersOnline, dsb.
+        // Process router stats
+        $routerStats = $this->processRouters($routersEnable);
+        extract($routerStats);
 
+        // Get Mikrotik list
         $mikrotiks = Mikrotik::orderBy('name')->get();
-        $customerSummary = $this->calculateCustomerSummary($user, $userId);
 
-        [$lastBillingPeriode, $lastBillings] = $this->getLastBillingData($user, $userId);
-        $summaryTotals = $this->calculateBillingSummary($lastBillings, $user);
+        // Get customer summary
+        $customerSummary = $this->calculateCustomerSummary();
 
-        $adminBillingSummary = null;
+        // Get last billing data
+        [$lastBillingPeriode, $lastBillings] = $this->getLastBillingData();
 
-        if ($user->can('view-billings-widget-total')) {
-            $adminBillingSummary = $this->getOwnerBillingSummary($lastBillingPeriode->id);
-        }
+        // Calculate billing summary
+        $summaryTotals = $this->calculateBillingSummary($lastBillings);
+
+        // Initialize admin billing summary
+        $adminBillingSummary = $user->can('view-billings-widget-total') ?
+            $this->getOwnerBillingSummary($lastBillingPeriode->id) : null;
 
         $isMobile = (new \Jenssegers\Agent\Agent())->isMobile();
 
@@ -93,24 +97,21 @@ class HomeController extends Controller
             'countRouterOffline',
             'lastBillingPeriode',
             'lastBillings',
-            'adminBillingSummary',
+            'adminBillingSummary'
         ), $summaryTotals, $customerSummary));
     }
 
     private function getUserAuthData()
     {
-        $userDetails = UserAuth::getUserDetails();
-        $user = $userDetails['user'];
-        $userId = $userDetails['userId'];
-
-        return [
-            'user' => $user,
-            'userId' => $userId,
-        ];
+        return UserAuth::getUserDetails();
     }
 
-    private function processRouters($routersEnable, $user, $userId)
+    private function processRouters($routersEnable)
     {
+        $auth = $this->getUserAuthData();
+        $user = $auth['user'];
+        $userId = $auth['userId'];
+
         $countRouterOnline = $countRouterOffline = $sumCustomersOnline = $sumCustomersOffline = $sumCustomersIsolir = 0;
         $onlineRouters = collect();
 
@@ -124,10 +125,12 @@ class HomeController extends Controller
                 $onlineRouters->push($router);
                 $countRouterOnline++;
 
-                $customerQuery = Customer::where('mikrotik_id', $router->id)->where('disabled', 'false');
-
-                if ($user->can('view-customers-widget-related')) {
-                    $customerQuery->where('user_id', $userId);
+                // Tentukan query berdasarkan permission
+                $customerQuery = Customer::query();
+                if ($user->can('view-customers-widget-total')) {
+                    $customerQuery->where('mikrotik_id', $router->id)->where('disabled', 'false');
+                } else {
+                    $customerQuery->where('user_id', $userId)->where('mikrotik_id', $router->id);
                 }
 
                 $usernames = $customerQuery->pluck('username');
@@ -149,11 +152,11 @@ class HomeController extends Controller
 
                 $sumCustomersIsolir += $countIsolir;
             } catch (\Exception $e) {
+                $countRouterOffline++;
                 LogHelper::logError(null, [
                     'mikrotik_id' => $router->id,
                     'error_message' => $e->getMessage(),
                 ], 500, 'Router connection failed');
-                $countRouterOffline++;
             }
         }
 
@@ -254,13 +257,24 @@ class HomeController extends Controller
             ]);
     }
 
-    private function getLastBillingData($user, $userId)
+    private function getLastBillingData()
     {
+        $auth = $this->getUserAuthData();
+        $user = $auth['user'];
+        $userId = $auth['userId'];
+
         $lastBillingPeriode = BillingPeriode::latest('created_at')->first();
 
         $billingQuery = Billing::where('billing_periode_id', $lastBillingPeriode->id);
 
-        if ($user->can('view-billings-widget-related')) {
+        if ($user->can('view-billings-widget-total') || $user->can('view-billings-widget-customer-count')) {
+        } elseif ($user->can('view-billings-widget-related')) {
+            $billingQuery->whereHas('customer.user', function ($query) use ($userId) {
+                $query->where('id', $userId);
+            });
+        }
+        // Default: filter berdasarkan user_id
+        else {
             $billingQuery->whereHas('customer.user', function ($query) use ($userId) {
                 $query->where('id', $userId);
             });
@@ -271,11 +285,18 @@ class HomeController extends Controller
         return [$lastBillingPeriode, $lastBillings];
     }
 
-    private function calculateCustomerSummary($user, $userId)
+    private function calculateCustomerSummary()
     {
+        $auth = $this->getUserAuthData();
+        $user = $auth['user'];
+        $userId = $auth['userId'];
+
         $query = Customer::query();
 
-        if ($user->can('view-customers-widget-related')) {
+        if ($user->can('view-billings-widget-total') || $user->can('view-billings-widget-customer-count')) {
+        } else if ($user->can('view-billings-widget-related')) {
+            $query->where('user_id', $userId);
+        } else {
             $query->where('user_id', $userId);
         }
 
@@ -294,8 +315,11 @@ class HomeController extends Controller
         ];
     }
 
-    private function calculateBillingSummary($billings, $user)
+    private function calculateBillingSummary($billings)
     {
+        $auth = $this->getUserAuthData();
+        $user = $auth['user'];
+
         try {
             if ($user->can('view-billings-widget-customer-count') || !$billings) {
                 return [
