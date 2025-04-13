@@ -1,11 +1,9 @@
 @php
     $user = auth()->user();
-    $isAdmin = $user->hasRole('Admin');
-    $isCashier = $user->hasRole('Kasir');
 
-    if ($isAdmin || $isCashier) {
+    if ($user->can('view-bill-top-bar-total')) {
         $billingsToShow = $billings->where('status', '!=', 'LS');
-    } else {
+    } elseif ($user->can('view-bill-top-bar-related')) {
         $billingsToShow = $billings->filter(function ($billing) use ($user) {
             return $billing->customer->user_id == $user->id && $billing->status != 'LS';
         });

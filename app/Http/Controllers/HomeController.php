@@ -49,14 +49,15 @@ class HomeController extends Controller
     public function __invoke(Request $request)
     {
         $auth = $this->getUserAuthData();
-        $isPrivileged = $auth['isSuperAdmin'] || $auth['isCashier'];
+        $user = $auth['user'];
+        $userId = $auth['userId'];
 
         if ($this->version != $this->newVersion) {
             return redirect()->route('settings.update.index')->with('error', 'Please update first!');
         }
 
-        if (!($auth['isSuperAdmin'] || $auth['isCashier'])) {
-            $routersEnable = Mikrotik::whereIn('id', Customer::where('user_id', $auth['userId'])->pluck('mikrotik_id'))
+        if ($user->can('view-customers-widget-related')) {
+            $routersEnable = Mikrotik::whereIn('id', Customer::where('user_id', $userId)->pluck('mikrotik_id'))
                 ->where('disabled', 'false')
                 ->get();
         } else {
@@ -64,16 +65,20 @@ class HomeController extends Controller
         }
 
         // Proses router dan dapatkan statistik
-        $routerStats = $this->processRouters($routersEnable, $isPrivileged, $auth['userId']);
+        $routerStats = $this->processRouters($routersEnable, $user, $userId);
         extract($routerStats); // Extract ke dalam variabel seperti $sumCustomersOnline, dsb.
 
         $mikrotiks = Mikrotik::orderBy('name')->get();
-        $customerSummary = $this->calculateCustomerSummary($auth['userId'], $isPrivileged);
+        $customerSummary = $this->calculateCustomerSummary($user, $userId);
 
-        [$lastBillingPeriode, $lastBillings] = $this->getLastBillingData($auth['userId'], $isPrivileged);
-        $summaryTotals = $this->calculateBillingSummary($lastBillings, $auth['isCashier']);
+        [$lastBillingPeriode, $lastBillings] = $this->getLastBillingData($user, $userId);
+        $summaryTotals = $this->calculateBillingSummary($lastBillings, $user);
 
-        $adminBillingSummary = $this->getAdminBillingSummary($lastBillingPeriode->id, $auth['isSuperAdmin'], $auth['userId']) ?? null;
+        $adminBillingSummary = null;
+
+        if ($user->can('view-billings-widget-total')) {
+            $adminBillingSummary = $this->getOwnerBillingSummary($lastBillingPeriode->id);
+        }
 
         $isMobile = (new \Jenssegers\Agent\Agent())->isMobile();
 
@@ -94,26 +99,17 @@ class HomeController extends Controller
 
     private function getUserAuthData()
     {
-        $roles = UserAuth::getRole();
-        $isSuperAdmin = UserAuth::isSuperAdmin();
-        $isAdmin = UserAuth::isAdmin();
-        $isCashier = UserAuth::isCashier();
-        $userId = UserAuth::getUserId();
-
         $userDetails = UserAuth::getUserDetails();
         $user = $userDetails['user'];
+        $userId = $userDetails['userId'];
 
         return [
-            'roles' => $roles,
-            'isSuperAdmin' => $isSuperAdmin,
-            'isAdmin' => $isAdmin,
-            'isCashier' => $isCashier,
-            'userId' => $userId,
             'user' => $user,
+            'userId' => $userId,
         ];
     }
 
-    private function processRouters($routersEnable, $isPrivileged, $userId)
+    private function processRouters($routersEnable, $user, $userId)
     {
         $countRouterOnline = $countRouterOffline = $sumCustomersOnline = $sumCustomersOffline = $sumCustomersIsolir = 0;
         $onlineRouters = collect();
@@ -130,7 +126,7 @@ class HomeController extends Controller
 
                 $customerQuery = Customer::where('mikrotik_id', $router->id)->where('disabled', 'false');
 
-                if (!$isPrivileged) {
+                if ($user->can('view-customers-widget-related')) {
                     $customerQuery->where('user_id', $userId);
                 }
 
@@ -171,36 +167,11 @@ class HomeController extends Controller
         );
     }
 
-    private function getAdminBillingSummary($billingPeriodeId, $isSuperAdmin, $userId)
+    private function getOwnerBillingSummary($billingPeriodeId)
     {
         // Jika Super Admin, ambil semua billing
-        if ($isSuperAdmin) {
-            return Billing::with(['customer', 'customer.user'])
-                ->where('billing_periode_id', $billingPeriodeId)
-                ->get()
-                ->groupBy(fn($b) => $b->customer->user->id ?? 'Not Linked')
-                ->map(function ($group, $adminId) {
-                    return [
-                        'admin_id' => $adminId,
-                        'admin_name' => $group->first()->customer->user->name ?? 'Not Linked User',
-                        'total_customers' => $group->unique('customer_id')->count(),
-                        'total_billing' => $group->sum('paket_price'),
-                        'total_paid' => $group->where('status', 'LS')->sum('paket_price'),
-                        'total_paylater' => $group->where('status', 'PL')->sum('paket_price'),
-                        'total_unpaid' => $group->where('status', 'BL')->sum('paket_price'),
-                        'total_paid_customers' => $group->where('status', 'LS')->unique('customer_id')->count(),
-                        'total_paylater_customers' => $group->where('status', 'PL')->unique('customer_id')->count(),
-                        'total_unpaid_customers' => $group->where('status', 'BL')->unique('customer_id')->count(),
-                    ];
-                });
-        }
-
-        // Jika Admin, ambil billing hanya untuk customer miliknya
         return Billing::with(['customer', 'customer.user'])
             ->where('billing_periode_id', $billingPeriodeId)
-            ->whereHas('customer.user', function ($query) use ($userId) {
-                $query->where('id', $userId);
-            })
             ->get()
             ->groupBy(fn($b) => $b->customer->user->id ?? 'Not Linked')
             ->map(function ($group, $adminId) {
@@ -219,41 +190,52 @@ class HomeController extends Controller
             });
     }
 
-    private function getMonthlyBillingSummary($userId, $isAdmin)
+    private function getMonthlyBillingSummaryTotal()
     {
-        $query = Billing::with('billing_periode')
+        return Billing::with('billing_periode')
             ->selectRaw("
             billing_periode_id,
             COUNT(DISTINCT id) as total_customers,
             SUM(CASE WHEN status IN ('LS', 'BL', 'PL') THEN paket_price ELSE 0 END) as total_nominal,
             SUM(CASE WHEN status = 'LS' THEN paket_price ELSE 0 END) as total_paid,
             SUM(CASE WHEN status IN ('BL', 'PL') THEN paket_price ELSE 0 END) as total_unpaid
-        ");
-
-        Log::info("Roles: {$isAdmin}");
-
-        if (!$isAdmin) {
-            $query->whereHas('customer.user', fn($q) => $q->where('id', $userId));
-        }
-
-        return $query->groupBy('billing_periode_id')->get()->map(function ($item) {
-            return [
-                'month_name' => $item->billing_periode->name,
+        ")
+            ->groupBy('billing_periode_id')
+            ->get()
+            ->map(fn($item) => [
+                'month_name'      => $item->billing_periode->name,
                 'total_customers' => $item->total_customers,
-                'total_nominal' => $item->total_nominal,
-                'total_paid' => $item->total_paid,
-                'total_unpaid' => $item->total_unpaid,
-            ];
-        });
+                'total_nominal'   => $item->total_nominal,
+                'total_paid'      => $item->total_paid,
+                'total_unpaid'    => $item->total_unpaid,
+            ]);
     }
 
-    private function getMonthlyCustomerCountForCashier($isCashier)
+    private function getMonthlyBillingSummaryRelated($userId)
     {
-        if (!$isCashier) {
-            return collect();  // Bukan kasir, return kosong.
-        }
+        return Billing::with('billing_periode')
+            ->selectRaw("
+            billing_periode_id,
+            COUNT(DISTINCT id) as total_customers,
+            SUM(CASE WHEN status IN ('LS', 'BL', 'PL') THEN paket_price ELSE 0 END) as total_nominal,
+            SUM(CASE WHEN status = 'LS' THEN paket_price ELSE 0 END) as total_paid,
+            SUM(CASE WHEN status IN ('BL', 'PL') THEN paket_price ELSE 0 END) as total_unpaid
+        ")
+            ->whereHas('customer.user', fn($q) => $q->where('id', $userId))
+            ->groupBy('billing_periode_id')
+            ->get()
+            ->map(fn($item) => [
+                'month_name'      => $item->billing_periode->name,
+                'total_customers' => $item->total_customers,
+                'total_nominal'   => $item->total_nominal,
+                'total_paid'      => $item->total_paid,
+                'total_unpaid'    => $item->total_unpaid,
+            ]);
+    }
 
-        $query = Billing::with('billing_periode')
+    private function getMonthlyCustomerCountForCashier()
+    {
+        return Billing::with('billing_periode')
             ->selectRaw("
             billing_periode_id,
             COUNT(DISTINCT customer_id) as total_customers,
@@ -262,30 +244,23 @@ class HomeController extends Controller
             SUM(CASE WHEN status = 'BL' THEN 1 ELSE 0 END) as total_unpaid
         ")
             ->groupBy('billing_periode_id')
-            ->get();
-
-        return $query->map(function ($item) {
-            return [
-                'month_name' => $item->billing_periode->name,
+            ->get()
+            ->map(fn($item) => [
+                'month_name'      => $item->billing_periode->name,
                 'total_customers' => (int) $item->total_customers,
-                'total_paid' => (int) $item->total_paid,
-                'total_paylater' => (int) $item->total_paylater,
-                'total_unpaid' => (int) $item->total_unpaid,
-            ];
-        });
+                'total_paid'      => (int) $item->total_paid,
+                'total_paylater'  => (int) $item->total_paylater,
+                'total_unpaid'    => (int) $item->total_unpaid,
+            ]);
     }
 
-    private function getLastBillingData($userId, $isPrivileged)
+    private function getLastBillingData($user, $userId)
     {
         $lastBillingPeriode = BillingPeriode::latest('created_at')->first();
 
-        if (!$lastBillingPeriode) {
-            return [null, collect()];
-        }
-
         $billingQuery = Billing::where('billing_periode_id', $lastBillingPeriode->id);
 
-        if (!$isPrivileged) {
+        if ($user->can('view-billings-widget-related')) {
             $billingQuery->whereHas('customer.user', function ($query) use ($userId) {
                 $query->where('id', $userId);
             });
@@ -296,11 +271,11 @@ class HomeController extends Controller
         return [$lastBillingPeriode, $lastBillings];
     }
 
-    private function calculateCustomerSummary($userId, $isPrivileged)
+    private function calculateCustomerSummary($user, $userId)
     {
         $query = Customer::query();
 
-        if (!$isPrivileged) {
+        if ($user->can('view-customers-widget-related')) {
             $query->where('user_id', $userId);
         }
 
@@ -319,24 +294,15 @@ class HomeController extends Controller
         ];
     }
 
-    private function calculateBillingSummary($billings, $isCashier)
+    private function calculateBillingSummary($billings, $user)
     {
         try {
-            if ($isCashier) {
+            if ($user->can('view-billings-widget-customer-count') || !$billings) {
                 return [
                     'totalBilling' => null,
                     'totalPaid' => null,
                     'totalPaylater' => null,
                     'totalUnpaid' => null,
-                ];
-            }
-
-            if (!$billings) {
-                return [
-                    'totalBilling' => 0,
-                    'totalPaid' => 0,
-                    'totalPaylater' => 0,
-                    'totalUnpaid' => 0,
                 ];
             }
 
@@ -363,29 +329,32 @@ class HomeController extends Controller
     public function getBillingMonthly()
     {
         $auth = $this->getUserAuthData();
-
+        $user = $auth['user'];
         $userId = $auth['userId'];
-        $isAdmin = $auth['isAdmin'];
-        $isSuperAdmin = $auth['isSuperAdmin'];
-        $isCashier = $auth['isCashier'];
 
-        $billingSummary = [];
+        // Menentukan billing summary berdasarkan permission
+        $billingSummary = match (true) {
+            $user->can('view-billings-chart-nominal-total')   => $this->getMonthlyBillingSummaryTotal(),
+            $user->can('view-billings-chart-nominal-related') => $this->getMonthlyBillingSummaryRelated($userId),
+            $user->can('view-billings-chart-customer-count')  => $this->getMonthlyCustomerCountForCashier(),
+            default => collect(),
+        };
 
-        if ($isSuperAdmin || $isAdmin) {
-            $billingSummary = $this->getMonthlyBillingSummary($userId, !$isSuperAdmin);
-            // Kalo superadmin => !$isSuperAdmin = false -> tampil semua
-            // Kalo admin => !$isSuperAdmin = true -> filter customer miliknya
-        } else {
-            $billingSummary = $this->getMonthlyCustomerCountForCashier(true);
+        // Kirimkan hanya permissions yang relevan
+        $permissions = [];
+        if ($user->can('view-billings-chart-nominal-total')) {
+            $permissions[] = 'view-billings-chart-nominal-total';
+        }
+        if ($user->can('view-billings-chart-nominal-related')) {
+            $permissions[] = 'view-billings-chart-nominal-related';
+        }
+        if ($user->can('view-billings-chart-customer-count')) {
+            $permissions[] = 'view-billings-chart-customer-count';
         }
 
-        // Log::info('Billing Summary:', ['summary' => $billingSummary]);
-
         return response()->json([
-            'isSuperAdmin' => $isSuperAdmin,
-            'isAdmin' => $isAdmin,
-            'isCashier' => $isCashier,
-            'billingSummary' => $billingSummary
+            'billingSummary' => $billingSummary,
+            'permissions' => $permissions, // Kirim hanya permissions yang dibutuhkan
         ]);
     }
 }

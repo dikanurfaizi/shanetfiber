@@ -681,99 +681,145 @@
         {{-- <script src="{{ asset('assets/vendor/apexcharts/apexcharts.min.js') }}"></script> --}}
         <script>
             let chart;
-            
+
             async function fetchMonthlySummary() {
                 try {
                     const response = await fetch('/api/fetch-monthly-summary', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute(
+                                'content')
                         }
                     });
-            
+
                     const data = await response.json() || {};
                     const {
-                        isAdmin = false,
-                        isSuperAdmin = false,
-                        billingSummary = []
+                        billingSummary = [], permissions = []
                     } = data ?? {};
-            
-                    const isPrivileged = isSuperAdmin || isAdmin;
+
+                    // Extract billing summary data
                     const months = billingSummary.map(item => item.month_name || '');
                     const totalPaid = billingSummary.map(item => item.total_paid || 0);
                     const totalUnpaid = billingSummary.map(item => item.total_unpaid || 0);
                     const totalPaylater = billingSummary.map(item => item.total_paylater || 0);
                     const totalCustomers = billingSummary.map(item => item.total_customers || 0);
-            
-                    const yAxisMax = isPrivileged
-                        ? Math.ceil(Math.max(...totalPaid, ...totalUnpaid) * 1.25)
-                        : Math.max(...totalCustomers) + Math.ceil(0.25 * Math.max(...totalCustomers));
-            
-                    const annotations = isPrivileged ? [] : totalCustomers.map((total, index) => ({
-                        x: months[index],
-                        y: total,
-                        label: {
-                            text: `${total} Pelanggan`,
-                            borderColor: '#007bff',
-                            style: { color: '#007bff', fontSize: '12px', background: '#FFFFFF' },
-                            position: 'top'
-                        }
-                    }));
-            
-                    const series = isPrivileged
-                        ? [
-                            { name: 'Belum Bayar (Rp)', data: totalUnpaid, color: '#dc3545' },
-                            { name: 'Sudah Bayar (Rp)', data: totalPaid, color: '#28a745' }
-                          ]
-                        : [
-                            { name: 'Belum Bayar', data: totalUnpaid, color: '#dc3545' },
-                            { name: 'Paylater', data: totalPaylater, color: '#ffc107' },
-                            { name: 'Sudah Bayar', data: totalPaid, color: '#28a745' }
-                          ];
-            
+
+                    // Set up the chart series based on user permissions
+                    let series = [];
+
+                    if (permissions.includes('view-billings-chart-nominal-total')) {
+                        // If user can see total nominal
+                        series = [{
+                                name: 'Belum Bayar (Rp)',
+                                data: totalUnpaid,
+                                color: '#dc3545'
+                            },
+                            {
+                                name: 'Sudah Bayar (Rp)',
+                                data: totalPaid,
+                                color: '#28a745'
+                            }
+                        ];
+                    } else if (permissions.includes('view-billings-chart-nominal-related')) {
+                        // If user can see related nominal only
+                        series = [{
+                                name: 'Belum Bayar (Rp)',
+                                data: totalUnpaid,
+                                color: '#dc3545'
+                            },
+                            {
+                                name: 'Sudah Bayar (Rp)',
+                                data: totalPaid,
+                                color: '#28a745'
+                            }
+                        ];
+                    } else if (permissions.includes('view-billings-chart-customer-count')) {
+                        // If user can only see customer counts
+                        series = [{
+                                name: 'Belum Bayar',
+                                data: totalUnpaid,
+                                color: '#dc3545'
+                            },
+                            {
+                                name: 'Paylater',
+                                data: totalPaylater,
+                                color: '#ffc107'
+                            },
+                            {
+                                name: 'Sudah Bayar',
+                                data: totalPaid,
+                                color: '#28a745'
+                            }
+                        ];
+                    }
+
+                    const yAxisMax = Math.max(...totalPaid, ...totalUnpaid, ...totalCustomers) * 1.25;
+
                     const options = {
-                        chart: { type: 'bar', height: 350, stacked: true, toolbar: { show: false } },
+                        chart: {
+                            type: 'bar',
+                            height: 350,
+                            stacked: true,
+                            toolbar: {
+                                show: false
+                            }
+                        },
                         title: {
                             text: 'Rekap Customer Bulanan',
                             align: 'center',
-                            style: { fontSize: '18px', fontWeight: 'bold', color: '#333' }
+                            style: {
+                                fontSize: '18px',
+                                fontWeight: 'bold',
+                                color: '#333'
+                            }
                         },
                         series,
-                        xaxis: { categories: months, labels: { rotate: -45 } },
+                        xaxis: {
+                            categories: months,
+                            labels: {
+                                rotate: -45
+                            }
+                        },
                         yaxis: {
                             min: 0,
                             max: yAxisMax,
                             labels: {
-                                formatter: value => isPrivileged
-                                    ? 'Rp ' + value.toLocaleString()
-                                    : `${Math.round(value)} pelanggan`
+                                formatter: value =>
+                                    permissions.includes('view-billings-chart-nominal-total') || permissions.includes(
+                                        'view-billings-chart-nominal-related') ?
+                                    'Rp ' + value.toLocaleString() : `${Math.round(value)} pelanggan`
                             }
                         },
                         tooltip: {
                             y: {
-                                formatter: value => isPrivileged
-                                    ? 'Rp ' + value.toLocaleString()
-                                    : `${Math.round(value)} pelanggan`
+                                formatter: value =>
+                                    permissions.includes('view-billings-chart-nominal-total') || permissions.includes(
+                                        'view-billings-chart-nominal-related') ?
+                                    'Rp ' + value.toLocaleString() : `${Math.round(value)} pelanggan`
                             }
                         },
-                        dataLabels: { enabled: false },
-                        annotations: { points: annotations },
-                        legend: { position: 'top', horizontalAlign: 'center' }
+                        dataLabels: {
+                            enabled: false
+                        },
+                        legend: {
+                            position: 'top',
+                            horizontalAlign: 'center'
+                        }
                     };
-            
+
                     if (chart) chart.destroy();
                     chart = new ApexCharts(document.querySelector("#chartWrapper1"), options);
                     chart.render();
-            
+
                 } catch (error) {
                     console.error('Error fetching data: ', error);
                 }
             }
-            
+
             fetchMonthlySummary();
             setInterval(fetchMonthlySummary, 300000);
-            </script>            
+        </script>
 
         <script>
             $.ajaxSetup({
