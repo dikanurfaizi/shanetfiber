@@ -417,6 +417,108 @@ class CustomerController extends Controller
         ])->with('i', (request()->input('page', 1) - 1) * $perPage);
     }
 
+    private function filterCustomersByStatus($request, $routersEnable, $searchParams, $paginate)
+    {
+        $status = $searchParams['status'] ?? null;
+        $searchAddress = $searchParams['address'] ?? null;
+        $searchServer = $searchParams['server'] ?? null;
+        $searchPaket = $searchParams['paket'] ?? null;
+
+        $startTime = microtime(true);
+        $maxExecutionTime = ini_get('max_execution_time');
+        $safeLimit = $maxExecutionTime > 0 ? $maxExecutionTime - 2 : 28;
+
+        $dataCustomers = [];
+
+        if (count($routersEnable) == 0) {
+            return redirect()->route('customers.index')
+                ->withErrors(['msg' => 'All server disable, please check your server setting.', 'Or you don\'t have server data.']);
+        }
+
+        foreach ($routersEnable as $router) {
+            if ((microtime(true) - $startTime) >= $safeLimit) {
+                Log::warning('Execution time approaching limit, returning partial data.');
+                break;
+            }
+
+            try {
+                $this->testConnectionService->checkOnline($router);
+            } catch (\Exception $e) {
+                return redirect()->route('customers.index')
+                    ->withErrors(['msg' => 'Server ' . $router->name . ' Offline.', 'Please enable first or check your configuration!']);
+            }
+
+            $secretsStatus = [];
+
+            if ($status === 'isolir') {
+                $profileIsolir = AutoIsolir::where('mikrotik_id', $router->id)->value('profile_id');
+                if ($profileIsolir) {
+                    $getSecretStatus = $this->secretService->getSecretByProfile($router, $profileIsolir);
+                    $collectionSecretStatus = SecretResource::collection($getSecretStatus)->where('disabled', 'false');
+                    $secretsStatus = $collectionSecretStatus->pluck('name')->toArray();
+                } else {
+                    return redirect()->route('customers.index')
+                        ->withErrors(['msg' => 'Please config auto isolir on Server ' . $router->name . ' first.']);
+                }
+            } else {
+                $getAllSecretActive = $this->secretService->getPppActive($router);
+                $collectionSecretActive = SecretResource::collection($getAllSecretActive);
+                $secretActive = $collectionSecretActive->pluck('name')->toArray();
+
+                if ($status === 'offline') {
+                    $usernameCustomers = Customer::where('mikrotik_id', $router->id)
+                        ->where('disabled', 'false')
+                        ->pluck('username')
+                        ->toArray();
+
+                    $secretsStatus = collect($usernameCustomers)->diff($secretActive)->values()->all();
+                } elseif ($status === 'online') {
+                    $secretsStatus = $secretActive;
+                }
+            }
+
+            foreach ($secretsStatus as $secretName) {
+                $customer = Customer::where('username', $secretName)->first();
+                if ($customer) {
+                    $dataCustomers[] = $customer;
+                }
+            }
+        }
+
+        $filteredCustomers = collect($dataCustomers)
+            ->filter(function ($customer) use ($searchAddress) {
+                if ($searchAddress === 'NULL') {
+                    return $customer->address === null;
+                } elseif ($searchAddress !== null) {
+                    return $customer->address === $searchAddress;
+                }
+                return true;
+            })
+            ->filter(function ($customer) use ($searchServer) {
+                return $searchServer ? $customer->mikrotik_id == $searchServer : true;
+            })
+            ->filter(function ($customer) use ($searchPaket) {
+                return $searchPaket ? $customer->paket_id == $searchPaket : true;
+            })
+            ->where('activation', 'true')
+            ->sortBy('name')
+            ->values();
+
+        // Paginasi manual
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $currentPageResults = $filteredCustomers->slice(($currentPage - 1) * $paginate, $paginate)->all();
+        $paginatedSearchResults = new LengthAwarePaginator($currentPageResults, $filteredCustomers->count(), $paginate, $currentPage, [
+            'path' => $request->url(),
+            'query' => $request->except('page'),
+        ]);
+
+        return view('customers.offline', [
+            'data' => $paginatedSearchResults,
+            'status' => $status,
+            'dataCustomers' => $filteredCustomers,
+        ])->with('i', ($currentPage - 1) * $paginate);
+    }
+
     private function applyStatusFilter($query, $status)
     {
         return match ($status) {

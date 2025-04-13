@@ -129,8 +129,8 @@
                         <div class="card-header py-3">
                             <h6 class="m-0 font-weight-bold text-primary">
                                 <i class="fas fa-fw fa-users text-primary"></i> Customers :
-                                @if ($customers->count() > 0)
-                                    <a href="{{ route('customers.index') }}">{{ $customers->count() }}</a>
+                                @if ($totalCustomers > 0)
+                                    <a href="{{ route('customers.index') }}">{{ $totalCustomers }}</a>
                                 @else
                                     0
                                 @endif
@@ -149,8 +149,8 @@
                                         <span>
                                             <a href="{{ route('customers.index', ['status' => 'false']) }}">
                                                 <i class="fas fa-check-circle text-success"></i>
-                                                @if ($customers->where('disabled', 'false')->count() > 0)
-                                                    {{ $customers->where('disabled', 'false')->count() }}
+                                                @if ($totalEnabled > 0)
+                                                    {{ $totalEnabled }}
                                                 @else
                                                     0
                                                 @endif Enable
@@ -161,8 +161,8 @@
                                         <span>
                                             <a href="{{ route('customers.index', ['status' => 'true']) }}">
                                                 <i class="fas fa-ban text-danger"></i>
-                                                @if ($customers->where('disabled', 'true')->count() - $customers->where('activation', 'false')->count() > 0)
-                                                    {{ $customers->where('disabled', 'true')->count() - $customers->where('activation', 'false')->count() }}
+                                                @if ($totalDisabled > 0)
+                                                    {{ $totalDisabled }}
                                                 @else
                                                     0
                                                 @endif Disable
@@ -173,8 +173,8 @@
                                         <span>
                                             <a href="{{ route('customers.index', ['status' => 'deactivated']) }}">
                                                 <i class="fas fa-ban text-danger"></i>
-                                                @if ($customers->where('activation', 'false')->count() > 0)
-                                                    {{ $customers->where('activation', 'false')->count() }}
+                                                @if ($totalNonActiveDisabled > 0)
+                                                    {{ $totalNonActiveDisabled }}
                                                 @else
                                                     0
                                                 @endif Deactivation
@@ -224,8 +224,8 @@
                                         <span>
                                             <a href="{{ route('customers.index', ['status' => 'isolir']) }}">
                                                 <i class="fas fa-ban text-danger"></i>
-                                                @if ($sumCustomersIsolir - $customers->where('activation', 'false')->where('disabled', 'true')->count() > 0)
-                                                    {{ $sumCustomersIsolir - $customers->where('activation', 'false')->where('disabled', 'true')->count() }}
+                                                @if ($sumCustomersIsolir - $totalNonActiveDisabled > 0)
+                                                    {{ $sumCustomersIsolir - $totalNonActiveDisabled }}
                                                 @else
                                                     0
                                                 @endif Isolir
@@ -300,11 +300,13 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div id="all-ppp-secrets-active-count" class="h5">
-                                            <h6 class="m-0 font-weight-bold text-primary">
-                                                @moneyIDR($totalBilling)
-                                            </h6>
-                                        </div>
+                                        @if ($totalBilling !== null)
+                                            <div id="all-ppp-secrets-active-count" class="h5">
+                                                <h6 class="m-0 font-weight-bold text-primary">
+                                                    @moneyIDR($totalBilling)
+                                                </h6>
+                                            </div>
+                                        @endif
                                         @if ($adminBillingSummary && $adminBillingSummary->count() > 0)
                                             <hr>
                                             <h6 class="m-0 font-weight-bold text-primary mb-3">
@@ -378,11 +380,13 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div id="all-ppp-secrets-active-count" class="h5">
-                                            <h6 class="m-0 font-weight-bold text-primary">
-                                                @moneyIDR($totalPaid)
-                                            </h6>
-                                        </div>
+                                        @if ($totalPaid !== null)
+                                            <div id="all-ppp-secrets-active-count" class="h5">
+                                                <h6 class="m-0 font-weight-bold text-primary">
+                                                    @moneyIDR($totalPaid)
+                                                </h6>
+                                            </div>
+                                        @endif
                                         @if ($adminBillingSummary && $adminBillingSummary->count() > 0)
                                             <hr>
                                             <h6 class="m-0 font-weight-bold text-primary mb-3">
@@ -456,11 +460,13 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div id="all-ppp-secrets-active-count" class="h5">
-                                            <h6 class="m-0 font-weight-bold text-primary">
-                                                @moneyIDR($totalPaylater)
-                                            </h6>
-                                        </div>
+                                        @if ($totalPaylater !== null)
+                                            <div id="all-ppp-secrets-active-count" class="h5">
+                                                <h6 class="m-0 font-weight-bold text-primary">
+                                                    @moneyIDR($totalPaylater) <!-- Menampilkan nilai $totalPaylater -->
+                                                </h6>
+                                            </div>
+                                        @endif
                                         @if ($adminBillingSummary && $adminBillingSummary->count() > 0)
                                             <hr>
                                             <h6 class="m-0 font-weight-bold text-primary mb-3">
@@ -535,11 +541,13 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div id="all-ppp-secrets-active-count" class="h5">
-                                            <h6 class="m-0 font-weight-bold text-primary">
-                                                @moneyIDR($totalUnpaid)
-                                            </h6>
-                                        </div>
+                                        @if ($totalUnpaid !== null)
+                                            <div id="all-ppp-secrets-active-count" class="h5">
+                                                <h6 class="m-0 font-weight-bold text-primary">
+                                                    @moneyIDR($totalUnpaid)
+                                                </h6>
+                                            </div>
+                                        @endif
                                         @if ($adminBillingSummary && $adminBillingSummary->count() > 0)
                                             <hr>
                                             <h6 class="m-0 font-weight-bold text-primary mb-3">
@@ -672,129 +680,100 @@
         <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
         {{-- <script src="{{ asset('assets/vendor/apexcharts/apexcharts.min.js') }}"></script> --}}
         <script>
-            // Global chart variable
             let chart;
-
-            // Function untuk mengambil data bulanan dari backend
+            
             async function fetchMonthlySummary() {
                 try {
                     const response = await fetch('/api/fetch-monthly-summary', {
-                        method: 'POST', // Menentukan method POST
+                        method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json', // Memberitahu server bahwa data yang dikirimkan adalah JSON
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute(
-                                'content') // CSRF token untuk Laravel
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                         }
                     });
-                    const chartData = await response.json();
-                    // console.log(chartData);
-
-                    // Extract data untuk grafik
-                    const months = chartData.map(item => item.month_name);
-                    const totalNominal = chartData.map(item => parseFloat(item.total_nominal));
-                    const totalPaid = chartData.map(item => parseFloat(item.total_paid));
-                    const totalUnpaid = chartData.map(item => parseFloat(item.total_unpaid));
-                    const totalCustomers = chartData.map(item => item.total_customers || 0);
-
-                    // Siapkan anotasi untuk label di atas balok
-                    const annotations = totalNominal.map((nominal, index) => ({
+            
+                    const data = await response.json() || {};
+                    const {
+                        isAdmin = false,
+                        isSuperAdmin = false,
+                        billingSummary = []
+                    } = data ?? {};
+            
+                    const isPrivileged = isSuperAdmin || isAdmin;
+                    const months = billingSummary.map(item => item.month_name || '');
+                    const totalPaid = billingSummary.map(item => item.total_paid || 0);
+                    const totalUnpaid = billingSummary.map(item => item.total_unpaid || 0);
+                    const totalPaylater = billingSummary.map(item => item.total_paylater || 0);
+                    const totalCustomers = billingSummary.map(item => item.total_customers || 0);
+            
+                    const yAxisMax = isPrivileged
+                        ? Math.ceil(Math.max(...totalPaid, ...totalUnpaid) * 1.25)
+                        : Math.max(...totalCustomers) + Math.ceil(0.25 * Math.max(...totalCustomers));
+            
+                    const annotations = isPrivileged ? [] : totalCustomers.map((total, index) => ({
                         x: months[index],
-                        y: nominal, // Total nominal (Paid + Unpaid)
+                        y: total,
                         label: {
-                            text: `Rp ${nominal.toLocaleString('id-ID')} dari ${totalCustomers[index]} Pelanggan`,
-                            borderColor: '#FF0000',
-                            style: {
-                                color: '#FF0000',
-                                fontSize: '12px',
-                                background: '#FFFFFF'
-                            },
+                            text: `${total} Pelanggan`,
+                            borderColor: '#007bff',
+                            style: { color: '#007bff', fontSize: '12px', background: '#FFFFFF' },
                             position: 'top'
                         }
                     }));
-
-                    // Menentukan nilai maksimal untuk sumbu Y dengan buffer 25% dari total nominal terbesar
-                    const maxNominal = Math.max(...totalNominal);
-                    const yAxisMax = Math.max(0, maxNominal + (0.25 * maxNominal));
-
-                    // Konfigurasi grafik
+            
+                    const series = isPrivileged
+                        ? [
+                            { name: 'Belum Bayar (Rp)', data: totalUnpaid, color: '#dc3545' },
+                            { name: 'Sudah Bayar (Rp)', data: totalPaid, color: '#28a745' }
+                          ]
+                        : [
+                            { name: 'Belum Bayar', data: totalUnpaid, color: '#dc3545' },
+                            { name: 'Paylater', data: totalPaylater, color: '#ffc107' },
+                            { name: 'Sudah Bayar', data: totalPaid, color: '#28a745' }
+                          ];
+            
                     const options = {
-                        chart: {
-                            type: 'bar',
-                            height: 350,
-                            stacked: true, // Aktifkan mode stacked
-                            toolbar: {
-                                show: false
-                            },
-                        },
+                        chart: { type: 'bar', height: 350, stacked: true, toolbar: { show: false } },
                         title: {
-                            text: 'Customer Billing',
+                            text: 'Rekap Customer Bulanan',
                             align: 'center',
-                            style: {
-                                fontSize: '18px',
-                                fontWeight: 'bold',
-                                color: '#333'
-                            }
+                            style: { fontSize: '18px', fontWeight: 'bold', color: '#333' }
                         },
-                        series: [{
-                                name: 'Belum Lunas',
-                                data: totalUnpaid,
-                                color: '#dc3545'
-                            },
-                            {
-                                name: 'Lunas',
-                                data: totalPaid,
-                                color: '#28a745'
-                            }
-                        ],
-                        xaxis: {
-                            categories: months,
-                            labels: {
-                                rotate: -45
-                            }
-                        },
+                        series,
+                        xaxis: { categories: months, labels: { rotate: -45 } },
                         yaxis: {
                             min: 0,
                             max: yAxisMax,
                             labels: {
-                                formatter: value => `Rp ${value.toLocaleString('id-ID')}`
+                                formatter: value => isPrivileged
+                                    ? 'Rp ' + value.toLocaleString()
+                                    : `${Math.round(value)} pelanggan`
                             }
                         },
                         tooltip: {
                             y: {
-                                formatter: value => `Rp ${value.toLocaleString('id-ID')}`
+                                formatter: value => isPrivileged
+                                    ? 'Rp ' + value.toLocaleString()
+                                    : `${Math.round(value)} pelanggan`
                             }
                         },
-                        dataLabels: {
-                            enabled: false
-                        },
-                        annotations: {
-                            points: annotations
-                        },
-                        legend: {
-                            position: 'top',
-                            horizontalAlign: 'center'
-                        }
+                        dataLabels: { enabled: false },
+                        annotations: { points: annotations },
+                        legend: { position: 'top', horizontalAlign: 'center' }
                     };
-
-                    // Hapus grafik lama jika ada
-                    if (chart) {
-                        chart.destroy();
-                    }
-
-                    // Render grafik baru
+            
+                    if (chart) chart.destroy();
                     chart = new ApexCharts(document.querySelector("#chartWrapper1"), options);
                     chart.render();
+            
                 } catch (error) {
                     console.error('Error fetching data: ', error);
                 }
             }
-
-            // Panggil fungsi untuk pertama kali
+            
             fetchMonthlySummary();
-
-            // Set interval untuk memperbarui data setiap 5 menit
-            setInterval(fetchMonthlySummary, 300000); // 10000 ms = 5 menit
-        </script>
+            setInterval(fetchMonthlySummary, 300000);
+            </script>            
 
         <script>
             $.ajaxSetup({

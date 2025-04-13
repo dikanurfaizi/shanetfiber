@@ -37,7 +37,7 @@ class TestConnectionService
                 ->set('user', $router->username);
 
             $client = new Client($config);
-            LogHelper::logInfo(null, ['host' => $router->host], 200, "Successfully connected to Mikrotik");
+            // LogHelper::logInfo(null, ['host' => $router->host], 200, "Successfully connected to Mikrotik");
             return $client;
         } catch (\Exception $e) {
             LogHelper::logError(null, ['host' => $router->host ?? 'N/A', 'error' => $e->getMessage()], 500, "Failed to connect to Mikrotik");
@@ -65,7 +65,7 @@ class TestConnectionService
             $query = (new Query('/system/resource/print'));
             $result = $client->query($query)->read();
 
-            LogHelper::logInfo(null, ['host' => $router['host']], 200, "Successfully fetched system resource from Mikrotik");
+            // LogHelper::logInfo(null, ['host' => $router['host']], 200, "Successfully fetched system resource from Mikrotik");
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(null, ['host' => $router['host'] ?? 'N/A', 'error' => $e->getMessage()], 500, "Failed to fetch system resource from Mikrotik");
@@ -91,7 +91,7 @@ class TestConnectionService
             $query = (new Query('/system/resource/print'));
             $result = $client->query($query)->read();
 
-            LogHelper::logInfo(null, ['host' => $router->host], 200, "Mikrotik is online");
+            // LogHelper::logInfo(null, ['host' => $router->host], 200, "Mikrotik is online");
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(null, ['host' => $router->host ?? 'N/A', 'error' => $e->getMessage()], 500, "Mikrotik is offline or unreachable");

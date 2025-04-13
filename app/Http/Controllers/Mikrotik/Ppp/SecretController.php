@@ -47,11 +47,11 @@ class SecretController extends Controller
             $pppsecrets = SecretResource::collection($secrets);
             $pppSecretsActive = SecretResource::collection($secretsActive);
 
-            LogHelper::logInfo(null, [
-                'mikrotik' => $mikrotik->toArray(),
-                'pppsecrets' => $pppsecrets,
-                'pppSecretsActive' => $pppSecretsActive
-            ], 200, 'Fetched secrets successfully');
+            // LogHelper::logInfo(null, [
+            //     'mikrotik' => $mikrotik->toArray(),
+            //     'pppsecrets' => $pppsecrets,
+            //     'pppSecretsActive' => $pppSecretsActive
+            // ], 200, 'Fetched secrets successfully');
 
             return view('mikrotiks.ppp.secrets.index', [
                 'mikrotik' => $mikrotik,
@@ -76,11 +76,11 @@ class SecretController extends Controller
             // $pppServices = PppType::pluck('name', 'id');
             //return dd($pppServices);
 
-            LogHelper::logInfo(null, [
-                'mikrotik' => $mikrotik->toArray(),
-                'pppprofiles' => $pppProfiles,
-                'pppservices' => PppType::All()->toArray()
-            ], 200, 'Secret created successfully');
+            // LogHelper::logInfo(null, [
+            //     'mikrotik' => $mikrotik->toArray(),
+            //     'pppprofiles' => $pppProfiles,
+            //     'pppservices' => PppType::All()->toArray()
+            // ], 200, 'Secret created successfully');
             return view('mikrotiks.ppp.secrets.create', [
                 'mikrotik' => $mikrotik,
                 'pppprofiles' => $pppProfiles,
@@ -121,7 +121,7 @@ class SecretController extends Controller
             //$router = $mikrotik;
 
             $response = $this->secretService->createSecret($mikrotik, $username, $password, $service, $profile,  $comment);
-            LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray()], 200, 'Secret created successfully');
+            // LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray()], 200, 'Secret created successfully');
 
             return isset($response['after']['message'])
                 ? redirect()->back()->with('error', $response['after']['message'])
@@ -158,12 +158,12 @@ class SecretController extends Controller
 
             $profiles = $this->secretService->getPppProfile($mikrotik);
             $pppProfiles = ProfileResource::collection($profiles);
-            LogHelper::logInfo(null, [
-                'mikrotik' => $mikrotik->toArray(),
-                'pppsecrets' => $pppsecrets,
-                'pppprofiles' => $pppProfiles,
-                'pppservices' => PppType::All()->toArray(),
-            ], 200, 'Secret successfully edited');
+            // LogHelper::logInfo(null, [
+            //     'mikrotik' => $mikrotik->toArray(),
+            //     'pppsecrets' => $pppsecrets,
+            //     'pppprofiles' => $pppProfiles,
+            //     'pppservices' => PppType::All()->toArray(),
+            // ], 200, 'Secret successfully edited');
 
             return view('mikrotiks.ppp.secrets.edit', [
                 'mikrotik' => $mikrotik,
@@ -202,7 +202,7 @@ class SecretController extends Controller
             $profile = $request->profile;
             $id = request('id');
             $response = $this->secretService->updateSecret($mikrotik, $username, $password, $service, $profile, $id);
-            LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray(),], 200, 'Secret updated seccessfully');
+            // LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray(),], 200, 'Secret updated seccessfully');
 
             return isset($response['after']['message'])
                 ? redirect()->back()->with('error', $response['after']['message'])
@@ -218,7 +218,7 @@ class SecretController extends Controller
         try {
             $allPppSecrets = $this->secretService->getAllPppSecrets($mikrotik);
             $allPppSecretsCount = count($allPppSecrets);
-            LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray(), 'allPppSecretsCount' => $allPppSecretsCount], 200, 'Secret get count ppp secrets');
+            // LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray(), 'allPppSecretsCount' => $allPppSecretsCount], 200, 'Secret get count ppp secrets');
             return response()->json([
                 'allPppSecretsCount' => $allPppSecretsCount,
             ]);
@@ -233,7 +233,7 @@ class SecretController extends Controller
         try {
             $allPppActive = $this->secretService->getPppActive($mikrotik);
             $allPppActiveCount = count($allPppActive);
-            LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray(), 'allPppSecretsCount' => $allPppActiveCount], 200, 'Secret get count ppp secrets active');
+            // LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray(), 'allPppSecretsCount' => $allPppActiveCount], 200, 'Secret get count ppp secrets active');
             return response()->json([
                 'allPppActiveCount' => $allPppActiveCount,
             ]);
@@ -251,7 +251,7 @@ class SecretController extends Controller
         try {
             $secretId = request('id');
             $this->secretService->deleteOneSecret($mikrotik, $secretId);
-            LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray()], 200, 'Successfully delete one secret');
+            // LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray()], 200, 'Successfully delete one secret');
             return back();
         } catch (Exception $e) {
             LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed delete one secret');
@@ -264,7 +264,7 @@ class SecretController extends Controller
         try {
             $username = request()->input('username');
             dispatch(new DisablePppSecretJob($mikrotik, $username))->onQueue('default');
-            LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray()], 200, 'Successfully disable ppp secret');
+            // LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray()], 200, 'Successfully disable ppp secret');
             return back();
         } catch (Exception $e) {
             LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to disable ppp secret');
@@ -277,7 +277,7 @@ class SecretController extends Controller
         try {
             $username = request()->input('username');
             dispatch(new EnablePppSecretJob($mikrotik, $username))->onQueue('default');
-            LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray()], 200, 'Successfully enable ppp secret');
+            // LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray()], 200, 'Successfully enable ppp secret');
             return back();
         } catch (Exception $e) {
             LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to enable ppp secret');
@@ -387,7 +387,7 @@ class SecretController extends Controller
                 'mikrotik_id' => $mikrotikId,
                 'imported_customers' => count($secretNonCustomer),
             ];
-            LogHelper::logInfo(null, $logBody, 200, 'Import customers successfully');
+            // LogHelper::logInfo(null, $logBody, 200, 'Import customers successfully');
 
             return redirect()->route('customers.index')->with('success', 'Import customers successfully.');
         } catch (Exception $e) {

@@ -41,7 +41,7 @@ class SystemController extends Controller
                 'spec' => $spec,
                 'resources' => $resources
             ];
-            LogHelper::logInfo(null, $logBody, 200, 'Successfully to get mikrotik interface');
+            // LogHelper::logInfo(null, $logBody, 200, 'Successfully to get mikrotik interface');
             return response()->json([
                 'resources' => $resources,
             ]);
@@ -66,7 +66,7 @@ class SystemController extends Controller
     {
         try {
             $response = $this->systemService->monitoringTraffic($mikrotik);
-            LogHelper::logInfo(null, ['mikrotik' => $mikrotik->id, 'response' => $response], 200, 'Successfully to retrieve mikrotik traffic interface');
+            // LogHelper::logInfo(null, ['mikrotik' => $mikrotik->id, 'response' => $response], 200, 'Successfully to retrieve mikrotik traffic interface');
             return $response;
         } catch (Exception $e) {
             LogHelper::logError(null, ['error' => $e->getMessage()], 503, 'Failed to retrieve mikrotik traffic interface');
@@ -95,7 +95,7 @@ class SystemController extends Controller
                 'time' => $time,
             ];
 
-            LogHelper::logInfo(null, $logBody, 200, 'Successfully retrieved Mikrotik time');
+            // LogHelper::logInfo(null, $logBody, 200, 'Successfully retrieved Mikrotik time');
 
             return response()->json([
                 'time' => $time,

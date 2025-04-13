@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Providers\RouteServiceProvider;
 use Symfony\Component\HttpFoundation\Response;
+use App\Helpers\LogHelper;
 
 class RedirectIfAuthenticated
 {
@@ -24,6 +25,10 @@ class RedirectIfAuthenticated
             DB::connection()->getPdo();
             $status = 'false';
         } catch (Exception $e) {
+            LogHelper::logError(null, [
+                'database' => $dbName,
+                'error_message' => $e->getMessage(),
+            ], 500, 'Database connection failed');
             return redirect()->route('install');
         }
 

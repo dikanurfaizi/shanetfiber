@@ -1,8 +1,9 @@
 @php
     $user = auth()->user();
     $isAdmin = $user->hasRole('Admin');
+    $isCashier = $user->hasRole('Kasir');
 
-    if ($isAdmin) {
+    if ($isAdmin || $isCashier) {
         $billingsToShow = $billings->where('status', '!=', 'LS');
     } else {
         $billingsToShow = $billings->filter(function ($billing) use ($user) {
