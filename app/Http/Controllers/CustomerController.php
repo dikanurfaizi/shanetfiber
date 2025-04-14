@@ -378,7 +378,7 @@ class CustomerController extends Controller
             $searchParams['search_admin'] = $user->id;
         }
 
-        DB::enableQueryLog();
+        // DB::enableQueryLog();
 
         // Query pelanggan
         $customers = Customer::with(['user'])
@@ -404,16 +404,16 @@ class CustomerController extends Controller
 
         $data = $customers->paginate($perPage)->appends($request->query());
 
-        $queries = DB::getQueryLog();
-        LogHelper::logInfo(
-            null,
-            [
-                'queries' => $queries,
-                'params' => $searchParams,
-            ],
-            200,
-            'Debug customer query'
-        );
+        // $queries = DB::getQueryLog();
+        // LogHelper::logInfo(
+        //     null,
+        //     [
+        //         'queries' => $queries,
+        //         'params' => $searchParams,
+        //     ],
+        //     200,
+        //     'Debug customer query'
+        // );
 
         // Hitung total pemasukan
         $totalIncoming = $data->sum(fn($customer) => $customer->paket->price * ((100 - $customer->discount) / 100));

@@ -66,7 +66,7 @@
                                     <option value="!LS">{{ __('billing.placeholder.select.unpaid') }}</option>
                                     <option value="PL">{{ __('billing.placeholder.select.paylater') }}</option>
                                     <option value="LS">{{ __('billing.placeholder.select.paid') }}</option>
-                                    <option value="NP">{{ __('billing.placeholder.select.notactive') }}</option>
+                                    {{-- <option value="NP">{{ __('billing.placeholder.select.notactive') }}</option> --}}
                                 </select>
                             </div>
                         </div>
