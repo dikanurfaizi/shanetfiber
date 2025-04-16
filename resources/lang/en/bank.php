@@ -34,6 +34,8 @@ return [
         'account-number' => 'Account Number',
         'status' => 'Status',
         'action' => 'Action',
+        'admin' => 'Admin Area',
+        'same_as_admin' => 'Account Name Same as Admin',
     ],
     'placeholder' => [
         'name' => 'Account Name',
@@ -43,5 +45,10 @@ return [
         'deposit_account_name' => 'Deposit Account Name',
         'deposit_account_number' => 'Deposit Account Number',
         'reference-id' => 'Reference ID',
-    ]
+        'select_admin' => 'Select Admin Area',
+        'select_bank' => 'Select Bank Name',
+    ],
+    'error' => [
+        'select_admin' => 'Please select Admin Area first'
+    ],
 ];

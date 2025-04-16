@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\BankUpdateRequest;
 use App\Models\Bank;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -22,8 +23,8 @@ class BankController extends Controller
 
     public function create()
     {
-
-        return view('banks.create');
+        $users = USER::All();
+        return view('banks.create', compact('users'));
     }
 
     /**
@@ -36,13 +37,14 @@ class BankController extends Controller
             [
                 'name' => 'required',
                 'bank' => 'required',
-                'account_number' => 'required'
+                'account_number' => 'required',
+                'user_id' => 'required'
             ],
             [
                 'name.required' => 'Account Name required!',
                 'bank.required' => 'Bank Name required!',
-                'account_number.required' => 'Account Number required!'
-
+                'account_number.required' => 'Account Number required!',
+                'user_id.required' => 'Admin Area required!'
             ]
         );
 
@@ -58,8 +60,8 @@ class BankController extends Controller
     }
     public function edit(Bank $bank)
     {
-
-        return view('banks.edit', compact('bank'));
+        $users = USER::All();
+        return view('banks.edit', compact('bank', 'users'));
     }
     public function update(BankUpdateRequest $request, Bank $bank)
     {
