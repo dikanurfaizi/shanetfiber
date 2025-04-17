@@ -75,30 +75,30 @@ class WhatsappMessageService
         }
     }
 
-    public function getAccountBank()
-    {
-        try {
-            $account_banks_text = '';
-            $account_banks = Bank::where('disabled', false)->get();
+    // public function getAccountBank()
+    // {
+    //     try {
+    //         $account_banks_text = '';
+    //         $account_banks = Bank::where('disabled', false)->get();
 
-            if ($account_banks->isNotEmpty()) {
-                $i = 0;
-                foreach ($account_banks as $account_bank) {
-                    $i++;
-                    $account_banks_text .= $i . '. ' . $account_bank->bank . ' - ' . $account_bank->account_number . ' - ' . $account_bank->account_name . '%0a';
-                }
-            }
-            return $account_banks_text;
-        } catch (\Exception $e) {
-            LogHelper::logError(
-                null,
-                null,
-                500,
-                "Error retrieving account bank information: " . $e->getMessage()
-            );
-            return "Gagal mengambil informasi rekening bank.";
-        }
-    }
+    //         if ($account_banks->isNotEmpty()) {
+    //             $i = 0;
+    //             foreach ($account_banks as $account_bank) {
+    //                 $i++;
+    //                 $account_banks_text .= $i . '. ' . $account_bank->bank . ' - ' . $account_bank->account_number . ' - ' . $account_bank->account_name . '%0a';
+    //             }
+    //         }
+    //         return $account_banks_text;
+    //     } catch (\Exception $e) {
+    //         LogHelper::logError(
+    //             null,
+    //             null,
+    //             500,
+    //             "Error retrieving account bank information: " . $e->getMessage()
+    //         );
+    //         return "Gagal mengambil informasi rekening bank.";
+    //     }
+    // }
 
     public function getDefaultMessage($slug)
     {
@@ -172,31 +172,35 @@ class WhatsappMessageService
     /**
      * Ambil informasi bank dalam format string
      */
-    private function getBankInfo()
+    private function getBankInfo($id)
     {
         try {
-            $bankInfo = Bank::where('disabled', 'false')
+            // Ambil bank info berdasarkan user_id
+            $banks = Bank::where('user_id', $id)
+                ->where('disabled', 'false')
                 ->select('name', 'bank', 'account_number')
-                ->get()
-                ->map(fn($bank) => "{$bank->bank} - {$bank->account_number} (a.n {$bank->name})")
-                ->implode("\n");
+                ->get();
 
-            if (!$bankInfo) {
+            if ($banks->isEmpty()) {
                 LogHelper::logWarning(
                     null,
                     null,
-                    404, // Bad Request
-                    "No bank information available"
+                    404,
+                    "No bank information available for user_id: {$id}"
                 );
                 return 'Tidak ada informasi bank';
             }
 
+            $bankInfo = $banks->map(fn($bank) => "- {$bank->bank} - {$bank->account_number} (a.n {$bank->name})")
+                ->implode("\n");
+
             return $bankInfo;
         } catch (\Exception $e) {
+            // Jika terjadi error
             LogHelper::logError(
                 null,
                 null,
-                500, // Bad Request
+                500, // Internal Server Error
                 "Failed to retrieve bank information. Error: {$e->getMessage()}"
             );
             return 'Terjadi kesalahan saat mengambil informasi bank';
@@ -324,10 +328,11 @@ class WhatsappMessageService
     /**
      * Ambil nomor WhatsApp aktif
      */
-    private function getWhatsAppNumber()
+    private function getWhatsAppNumber($id)
     {
         try {
-            $number = WhatsappNumber::where('disabled', 0)->first()->number ?? null;
+            $user = User::where('id', $id)->first();
+            $number = $user ? $user->contact : null;
 
             if (!$number) {
                 LogHelper::logWarning(
@@ -393,11 +398,22 @@ class WhatsappMessageService
                 return;
             }
 
-            $admin = User::Where('id', $customers->user_id)->first();
+            $admin = User::where('id', $customers->user_id)->first() ?? 1;
             $admin_number = '-';
+
             if (!empty($admin->contact)) {
                 $admin_number = $this->manipulateContactBillInfo($admin->contact, null);
             }
+
+            $accountBank = $this->getBankInfo($admin->id);
+
+            // Log hasil accountBank setelah getBankInfo
+            LogHelper::logInfo(
+                null,
+                null,
+                200,
+                "Final bank info for notification:\n{$accountBank}"
+            );
 
             $replace = [
                 '%name%' => $customers->name,
@@ -408,6 +424,7 @@ class WhatsappMessageService
                 '%admin%' => $admin->name,
                 '%paket%' => $customers->paket->name,
                 '%bill%' => 'Rp. ' . number_format($customers->paket->price, 2, ',', '.'),
+                '%account_bank%' => $accountBank,
             ];
 
             $message = $this->getDefaultMessage($action);
@@ -473,7 +490,8 @@ class WhatsappMessageService
                 return;
             }
 
-            $whatsapp_number = $this->manipulateContactBillInfo($this->getWhatsAppNumber(), null);
+            $userId = $billing->customer->user_id ?? 1;
+            $whatsapp_number = $this->manipulateContactBillInfo($this->getWhatsAppNumber($userId), null);
 
             $discount = 0;
             $price_after_discount = $billing->customer->paket->price;
@@ -614,14 +632,20 @@ class WhatsappMessageService
             }
 
             // Ambil informasi customer
-            $full_name = $billing->customer_name ?? 'Pelanggan';
+            $customer_name = $billing->customer_name ?? 'Pelanggan';
             $address = $billing->customer_address ?? 'Alamat tidak tersedia';
             $cust_id = $billing->customer_id ?? 'ID tidak tersedia';
             $customer_id = $billing->customer_unique_id ?? 'Customer ID tidak tersedia';
             $admin = $billing->admin_name ?? 'Belum terlink ke admin';
 
             // Ambil informasi bank
-            $accountBank = $this->getBankInfo();
+            $userId = $billing->customer->user_id;
+
+            if ($userId) {
+                $accountBank = $this->getBankInfo($userId);
+            } else {
+                $accountBank = $this->getBankInfo(1);
+            }
 
             // Ambil rincian paket
             $pakets = $this->getBillingPackages($cust_id);
@@ -640,7 +664,8 @@ class WhatsappMessageService
                 return;
             }
 
-            $whatsapp_number = $this->manipulateContactBillInfo($this->getWhatsAppNumber(), null);
+            $userId = $billing->customer->user_id ?? 1;
+            $whatsapp_number = $this->manipulateContactBillInfo($this->getWhatsAppNumber($userId), null);
 
             // Hitung jatuh tempo
             $today = Carbon::today();
@@ -654,11 +679,11 @@ class WhatsappMessageService
 
             // Data replace umum
             $replace = [
-                '%name%' => $full_name,
+                '%name%' => $customer_name,
                 '%address%' => $address,
                 '%customer_id%' => $customer_id,
                 '%billing_number%' => $billing->billing_number ?? 'Nomor tidak tersedia',
-                '%account-bank%' => $accountBank,
+                '%account_bank%' => $accountBank,
                 '%day%' => $remainingDays,
                 '%pakets%' => $paketsText,
                 '%whatsapp_number%' => $whatsapp_number,
@@ -666,7 +691,8 @@ class WhatsappMessageService
             ];
 
             // Tentukan template pesan
-            $message = $this->getMessageTemplate($action, $pakets, $admin);
+            $messageTemplate = $this->getMessageTemplate($action, $pakets, $admin);
+            $message = $this->replaceMessagePlaceholders($messageTemplate, $replace);
             if (!$message) {
                 LogHelper::logWarning(
                     null,
@@ -683,14 +709,14 @@ class WhatsappMessageService
 
             // Kirim pesan via WhatsApp
             try {
-                $this->sendWhatsappSingleJob($full_name, $customer_contact, $gateway, str_replace(array_keys($replace), $replace, $message));
+                $this->sendWhatsappSingleJob($customer_name, $customer_contact, $gateway, $message);
 
                 LogHelper::logInfo(
                     null,
                     [
                         'customer_id' => $cust_id,
                         'billing_customer_id' => $customer_id,
-                        'customer_name' => $full_name,
+                        'customer_name' => $customer_name,
                         'customer_contact' => $customer_contact,
                         'address' => $address,
                         'message_type' => $action,
