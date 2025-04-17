@@ -129,20 +129,19 @@
                     <strong>Pembayaran dapat dilakukan dengan cara:</strong><br>
                     1. Cash/Tunai.<br>
                     2. Pembayaran Online.<br>
-                    3. Transfer ke rekening admin area Purwakarta <span class="badge bg-primary text-white">Dian
-                        Ardiansyah</span><br>
-                    - <span class="badge bg-success text-white">Bank BCA : 299 040 7315</span><br>
-                    - <span class="badge bg-success text-white">Bank Mandiri : 173-00-1269590-5</span><br>
-                    - <span class="badge bg-success text-white">Dana : 0857-9590-9904</span><br>
-                    <br>
-                    4. Transfer ke rekening admin area Babakancikao <span class="badge bg-primary text-white">Budi
-                        Kosasih</span><br>
-                    - <span class="badge bg-success text-white">Bank Mandiri : 173-00-1265603-0</span><br>
-                    - <span class="badge bg-success text-white">Dana : 0857-1084-0198</span><br>
+                    3. Transfer ke rekening admin
+                    <span class="badge bg-primary text-white">{{ $customer->user->name }}</span><br>
+
+                    @foreach ($banks as $bank)
+                        - <span class="badge bg-success text-white">
+                            Bank {{ $bank->bank }} : {{ $bank->account_number }}
+                        </span> a.n {{ $bank->name }}<br>
+                    @endforeach
+
                     <br>
                     Silahkan konfirmasi ke nomor WhatsApp <span
-                        class="badge bg-primary text-white">0856-4233-6774</span> setelah melakukan pembayaran dengan
-                    mengirimkan bukti transfer.
+                        class="badge bg-primary text-white">{{ $contact_admin }}</span> setelah melakukan pembayaran
+                    dengan mengirimkan bukti transfer.
                 </div>
             @endforeach
 
