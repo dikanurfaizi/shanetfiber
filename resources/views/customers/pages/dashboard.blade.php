@@ -36,7 +36,8 @@
                 </tr>
                 <tr class="table-borderless">
                     <td width="100px"><strong>{{ __('customer.label.discount-type') }}</strong></td>
-                    <td width="380px">{{ __(':') }} {{ $customer->member->type ?? 'No Discount' }} </td>
+                    <td width="380px">{{ __(':') }} {{ optional($customer->member)->type ?? 'No Discount' }}
+                    </td>
                 </tr>
                 @if ($websystem->enable_tax === 'true')
                     <tr class="table-borderless">

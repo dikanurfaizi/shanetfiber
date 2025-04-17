@@ -3,6 +3,13 @@
     <div class="card-header py-3 font-weight-bold text-primary">
         {{ __('customer.page.header.index') }}{{ auth()->guard('customer')->user()->name }}
     </div>
+    @php
+        $price = $customer->paket->price;
+        $discountPrice = $price * ($customer->discount / 100);
+        $priceAfterDiscount = $price - $discountPrice;
+        $taxPrice = ceil($priceAfterDiscount * ($websystem->tax_rate / 100));
+        $totalPrice = $priceAfterDiscount + $taxPrice;
+    @endphp
     <div class="card-body col-lg-8">
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
@@ -18,28 +25,33 @@
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
-                <strong>{{ __('customer.label.bill') }}</strong>
-                <strong>@moneyIDR($customer->paket->price)</strong> / bulan
+                <strong>{{ __('customer.label.price') }} :</strong>
+                <strong>@moneyIDR($price)</strong> / bulan
             </div>
         </div>
-        <div class="col-xs-12 col-sm-12 col-md-12 mb-3">
+        <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
-                <strong>{{ __('customer.page.label.due-date') }}</strong>
-                @if ($billings->isEmpty())
-                    @if ($customer->activation_date)
-                        {{ \Carbon\Carbon::parse($customer->activation_date)->addDays(30)->translatedFormat('d F Y, h:i A') }}
+                <strong>{{ __('customer.label.discount') }} :</strong>
+                <strong>@moneyIDR($discountPrice)</strong> / bulan
+            </div>
+        </div>
+        <div class="col-xs-12 col-sm-12 col-md-12">
+            <div class="form-group">
+                <strong>{{ __('customer.label.discount-type') }} :</strong>
+                <strong>{{ optional($customer->member)->type ?? 'No Discount' }}</strong>
+            </div>
+        </div>
+        <div class="col-xs-12 col-sm-12 col-md-12">
+            <div class="form-group">
+                <strong>{{ __('customer.label.bill') }}</strong>
+                @if ($websystem->enable_tax === 'true')
+                    <strong>{{ __(':') }} <strong>@moneyIDR($totalPrice)</strong> / bulan
                     @else
-                        {{ __('No Due Date') }}
-                    @endif
-                @else
-                    @if ($customer->activation_date)
-                        {{ \Carbon\Carbon::parse($customer->activation_date)->translatedFormat('d F Y, h:i A') }}
-                    @else
-                        {{ __('No Due Date') }}
-                    @endif
+                        <strong>{{ __(':') }} <strong>@moneyIDR($priceAfterDiscount)</strong> / bulan
                 @endif
             </div>
         </div>
+
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>{{ __('customer.label.last-payment') }}</strong>
@@ -93,12 +105,14 @@
                 <strong>Pembayaran dapat dilakukan dengan cara:</strong><br>
                 1. Cash/Tunai.<br>
                 2. Pembayaran Online.<br>
-                3. Transfer ke rekening admin area Purwakarta <span class="badge bg-primary text-white">Dian Ardiansyah</span><br>
-                    - <span class="badge bg-success text-white">Bank BCA : 299 040 7315</span><br>
-                    - <span class="badge bg-success text-white">Bank Mandiri : 173-00-1269590-5</span><br>
+                3. Transfer ke rekening admin area Purwakarta <span class="badge bg-primary text-white">Dian
+                    Ardiansyah</span><br>
+                - <span class="badge bg-success text-white">Bank BCA : 299 040 7315</span><br>
+                - <span class="badge bg-success text-white">Bank Mandiri : 173-00-1269590-5</span><br>
                 <br>
-                4. Transfer ke rekening admin area Babakancikao <span class="badge bg-primary text-white">Budi Kosasih</span><br>
-                    - <span class="badge bg-success text-white">Bank Mandiri : 173-00-1265603-0</span><br>
+                4. Transfer ke rekening admin area Babakancikao <span class="badge bg-primary text-white">Budi
+                    Kosasih</span><br>
+                - <span class="badge bg-success text-white">Bank Mandiri : 173-00-1265603-0</span><br>
                 <br>
                 Silahkan konfirmasi ke nomor WhatsApp <span class="badge bg-primary text-white">0878 1804 0024</span>
                 setelah melakukan pembayaran dengan mengirimkan bukti transfer.
