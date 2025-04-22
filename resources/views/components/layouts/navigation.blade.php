@@ -118,12 +118,12 @@
             </a>
         </li>
     @endcanany
-    <hr class="sidebar-divider">
+    {{-- <hr class="sidebar-divider">
     <li class="nav-item @if (request()->routeIs('about')) active @endif">
         <a class="nav-link" href="{{ route('about') }}">
             <i class="fas fa-fw fa-eye"></i>
             <span>{{ __('About') }}</span></a>
-    </li>
+    </li> --}}
 
     <!-- Sidebar Toggler (Sidebar) -->
     <div class="text-center d-none d-md-inline pt-4">

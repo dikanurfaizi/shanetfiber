@@ -90,25 +90,55 @@ class ServerController extends Controller
      */
     public function update(ServerUpdateRequest $request, Mikrotik $server): RedirectResponse
     {
+        // $this->validate($request, [
+        //     'host' => ['required', 'string', Rule::unique('mikrotiks')->ignore($server->slug, 'slug')],
+        // ]);
+
         $this->validate($request, [
-            'host' => ['required', 'string', Rule::unique('mikrotiks')->ignore($server->slug, 'slug')],
+            'host' => ['required', 'string'],
+            'port' => [
+                'required',
+                'numeric',
+                Rule::unique('mikrotiks')->where(function ($query) use ($request) {
+                    return $query->where('host', $request->host);
+                })->ignore($server->id),
+            ],
         ]);
         if ($request->password) {
             $server->update(['password' => $request->password]);
         }
 
-        $server->update([
+        // $server->update([
+        //     'name' => $request['name'],
+        //     'host' => $request['host'],
+        //     'username' => $request['username'],
+        //     'port' => $request['port'],
+        //     'ros_version_id' => $request->ros_version_id
+        // ]);
+
+        $updateData = [
             'name' => $request['name'],
-            'host' => $request['host'],
             'username' => $request['username'],
-            'port' => $request['port'],
             'ros_version_id' => $request->ros_version_id
-        ]);
+        ];
+
+        if ($request->host !== $server->host) {
+            $updateData['host'] = $request->host;
+        }
+
+        if ($request->port != $server->port) {
+            $updateData['port'] = $request->port;
+        }
+
+        if ($request->password) {
+            $updateData['password'] = $request->password;
+        }
+
+        $server->update($updateData);
+
         return redirect()->route('servers.index')
             ->with('success', 'Mikrotik updated successfully');
     }
-
-
 
     /**
      * Remove the specified resource from storage.

@@ -112,5 +112,6 @@ return [
         'proxy_access_src_address' => 'Access Src Address:',
         'proxy-access-action' => 'Action',
         'address_list_isolir' => 'Address List Isolir',
+        'select-version-ros' => 'Select Version Router OS',
     ],
 ];

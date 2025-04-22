@@ -22,13 +22,26 @@ class ServerStoreRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        // return [
 
+        //     'name' => ['required', 'string', 'min:5', 'max:25'],
+        //     'host' => ['required', 'string', 'unique:mikrotiks,host'],
+        //     'username' => ['required', 'string', 'min:4', 'max:25'],
+        //     'password' => ['required', 'string', 'min:5', 'max:15'],
+        //     'port' => ['required', 'numeric'],
+        // ];
+        return [
             'name' => ['required', 'string', 'min:5', 'max:25'],
-            'host' => ['required', 'string', 'unique:mikrotiks,host'],
+            'host' => ['required', 'string'],
             'username' => ['required', 'string', 'min:4', 'max:25'],
             'password' => ['required', 'string', 'min:5', 'max:15'],
-            'port' => ['required', 'numeric'],
+            'port' => [
+                'required',
+                'numeric',
+                \Illuminate\Validation\Rule::unique('mikrotiks')->where(function ($query) {
+                    return $query->where('host', $this->host);
+                }),
+            ],
         ];
     }
 
@@ -51,7 +64,7 @@ class ServerStoreRequest extends FormRequest
             'password.string' => 'Password must be a string',
             'port.required' => 'Port router is required, default is 8728',
             'port.numeric' => 'Port field must be a number',
-
+            'port.unique' => 'This combination of host and port already exists.',
         ];
     }
 }
