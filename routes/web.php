@@ -122,8 +122,8 @@ Route::group(['prefix' => 'cpanel'], function () {
 
         Route::resource('profiles', PppProfileController::class);
         Route::get('/server/{mikrotik:slug}/delete', [PppProfileController::class, 'delete'])->name('profile.delete');
-        Route::put('/packets/{mikrotik:slug}/disabled/true', [PppProfileController::class, 'disable'])->name('profile.disable');
-        Route::put('/packets/{mikrotik:slug}/disabled/false', [PppProfileController::class, 'enable'])->name('profile.enable');
+        Route::put('/profiles/{mikrotik:slug}/disabled/true', [PppProfileController::class, 'disable'])->name('profile.disable');
+        Route::put('/profiles/{mikrotik:slug}/disabled/false', [PppProfileController::class, 'enable'])->name('profile.enable');
         // Route::get('/server/ppp/profiles/mikrotik/list', [PppProfileController::class, 'mikrotik_list'])->name('ppp.profiles.mikrotik.list');
         Route::get('/server/{mikrotik:slug}/ppp/profiles/mikrotik', [PppProfileController::class, 'get_mikrotik_profiles'])->name('ppp.profiles.get.mikrotik.profiles');
         Route::get('/server/ppp-profiles/import/data', [PppProfileController::class, 'viewServer'])->name('ppp.profiles.import.data');
@@ -133,9 +133,9 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::resource('paket/ppp-profiles', PppProfileController::class);
         //==================================Paket====================================================
         Route::resource('packets', PacketController::class);
+        Route::put('/packets/{packet:slug}/disabled/true', [PacketController::class, 'disable'])->name('disable.package');
+        Route::put('/packets/{packet:slug}/disabled/false', [PacketController::class, 'enable'])->name('enable.package');
         Route::get('/packets/{packet:slug}/delete', [PacketController::class, 'delete'])->name('paket.delete');
-        Route::put('/packets/{packet:slug}/disabled/true', [PacketController::class, 'disable'])->name('paket.disable');
-        Route::put('/packets/{packet:slug}/disabled/false', [PacketController::class, 'enable'])->name('paket.enable');
         //========================ROUTE CUSTOMER===============================
         Route::resource('customers', CustomerController::class);
         Route::get('/customers/search', [PaymentController::class, 'index'])->name('customers.search');

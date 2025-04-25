@@ -17,7 +17,7 @@
                 @moneyIDR($packet->price ?? '0')
             </div>
         </div>
-        <div class="col-xs-12 col-sm-12 col-md-12">
+        {{-- <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>Location on server:</strong>
                 <span class="badge bg-danger-soft text-danger">
@@ -25,7 +25,7 @@
                 </span>
 
             </div>
-        </div>
+        </div> --}}
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>Profile:</strong>
@@ -53,7 +53,8 @@
         </div>
     </div>
     <div class="card-footer">
-        <a class="btn btn-sm btn-success" href="{{ route('packets.edit',$packet->slug) }}"><i class="fa fa-edit"></i> Edit</a>
+        <a class="btn btn-sm btn-success" href="{{ route('packets.edit', $packet->slug) }}"><i class="fa fa-edit"></i>
+            Edit</a>
         <a class="btn btn-sm btn-primary" href="{{ route('packets.index') }}"><i class="fa fa-arrow-left"></i> Back</a>
     </div>
 

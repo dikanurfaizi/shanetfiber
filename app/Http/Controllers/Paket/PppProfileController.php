@@ -390,4 +390,22 @@ class PppProfileController extends Controller
 
         return response()->json(['message' => 'Profiles saved successfully']);
     }
+
+    public function enable($id)
+    {
+        $profile = PppProfile::findOrFail($id);
+        $profile->disabled = 'false';
+        $profile->save();
+
+        return redirect()->back()->with('success', 'Profile enabled successfully.');
+    }
+
+    public function disable($id)
+    {
+        $profile = PppProfile::findOrFail($id);
+        $profile->disabled = 'true';
+        $profile->save();
+
+        return redirect()->back()->with('success', 'Profile disabled successfully.');
+    }
 }

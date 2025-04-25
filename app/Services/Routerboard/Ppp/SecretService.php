@@ -1096,12 +1096,12 @@ class SecretService
             $query = new Query('/ppp/profile/print');
             $result = $client->query($query)->read();
 
-            // LogHelper::logInfo(
-            //     null,
-            //     ['host' => $mikrotik->host ?? 'N/A', 'count' => count($result)],
-            //     200,
-            //     "Fetched all PPP profiles"
-            // );
+            LogHelper::logInfo(
+                null,
+                ['host' => $mikrotik->host ?? 'N/A', 'count' => count($result)],
+                200,
+                "Fetched all PPP profiles"
+            );
 
             return $result;
         } catch (\Exception $e) {

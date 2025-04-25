@@ -13,6 +13,7 @@ use App\Http\Requests\PaketStoreRequest;
 use App\Http\Requests\PaketUpdateRequest;
 use App\Http\Resources\Pppoe\SecretResource;
 use App\Http\Resources\Pppoe\ProfileResource;
+use App\Models\Paket\PppProfile;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Routerboard\TestConnectionService;
 
@@ -50,10 +51,14 @@ class PacketController extends Controller
     public function create(Request $request)
     {
         //return dd($request->mikrotik_id);
-        $mikrotiks = Mikrotik::orderBy('name', 'ASC')->pluck('name', 'id');
+        // $mikrotiks = Mikrotik::orderBy('name', 'ASC')->pluck('name', 'id');
+        $pppprofiles = PppProfile::where('disabled', 'false')
+            ->orderBy('profile_name')
+            ->get(['id', 'profile_name']);
 
         return view('packets.create', [
-            'mikrotiks' => $mikrotiks,
+            // 'mikrotiks' => $mikrotiks,
+            'ppp_profiles' => $pppprofiles,
 
         ]);
     }
@@ -66,15 +71,13 @@ class PacketController extends Controller
         $this->validate(
             $request,
             [
-                // 'customer_id' => 'required|unique:billings,customer_id,NULL,name,profile,' . $month,
-                'name' => 'required|unique:pakets,name,null,null,mikrotik_id,' . $request->mikrotik_id
+                'name' => 'required|unique:pakets,name'
             ],
             [
-                'name.unique' => 'Name paket ' . $request->name . ' already exist in server '
-
+                'name.unique' => 'Name paket ' . $request->name . ' already exist.'
             ]
         );
-        $request->request->add(['mikrotik_id' => $request->mikrotik_id]);
+
         $request->request->add(['slug' => str($request->name . '-' . Str::random(4))->slug()]);
         Paket::create($request->all());
 
@@ -95,16 +98,27 @@ class PacketController extends Controller
      */
     public function edit(Paket $packet)
     {
-        $router = Mikrotik::where('id', $packet->mikrotik_id)->first();
+        //$router = Mikrotik::where('id', $packet->mikrotik_id)->first();
         try {
             //$this->testConnectionService->checkOnline($router);
-            $profiles = $this->secretService->getPppProfile($router);
-            $pppprofiles = ProfileResource::collection($profiles);
-            return view('packets.edit', compact('packet'), [
+            //$profiles = $this->secretService->getPppProfile($router);
+            // $pppprofiles = ProfileResource::collection($profiles);
+            $pppprofiles = PppProfile::where('disabled', 'false')
+                ->orderBy('profile_name') // optional: biar urut
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'name' => $item->profile_name,
+                    ];
+                });
+            // dd($pppprofiles);
+            return view('packets.edit', [
+                'packet' => $packet,
                 'pppprofiles' => $pppprofiles,
             ]);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['msg' => 'Router offline, please check your router.', 'Server ' . $router->name . ' Offline']);
+            return redirect()->back()->withErrors(['msg' => 'Please check again your profiles']);
         }
     }
 
@@ -132,18 +146,19 @@ class PacketController extends Controller
 
     public function enable(Paket $packet)
     {
-        $packet->update([
-            'disabled' => 'false',
-        ]);
-        return redirect()->back()->with('success', 'Paket enable');
+        // dd($packet);
+        $packet->disabled = 'false';
+        $packet->save();
+
+        return redirect()->back()->with('success', 'Paket enabled successfully.');
     }
 
     public function disable(Paket $packet)
     {
-        $packet->update([
-            'disabled' => 'true',
-        ]);
-        return redirect()->back()->with('success', 'Paket disable');
+        $packet->disabled = 'true';
+        $packet->save();
+
+        return redirect()->back()->with('success', 'Paket disabled successfully.');
     }
 
     /**

@@ -22,7 +22,7 @@
                     </div>
                 </div>
 
-                <div class="row align-items-center">
+                {{-- <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="server"><strong>{{ __('customer.label.server') }}</strong></label>
 
@@ -36,9 +36,9 @@
                             <span class="text-danger">{{ $errors->first('mikrotik_id') }}</span>
                         @endif
                     </div>
-                </div>
+                </div> --}}
 
-                <div class="row align-items-center">
+                {{-- <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="profile"><strong>{{ __('paket.label.profile') }}</strong></label>
                         <div class="input-group">
@@ -46,6 +46,23 @@
                                 <option value="">Select Profile</option>
                                 </option>
 
+                            </select>
+                        </div>
+                        @if ($errors->has('profile'))
+                            <span class="text-danger">{{ $errors->first('profile') }}</span>
+                        @endif
+                    </div>
+                </div> --}}
+
+                <div class="row align-items-center">
+                    <div class="col-md-12 mb-3">
+                        <label for="profile"><strong>{{ __('paket.label.profile') }}</strong></label>
+                        <div class="input-group">
+                            <select id="profile-dropdown" name="profile" class="form-control">
+                                <option value="">Select Profile</option>
+                                @foreach ($ppp_profiles as $profile)
+                                    <option value="{{ $profile->profile_name }}">{{ $profile->profile_name }}</option>
+                                @endforeach
                             </select>
                         </div>
                         @if ($errors->has('profile'))
@@ -89,7 +106,7 @@
         </div>
     </div>
 
-    @section('custom_scripts')
+    {{-- @section('custom_scripts')
         <script type="text/javascript">
             $(document).ready(function() {
 
@@ -124,5 +141,5 @@
 
             });
         </script>
-    @endsection
+    @endsection --}}
 </x-layouts.app-layout>

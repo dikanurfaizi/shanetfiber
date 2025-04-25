@@ -39,33 +39,33 @@ class MigrateCustomerToRouter implements ShouldQueue
 
         LogHelper::logWarning(null, ['target_mikrotik' => $this->target], 200, 'Target Mikrotik');
 
-        try {
-            $existingProfiles = collect($secretService->getPppProfile($this->target))->pluck('name')->toArray();
-            LogHelper::logInfo(null, [
-                'router' => $this->target->name,
-                'existing_profiles' => $existingProfiles,
-            ], 200, 'Available PPP Profiles in Target Router');
-        } catch (\Exception $e) {
-            LogHelper::logError(null, [
-                'router' => $this->target->name,
-                'error' => $e->getMessage(),
-            ], 500, 'Failed to get PPP profiles from target router');
-            return;
-        }
+        // try {
+        //     $existingProfiles = collect($secretService->getPppProfile($this->target))->pluck('name')->toArray();
+        //     LogHelper::logInfo(null, [
+        //         'router' => $this->target->name,
+        //         'existing_profiles' => $existingProfiles,
+        //     ], 200, 'Available PPP Profiles in Target Router');
+        // } catch (\Exception $e) {
+        //     LogHelper::logError(null, [
+        //         'router' => $this->target->name,
+        //         'error' => $e->getMessage(),
+        //     ], 500, 'Failed to get PPP profiles from target router');
+        //     return;
+        // }
 
         foreach ($customers as $customer) {
             $service = optional($customer->pppType)->name;
             $profile = optional($customer->paket)->profile;
 
             // Skip kalau profil customer tidak ada di Mikrotik target
-            if (!in_array($profile, $existingProfiles)) {
-                LogHelper::logInfo(null, [
-                    'username' => $customer->username,
-                    'profile' => $profile,
-                    'router' => $this->target->name,
-                ], 200, 'Skipped customer migration: profile not found in target router');
-                continue;
-            }
+            // if (!in_array($profile, $existingProfiles)) {
+            //     LogHelper::logInfo(null, [
+            //         'username' => $customer->username,
+            //         'profile' => $profile,
+            //         'router' => $this->target->name,
+            //     ], 200, 'Skipped customer migration: profile not found in target router');
+            //     continue;
+            // }
 
             $comment = optional(
                 AutoIsolir::where('mikrotik_id', $this->target->id)->first()
