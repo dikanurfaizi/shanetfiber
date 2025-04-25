@@ -8,7 +8,7 @@ use App\Models\Mikrotik;
 use App\Models\AutoIsolir;
 use Illuminate\Http\Request;
 use App\Models\Billing\Billing;
-use App\models\Paket\PppProfile;
+use App\Models\Paket\PppProfile;
 use App\Jobs\DisabledScheduleJob;
 use App\Models\Billing\BillingPeriode;
 use App\Jobs\AddPaymentBeforeDueDateJob;

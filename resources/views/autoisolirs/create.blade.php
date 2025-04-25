@@ -65,8 +65,6 @@
                         @endif
                     </div>
                 </div>
-
-
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="script"><strong>{{ __('autoisolir.label.name') }}</strong></label>
@@ -172,40 +170,40 @@
         </div>
     </div>
 
-    {{-- @section('custom_scripts')
+    @section('custom_scripts')
         <script type="text/javascript">
             $(document).ready(function() {
 
                 /*==================================================
                     Server Dropdown Change Event
                 ====================================================*/
-                $('#server-dropdown').on('change', function() {
-                    var idServer = this.value;
-                    console.log("Server: ", idServer);
-                    $("#profile-isolir-dropdown").html('');
-                    $.ajax({
-                        url: "{{ url('api/fetch-profiles') }}",
-                        type: "POST",
-                        data: {
-                            mikrotik_id: idServer,
-                            _token: '{{ csrf_token() }}'
-                        },
-                        dataType: 'json',
-                        success: function(result_server) {
-                            console.log("✅ Success:", result_server);
-                            $('#profile-isolir-dropdown').html(
-                                '<option value="">Select Profile</option>');
-                            $.each(result_server, function(key, value) {
-                                $("#profile-isolir-dropdown").append('<option value="' +
-                                    key + '">' + value + '</option>');
-                            });
-                        },
-                        error: function(xhr, status, error) {
-                            console.error("❌ Error:", status, error);
-                            console.log("Response:", xhr.responseText);
-                        }
-                    });
-                });
+                // $('#server-dropdown').on('change', function() {
+                //     var idServer = this.value;
+                //     console.log("Server: ", idServer);
+                //     $("#profile-isolir-dropdown").html('');
+                //     $.ajax({
+                //         url: "{{ url('api/fetch-profiles') }}",
+                //         type: "POST",
+                //         data: {
+                //             mikrotik_id: idServer,
+                //             _token: '{{ csrf_token() }}'
+                //         },
+                //         dataType: 'json',
+                //         success: function(result_server) {
+                //             console.log("✅ Success:", result_server);
+                //             $('#profile-isolir-dropdown').html(
+                //                 '<option value="">Select Profile</option>');
+                //             $.each(result_server, function(key, value) {
+                //                 $("#profile-isolir-dropdown").append('<option value="' +
+                //                     key + '">' + value + '</option>');
+                //             });
+                //         },
+                //         error: function(xhr, status, error) {
+                //             console.error("❌ Error:", status, error);
+                //             console.log("Response:", xhr.responseText);
+                //         }
+                //     });
+                // });
 
                 $('#auto-isolir-option').on('change', function() {
                     var autoIsolirOption = this.value;
@@ -219,5 +217,5 @@
                 });
             });
         </script>
-    @endsection --}}
+    @endsection
 </x-layouts.cpanel.settings.app-layout>

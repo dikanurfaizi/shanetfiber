@@ -45,10 +45,12 @@
                 </div>
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
-                        <select name="paket_id" class="form-control d-none" data-dependent="details"
-                            onchange="updateMemberDropdown(this.value); calculateDiscount();" id="paket-dropdown">
-                            <option value="">Select Paket</option>
-                        </select>
+                        {!! Form::select('paket_id', $pppprofiles, null, [
+                            'placeholder' => 'Select Paket',
+                            'class' => 'form-control d-none',
+                            'id' => 'paket-dropdown',
+                            'onchange' => 'updateMemberDropdown(this.value); calculateDiscount();',
+                        ]) !!}
 
                         @if ($errors->has('paket_id'))
                             <span class="text-danger">{{ $errors->first('paket_id') }}</span>

@@ -13,6 +13,7 @@ use App\Models\TypeRouter;
 use App\Models\CustomerOnt;
 use App\Models\User;
 use App\Models\DeleteCustomer;
+use App\Models\Paket\PppProfile;
 
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
@@ -83,16 +84,17 @@ class CustomerController extends Controller
     private SystemService $systemService;
     private QueueService $queueService;
     private IpStaticService $ipStaticService;
-    private WhatsappMessageService $messageService;
+    private WhatsappMessageService $whatsappMessageService;
 
-    public function __construct(SecretService $secretService, TestConnectionService $testConnectionService, SystemService $systemService, QueueService $queueService, IpStaticService $ipStaticService, WhatsappMessageService $messageService)
+
+    public function __construct(SecretService $secretService, TestConnectionService $testConnectionService, SystemService $systemService, QueueService $queueService, IpStaticService $ipStaticService, WhatsappMessageService $whatsappMessageService)
     {
         $this->secretService = $secretService;
         $this->testConnectionService = $testConnectionService;
         $this->systemService = $systemService;
         $this->queueService = $queueService;
         $this->ipStaticService = $ipStaticService;
-        $this->messageService = $messageService;
+        $this->whatsappMessageService = $whatsappMessageService;
         $this->middleware('permission:customer-list|customer-create|customer-edit|customer-delete|secret-disable|secret-edit', ['only' => ['index', 'show']]);
         $this->middleware('permission:customer-create', ['only' => ['create', 'store', 'activation']]);
         $this->middleware('permission:customer-edit', ['only' => ['edit', 'update', 'activation', 'editRouter', 'updateRouter']]);
@@ -556,6 +558,7 @@ class CustomerController extends Controller
         $mikrotiks = Mikrotik::where('disabled', 'false')->orderBy('name', 'ASC')->pluck('name', 'id');
         $pppservices = PppType::orderBy('name', 'ASC')->pluck('name', 'id');
         // $interfaces = $this->ipStaticService->getInterfaces($mikrotiks);
+        $pppprofiles = PppProfile::where('disabled', 'false')->orderBy('profile_name', 'ASC')->pluck('profile_name', 'id');
         $users = User::all();
         $members = Member::all();
         return view('customers.create', [
@@ -563,6 +566,7 @@ class CustomerController extends Controller
             'pppservices' => $pppservices,
             'users' => $users,
             'members' => $members,
+            'pppprofiles' => $pppprofiles,
         ]);
     }
 
@@ -691,256 +695,106 @@ class CustomerController extends Controller
         ]);
     }
 
-    // public function activation(Customer $customer): RedirectResponse
-    // {
-    //     $internet_service = $customer->internet_service;
-    //     $activationDate = Carbon::now();
-    //     $mikrotikId = $customer->mikrotik_id;
-    //     $router = Mikrotik::where('id', $mikrotikId)->first();
-    //     $profile = Paket::where('id', $customer->paket_id)->value('profile');
-    //     if ($router->disabled == 'true') {
-    //         return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' disable, please enable first.']);
-    //     }
-    //     $autoIsolir = AutoIsolir::where('mikrotik_id', $mikrotikId)->first();
-    //     if (isset($autoIsolir)) {
-    //         if ($autoIsolir->activation_date == 'true') {
-    //             $totalDaysInNextMonth = Carbon::now()->addMonth()->daysInMonth;
-    //             $day = Carbon::now()->format('d');
-    //             if ($day > $totalDaysInNextMonth) {
-    //                 $day = $totalDaysInNextMonth;
-    //             }
-    //             $nextMonth = Carbon::now()->addMonth()->format('m_Y');
-    //             $comment_payment = $autoIsolir->comment_unpayment . '_' . $day . '_' . $nextMonth;
-    //         } else {
-    //             $comment_payment = $autoIsolir->comment_payment;
-    //         }
-    //     } else {
-    //         $comment_payment = 'create_from_customer_management';
-    //     }
-    //     $username = $customer->username;
-    //     if ($internet_service == 'ppp') {
-    //         $password = $customer->password_ppp;
-    //         $serviceName = PppType::where('id', $customer->ppp_type_id)->value('name');
-    //         try {
-    //             //$createSecret = $this->secretService->createSecret($router, $username, $password, $serviceName, $profile, $comment_payment);
-    //             if (isset($createSecret['after']['message'])) {
-    //                 return redirect()->back()->withErrors(['msg' => 'Cant create user ppp on server ' . $router->name . '.']);
-    //             } else {
-    //                 // $secretId = $createSecret['after']['ret'];
-    //                 $customer->update([
-    //                     'activation_date' => $activationDate,
-    //                     'activation' => 'true',
-    //                     'disabled' => 'false',
-    //                     // 'secret_id' => $secretId,
-    //                 ]);
-    //                 // $this->secretService->enableSecret($router, $username);
-    //             }
-    //         } catch (\Exception $e) {
-    //             return redirect()->back()->withErrors(['msg' => 'Cant connect to the server ' . $router->name . '.']);
-    //         }
-    //     } else if ($internet_service == 'ip_static') {
-    //         $comment = $customer->username ?? 'Create from Customer Management';
-    //         $profile_on_mikrotik = $this->secretService->getPppProfileByName($router, $profile);
-    //         $profile = $profile_on_mikrotik[0];
-    //         // return dd($profile);
-    //         //  if ($profile['rate-limit'] ) {
-    //         //      return redirect()->back()->withErrors(['msg' => 'Please create limitasi PPP Profile ' . $profile['name'] . ' on server ' . $router->name . '!']);
-    //         //  }
-    //         $valueLimitasi = $profile['rate-limit'] ?? '';
-    //         if (strlen($valueLimitasi) == 0) {
-    //             return redirect()->back()->withErrors(['msg' => 'Please create limitasi PPP Profile ' . $profile['name'] . ' on server ' . $router->name . '!']);
-    //         }
-    //         $parts = explode(' ', $valueLimitasi);
-    //         $ip_static = $customer->ip_static;
-    //         $mac_address = $customer->mac_address;
-    //         $interface = $customer->interface;
-    //         $parent = $profile['parent-queue'] ?? 'none';
-    //         $priority = $parts[4] . '/' . $parts[4];
-    //         $queuetype = $profile['queue-type'] ?? '';
-    //         $limitat = $parts[5];
-    //         $maxlimit = $parts[0];
-    //         try {
-    //             $createLimitasi = $this->queueService->createSimpleQueue($router, $username, $ip_static, $parent, $priority, $queuetype, $limitat, $maxlimit, $comment_payment);
-    //             if (isset($createLimitasi['after']['message'])) {
-    //                 return redirect()->back()->withErrors(['msg' => 'Cant create limitasi on server ' . $router->name . ', ' . $createLimitasi['after']['message'] . '.']);
-    //             } else {
-    //                 $simpleque_id = $createLimitasi['after']['ret'];
-    //             }
-    //             $createArp = $this->ipStaticService->addIpToArp($router, $ip_static, $mac_address, $interface, $comment);
-    //             // $createArp = $this->ipStaticService->addIpToArp($router, $ip_static, $interface, $comment);
-
-    //             if (isset($createArp['after']['message'])) {
-    //                 //if ($simpleque_id) {
-    //                 $this->ipStaticService->deleteIpFromSimpleQueue($router, $simpleque_id);
-    //                 //  }
-
-    //                 return redirect()->back()->withErrors(['msg' => 'Cant create arp to ip ' . $ip_static . ' on server ' . $router->name . ', ' . $createArp['after']['message'] . ' .']);
-    //             } else {
-    //                 $arp_id = $createArp['after']['ret'];
-    //             }
-    //         } catch (\Exception $e) {
-    //             return redirect()->back()->withErrors(['msg' => 'Cant connect to the server ' . $router->name . '.']);
-    //         }
-
-    //         $customer->update([
-    //             'activation_date' => $activationDate,
-    //             'activation' => 'true',
-    //             'disabled' => 'false',
-    //             //'address_list_id' => null,
-    //             'simpleque_id' => $simpleque_id,
-    //             'arp_id' => $arp_id,
-    //         ]);
-    //     }
-    //     $billing = Billing::where('customer_id', $customer->id)->first();
-    //     $getLastReceipt = Receipt::latest('created_at')->value('number');
-    //     if (!$getLastReceipt) {
-    //         $numberReceipt = 1;
-    //     } else {
-    //         $receipt = explode('-', $getLastReceipt);
-    //         $numberReceipt = (int)$receipt[1];
-    //         $numberReceipt++;
-    //     }
-    //     $receipt = Receipt::create([
-    //         'slug' => str('inv-' . $customer->id . '-' . Str::random(4))->slug(),
-    //         'periode' => $billing->billing_periode->name,
-    //         'number' => str(sprintf("%05d", $numberReceipt) . '-KWT-' . Carbon::now()->format('F') . '-' . Carbon::now()->format('Y')),
-    //         'billing_number' => $billing->billing_number,
-    //         'customer_id' => $customer->id,
-    //         'customer_name' => $customer->name,
-    //         'customer_address' => $customer->address,
-    //         'paket_name' => $customer->paket->name,
-    //         'paket_price' => $customer->paket->price * ((100 - $customer->discount) / 100),
-    //         'payment_methode' => 'cash',
-    //         'created_name' => auth()->user()->name,
-    //         'teller_name' => auth()->user()->name,
-    //         'payment_time' => Carbon::now(),
-    //     ]);
-    //     $getReceipt = $receipt->fresh();
-    //     $billing->update([
-    //         'payment_time' => Carbon::now(),
-    //         'teller_name' => auth()->user()->name,
-    //         'status' => 'LS',
-    //         'receipt_id' => $getReceipt->id,
-    //     ]);
-    //     if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
-    //         $this->messageService->activation($customer, 'activation_customer');
-    //     }
-    //     return redirect()->back()
-    //         ->with('success', 'Customer activated.');
-    // }
-
     public function activation(Customer $customer): RedirectResponse
     {
         $internet_service = $customer->internet_service;
         $activationDate = Carbon::now();
         $mikrotikId = $customer->mikrotik_id;
-
-        // $router = Mikrotik::where('id', $mikrotikId)->first();
+        $router = Mikrotik::where('id', $mikrotikId)->first();
         $profile = Paket::where('id', $customer->paket_id)->value('profile');
-
-        // if ($router->disabled == 'true') {
-        //     return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' disable, please enable first.']);
-        // }
-
-        // $autoIsolir = AutoIsolir::where('mikrotik_id', $mikrotikId)->first();
-        // if (isset($autoIsolir)) {
-        //     if ($autoIsolir->activation_date == 'true') {
-        //         $totalDaysInNextMonth = Carbon::now()->addMonth()->daysInMonth;
-        //         $day = Carbon::now()->format('d');
-        //         if ($day > $totalDaysInNextMonth) {
-        //             $day = $totalDaysInNextMonth;
-        //         }
-        //         $nextMonth = Carbon::now()->addMonth()->format('m_Y');
-        //         $comment_payment = $autoIsolir->comment_unpayment . '_' . $day . '_' . $nextMonth;
-        //     } else {
-        //         $comment_payment = $autoIsolir->comment_payment;
-        //     }
-        // } else {
-        //     $comment_payment = 'create_from_customer_management';
-        // }
-
-        $comment_payment = 'create_from_customer_management';  // default fallback saat mikrotik related di-comment.
-
+        if ($router->disabled == 'true') {
+            return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' disable, please enable first.']);
+        }
+        $autoIsolir = AutoIsolir::where('mikrotik_id', $mikrotikId)->first();
+        if (isset($autoIsolir)) {
+            if ($autoIsolir->activation_date == 'true') {
+                $totalDaysInNextMonth = Carbon::now()->addMonth()->daysInMonth;
+                $day = Carbon::now()->format('d');
+                if ($day > $totalDaysInNextMonth) {
+                    $day = $totalDaysInNextMonth;
+                }
+                $nextMonth = Carbon::now()->addMonth()->format('m_Y');
+                $comment_payment = $autoIsolir->comment_unpayment . '_' . $day . '_' . $nextMonth;
+            } else {
+                $comment_payment = $autoIsolir->comment_payment;
+            }
+        } else {
+            $comment_payment = 'create_from_customer_management';
+        }
         $username = $customer->username;
         if ($internet_service == 'ppp') {
             $password = $customer->password_ppp;
             $serviceName = PppType::where('id', $customer->ppp_type_id)->value('name');
             try {
-                // $createSecret = $this->secretService->createSecret($router, $username, $password, $serviceName, $profile, $comment_payment);
-                // if (isset($createSecret['after']['message'])) {
-                //     return redirect()->back()->withErrors(['msg' => 'Cant create user ppp on server ' . $router->name . '.']);
-                // } else {
-                //     $secretId = $createSecret['after']['ret'];
-                $customer->update([
-                    'activation_date' => $activationDate,
-                    'activation' => 'true',
-                    'disabled' => 'false',
-                    // 'secret_id' => $secretId,
-                ]);
-                // $this->secretService->enableSecret($router, $username);
-                // }
+                $createSecret = $this->secretService->createSecret($router, $username, $password, $serviceName, $profile, $comment_payment);
+                if (isset($createSecret['after']['message'])) {
+                    return redirect()->back()->withErrors(['msg' => 'Cant create user ppp on server ' . $router->name . '.']);
+                } else {
+                    $secretId = $createSecret['after']['ret'];
+                    $customer->update([
+                        'activation_date' => $activationDate,
+                        'activation' => 'true',
+                        'disabled' => 'false',
+                        'secret_id' => $secretId,
+                    ]);
+                    $this->secretService->enableSecret($router, $username);
+                }
             } catch (\Exception $e) {
-                // return redirect()->back()->withErrors(['msg' => 'Cant connect to the server ' . $router->name . '.']);
-                return redirect()->back()->withErrors(['msg' => 'Cant connect to the server.']);
+                return redirect()->back()->withErrors(['msg' => 'Cant connect to the server ' . $router->name . '.']);
             }
         } else if ($internet_service == 'ip_static') {
             $comment = $customer->username ?? 'Create from Customer Management';
-
-            // $profile_on_mikrotik = $this->secretService->getPppProfileByName($router, $profile);
-            // $profile = $profile_on_mikrotik[0];
-
-            // $valueLimitasi = $profile['rate-limit'] ?? '';
-            $valueLimitasi = '512k/512k'; // hardcode sementara, biar lolos validasi.
-
+            $profile_on_mikrotik = $this->secretService->getPppProfileByName($router, $profile);
+            $profile = $profile_on_mikrotik[0];
+            // return dd($profile);
+            //  if ($profile['rate-limit'] ) {
+            //      return redirect()->back()->withErrors(['msg' => 'Please create limitasi PPP Profile ' . $profile['name'] . ' on server ' . $router->name . '!']);
+            //  }
+            $valueLimitasi = $profile['rate-limit'] ?? '';
             if (strlen($valueLimitasi) == 0) {
-                return redirect()->back()->withErrors(['msg' => 'Please create limitasi PPP Profile on server!']);
+                return redirect()->back()->withErrors(['msg' => 'Please create limitasi PPP Profile ' . $profile['name'] . ' on server ' . $router->name . '!']);
             }
-
             $parts = explode(' ', $valueLimitasi);
             $ip_static = $customer->ip_static;
             $mac_address = $customer->mac_address;
             $interface = $customer->interface;
-            // $parent = $profile['parent-queue'] ?? 'none';
-            $parent = 'none';
-            $priority = $parts[4] . '/' . $parts[4] ?? '8/8';
-            // $queuetype = $profile['queue-type'] ?? '';
-            $queuetype = '';
-            $limitat = $parts[5] ?? '512k';
+            $parent = $profile['parent-queue'] ?? 'none';
+            $priority = $parts[4] . '/' . $parts[4];
+            $queuetype = $profile['queue-type'] ?? '';
+            $limitat = $parts[5];
             $maxlimit = $parts[0];
-
             try {
-                // $createLimitasi = $this->queueService->createSimpleQueue($router, $username, $ip_static, $parent, $priority, $queuetype, $limitat, $maxlimit, $comment_payment);
-                // if (isset($createLimitasi['after']['message'])) {
-                //     return redirect()->back()->withErrors(['msg' => 'Cant create limitasi on server, ' . $createLimitasi['after']['message'] . '.']);
-                // } else {
-                //     $simpleque_id = $createLimitasi['after']['ret'];
-                // }
+                $createLimitasi = $this->queueService->createSimpleQueue($router, $username, $ip_static, $parent, $priority, $queuetype, $limitat, $maxlimit, $comment_payment);
+                if (isset($createLimitasi['after']['message'])) {
+                    return redirect()->back()->withErrors(['msg' => 'Cant create limitasi on server ' . $router->name . ', ' . $createLimitasi['after']['message'] . '.']);
+                } else {
+                    $simpleque_id = $createLimitasi['after']['ret'];
+                }
+                $createArp = $this->ipStaticService->addIpToArp($router, $ip_static, $mac_address, $interface, $comment);
+                // $createArp = $this->ipStaticService->addIpToArp($router, $ip_static, $interface, $comment);
 
-                // $createArp = $this->ipStaticService->addIpToArp($router, $ip_static, $mac_address, $interface, $comment);
-                // if (isset($createArp['after']['message'])) {
-                //     $this->ipStaticService->deleteIpFromSimpleQueue($router, $simpleque_id);
-                //     return redirect()->back()->withErrors(['msg' => 'Cant create arp to ip ' . $ip_static . ', ' . $createArp['after']['message'] . '.']);
-                // } else {
-                //     $arp_id = $createArp['after']['ret'];
-                // }
+                if (isset($createArp['after']['message'])) {
+                    //if ($simpleque_id) {
+                    $this->ipStaticService->deleteIpFromSimpleQueue($router, $simpleque_id);
+                    //  }
 
-                $simpleque_id = null; // dummy value
-                $arp_id = null;        // dummy value
-
+                    return redirect()->back()->withErrors(['msg' => 'Cant create arp to ip ' . $ip_static . ' on server ' . $router->name . ', ' . $createArp['after']['message'] . ' .']);
+                } else {
+                    $arp_id = $createArp['after']['ret'];
+                }
             } catch (\Exception $e) {
-                // return redirect()->back()->withErrors(['msg' => 'Cant connect to the server ' . $router->name . '.']);
-                return redirect()->back()->withErrors(['msg' => 'Cant connect to the server.']);
+                return redirect()->back()->withErrors(['msg' => 'Cant connect to the server ' . $router->name . '.']);
             }
 
             $customer->update([
                 'activation_date' => $activationDate,
                 'activation' => 'true',
                 'disabled' => 'false',
+                //'address_list_id' => null,
                 'simpleque_id' => $simpleque_id,
                 'arp_id' => $arp_id,
             ]);
         }
-
         $billing = Billing::where('customer_id', $customer->id)->first();
         $getLastReceipt = Receipt::latest('created_at')->value('number');
         if (!$getLastReceipt) {
@@ -950,7 +804,6 @@ class CustomerController extends Controller
             $numberReceipt = (int)$receipt[1];
             $numberReceipt++;
         }
-
         $receipt = Receipt::create([
             'slug' => str('inv-' . $customer->id . '-' . Str::random(4))->slug(),
             'periode' => $billing->billing_periode->name,
@@ -966,7 +819,6 @@ class CustomerController extends Controller
             'teller_name' => auth()->user()->name,
             'payment_time' => Carbon::now(),
         ]);
-
         $getReceipt = $receipt->fresh();
         $billing->update([
             'payment_time' => Carbon::now(),
@@ -974,12 +826,11 @@ class CustomerController extends Controller
             'status' => 'LS',
             'receipt_id' => $getReceipt->id,
         ]);
-
         if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
-            $this->messageService->activation($customer, 'activation_customer');
+            $this->whatsappMessageService->activation($customer, 'activation_customer');
         }
-
-        return redirect()->back()->with('success', 'Customer activated.');
+        return redirect()->back()
+            ->with('success', 'Customer activated.');
     }
 
     /**
@@ -1026,7 +877,7 @@ class CustomerController extends Controller
             $serverDisconnect = 'true';
             $message = 'Server ' . $router->name . ' offline, data displayed is local data. You cannot change this information.';
         }
-        // dd($customer, $billingPeriods, $billingLastPayment, $billingPeriodeActive);
+        // dd($customer);
         return view('customers.show', [
             'customer' => $customer,
             'customer_contact' => $this->formatContact($customer->contact, false),
@@ -1242,11 +1093,7 @@ class CustomerController extends Controller
 
         $billingPeriode = NULL;
         $periode = BillingPeriode::latest('created_at')->first();
-        if ($periode === null) {
-            $periodeName = now()->addMonth()->format('F Y');
-        } else {
-            $periodeName = $periode->name;
-        }
+        $periodeName = $periode->name;
 
         $billing_option = $request->billing_option ? $request->billing_option : '0';
         if ($billing_option !== '0' || $billing_option !== '1') {

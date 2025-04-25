@@ -156,38 +156,47 @@
             /*==================================================
                 Server Dropdown Change Event
             ====================================================*/
-            let idServer;
+            // let idServer;
+            // $('#server-dropdown').on('change', function() {
+            //     // var idServer = this.value;
+            //     idServer = this.value;
+            //     const url = "{{ route('fetch.paket') }}";
+            //     $("#paket-dropdown").html('');
+            //     if (idServer) {
+            //         $('#paket-dropdown').removeClass('d-none');
+            //     } else {
+            //         $('#paket-dropdown').addClass('d-none');
+            //     }
+            //     $.ajax({
+
+            //         url: url,
+            //         type: "POST",
+            //         data: {
+            //             mikrotik_id: idServer,
+            //             _token: '{{ csrf_token() }}'
+            //         },
+            //         dataType: 'json',
+            //         success: function(result_server) {
+            //             $('#paket-dropdown').html('<option value="">Select Paket</option>');
+            //             $.each(result_server.pakets, function(key, value) {
+            //                 $("#paket-dropdown").append('<option value="' + value.id +
+            //                     '">' + value.name + ' - ' + 'Rp. ' + new Intl
+            //                     .NumberFormat().format(value.price) + ',00' +
+            //                     '</option>');
+            //             });
+            //             // $("#paket-dropdown").append('<option value="free">Free</option>');
+            //         }
+
+            //     });
+            // });
             $('#server-dropdown').on('change', function() {
-                // var idServer = this.value;
-                idServer = this.value;
-                const url = "{{ route('fetch.paket') }}";
-                $("#paket-dropdown").html('');
+                const idServer = this.value;
+
                 if (idServer) {
                     $('#paket-dropdown').removeClass('d-none');
                 } else {
                     $('#paket-dropdown').addClass('d-none');
                 }
-                $.ajax({
-
-                    url: url,
-                    type: "POST",
-                    data: {
-                        mikrotik_id: idServer,
-                        _token: '{{ csrf_token() }}'
-                    },
-                    dataType: 'json',
-                    success: function(result_server) {
-                        $('#paket-dropdown').html('<option value="">Select Paket</option>');
-                        $.each(result_server.pakets, function(key, value) {
-                            $("#paket-dropdown").append('<option value="' + value.id +
-                                '">' + value.name + ' - ' + 'Rp. ' + new Intl
-                                .NumberFormat().format(value.price) + ',00' +
-                                '</option>');
-                        });
-                        // $("#paket-dropdown").append('<option value="free">Free</option>');
-                    }
-
-                });
             });
 
             // $('#paket-dropdown').on('change', function() {
