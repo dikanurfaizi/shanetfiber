@@ -136,6 +136,7 @@ class PppProfileController extends Controller
             'change_tcp_mss' => $request->change_tcp_mss,
             'use_upnp' => $request->use_upnp,
             'comment' => $request->comment ?? null,
+            'only_one' => $request->only_one ?? 'yes',
         ]);
 
         // Redirect ke halaman index setelah berhasil
