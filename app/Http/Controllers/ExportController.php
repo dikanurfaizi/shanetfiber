@@ -51,6 +51,11 @@ use App\Models\Receipt;
 use App\Services\Routerboard\TestConnectionService;
 //use Symfony\Component\HttpFoundation\Session\Session;
 use Illuminate\Contracts\Database\Eloquent\Builder;
+use App\Models\Paket\PppProfile;
+use App\Helpers\LogHelper;
+use Illuminate\Support\Facades\Bus;
+use App\Jobs\CreatePppProfileToRouter;
+use App\Jobs\MigrateCustomerToRouter;
 
 class ExportController extends Controller
 {
@@ -83,69 +88,25 @@ class ExportController extends Controller
     public function exportToRouter(Request $request)
     {
         $this->validate($request, [
-            'servers' => ['required'],
+            'source_server' => ['required'],
+            'destination_server' => ['required'],
         ]);
-        $mikrotikId = $request->servers;
 
-        $router = Mikrotik::where('id', $mikrotikId)->first();
-        try {
-            $getAllProfiles = $this->secretService->getPppProfile($router);
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['msg' => 'Router offline, please check your router.', 'Server ' . $router->name . ' Offline']);
-        }
+        $sourceMikrotik = Mikrotik::findOrFail($request->source_server);
+        $targetMikrotik = Mikrotik::findOrFail($request->destination_server);
 
-        $pakets = Paket::where('mikrotik_id', $mikrotikId)->get();
-        $paketsUnique = $pakets->unique('profile');
-        $profiles = $paketsUnique->pluck('profile')->toArray();
-        $collectPaketProfiles = collect($profiles);
+        $profilesToExport = PppProfile::all();
 
-        $collectionProfile = SecretResource::collection($getAllProfiles);
-        $profileNames = $collectionProfile->pluck(['name'])->toArray();
-        $collectProfileNames = collect($profileNames);
+        $profileJobs = $profilesToExport->map(function ($profile) use ($targetMikrotik) {
+            return new CreatePppProfileToRouter($targetMikrotik, $profile);
+        })->toArray();
 
-        $paketsNonProfile = $collectPaketProfiles->diff($collectProfileNames);
-        foreach ($paketsNonProfile as $paketNonProfile) {
-            $profiles = Paket::where('profile', $paketNonProfile)->first();
-            $comment = 'created_from_customer_management';
-            $response = $this->secretService->createPppProfile($router, $profiles->profile,  $comment);
+        // Chain: export profile ke target, lalu migrasi customer dari source ke target
+        Bus::chain(array_merge(
+            $profileJobs,
+            [new MigrateCustomerToRouter($sourceMikrotik, $targetMikrotik)]
+        ))->dispatch();
 
-            if (isset($response['after']['message'])) {
-                return redirect()->back()->withErrors(['msg' => $response['after']['message'], 'Something wrong.']);
-            }
-        }
-
-
-        $customers = Customer::where('mikrotik_id', $mikrotikId)->pluck('username')->toArray();
-        $collectCustomerUsernames = collect($customers);
-        $getAllSecret = $this->secretService->getAllPppSecrets($router);
-        $collectionSecret = SecretResource::collection($getAllSecret);
-        $secretNames = $collectionSecret->pluck(['name'])->toArray();
-        $collectSecretNames = collect($secretNames);
-        $customersNonSecret = $collectCustomerUsernames->diff($collectSecretNames);
-        $countSecretExported = 0;
-        foreach ($customersNonSecret as $customerNonSecret) {
-            $customers = Customer::where('username', $customerNonSecret)->first();
-            $service = PppType::where('id', $customers->ppp_type_id)->value('name');
-            $profile = Paket::where('id', $customers->paket_id)->value('profile');
-            $autoIsolir = AutoIsolir::where('mikrotik_id', $mikrotikId)->first();
-            if ($autoIsolir != NULL) {
-                $comment = $autoIsolir->comment_unpayment;
-            } else {
-                $comment = 'import_from_customer_management';
-            }
-
-            $response = $this->secretService->createSecret($router, $customers->username,  $customers->password_ppp, $service, $profile, $comment);
-            if (isset($response['after']['message'])) {
-                Customer::where('id', $customers->id)->update([
-                    'secret_id' => 0,
-                ]);
-            } else {
-                $countSecretExported++;
-                Customer::where('id', $customers->id)->update([
-                    'secret_id' => $response['after']['ret'],
-                ]);
-            }
-        }
-        return redirect()->back()->with('success', $countSecretExported . ' Customer successfully export to server ' . $router->name);
+        return redirect()->back()->with('success', "Export profile dan migrasi customer sedang diproses untuk router {$targetMikrotik->name}.");
     }
 }

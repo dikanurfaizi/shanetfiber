@@ -10,6 +10,7 @@ use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 use App\Jobs\SendPaymentReminderJob;
 use App\Services\WhatsappMessageService;
 use Illuminate\Support\Facades\Log;
+use App\Console\Commands\BillingCheckAndUpdateProfile;
 
 class Kernel extends ConsoleKernel
 {
@@ -18,9 +19,10 @@ class Kernel extends ConsoleKernel
      *
      * @var array
      */
-    // protected $commands = [
-    //      CreateBillingCron::class,
-    //  ];
+    protected $commands = [
+        //      CreateBillingCron::class,
+        BillingCheckAndUpdateProfile::class,
+    ];
     /**
      * Define the application's command schedule.
      */

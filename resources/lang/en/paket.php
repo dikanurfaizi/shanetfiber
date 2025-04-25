@@ -67,6 +67,7 @@ return [
             'create' => 'Create Profile',
             'index' => 'Profile',
             'create' => 'Create Profile',
+            'import' => 'Import Profile',
         ],
         'label' => [
             'profile_name' => 'Profile Name',
@@ -93,7 +94,12 @@ return [
             'cir' => 'Cir',
             'priority' => 'Priority',
             'server' => 'Server',
-
+            'status' => 'Position',
+            'select' => 'All',
+            'dns_server' => 'DNS Server',
+            'use_encryption' => 'User Encryption',
+            'rate_limit' => 'Rate Limit',
+            'only_one' => 'Only One',
         ],
         'placeholder' => [
             'name' => 'Profile Name',
@@ -114,6 +120,16 @@ return [
         'button' => [
             'save' => 'Create Profile',
             'create' => 'Create Profile',
+            'import' => 'Import Profile',
+            'back' => 'Back to Previous Page',
+            'export_all' => 'Export All Profile',
+        ],
+        'action' => [
+            'show' => 'View this profile',
+            'edit' => 'Edit this profile',
+            'disable' => 'Disable',
+            'enable' => 'Enable',
+            'delete' => 'Delete this profile',
         ],
     ],
 

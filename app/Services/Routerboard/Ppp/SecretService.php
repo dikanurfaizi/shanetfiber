@@ -49,12 +49,33 @@ class SecretService
                 throw new Exception('Mikrotik not found.');
             }
 
+            // LogHelper::logInfo(
+            //     null,
+            //     [
+            //         'host' => $mikrotik->host ?? 'N/A',
+            //         'port' => $mikrotik->port ?? 'N/A',
+            //     ],
+            //     200, // Gateway Timeout
+            //     "Try to connect"
+            // );
+
             $config = (new Config())
                 ->set('timeout', 2)
                 ->set('host', $mikrotik->host)
                 ->set('port', (int) $mikrotik->port)
                 ->set('pass', $mikrotik->password)
                 ->set('user', $mikrotik->username);
+
+            // LogHelper::logInfo(
+            //     null,
+            //     [
+            //         'host' => $mikrotik->host ?? 'N/A',
+            //         'port' => $mikrotik->port ?? 'N/A',
+            //         'config_ready' => true
+            //     ],
+            //     200,
+            //     "Mikrotik config created successfully"
+            // );
 
             return new Client($config);
         } catch (StreamException $e) { // Jika library mendukung exception spesifik
@@ -68,6 +89,7 @@ class SecretService
                 504, // Gateway Timeout
                 "Failed to connect to Mikrotik due to stream timeout"
             );
+            return null;
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
@@ -79,6 +101,7 @@ class SecretService
                 503, // Service Unavailable
                 "Failed to connect to Mikrotik"
             );
+            return null;
         }
 
         return null;
@@ -100,6 +123,15 @@ class SecretService
                 throw new Exception('Failed to connect to Mikrotik.');
             }
 
+            // Log sebelum membuat query
+            LogHelper::logInfo(null, [
+                'router' => $mikrotik->name ?? 'unknown',
+                'username' => $username,
+                'profile' => $profile,
+                'service' => $service,
+                'comment' => $comment
+            ], 200, 'Preparing to create secret');
+
             $query = (new Query('/ppp/secret/add'))
                 ->equal('name', $username)
                 ->equal('password', $password)
@@ -108,9 +140,28 @@ class SecretService
                 ->equal('profile', $profile)
                 ->equal('disabled', 'false');
 
-            return $client->query($query)->read();
+            $response = $client->query($query)->read();
+
+            LogHelper::logInfo(null, [
+                'router' => $mikrotik->name,
+                'username' => $username,
+                'profile' => $profile,
+                'service' => $service,
+                'comment' => $comment,
+                'response' => $response
+            ], 200, 'Secret created successfully');
+
+            return $response;
         } catch (\Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to create secret');
+            LogHelper::logError(null, [
+                'router' => $mikrotik->name ?? 'unknown',
+                'username' => $username,
+                'profile' => $profile,
+                'service' => $service,
+                'comment' => $comment,
+                'error' => $e->getMessage()
+            ], 500, 'Failed to create secret');
+
             return null;
         }
     }
@@ -1137,7 +1188,7 @@ class SecretService
         }
     }
 
-    public function createPppProfile($mikrotik, $name, $comment)
+    public function createPppProfile($mikrotik, array $data)
     {
         try {
             $client = $this->getMikrotik($mikrotik);
@@ -1145,23 +1196,37 @@ class SecretService
                 throw new Exception('Failed to connect to Mikrotik.');
             }
 
-            $query = (new Query('/ppp/profile/add'))
-                ->equal('name', $name)
-                ->equal('comment', $comment);
+            $query = new Query('/ppp/profile/add');
+
+            foreach ($data as $key => $value) {
+                // Lewati field kosong atau null, kecuali boolean false
+                if ($value === null || $value === '') continue;
+
+                $query->equal($key, $value);
+            }
+
             $result = $client->query($query)->read();
 
-            // LogHelper::logInfo(
-            //     null,
-            //     ['host' => $mikrotik->host ?? 'N/A', 'profile_name' => $name],
-            //     200,
-            //     "Created new PPP profile"
-            // );
+            LogHelper::logInfo(
+                null,
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'profile_data' => $data,
+                    'result' => $result,
+                ],
+                200,
+                "Created new PPP profile"
+            );
 
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
-                ['host' => $mikrotik->host ?? 'N/A', 'profile_name' => $name, 'error' => $e->getMessage()],
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'profile_data' => $data,
+                    'error' => $e->getMessage()
+                ],
                 500,
                 "Failed to create new PPP profile"
             );

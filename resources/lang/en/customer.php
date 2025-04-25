@@ -93,6 +93,8 @@ return [
         'member' => 'Member Type',
         'already-paid' => 'Already Paid',
         'discount-type' => 'Discount Type',
+        'source-server' => 'Source Server',
+        'destination-server' => 'Destination Server',
     ],
     'placeholder' => [
         'name' => 'Insert customer name',

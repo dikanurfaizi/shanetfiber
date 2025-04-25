@@ -100,4 +100,9 @@ class Customer extends Authenticatable
     // {
     //     return $this->belongsTo(User::class);
     // }
+
+    public function pppType()
+    {
+        return $this->belongsTo(PppType::class, 'ppp_type_id');
+    }
 }
