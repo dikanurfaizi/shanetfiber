@@ -77,10 +77,10 @@
                         $('#destination-server-error').text('');
                     }
 
-                    if (source && destination && source === destination) {
-                        $('#destination-server-error').text('Source and Destination Mikrotik cannot be the same.');
-                        isValid = false;
-                    }
+                    // if (source && destination && source === destination) {
+                    //     $('#destination-server-error').text('Source and Destination Mikrotik cannot be the same.');
+                    //     isValid = false;
+                    // }
 
                     $('#export-button').prop('disabled', !isValid);
                 }

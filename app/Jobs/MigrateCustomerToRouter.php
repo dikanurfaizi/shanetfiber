@@ -17,15 +17,16 @@ class MigrateCustomerToRouter implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected Mikrotik $source;
+    //protected Mikrotik $source;
     protected Mikrotik $target;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Mikrotik $source, Mikrotik $target)
+    // public function __construct(Mikrotik $source, Mikrotik $target)
+    public function __construct(Mikrotik $target)
     {
-        $this->source = $source;
+        // $this->source = $source;
         $this->target = $target;
     }
 
@@ -34,7 +35,7 @@ class MigrateCustomerToRouter implements ShouldQueue
      */
     public function handle(SecretService $secretService): void
     {
-        $customers = Customer::where('mikrotik_id', $this->source->id)->get();
+        $customers = Customer::where('mikrotik_id', $this->target->id)->get();
 
         LogHelper::logWarning(null, ['target_mikrotik' => $this->target], 200, 'Target Mikrotik');
 
