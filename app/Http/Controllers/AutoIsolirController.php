@@ -8,6 +8,7 @@ use App\Models\Mikrotik;
 use App\Models\AutoIsolir;
 use Illuminate\Http\Request;
 use App\Models\Billing\Billing;
+use App\models\Paket\PppProfile;
 use App\Jobs\DisabledScheduleJob;
 use App\Models\Billing\BillingPeriode;
 use App\Jobs\AddPaymentBeforeDueDateJob;
@@ -56,8 +57,10 @@ class AutoIsolirController extends Controller
     public function create()
     {
         $mikrotiks = Mikrotik::where('disabled', 'false')->orderBy('name', 'ASC')->pluck('name', 'id');
+        $profiles = PppProfile::where('disabled', 'false')->orderBy('profile_name', 'ASC')->pluck('profile_name', 'id');
+        // dd($profiles);
         // $ipAddressList = $this->firewallService->getIpAddressList($router);
-        return view('autoisolirs.create', compact('mikrotiks'));
+        return view('autoisolirs.create', compact('mikrotiks', 'profiles'));
     }
 
     /**
@@ -203,8 +206,15 @@ class AutoIsolirController extends Controller
 
             return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' disable, please enable first to change configuration.']);
         }
-        $profiles = $this->secretService->getPppProfile($router);
-        $collectionProfiles = ProfileResource::collection($profiles)->pluck('name', 'name');
+        // $profiles = $this->secretService->getPppProfile($router);
+        // $collectionProfiles = ProfileResource::collection($profiles)->pluck('name', 'name');
+        // Ambil data profile dari database yang status disabled = 'false'
+        $profiles = PppProfile::where('disabled', 'false')
+            ->orderBy('profile_name', 'ASC')
+            ->get();
+
+        // Pluck data menjadi format key-value (id => profile_name)
+        $collectionProfiles = $profiles->pluck('profile_name', 'id');
         $collectionIpAddressLists = FirewallAddressListResource::collection($ipAddressList)->pluck('list', 'list');
 
         return view('autoisolirs.edit', [

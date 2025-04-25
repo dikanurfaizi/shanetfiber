@@ -32,6 +32,10 @@
                         <div class="input-group">
                             <select id="profile-isolir-dropdown" name="profile_id" class="form-control">
                                 <option value="">{{ __('autoisolir.placeholder.select-profile') }}</option>
+                                <!-- Loop untuk menampilkan profiles -->
+                                @foreach ($profiles as $id => $name)
+                                    <option value="{{ $id }}">{{ $name }}</option>
+                                @endforeach
                             </select>
                         </div>
                         @if ($errors->has('profile_id'))
@@ -168,7 +172,7 @@
         </div>
     </div>
 
-    @section('custom_scripts')
+    {{-- @section('custom_scripts')
         <script type="text/javascript">
             $(document).ready(function() {
 
@@ -215,5 +219,5 @@
                 });
             });
         </script>
-    @endsection
+    @endsection --}}
 </x-layouts.cpanel.settings.app-layout>
