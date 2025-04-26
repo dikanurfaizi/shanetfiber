@@ -10,6 +10,7 @@ use App\Models\Mikrotik;
 class PppProfile extends Model
 {
     use HasFactory;
+    protected $table = 'ppp_profiles';
     public $guarded = [];
     public function mikrotik(): BelongsTo
     {

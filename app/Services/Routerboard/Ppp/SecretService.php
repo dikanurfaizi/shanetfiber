@@ -1145,7 +1145,7 @@ class SecretService
         }
     }
 
-    public function updateRateLimitProfileSecret($mikrotik, $rateLimit, $id)
+    public function updateRateLimitProfileSecret($mikrotik, $rateLimit, $profileName)
     {
         try {
             $client = $this->getMikrotik($mikrotik);
@@ -1153,34 +1153,32 @@ class SecretService
                 throw new Exception('Failed to connect to Mikrotik.');
             }
 
-            $query = (new Query('/ppp/profile/print'))->where('.id', $id);
-            $profiles = $client->query($query)->read();
+            // 1. Fetch semua profile
+            $profiles = $client->query(new Query('/ppp/profile/print'))->read();
 
             if (empty($profiles)) {
-                throw new Exception("Profile with ID $id not found.");
+                throw new Exception("No profiles found in Mikrotik.");
             }
 
-            foreach ($profiles as $profile) {
-                $updateQuery = (new Query('/ppp/profile/set'))
-                    ->where('.id', $id)
-                    ->equal('.id', $profile['.id'])
-                    ->equal('rate-limit', $rateLimit);
+            // 2. Cari berdasarkan 'name'
+            $targetProfile = collect($profiles)->firstWhere('name', $profileName);
 
-                $result = $client->query($updateQuery)->read();
-
-                // LogHelper::logInfo(
-                //     null,
-                //     ['host' => $mikrotik->host ?? 'N/A', 'profile_id' => $id, 'rate_limit' => $rateLimit],
-                //     200,
-                //     "Updated rate limit for PPP profile"
-                // );
-
-                return $result;
+            if (!$targetProfile) {
+                throw new Exception("Profile with name '{$profileName}' not found.");
             }
+
+            // 3. Update berdasarkan .id yang ditemukan
+            $updateQuery = (new Query('/ppp/profile/set'))
+                ->equal('.id', $targetProfile['.id'])  // << pakai .id hasil dari step 2
+                ->equal('rate-limit', $rateLimit);
+
+            $result = $client->query($updateQuery)->read();
+
+            return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
-                ['host' => $mikrotik->host ?? 'N/A', 'profile_id' => $id, 'error' => $e->getMessage()],
+                ['host' => $mikrotik->host ?? 'N/A', 'profile_name' => $profileName, 'error' => $e->getMessage()],
                 500,
                 "Failed to update rate limit for PPP profile"
             );

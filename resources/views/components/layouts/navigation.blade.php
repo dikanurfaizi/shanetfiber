@@ -79,7 +79,7 @@
                 <span>{{ __('navigation.pakets.nav-item') }}</span>
             </a>
 
-            <div id="collapsePacket" class="collapse collapse @if (request()->routeIs('packets*') || request()->routeIs('ppp-profiles*'))  @endif"
+            <div id="collapsePacket" class="collapse collapse @if (request()->routeIs('packets*') || request()->routeIs('profiles*'))  @endif"
                 aria-labelledby="headingBilling" data-parent="#accordionSidebar">
                 <div class="bg-white py-2 collapse-inner rounded">
                     @can('packet-create')

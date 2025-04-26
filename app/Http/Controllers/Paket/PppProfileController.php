@@ -21,11 +21,13 @@ class PppProfileController extends Controller
 {
     private SecretService $secretService;
     private TestConnectionService $testConnectionService;
+    protected $model;
 
     public function __construct(SecretService $secretService, TestConnectionService $testConnectionService)
     {
         $this->secretService = $secretService;
         $this->testConnectionService = $testConnectionService;
+        $this->model = PppProfile::class;
     }
     /**
      * Display a listing of the resource.
@@ -153,19 +155,23 @@ class PppProfileController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(PppProfile $pppProfiles)
     {
-        //
+        return view('packets.profiles.show', compact('pppProfiles'));
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(PppProfile $pppProfile)
+    public function edit(PppProfile $profile)
     {
+        $mikrotiks = Mikrotik::where('disabled', 'false')->orderBy('name')->get();
 
-        // return dd($maxLimitUpload . $maxLimitDownload . $priority . $limitAtUpload . $limitAtDownload);
-        $router = Mikrotik::where('id', $pppProfile->mikrotik_id)->first();
+        // Mengirimkan satu objek PppProfile, bukan koleksi
+        return view('packets.profiles.edit', [
+            'mikrotiks' => $mikrotiks,
+            'pppProfile' => $profile,  // Mengirimkan model langsung
+        ]);
     }
 
     /**
@@ -173,54 +179,95 @@ class PppProfileController extends Controller
      */
     public function update(Request $request, PppProfile $pppProfile)
     {
-        //format 10M/4M 0/0 0/0 0/0 8 5000k/750k
-        $maxLimitUpload = $request->max_limit_upload;
-        $maxLimitDownload = $request->max_limit_download;
-        $priority = 8;
-        if ($request->priority) {
-            $priority = $request->priority;
-        }
-        $cir = $request->rasio_cir;
-        if ($request->unit_max_limit == 'mb') {
-            $maxLimitUpload = $request->max_limit_upload * 1000;
-            $maxLimitDownload = $request->max_limit_download * 1000;
-        }
-        $limitAtUpload = number_format($maxLimitUpload / $cir, 0, '.', '');
-        $limitAtDownload = number_format($maxLimitDownload / $cir, 0, '.', '');
+        $data = $request->only([
+            'profile_name',
+            'local_address',
+            'remote_address',
+            'dns_server',
+            'rate_limit',
+            'rasio_cir',
+            'priority',
+            'parent_queue',
+            'queue_type',
+            'bridge_learning',
+            'use_ipv6',
+            'use_mpls',
+            'use_compression',
+            'use_encryption',
+            'only_one',
+            'change_tcp_mss',
+            'use_upnp',
+            'comment',
+        ]);
 
-        // return dd($limitAtDownload);
+        $data['script_on_up'] = $request->input('on_up');
+        $data['script_on_down'] = $request->input('on_down');
+        $data['insert_queue_before'] = $request->input('insert_before');
 
-        //return dd($request->max_limit_upload);
-        $rateLimit = $maxLimitUpload . 'k/' . $maxLimitDownload . 'k#0/0 0/0 0/0#' . $priority . '#' . $limitAtUpload . 'k/' . $limitAtDownload . 'k';
-        $rateLimitMikrotik = $maxLimitUpload . 'k/' . $maxLimitDownload . 'k 0/0 0/0 0/0 ' . $priority . ' ' . $limitAtUpload . 'k/' . $limitAtDownload . 'k';
-        // if ($request->max_limit_upload > 0 || $request->max_limit_download > 0) {
+        $maxLimitUpload = $request->input('max_upload');
+        $maxLimitDownload = $request->input('max_download');
 
-        //}
-        $router = Mikrotik::where('id', $pppProfile->mikrotik_id)->first();
-        $updateProfilesMikrotik = $this->secretService->updateRateLimitProfileSecret($router, $rateLimitMikrotik, $pppProfile->profile_id);
-        //return dd($updateProfilesMikrotik);
-        if (isset($updateProfilesMikrotik['after'])) {
-            return redirect()->back()->withErrors(['msg' => $updateProfilesMikrotik['after']['message'], $rateLimitMikrotik]);
+        // proses rate_limit
+        $patternUnit = '/[0-9]/';
+        $patternLimit = '/[^0-9]/';
+
+        $unitUpload = strtolower(preg_replace($patternUnit, '', $maxLimitUpload));
+        $maxLimitUploadValue = (int) preg_replace($patternLimit, '', $maxLimitUpload);
+        if ($unitUpload === 'k') {
+            $maxLimitUploadValue = $maxLimitUploadValue / 1000;
+        } elseif ($unitUpload === '' || $unitUpload === null) {
+            $maxLimitUploadValue = $maxLimitUploadValue . 'M';
         }
-        //return dd($updateProfilesMikrotik['after']['message']);
-        $request->request->add(['rate_limit' => $rateLimit]);
-        $request->request->remove('max_limit_upload');
-        $request->request->remove('max_limit_download');
-        //  $request->request->remove('cir');
-        $request->request->remove('unit_max_limit');
-        $request->request->remove('priority');
-        $pppProfile->update($request->all());
-        return redirect()->route('packets.index')
+        $maxUpload = $maxLimitUploadValue . 'M';
+
+        $unitDownload = strtolower(preg_replace($patternUnit, '', $maxLimitDownload));
+        $maxLimitDownloadValue = (int) preg_replace($patternLimit, '', $maxLimitDownload);
+        if ($unitDownload === 'k') {
+            $maxLimitDownloadValue = $maxLimitDownloadValue / 1000;
+        } elseif ($unitDownload === '' || $unitDownload === null) {
+            $maxLimitDownloadValue = $maxLimitDownloadValue . 'M';
+        }
+        $maxDownload = $maxLimitDownloadValue . 'M';
+
+        $rateLimitMikrotik = $maxUpload . '/' . $maxDownload;
+
+        if ($pppProfile->rate_limit !== $rateLimitMikrotik) {
+            $routers = Mikrotik::where('disabled', 'false')->get();
+            foreach ($routers as $router) {
+                $updateResult = $this->secretService->updateRateLimitProfileSecret($router, $rateLimitMikrotik, $pppProfile->profile_name);
+
+                if (isset($updateResult['after'])) {
+                    return redirect()->back()->withErrors([
+                        'msg' => $updateResult['after']['message'],
+                    ]);
+                }
+            }
+            $data['rate_limit'] = $rateLimitMikrotik;
+        }
+
+        // dd($pppProfile);
+        $pppProfile->update($data);
+
+        return redirect()->route('ppp-profiles.index')
             ->with('success', 'Packet updated successfully');
+    }
+
+    public function delete(PppProfile $pppProfile)
+    {
+        // dd($pppProfile);
+        return view('packets.profiles.delete', compact('pppProfile'));
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(PppProfile $pppProfile)
     {
-        //
+        $pppProfile->delete(); // hapus profile dari database
+        return redirect()->route('ppp-profiles.index') // sesuai resource route kamu
+            ->with('success', 'Profile deleted successfully');
     }
+
 
     public function viewServer(Request $request)
     {
@@ -232,137 +279,89 @@ class PppProfileController extends Controller
     public function get_mikrotik_profiles(Request $request)
     {
         $sourceMikrotikId = $request->mikrotik_id;
-        if (is_null($sourceMikrotikId)) {
+        if (!$sourceMikrotikId) {
             return response()->json(['error' => 'Mikrotik ID is required'], 400);
-        }
-        try {
-            $sourceRouter = Mikrotik::findOrFail($sourceMikrotikId);
-        } catch (ModelNotFoundException $e) {
-            return response()->json(['error' => 'Mikrotik server not found'], 404);
         }
 
         try {
-            // Ambil dari Mikrotik
+            $sourceRouter = Mikrotik::findOrFail($sourceMikrotikId);
+
             $mikrotikProfiles = $this->secretService->getPppProfile($sourceRouter);
             if (empty($mikrotikProfiles)) {
                 return response()->json(['error' => 'No profiles found from Mikrotik'], 404);
             }
 
-            // Ambil dari DB
             $dbProfiles = PppProfile::all()->keyBy('profile_name');
-
-            LogHelper::logWarning(null, [
-                'mikrotik_profiles' => $mikrotikProfiles,
-                'db_profiles' => $dbProfiles,
-            ], 200, 'Successfully get Profile Data');
-
             $profileList = collect();
 
             foreach ($mikrotikProfiles as $profile) {
                 $profileName = $profile['name'] ?? '';
                 $dbProfile = $dbProfiles->get($profileName);
-
                 $status = $dbProfile ? 'conflict' : 'mikrotik';
 
-                // Data dari Mikrotik
-                if (!$profileList->contains('profile_name', $profileName)) {
-                    $profileList->push([
-                        'source' => 'mikrotik',
-                        'profile_name' => $profileName,
-                        'max_upload' => explode('/', $profile['rate-limit'] ?? '0/0')[0],
-                        'max_download' => explode('/', $profile['rate-limit'] ?? '0/0')[1],
-                        'min_upload' => '0',
-                        'min_download' => '0',
-                        'rasio_cir' => '',
-                        'priority' => $profile['priority'] ?? '8',
-                        'mikrotik_name' => $sourceRouter->name,
-                        'status' => $status,
-                        'db_profile_id' => $dbProfile?->id,
-                        'db_profile_name' => $dbProfile?->profile_name,
-                        'dns_server' => $profile['dns-server'] ?? '',
-                        'use_encryption' => $profile['use-encryption'] ?? '',
-                        'rate_limit' => $profile['rate-limit'] ?? '',
-                        'only_one' => $profile['only-one'] ?? '',
-                        'difference' => $dbProfile ? [
-                            'rate_limit' => [
-                                'mikrotik' => $profile['rate-limit'] ?? '',
-                                'db' => $dbProfile->rate_limit,
-                            ],
-                            'priority' => [
-                                'mikrotik' => $profile['priority'] ?? '',
-                                'db' => $dbProfile->priority,
-                            ],
-                            'dns_server' => [
-                                'mikrotik' => $profile['dns-server'] ?? '',
-                                'db' => $dbProfile->dns_server,
-                            ],
-                            'use_encryption' => [
-                                'mikrotik' => $profile['use-encryption'] ?? '',
-                                'db' => $dbProfile->use_encryption,
-                            ],
-                            'only_one' => [
-                                'mikrotik' => $profile['only-one'] ?? '',
-                                'db' => $dbProfile->only_one,
-                            ]
-                        ] : null,
-                    ]);
-                }
+                $profileList->push($this->mapProfile('mikrotik', $profile, $dbProfile, $sourceRouter->name, $status));
 
-                // Data dari DB
                 if ($dbProfile) {
-                    $profileList->push([
-                        'source' => 'database',
-                        'profile_name' => $dbProfile->profile_name,
-                        'max_upload' => $dbProfile->max_upload,
-                        'max_download' => $dbProfile->max_download,
-                        'min_upload' => $dbProfile->min_upload,
-                        'min_download' => $dbProfile->min_download,
-                        'rasio_cir' => $dbProfile->rasio_cir,
-                        'priority' => $dbProfile->priority,
-                        'mikrotik_name' => $sourceRouter->name,
-                        'status' => 'conflict',
-                        'db_profile_id' => $dbProfile->id,
-                        'db_profile_name' => $dbProfile->profile_name,
-                        'dns_server' => $dbProfile->dns_server,
-                        'use_encryption' => $dbProfile->use_encryption,
-                        'rate_limit' => $dbProfile->rate_limit,
-                        'only_one' => $dbProfile->only_one,
-                        'difference' => $dbProfile ? [
-                            'rate_limit' => [
-                                'mikrotik' => $profile['rate-limit'] ?? '',
-                                'db' => $dbProfile->rate_limit,
-                            ],
-                            'priority' => [
-                                'mikrotik' => $profile['priority'] ?? '',
-                                'db' => $dbProfile->priority,
-                            ],
-                            'dns_server' => [
-                                'mikrotik' => $profile['dns-server'] ?? '',
-                                'db' => $dbProfile->dns_server,
-                            ],
-                            'use_encryption' => [
-                                'mikrotik' => $profile['use-encryption'] ?? '',
-                                'db' => $dbProfile->use_encryption,
-                            ],
-                            'only_one' => [
-                                'mikrotik' => $profile['only-one'] ?? '',
-                                'db' => $dbProfile->only_one,
-                            ]
-                        ] : null,
-                    ]);
+                    $profileList->push($this->mapProfile('database', $profile, $dbProfile, $sourceRouter->name, 'conflict'));
                 }
             }
 
-            LogHelper::logWarning(null, [
-                'mikrotik_profiles' => $mikrotikProfiles,
-                'db_profiles' => $dbProfiles,
-            ], 200, 'Successfully get Profile Data');
+            // LogHelper::logWarning(null, [
+            //     'mikrotik_profiles' => $mikrotikProfiles,
+            //     'db_profiles' => $dbProfiles,
+            // ], 200, 'Successfully get Profile Data');
 
             return response()->json($profileList, 200);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Mikrotik server not found'], 404);
         } catch (\Exception $e) {
             LogHelper::logError($e, [], 500, 'Gagal mengambil profil dari Mikrotik.');
             return response()->json(['error' => 'Gagal mengambil profil dari Mikrotik.'], 500);
         }
+    }
+
+    private function mapProfile($source, $profile, $dbProfile, $mikrotikName, $status)
+    {
+        return [
+            'source' => $source,
+            'profile_name' => $source === 'database' ? $dbProfile->profile_name : ($profile['name'] ?? ''),
+            'max_upload' => $source === 'database' ? $dbProfile->max_upload : explode('/', $profile['rate-limit'] ?? '0/0')[0],
+            'max_download' => $source === 'database' ? $dbProfile->max_download : explode('/', $profile['rate-limit'] ?? '0/0')[1],
+            'min_upload' => $source === 'database' ? $dbProfile->min_upload : '0',
+            'min_download' => $source === 'database' ? $dbProfile->min_download : '0',
+            'rasio_cir' => $source === 'database' ? $dbProfile->rasio_cir : '',
+            'priority' => $source === 'database' ? $dbProfile->priority : ($profile['priority'] ?? '8'),
+            'mikrotik_name' => $mikrotikName,
+            'status' => $status,
+            'db_profile_id' => $dbProfile?->id,
+            'db_profile_name' => $dbProfile?->profile_name,
+            'dns_server' => $source === 'database' ? $dbProfile->dns_server : ($profile['dns-server'] ?? ''),
+            'use_encryption' => $source === 'database' ? $dbProfile->use_encryption : ($profile['use-encryption'] ?? ''),
+            'rate_limit' => $source === 'database' ? $dbProfile->rate_limit : ($profile['rate-limit'] ?? ''),
+            'only_one' => $source === 'database' ? $dbProfile->only_one : ($profile['only-one'] ?? ''),
+            'difference' => $dbProfile ? [
+                'rate_limit' => [
+                    'mikrotik' => $profile['rate-limit'] ?? '',
+                    'db' => $dbProfile->rate_limit,
+                ],
+                'priority' => [
+                    'mikrotik' => $profile['priority'] ?? '',
+                    'db' => $dbProfile->priority,
+                ],
+                'dns_server' => [
+                    'mikrotik' => $profile['dns-server'] ?? '',
+                    'db' => $dbProfile->dns_server,
+                ],
+                'use_encryption' => [
+                    'mikrotik' => $profile['use-encryption'] ?? '',
+                    'db' => $dbProfile->use_encryption,
+                ],
+                'only_one' => [
+                    'mikrotik' => $profile['only-one'] ?? '',
+                    'db' => $dbProfile->only_one,
+                ]
+            ] : null,
+        ];
     }
 
     public function import(Request $request)

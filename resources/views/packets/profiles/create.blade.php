@@ -20,6 +20,9 @@
                 <button type="submit" class="btn btn-sm btn-success">
                     <i class="fa fa-save"></i> &nbsp {{ __('paket.profile.button.save') }}
                 </button>
+                <a href="{{ route('ppp-profiles.index') }}" class="btn btn-sm btn-secondary">
+                    <i class="fa fa-arrow-left"></i> &nbsp {{ __('paket.profile.button.back') }}
+                </a>
             </div>
             {!! Form::close() !!}
         </div>

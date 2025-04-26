@@ -139,16 +139,28 @@
                     if (!mikrotikId) return;
 
                     function fetchProfiles() {
+                        Swal.fire({
+                            title: 'Mengambil data...',
+                            text: 'Mohon tunggu sebentar.',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+
                         $.ajax({
-                            url: `/cpanel/server/${mikrotikId}/ppp/profiles/mikrotik`,
+                            url: '/cpanel/packets/ppp-profiles/' + encodeURIComponent(mikrotikId) +
+                                '/list',
                             method: 'GET',
                             data: {
                                 mikrotik_id: mikrotikId
                             },
                             success: function(response) {
+                                Swal.close(); // Tutup loading
                                 appendProfilesToTable(response);
                             },
                             error: function() {
+                                Swal.close(); // Tutup loading dulu
                                 Swal.fire({
                                     icon: 'error',
                                     title: 'Gagal!',

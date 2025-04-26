@@ -7,16 +7,20 @@
 <div class="row">
     <div class="col-sm-6 col-md-3 mb-3">
         <label for="max_upload"><strong>{{ __('paket.profile.label.max_limit') }}</strong></label>
-        <input type="text" name="max_upload" class="form-control"
-            placeholder="{{ __('paket.profile.placeholder.max_upload') }}">
+        {!! Form::text('max_upload', isset($pppProfile) ? $pppProfile->max_upload : old('max_upload'), [
+            'class' => 'form-control',
+            'placeholder' => __('paket.profile.placeholder.max_upload'),
+        ]) !!}
         @error('max_upload')
             <span class="text-danger">{{ $message }}</span>
         @enderror
     </div>
     <div class="col-sm-6 col-md-3 mb-3">
         <label><strong>&nbsp;</strong></label>
-        <input type="text" name="max_download" class="form-control"
-            placeholder="{{ __('paket.profile.placeholder.max_download') }}">
+        {!! Form::text('max_download', isset($pppProfile) ? $pppProfile->max_download : old('max_download'), [
+            'class' => 'form-control',
+            'placeholder' => __('paket.profile.placeholder.max_download'),
+        ]) !!}
         @error('max_download')
             <span class="text-danger">{{ $message }}</span>
         @enderror
@@ -25,7 +29,9 @@
         <label for="rasio_cir"><strong>{{ __('paket.profile.label.cir') }}</strong></label>
         <select name="rasio_cir" class="form-control">
             @for ($i = 1; $i <= 8; $i++)
-                <option value="{{ $i }}">1:{{ $i }}</option>
+                <option value="{{ $i }}"
+                    {{ (isset($pppProfile) && $pppProfile->rasio_cir == $i) || old('rasio_cir') == $i ? 'selected' : '' }}>
+                    1:{{ $i }}</option>
             @endfor
         </select>
     </div>
@@ -33,7 +39,9 @@
         <label for="priority"><strong>{{ __('paket.profile.label.priority') }}</strong></label>
         <select name="priority" class="form-control">
             @for ($i = 8; $i >= 1; $i--)
-                <option value="{{ $i }}">{{ $i }}</option>
+                <option value="{{ $i }}"
+                    {{ (isset($pppProfile) && $pppProfile->priority == $i) || old('priority') == $i ? 'selected' : '' }}>
+                    {{ $i }}</option>
             @endfor
         </select>
     </div>

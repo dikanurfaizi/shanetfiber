@@ -24,12 +24,12 @@
                     </div>
                 </div>
 
-                <button id="exportProfileBtn" class="btn btn-sm btn-success">
+                <button id="exportProfileBtn" class="btn btn-sm btn-success" disabled>
                     <i class="fa fa-upload"></i>
                     <span class="d-none d-md-inline">{{ __('paket.profile.button.export_all') }}</span>
                 </button>
 
-                <a class="btn btn-sm btn-info" href="{{ route('ppp.profiles.import.data') }}">
+                <a class="btn btn-sm btn-info" href="{{ route('ppp-profiles.import.data') }}">
                     <i class="fa fa-download"></i>
                     <span class="d-none d-md-inline">{{ __('paket.profile.button.import') }}</span>
                 </a>
@@ -108,7 +108,7 @@
                                             @can('packet-list')
                                                 <li>
                                                     <a class="dropdown-item"
-                                                        href="{{ route('profiles.show', $profile->id) }}">
+                                                        href="{{ route('ppp-profiles.show', $profile->id) }}">
                                                         <i class="far fa-eye me-2 text-success"></i>
                                                         {{ __('paket.profile.action.show') }}
                                                     </a>
@@ -117,7 +117,7 @@
                                             @can('packet-edit')
                                                 <li>
                                                     <a class="dropdown-item"
-                                                        href="{{ route('profiles.edit', $profile->id) }}">
+                                                        href="{{ route('ppp-profiles.edit', $profile->id) }}">
                                                         <i class="far fa-edit me-2 text-success"></i>
                                                         {{ __('paket.profile.action.edit') }}
                                                     </a>
@@ -125,7 +125,7 @@
                                                 <li>
                                                     @if ($profile->disabled === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
                                                         <form method="POST" class="d-inline"
-                                                            action="{{ route('profile.disable', $profile->id) }}">
+                                                            action="{{ route('ppp-profiles.disable', $profile->id) }}">
                                                             @csrf
                                                             @method('put')
                                                             <a class="dropdown-item" href="#"
@@ -136,7 +136,7 @@
                                                         </form>
                                                     @else
                                                         <form method="POST" class="d-inline"
-                                                            action="{{ route('profile.enable', $profile->id) }}">
+                                                            action="{{ route('ppp-profiles.enable', $profile->id) }}">
                                                             @csrf
                                                             @method('put')
                                                             <a class="dropdown-item" href="#"
@@ -151,7 +151,7 @@
                                             @can('packet-delete')
                                                 <li>
                                                     <a class="dropdown-item"
-                                                        href="{{ route('profile.delete', $profile->id) }}">
+                                                        href="{{ route('ppp-profiles.delete', $profile->id) }}">
                                                         <i class="fa fa-trash me-2 text-danger"></i>
                                                         {{ __('paket.profile.action.delete') }}
                                                     </a>
@@ -232,7 +232,7 @@
                             });
 
                             // Use fetch API instead of form submission
-                            fetch(`/cpanel/ppp/profiles/export/${encodeURIComponent(selectedMikrotikSlug)}`, {
+                            fetch(`/cpanel/packets/ppp-profiles/export/${encodeURIComponent(selectedMikrotikSlug)}`, {
                                     method: 'POST',
                                     headers: {
                                         'X-CSRF-TOKEN': document.querySelector(

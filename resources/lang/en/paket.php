@@ -68,6 +68,8 @@ return [
             'index' => 'Profile',
             'create' => 'Create Profile',
             'import' => 'Import Profile',
+            'edit' => 'Update Profile',
+            'delete' => 'Delete Profile',
         ],
         'label' => [
             'profile_name' => 'Profile Name',
@@ -125,6 +127,9 @@ return [
             'import' => 'Import Profile',
             'back' => 'Back to Previous Page',
             'export_all' => 'Export All Profile',
+            'update' => 'Update Profile',
+            'delete' => 'Delete Profile',
+            'cancel' => 'Cancel'
         ],
         'action' => [
             'show' => 'View this profile',
