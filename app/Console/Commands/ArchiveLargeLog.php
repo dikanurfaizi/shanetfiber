@@ -55,9 +55,15 @@ class ArchiveLargeLog extends Command
         // Pindahkan log ke folder archive
         $archivedLog = "{$archiveFolder}/laravel_{$timestamp}.log";
         File::move($logPath, $archivedLog);
-        File::put($logPath, ''); // Buat file log kosong baru
 
-        $this->info("Archived laravel.log to {$archivedLog}");
+        // Buat file log kosong baru dengan akses yang sesuai
+        $newLog = fopen($logPath, 'w');  // Buka file untuk ditulis (buat file baru)
+        fclose($newLog);  // Tutup file
+
+        // Set permission file supaya bisa diakses oleh user selain root, misalnya user web server
+        chmod($logPath, 0664);  // Memberikan permission read/write kepada owner dan group, serta read kepada others
+
+        $this->info("Archived laravel.log to {$archivedLog} and created new empty log file");
     }
 
     // Fungsi untuk menghapus log yang lebih dari 1 bulan

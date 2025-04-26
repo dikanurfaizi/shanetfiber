@@ -11,6 +11,7 @@ use App\Jobs\SendPaymentReminderJob;
 use App\Services\WhatsappMessageService;
 use Illuminate\Support\Facades\Log;
 use App\Console\Commands\BillingCheckAndUpdateProfile;
+use App\Console\Commands\ArchiveLargeLog;
 
 class Kernel extends ConsoleKernel
 {
@@ -22,6 +23,7 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         //      CreateBillingCron::class,
         BillingCheckAndUpdateProfile::class,
+        ArchiveLargeLog::class,
     ];
     /**
      * Define the application's command schedule.

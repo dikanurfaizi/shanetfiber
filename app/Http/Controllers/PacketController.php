@@ -165,12 +165,11 @@ class PacketController extends Controller
      */
     public function delete(Paket $packet)
     {
-
         return view('packets.delete', compact('packet'));
     }
     public function destroy(Paket $packet)
     {
-        $packet->delete();
+        $packet->forceDelete();
         return redirect()->route('packets.index')
             ->with('success', 'Packet ' . $packet->name . ' deleted successfully.');
     }

@@ -114,7 +114,7 @@ class ExportController extends Controller
                 [
                     'message' => $e->getMessage(),
                 ],
-                404,
+                400,
                 'Export to router failed'
             );
             return redirect()->back()->withErrors('Terjadi kesalahan saat mengirim data ke router.');
