@@ -17,16 +17,15 @@ class MigrateCustomerToRouter implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    //protected Mikrotik $source;
+    protected Mikrotik $source;
     protected Mikrotik $target;
 
     /**
      * Create a new job instance.
      */
-    // public function __construct(Mikrotik $source, Mikrotik $target)
-    public function __construct(Mikrotik $target)
+    public function __construct(Mikrotik $source, Mikrotik $target)
     {
-        // $this->source = $source;
+        $this->source = $source;
         $this->target = $target;
     }
 
@@ -35,49 +34,35 @@ class MigrateCustomerToRouter implements ShouldQueue
      */
     public function handle(SecretService $secretService): void
     {
-        $customers = Customer::where('mikrotik_id', $this->target->id)->get();
+        LogHelper::logInfo(null, [
+            'source_router_id' => $this->source->id,
+            'source_router_name' => $this->source->name,
+            'target_router_id' => $this->target->id,
+            'target_router_name' => $this->target->name,
+        ], 200, 'Starting customer migration from source to target router');
 
-        LogHelper::logWarning(null, ['target_mikrotik' => $this->target], 200, 'Target Mikrotik');
+        $customers = Customer::where('mikrotik_id', $this->source->id)->get();
 
-        // try {
-        //     $existingProfiles = collect($secretService->getPppProfile($this->target))->pluck('name')->toArray();
-        //     LogHelper::logInfo(null, [
-        //         'router' => $this->target->name,
-        //         'existing_profiles' => $existingProfiles,
-        //     ], 200, 'Available PPP Profiles in Target Router');
-        // } catch (\Exception $e) {
-        //     LogHelper::logError(null, [
-        //         'router' => $this->target->name,
-        //         'error' => $e->getMessage(),
-        //     ], 500, 'Failed to get PPP profiles from target router');
-        //     return;
-        // }
+        LogHelper::logInfo(null, [
+            'total_customers_to_migrate' => $customers->count(),
+        ], 200, 'Number of customers fetched for migration');
 
         foreach ($customers as $customer) {
             $service = optional($customer->pppType)->name;
             $profile = optional($customer->paket)->profile;
-
-            // Skip kalau profil customer tidak ada di Mikrotik target
-            // if (!in_array($profile, $existingProfiles)) {
-            //     LogHelper::logInfo(null, [
-            //         'username' => $customer->username,
-            //         'profile' => $profile,
-            //         'router' => $this->target->name,
-            //     ], 200, 'Skipped customer migration: profile not found in target router');
-            //     continue;
-            // }
 
             $comment = optional(
                 AutoIsolir::where('mikrotik_id', $this->target->id)->first()
             )->comment_unpayment ?? 'import_from_customer_management';
 
             LogHelper::logInfo(null, [
+                'source_router' => $this->source->name,
                 'target_router' => $this->target->name,
                 'username' => $customer->username,
                 'service' => $service,
                 'profile' => $profile,
                 'comment' => $comment,
-            ], 200, 'Migrating customer to target router');
+            ], 200, 'Migrating customer from source to target router');
 
             $response = $secretService->createSecret(
                 $this->target,
@@ -93,14 +78,27 @@ class MigrateCustomerToRouter implements ShouldQueue
                     'secret_id' => $response['after']['ret'],
                     'mikrotik_id' => $this->target->id,
                 ]);
+
+                LogHelper::logInfo(null, [
+                    'username' => $customer->username,
+                    'new_router' => $this->target->name,
+                    'secret_id' => $response['after']['ret'],
+                ], 200, 'Customer migrated successfully');
             } else {
                 LogHelper::logError(null, [
-                    'router' => $this->target->name,
+                    'source_router' => $this->source->name,
+                    'target_router' => $this->target->name,
                     'customer' => $customer->username,
                     'error' => $response['after']['message'] ?? 'Unknown error'
                 ], 500, 'Failed to migrate customer');
+
                 $customer->update(['secret_id' => 0]);
             }
         }
+
+        LogHelper::logInfo(null, [
+            'source_router' => $this->source->name,
+            'target_router' => $this->target->name,
+        ], 200, 'Customer migration process finished');
     }
 }
