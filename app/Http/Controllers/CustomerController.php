@@ -915,8 +915,7 @@ class CustomerController extends Controller
 
         $customer_number = $this->formatContact($customer->contact, false);
         $users = User::all();
-        $pakets = Paket::where('mikrotik_id', $customer->mikrotik_id)
-            ->where('disabled', 'false')
+        $pakets = Paket::where('disabled', 'false')
             ->orderBy('price', 'ASC')
             ->get();
 
