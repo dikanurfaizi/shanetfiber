@@ -101,6 +101,7 @@ return [
             'use_encryption' => 'User Encryption',
             'rate_limit' => 'Rate Limit',
             'only_one' => 'Only One',
+            'status' => 'Status',
         ],
         'placeholder' => [
             'name' => 'Profile Name',

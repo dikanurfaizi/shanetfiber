@@ -39,6 +39,8 @@ class Kernel extends ConsoleKernel
                 // Kondisi agar hanya dijalankan saat diperlukan
                 return true; // Logika bisa disesuaikan
             });
+
+        $schedule->command('log:archive-large')->everyFiveMinutes();
     }
 
     /**

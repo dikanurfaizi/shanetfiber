@@ -25,12 +25,12 @@
                 </div>
 
                 <button id="exportProfileBtn" class="btn btn-sm btn-success">
-                    <i class="fa fa-download"></i>
+                    <i class="fa fa-upload"></i>
                     <span class="d-none d-md-inline">{{ __('paket.profile.button.export_all') }}</span>
                 </button>
 
                 <a class="btn btn-sm btn-info" href="{{ route('ppp.profiles.import.data') }}">
-                    <i class="fa fa-upload"></i>
+                    <i class="fa fa-download"></i>
                     <span class="d-none d-md-inline">{{ __('paket.profile.button.import') }}</span>
                 </a>
 
@@ -55,28 +55,49 @@
                             <th>{{ __('paket.profile.table.max_download') }}</th>
                             <th>{{ __('paket.profile.table.min_upload') }}</th>
                             <th>{{ __('paket.profile.table.min_download') }}</th>
-                            <th>{{ __('paket.profile.table.cir') }}</th>
-                            <th>{{ __('paket.profile.table.priority') }}</th>
+                            {{-- <th>{{ __('paket.profile.table.cir') }}</th>
+                            <th>{{ __('paket.profile.table.priority') }}</th> --}}
+                            <th>{{ __('paket.profile.table.status') }}</th>
                             <th class="text-end">{{ __('paket.table.action') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($profiles as $profile)
+                            @php
+                                $isDisabled = $profile->disabled === 'true';
+                            @endphp
                             <tr>
                                 <td><span class="badge rounded-pill text-secondary">{{ ++$i }}</span></td>
-                                <td><span class="badge text-primary">{{ $profile->profile_name }}</span></td>
-                                <td><span class="badge text-primary">{{ $profile->max_upload }}</span></td>
-                                <td><span class="badge text-primary">{{ $profile->max_download }}</span></td>
-                                <td><span class="badge text-primary">{{ $profile->min_upload }}</span></td>
-                                <td><span class="badge text-primary">{{ $profile->min_download }}</span></td>
+                                <td><span
+                                        class="badge {{ $isDisabled ? 'text-secondary' : 'text-primary' }}">{{ $profile->profile_name }}</span>
+                                </td>
+                                <td><span
+                                        class="badge {{ $isDisabled ? 'text-secondary' : 'text-primary' }}">{{ $profile->max_upload }}</span>
+                                </td>
+                                <td><span
+                                        class="badge {{ $isDisabled ? 'text-secondary' : 'text-primary' }}">{{ $profile->max_download }}</span>
+                                </td>
+                                <td><span
+                                        class="badge {{ $isDisabled ? 'text-secondary' : 'text-primary' }}">{{ $profile->min_upload }}</span>
+                                </td>
+                                <td><span
+                                        class="badge {{ $isDisabled ? 'text-secondary' : 'text-primary' }}">{{ $profile->min_download }}</span>
+                                </td>
                                 <td>
+                                    <span
+                                        class="badge {{ $isDisabled ? 'bg-danger text-white' : 'bg-success text-white' }}">
+                                        <i class="fa {{ $isDisabled ? 'fa-lock' : 'fa-unlock' }}"></i>
+                                        {{ $isDisabled ? 'Disabled' : 'Enabled' }}
+                                    </span>
+                                </td>
+                                {{-- <td>
                                     <span class="badge text-primary">
                                         @if ($profile->rasio_cir)
                                             1 : {{ $profile->rasio_cir }}
                                         @endif
                                     </span>
-                                </td>
-                                <td><span class="badge text-primary">{{ $profile->priority }}</span></td>
+                                </td> --}}
+                                {{-- <td><span class="badge text-primary">{{ $profile->priority }}</span></td> --}}
                                 <td class="text-end">
                                     <div class="dropdown">
                                         <button class="btn btn-sm btn-secondary dropdown-toggle" type="button"
@@ -211,7 +232,7 @@
                             });
 
                             // Use fetch API instead of form submission
-                            fetch(`/cpanel/server/ppp-profiles/export/${encodeURIComponent(selectedMikrotikSlug)}`, {
+                            fetch(`/cpanel/ppp/profiles/export/${encodeURIComponent(selectedMikrotikSlug)}`, {
                                     method: 'POST',
                                     headers: {
                                         'X-CSRF-TOKEN': document.querySelector(

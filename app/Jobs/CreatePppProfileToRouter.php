@@ -11,13 +11,14 @@ use App\Models\Mikrotik;
 use App\Models\Paket\PppProfile;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Helpers\LogHelper;
+use Illuminate\Bus\Batchable;
 
 class CreatePppProfileToRouter implements ShouldQueue
 {
     protected $router;
     protected $profile;
 
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, Batchable;
 
     /**
      * Create a new job instance.
