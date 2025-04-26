@@ -12,6 +12,10 @@ use App\Services\Routerboard\TestConnectionService;
 use App\Helpers\LogHelper;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Bus\Batch;
+use Illuminate\Support\Facades\Bus;
+use Throwable;
+use App\Jobs\CreatePppProfileToRouter;
 
 class PppProfileController extends Controller
 {
@@ -30,8 +34,10 @@ class PppProfileController extends Controller
     {
         $paginate = 10;
         $profiles = PppProfile::orderBy('profile_name', 'ASC')->paginate($paginate);
+        $mikrotiks = Mikrotik::where('disabled', 'false')->orderBy('name')->get();
         return view('packets.profiles.index', [
             'profiles' =>  $profiles,
+            'mikrotiks' => $mikrotiks,
         ])
             ->with('i', (request()->input('page', 1) - 1) * $paginate);
     }
@@ -389,6 +395,151 @@ class PppProfileController extends Controller
         }
 
         return response()->json(['message' => 'Profiles saved successfully']);
+    }
+
+    public function export($mikrotikSlug)
+    {
+        $uri = request()->path(); // Get current URI
+        $logBase = 'ppp-profiles/export';
+
+        try {
+            $mikrotik = Mikrotik::where('slug', $mikrotikSlug)
+                ->where('disabled', 'false')
+                ->firstOrFail();
+
+            LogHelper::logInfo(request()->path(), [
+                'mikrotik' => $mikrotik->slug,
+                'step' => 'export_started'
+            ], 200, 'Export initiated');
+
+            // Get all active profiles
+            $profilesToExport = PppProfile::where('disabled', 'false')
+                ->whereNotNull('profile_name')
+                ->get();
+
+            // Validate if there are profiles to export
+            if ($profilesToExport->isEmpty()) {
+                LogHelper::logWarning(
+                    $uri,
+                    [
+                        'mikrotik' => $mikrotik->only(['id', 'name']),
+                        'profile_count' => 0
+                    ],
+                    404,
+                    'Export failed: No active profiles found'
+                );
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active profiles found to export'
+                ], 404);
+            }
+
+            // Batch the jobs
+            $profileJobs = $profilesToExport->map(fn($profile) => new CreatePppProfileToRouter($mikrotik, $profile));
+
+            $batch = Bus::batch($profileJobs)
+                ->then(function (Batch $batch) use ($uri, $logBase) {
+                    LogHelper::logInfo(
+                        $uri,
+                        [
+                            'batch_id' => $batch->id ?? 'unknown',
+                            'successful_jobs' => $batch->totalJobs - $batch->failedJobs,
+                            'failed_jobs' => $batch->failedJobs
+                        ],
+                        200,
+                        "$logBase completed"
+                    );
+                })
+                ->catch(function (Batch $batch, Throwable $e) use ($uri, $logBase) {
+                    LogHelper::logError(
+                        $uri,
+                        [
+                            'batch_id' => $batch->id ?? 'unknown',
+                            'error' => $e->getMessage(),
+                            'trace' => substr($e->getTraceAsString(), 0, 500)
+                        ],
+                        500,
+                        "$logBase failed"
+                    );
+                })
+                ->finally(function (Batch $batch) use ($uri, $logBase) {
+                    try {
+                        LogHelper::logInfo(
+                            $uri,
+                            [
+                                'batch_id' => $batch->id ?? 'unknown',
+                                'processed_jobs' => $batch->processedJobs()
+                            ],
+                            200,
+                            "$logBase finalized"
+                        );
+                    } catch (Throwable $e) {
+                        // Fallback logging jika gagal
+                        LogHelper::logError(
+                            $uri,
+                            [
+                                'batch_id' => $batch->id ?? 'unknown',
+                                'error' => $e->getMessage(),
+                                'trace' => substr($e->getTraceAsString(), 0, 500)
+                            ],
+                            500,
+                            "$logBase failed to log batch finalization"
+                        );
+                    }
+                })
+                ->dispatch();
+            // $batchId = 'temp-batch-' . Str::random(8);
+
+            LogHelper::logInfo(
+                $uri,
+                [
+                    'batch_id' => $batch->id ?? 'unknown',
+                    'mikrotik' => $mikrotik->only(['id', 'name']),
+                    'profile_count' => $profilesToExport->count()
+                ],
+                202,
+                "$logBase started"
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile export process started successfully',
+                'data' => [
+                    'total_profiles' => $profilesToExport->count(),
+                    'batch_id' => $batch->id ?? null,
+                    'mikrotik' => $mikrotik->only(['id', 'name', 'host'])
+                ],
+                'timestamp' => now()->toDateTimeString()
+            ], 202);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            LogHelper::logError(request()->path(), [
+                'slug' => $mikrotikSlug,
+                'error' => 'Mikrotik not found'
+            ], 404, 'Mikrotik lookup failed');
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Mikrotik device not found'
+            ], 404);
+        } catch (Throwable $e) {
+            LogHelper::logError(
+                $uri,
+                [
+                    'mikrotik' => $mikrotik->only(['id', 'name']),
+                    'error' => $e->getMessage(),
+                    'trace' => substr($e->getTraceAsString(), 0, 500) // Truncated trace
+                ],
+                500,
+                "$logBase exception"
+            );
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to start export process',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function enable($id)

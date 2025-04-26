@@ -130,16 +130,15 @@ class PacketController extends Controller
         $this->validate(
             $request,
             [
-                'name' => 'required|unique:pakets,name,' . $packet->id . ',id,mikrotik_id,' . $packet->mikrotik_id
+                'name' => 'required|unique:pakets,name,' . $packet->id
             ],
-
             [
-                'name.unique' => 'Name paket ' . $request->name . ' already exist in server '
-
+                'name.unique' => 'Name paket ' . $request->name . ' already exists.'
             ]
         );
 
         $packet->update($request->all());
+
         return redirect()->route('packets.index')
             ->with('success', 'Packet updated successfully');
     }

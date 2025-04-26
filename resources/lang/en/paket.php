@@ -83,6 +83,7 @@ return [
             'parent_queue' => 'Parent Queue',
             'queue_type' => 'Queue Type',
             'insert_before' => 'Insert Before',
+            'select_mikrotik' => 'Select Mikrotik',
         ],
         'table' => [
             'name' => 'Profile Name',

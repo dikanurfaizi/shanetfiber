@@ -87,6 +87,7 @@ class ExportController extends Controller
 
     public function exportToRouter(Request $request)
     {
+        $uri = request()->path();
         $this->validate($request, [
             'source_server' => ['required'],
             'destination_server' => ['required'],
@@ -95,17 +96,29 @@ class ExportController extends Controller
         $sourceMikrotik = Mikrotik::findOrFail($request->source_server);
         $targetMikrotik = Mikrotik::findOrFail($request->destination_server);
 
-        $profilesToExport = PppProfile::all();
+        $profilesToExport = PppProfile::where('disabled', 'false')->get();
 
         $profileJobs = $profilesToExport->map(function ($profile) use ($targetMikrotik) {
             return new CreatePppProfileToRouter($targetMikrotik, $profile);
         })->toArray();
 
         // Chain: export profile ke target, lalu migrasi customer dari source ke target
-        Bus::chain(array_merge(
-            $profileJobs,
-            [new MigrateCustomerToRouter($sourceMikrotik, $targetMikrotik)]
-        ))->dispatch();
+        try {
+            Bus::chain(array_merge(
+                $profileJobs,
+                [new MigrateCustomerToRouter($sourceMikrotik, $targetMikrotik)]
+            ))->dispatch();
+        } catch (\Throwable $e) {
+            LogHelper::logWarning(
+                $uri,
+                [
+                    'message' => $e->getMessage(),
+                ],
+                404,
+                'Export to router failed'
+            );
+            return redirect()->back()->withErrors('Terjadi kesalahan saat mengirim data ke router.');
+        }
 
         return redirect()->back()->with('success', "Export profile dan migrasi customer sedang diproses untuk router {$targetMikrotik->name}.");
     }
