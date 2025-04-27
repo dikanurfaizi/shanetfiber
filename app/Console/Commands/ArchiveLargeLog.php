@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Carbon\Carbon;
+use App\Helpers\LogHelper;
 
 class ArchiveLargeLog extends Command
 {
@@ -64,6 +65,7 @@ class ArchiveLargeLog extends Command
         chmod($logPath, 0664);  // Memberikan permission read/write kepada owner dan group, serta read kepada others
 
         $this->info("Archived laravel.log to {$archivedLog} and created new empty log file");
+        LogHelper::logInfo(null, null, 200, "Archived laravel.log to {$archivedLog} and created new empty log file");
     }
 
     // Fungsi untuk menghapus log yang lebih dari 1 bulan
@@ -83,6 +85,7 @@ class ArchiveLargeLog extends Command
                 // Hapus folder beserta isinya
                 File::deleteDirectory($folder);
                 $this->info("Deleted archived folder: {$folder}");
+                LogHelper::logInfo(null, null, 200, "Deleted archived folder: {$folder}");
             }
         }
     }

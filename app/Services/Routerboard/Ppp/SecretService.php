@@ -1149,6 +1149,8 @@ class SecretService
     {
         try {
             $client = $this->getMikrotik($mikrotik);
+            $host = $mikrotik->host ?? 'Unknown Host';
+            $name = $mikrotik->name ?? 'Unknown Name';
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -1164,7 +1166,13 @@ class SecretService
             $targetProfile = collect($profiles)->firstWhere('name', $profileName);
 
             if (!$targetProfile) {
-                throw new Exception("Profile with name '{$profileName}' not found.");
+                LogHelper::logWarning(
+                    null,
+                    ['host' => $mikrotik->host ?? 'Unknown Host', 'profile_name' => $profileName],
+                    404,
+                    "PPP Profile not found during rate limit update"
+                );
+                throw new Exception("Profile '{$profileName}' not found in Mikrotik '{$name}' with host '{$host}'");
             }
 
             // 3. Update berdasarkan .id yang ditemukan

@@ -27,4 +27,9 @@
             {!! Form::close() !!}
         </div>
     </div>
+
+    @section('custom_scripts')
+        <script src="{{ asset('js/rate-limit.js') }}"></script>
+    @endsection
+
 </x-layouts.app-layout>

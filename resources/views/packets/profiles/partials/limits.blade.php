@@ -10,7 +10,9 @@
         {!! Form::text('max_upload', isset($pppProfile) ? $pppProfile->max_upload : old('max_upload'), [
             'class' => 'form-control',
             'placeholder' => __('paket.profile.placeholder.max_upload'),
+            'id' => 'max_upload', // tambahkan ID supaya gampang di JS
         ]) !!}
+        <span id="error-max-upload" class="text-danger"></span> {{-- span untuk error --}}
         @error('max_upload')
             <span class="text-danger">{{ $message }}</span>
         @enderror
@@ -20,7 +22,9 @@
         {!! Form::text('max_download', isset($pppProfile) ? $pppProfile->max_download : old('max_download'), [
             'class' => 'form-control',
             'placeholder' => __('paket.profile.placeholder.max_download'),
+            'id' => 'max_download', // tambahkan ID supaya gampang di JS
         ]) !!}
+        <span id="error-max-download" class="text-danger"></span> {{-- span untuk error --}}
         @error('max_download')
             <span class="text-danger">{{ $message }}</span>
         @enderror

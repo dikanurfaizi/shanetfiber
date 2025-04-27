@@ -84,43 +84,14 @@ class PppProfileController extends Controller
             ]
         );
 
-        // Pemrosesan max_upload dan max_download (konversi unit ke 'M')
-        $maxLimitUpload = $request->max_upload;
-        $maxLimitDownload = $request->max_download;
+        $calculation = $this->calculation($request->max_upload, $request->max_download, $request->rasio_cir ?? 3.33);
+        $maxUpload = $calculation['maxLimitUpload'];
+        $maxDownload = $calculation['maxLimitDownload'];
+        $limitAtUpload = $calculation['limitAtUpload'];
+        $limitAtDownload = $calculation['limitAtDownload'];
+        $rasioCir = $calculation['rasioCir'];
+        $rateLimitMikrotik = $calculation['rateLimitMikrotik'];
 
-        $patternUnit = '/[0-9]/';       // Untuk ambil unit huruf (k, M, dll)
-        $patternLimit = '/[^0-9]/';     // Untuk ambil angka
-
-        // ==== Upload ====
-        $unitUpload = strtolower(preg_replace($patternUnit, '', $maxLimitUpload));
-        $maxLimitUploadValue = (int) preg_replace($patternLimit, '', $maxLimitUpload);
-
-        if ($unitUpload === 'k') {
-            $maxLimitUploadValue = $maxLimitUploadValue / 1000;
-        } elseif ($unitUpload === '' || $unitUpload === null) {
-            // anggap nilai numeric langsung satuan Kbps → ubah ke Mbps
-            $maxLimitUploadValue = $maxLimitUploadValue . 'M';
-        }
-        $maxUpload = $maxLimitUploadValue . 'M';
-
-        // ==== Download ====
-        $unitDownload = strtolower(preg_replace($patternUnit, '', $maxLimitDownload));
-        $maxLimitDownloadValue = (int) preg_replace($patternLimit, '', $maxLimitDownload);
-
-        if ($unitDownload === 'k') {
-            $maxLimitDownloadValue = $maxLimitDownloadValue / 1000;
-        } elseif ($unitDownload === '' || $unitDownload === null) {
-            $maxLimitDownloadValue = $maxLimitDownloadValue . 'M';
-        }
-        $maxDownload = $maxLimitDownloadValue . 'M';
-
-        // Penghitungan limit upload dan download
-        $rasioCir = $request->rasio_cir;
-        $limitAtUpload = number_format(($maxLimitUploadValue * 1000) / $rasioCir, 0, '.', '');
-        $limitAtDownload = number_format(($maxLimitDownloadValue * 1000) / $rasioCir, 0, '.', '');
-
-        // Output rate-limit
-        $rateLimitMikrotik = $maxUpload . '/' . $maxDownload;
         // $rateLimitMikrotik = $maxUpload . '/' . $maxDownload . ' 0/0 0/0 0/0 ' . $request->priority . ' ' . $limitAtUpload . 'k/' . $limitAtDownload . 'k';
 
         // Menyiapkan data untuk disimpan
@@ -131,8 +102,8 @@ class PppProfileController extends Controller
             'dns_server' => $request->dns_server ?? '8.8.8.8, 8.8.4.4',
             'max_upload' => $maxUpload,
             'max_download' => $maxDownload,
-            'min_upload' => $limitAtUpload . 'k',
-            'min_download' => $limitAtDownload . 'k',
+            'min_upload' => $limitAtUpload,
+            'min_download' => $limitAtDownload,
             'rasio_cir' => $rasioCir,
             'parent_queue' => $request->parent_queue ?? null,
             'queue_type' => $request->queue_type ?? null,
@@ -150,6 +121,60 @@ class PppProfileController extends Controller
         // Redirect ke halaman index setelah berhasil
         return redirect()->route('ppp-profiles.index')
             ->with('success', 'PPP Profile created successfully.');
+    }
+
+    private function calculation($max_upload, $max_download, $rasio_cir = 3.33)
+    {
+        // Inputan
+        $maxLimitUpload = str_replace(',', '.', $max_upload);    // Ganti koma ke titik
+        $maxLimitDownload = str_replace(',', '.', $max_download);
+
+        // ==== Upload ====
+        $unitUploadRaw = preg_replace('/[0-9\.\,]/', '', $maxLimitUpload); // Ambil huruf satuannya
+        $unitUpload = strtolower($unitUploadRaw) === 'm' ? 'M' : 'k';       // Kalau 'm' jadi 'M', lainnya 'k'
+        $maxLimitUploadValue = floatval(preg_replace('/[^0-9\.\,]/', '', $maxLimitUpload)); // Ambil angka pecahan
+
+        // ==== Download ====
+        $unitDownloadRaw = preg_replace('/[0-9\.\,]/', '', $maxLimitDownload);
+        $unitDownload = strtolower($unitDownloadRaw) === 'm' ? 'M' : 'k';
+        $maxLimitDownloadValue = floatval(preg_replace('/[^0-9\.\,]/', '', $maxLimitDownload));
+
+        // Pastikan hanya k atau M
+        if (!in_array($unitUpload, ['k', 'M']) || !in_array($unitDownload, ['k', 'M'])) {
+            throw new \Exception('Satuan upload dan download harus "k" atau "M"');
+        }
+
+        // Max Limit (Upload/Download)
+        $maxUpload = $maxLimitUploadValue . $unitUpload;
+        $maxDownload = $maxLimitDownloadValue . $unitDownload;
+
+        // Hitung Limit-At (Min Limit, biasanya 30% dari Max Limit dibagi rasio)
+        if ($unitUpload === 'k') {
+            $limitAtUploadValue = $maxLimitUploadValue / $rasio_cir;
+        } else { // 'M'
+            $limitAtUploadValue = ($maxLimitUploadValue * 1000) / $rasio_cir;
+        }
+        $limitAtUpload = $limitAtUploadValue . 'k';
+
+        if ($unitDownload === 'k') {
+            $limitAtDownloadValue = $maxLimitDownloadValue / $rasio_cir;
+        } else { // 'M'
+            $limitAtDownloadValue = ($maxLimitDownloadValue * 1000) / $rasio_cir;
+        }
+        $limitAtDownload = $limitAtDownloadValue . 'k';
+
+        // Final Rate Limit Format
+        $rateLimitMikrotik = "{$maxUpload}/{$maxDownload}";
+
+        // Return semua data
+        return [
+            'maxLimitUpload' => $maxUpload,
+            'maxLimitDownload' => $maxDownload,
+            'limitAtUpload' => $limitAtUpload,
+            'limitAtDownload' => $limitAtDownload,
+            'rasioCir' => $rasio_cir,
+            'rateLimitMikrotik' => $rateLimitMikrotik,
+        ];
     }
 
     /**
@@ -204,34 +229,22 @@ class PppProfileController extends Controller
         $data['script_on_down'] = $request->input('on_down');
         $data['insert_queue_before'] = $request->input('insert_before');
 
-        $maxLimitUpload = $request->input('max_upload');
-        $maxLimitDownload = $request->input('max_download');
+        $calculation = $this->calculation($request->max_upload, $request->max_download, $request->rasio_cir ?? 3.33);
+        $maxUpload = $calculation['maxLimitUpload'];
+        $maxDownload = $calculation['maxLimitDownload'];
+        $limitAtUpload = $calculation['limitAtUpload'];
+        $limitAtDownload = $calculation['limitAtDownload'];
+        $rasioCir = $calculation['rasioCir'];
+        $rateLimitMikrotik = $calculation['rateLimitMikrotik'];
 
-        // proses rate_limit
-        $patternUnit = '/[0-9]/';
-        $patternLimit = '/[^0-9]/';
-
-        $unitUpload = strtolower(preg_replace($patternUnit, '', $maxLimitUpload));
-        $maxLimitUploadValue = (int) preg_replace($patternLimit, '', $maxLimitUpload);
-        if ($unitUpload === 'k') {
-            $maxLimitUploadValue = $maxLimitUploadValue / 1000;
-        } elseif ($unitUpload === '' || $unitUpload === null) {
-            $maxLimitUploadValue = $maxLimitUploadValue . 'M';
-        }
-        $maxUpload = $maxLimitUploadValue . 'M';
-
-        $unitDownload = strtolower(preg_replace($patternUnit, '', $maxLimitDownload));
-        $maxLimitDownloadValue = (int) preg_replace($patternLimit, '', $maxLimitDownload);
-        if ($unitDownload === 'k') {
-            $maxLimitDownloadValue = $maxLimitDownloadValue / 1000;
-        } elseif ($unitDownload === '' || $unitDownload === null) {
-            $maxLimitDownloadValue = $maxLimitDownloadValue . 'M';
-        }
-        $maxDownload = $maxLimitDownloadValue . 'M';
-
-        $rateLimitMikrotik = $maxUpload . '/' . $maxDownload;
+        $data['max_upload'] = $maxUpload;
+        $data['max_download'] = $maxDownload;
+        $data['min_upload'] = $limitAtUpload;
+        $data['min_download'] = $limitAtDownload;
+        $data['rasio_cir'] = $rasioCir;
 
         if ($pppProfile->rate_limit !== $rateLimitMikrotik) {
+            dd($pppProfile->rate_limit, $rateLimitMikrotik);
             $routers = Mikrotik::where('disabled', 'false')->get();
             foreach ($routers as $router) {
                 $updateResult = $this->secretService->updateRateLimitProfileSecret($router, $rateLimitMikrotik, $pppProfile->profile_name);
