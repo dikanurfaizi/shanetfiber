@@ -72,7 +72,7 @@ class SecretService
                 504, // Gateway Timeout
                 "Failed to connect to Mikrotik due to stream timeout"
             );
-            return null;
+            throw $e;
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
@@ -84,7 +84,7 @@ class SecretService
                 503, // Service Unavailable
                 "Failed to connect to Mikrotik"
             );
-            return null;
+            throw $e;
         }
 
         return null;
@@ -145,7 +145,7 @@ class SecretService
                 'error' => $e->getMessage()
             ], 500, 'Failed to create secret');
 
-            return null;
+            throw $e;
         }
     }
 
@@ -177,7 +177,7 @@ class SecretService
             }
         } catch (\Exception $e) {
             LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to update secret');
-            return null;
+            throw $e;
         }
     }
 
@@ -209,7 +209,7 @@ class SecretService
             }
         } catch (\Exception $e) {
             LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to update user password/service secret');
-            return null;
+            throw $e;
         }
     }
 
@@ -239,7 +239,7 @@ class SecretService
             }
         } catch (\Exception $e) {
             LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to update profile secret');
-            return null;
+            throw $e;
         }
     }
 
@@ -269,7 +269,7 @@ class SecretService
             }
         } catch (\Exception $e) {
             LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to add comment to secret');
-            return null;
+            throw $e;
         }
     }
 
@@ -300,7 +300,7 @@ class SecretService
             return ($response = 'success');
         } catch (\Exception $e) {
             LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to enable secret');
-            return 'error';
+            throw $e;
         }
     }
 
@@ -330,6 +330,7 @@ class SecretService
             }
         } catch (\Exception $e) {
             LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to enable one secret');
+            throw $e;
         }
     }
 
@@ -360,7 +361,7 @@ class SecretService
             return ($response = 'success');
         } catch (\Exception $e) {
             LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to disable secret');
-            return ($response = 'error');
+            throw $e;
         }
     }
 
@@ -390,6 +391,7 @@ class SecretService
             }
         } catch (\Exception $e) {
             LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to disable one secret');
+            throw $e;
         }
     }
 
@@ -455,6 +457,7 @@ class SecretService
                 500, // Internal Server Error
                 "Failed to delete Mikrotik secret"
             );
+            throw $e;
         }
     }
 
@@ -490,31 +493,10 @@ class SecretService
                 500, // Internal Server Error
                 "Failed to delete Mikrotik secret"
             );
+            throw $e;
         }
     }
 
-    // public function deleteSecretByName($mikrotik, $username): void
-    // {
-    //     $client = $this->getMikrotik($mikrotik);
-    //     $pppsecret = new Query('/ppp/secret/print');
-    //     $pppsecret->where('name', $username);
-    //     $deleteSecrets = $client->query($pppsecret)->read();
-    //     foreach ($deleteSecrets as $secret) {
-    //         $secret = (new Query('/ppp/secret/remove'))
-    //             ->where('name', $username)
-    //             ->equal('.id', $secret['.id']);
-    //         $client->query($secret)->read();
-    //     }
-    // }
-
-    // public function deleteOneSecret($mikrotik, $secretId)
-    // {
-    //     $client = $this->getMikrotik($mikrotik);
-    //     $secret = (new Query('/ppp/secret/remove'))
-    //         ->where('.id', $secretId)
-    //         ->equal('.id', $secretId);
-    //     $client->query($secret)->read();
-    // }
     /**
      * @throws ClientException
      * @throws ConnectException
@@ -549,7 +531,7 @@ class SecretService
                 500,
                 "Failed to fetch all Mikrotik secrets"
             );
-            return [];
+            throw $e;
         }
     }
 
@@ -613,7 +595,7 @@ class SecretService
                 500,
                 "Failed to fetch Mikrotik secrets by $filterType"
             );
-            return [];
+            throw $e;
         }
     }
 
@@ -659,6 +641,7 @@ class SecretService
                 500,
                 "Failed to delete active Mikrotik secret"
             );
+            throw $e;
         }
     }
 
@@ -696,7 +679,7 @@ class SecretService
                 500,
                 "Failed to fetch active Mikrotik PPP sessions"
             );
-            return [];
+            throw $e;
         }
     }
 
@@ -742,7 +725,7 @@ class SecretService
                 500,
                 "Failed to fetch active PPP secret by username"
             );
-            return [];
+            throw $e;
         }
     }
 
@@ -773,7 +756,7 @@ class SecretService
                 500,
                 "Failed to fetch active PPP secret by name"
             );
-            return [];
+            throw $e;
         }
     }
 
@@ -803,7 +786,7 @@ class SecretService
                 500,
                 "Failed to fetch active PPP secret by IP"
             );
-            return [];
+            throw $e;
         }
     }
 
@@ -834,7 +817,7 @@ class SecretService
                 500,
                 "Failed to fetch PPP profiles"
             );
-            return [];
+            throw $e;
         }
     }
 
@@ -913,7 +896,7 @@ class SecretService
                 500,
                 "Failed to update rate limit for PPP profile"
             );
-            return [];
+            throw $e;
         }
     }
 
@@ -959,7 +942,7 @@ class SecretService
                 500,
                 "Failed to create new PPP profile"
             );
-            return [];
+            throw $e;
         }
     }
 }

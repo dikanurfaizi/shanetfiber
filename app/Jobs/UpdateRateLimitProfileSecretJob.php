@@ -8,12 +8,14 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Mikrotik;
-use App\Services\Routerboard\PPP\SecretService;
-use Exception;
-use App\Helpers\LogHelper;
 use App\Models\WhatsAppGateway;
 use App\Models\Websystem;
-use App\Services\WhatsappMessageService;
+use App\Helpers\LogHelper;
+use Exception;
+use RouterOS\Query;
+use RouterOS\Client;
+use RouterOS\Config;
+use RouterOS\Exceptions\StreamException;
 
 class UpdateRateLimitProfileSecretJob implements ShouldQueue
 {
@@ -24,12 +26,9 @@ class UpdateRateLimitProfileSecretJob implements ShouldQueue
     protected $rateLimit;
 
     public $tries = 5;
-    public $timeout = 60; // boleh ditambahin sedikit dari 30 detik
-    public $maxExceptions = 3; // kalau terjadi exception terus menerus, stop di 3
+    public $timeout = 60;
+    public $maxExceptions = 3;
 
-    /**
-     * Create a new job instance.
-     */
     public function __construct(Mikrotik $router, string $profileName, string $rateLimit)
     {
         $this->router = $router;
@@ -37,78 +36,142 @@ class UpdateRateLimitProfileSecretJob implements ShouldQueue
         $this->rateLimit = $rateLimit;
     }
 
-    /**
-     * Execute the job.
-     */
-    public function handle(SecretService $secretService)
+    public function handle()
     {
         $maxLocalRetries = 3;
         $attempt = 0;
 
         while ($attempt < $maxLocalRetries) {
             try {
-                $secretService->updateRateLimitProfileSecret(
+                $this->updateRateLimitProfileSecret(
                     $this->router,
                     $this->rateLimit,
                     $this->profileName
                 );
 
-                // Jika berhasil, keluar dari loop
-                return;
+                return; // Berhasil, keluar
             } catch (Exception $e) {
                 $attempt++;
 
-                // Log lokal supaya tahu pernah error
-                LogHelper::logWarning(null, ['attempt' => $attempt, 'profile' => $this->profileName, 'router' => $this->router->name, 'error_message' => $e->getMessage()], 500, "Failed to update rate limit");
+                LogHelper::logWarning(null, [
+                    'attempt' => $attempt,
+                    'profile' => $this->profileName,
+                    'router' => $this->router->name,
+                    'error_message' => $e->getMessage()
+                ], 500, "Failed to update rate limit");
 
                 if ($attempt >= $maxLocalRetries) {
-                    // Kalau gagal setelah semua percobaan manual, lempar lagi error
-                    $this->failed($e);
+                    $this->failed($e->getMessage());
                     throw $e;
                 }
 
-                // Tunggu sebelum retry lagi
-                sleep(10);
+                sleep(10); // Retry setelah jeda
             }
         }
     }
 
-    /**
-     * Handle a job failure.
-     */
-    public function failed(Exception $exception)
+    public function failed(string $message)
     {
-        // Bisa dikembangkan kirim alert ke Telegram, Slack, dsb
-        LogHelper::logError(null, ['profile' => $this->profileName, 'router' => $this->router->name, 'error_message' => $exception->getMessage()], 500, "UpdateRateLimitProfileSecretJob failed");
+        LogHelper::logError(null, [
+            'profile' => $this->profileName,
+            'router' => $this->router->name,
+            'error_message' => $message
+        ], 500, "UpdateRateLimitProfileSecretJob failed");
+
         $gateway = WhatsappGateway::where('slug', 'gateway')->first();
-        $websystem = Websystem::query()->first();
+        $websystem = Websystem::first();
+
         if (!$websystem) {
-            // Jika tidak ada data di Websystem, log error dan keluar
-            LogHelper::logError(null, ['profile' => $this->profileName, 'router' => $this->router->name, 'error_message' => 'Websystem data not found'], 500, "Websystem data missing");
+            LogHelper::logError(null, [
+                'profile' => $this->profileName,
+                'router' => $this->router->name,
+                'error_message' => 'Websystem data not found'
+            ], 500, "Websystem data missing");
             return;
         }
-        $operatorPhone = $websystem->phone ?? null;
-        $customerName = $websystem->title ?? 'Admin';
-        if ($operatorPhone) {
-            // Normalisasi nomor HP
-            $operatorPhone = ltrim($operatorPhone); // buang spasi di depan
-            if (!preg_match('/^(\+?62|08|8)/', $operatorPhone)) {
-                LogHelper::logError(null, ['profile' => $this->profileName, 'router' => $this->router->name, 'error_message' => 'Invalid phone number format'], 500, "Invalid operator phone number");
-                return;
-            }
-            $message = "❗ Gagal update rate limit PPP Profile `{$this->profileName}` di router `{$this->router->name}`. Error: {$exception->getMessage()}";
 
-            if ($gateway && $gateway->disabled === 'false' && $operatorPhone) {
-                dispatch(new SendWhatsappSingleJob($customerName, $operatorPhone, $gateway, $message));
+        $operatorPhone = ltrim($websystem->phone ?? '');
+        $customerName = $websystem->title ?? 'Admin';
+
+        if (preg_match('/^(\+?62|08|8)/', $operatorPhone)) {
+            $whatsappMessage = "❗ Gagal update rate limit PPP Profile `{$this->profileName}` di router `{$this->router->name}`. Error: {$message}";
+
+            if ($gateway && $gateway->disabled === 'false') {
+                dispatch(new SendWhatsappSingleJob($customerName, $operatorPhone, $gateway, $whatsappMessage));
             }
+        } else {
+            LogHelper::logError(null, [
+                'profile' => $this->profileName,
+                'router' => $this->router->name,
+                'error_message' => 'Invalid phone number format'
+            ], 500, "Invalid operator phone number");
         }
     }
 
-    /**
-     * Define backoff time between retries.
-     */
     public function backoff()
     {
         return [30, 60, 120];
+    }
+
+    private function updateRateLimitProfileSecret($mikrotik, $rateLimit, $profileName)
+    {
+        $client = $this->getMikrotik($mikrotik);
+
+        if (!$client) {
+            throw new Exception('Failed to connect to Mikrotik.');
+        }
+
+        $profiles = $client->query(new Query('/ppp/profile/print'))->read();
+
+        if (empty($profiles)) {
+            throw new Exception("No profiles found in Mikrotik.");
+        }
+
+        $targetProfile = collect($profiles)->firstWhere('name', $profileName);
+
+        if (!$targetProfile) {
+            LogHelper::logWarning(null, [
+                'host' => $mikrotik->host ?? 'Unknown Host',
+                'name' => $mikrotik->name,
+                'profile_name' => $profileName
+            ], 404, "PPP Profile not found during rate limit update");
+
+            $this->failed("Profile '{$profileName}' not found in Mikrotik '{$mikrotik->name}' with host '{$mikrotik->host}'");
+            throw new Exception("Profile '{$profileName}' not found in Mikrotik '{$mikrotik->name}' with host '{$mikrotik->host}'");
+        }
+
+        $updateQuery = (new Query('/ppp/profile/set'))
+            ->equal('.id', $targetProfile['.id'])
+            ->equal('rate-limit', $rateLimit);
+
+        return $client->query($updateQuery)->read();
+    }
+
+    private function getMikrotik($mikrotik): ?Client
+    {
+        try {
+            $config = (new Config())
+                ->set('timeout', 2)
+                ->set('host', $mikrotik->host)
+                ->set('port', (int) $mikrotik->port)
+                ->set('user', $mikrotik->username)
+                ->set('pass', $mikrotik->password);
+
+            return new Client($config);
+        } catch (StreamException $e) {
+            LogHelper::logError(null, [
+                'host' => $mikrotik->host ?? 'N/A',
+                'port' => $mikrotik->port ?? 'N/A',
+                'error' => 'Stream Timeout: ' . $e->getMessage()
+            ], 504, "Failed to connect to Mikrotik (stream timeout)");
+            throw $e;
+        } catch (Exception $e) {
+            LogHelper::logError(null, [
+                'host' => $mikrotik->host ?? 'N/A',
+                'port' => $mikrotik->port ?? 'N/A',
+                'error' => $e->getMessage()
+            ], 503, "Failed to connect to Mikrotik");
+            throw $e;
+        }
     }
 }
