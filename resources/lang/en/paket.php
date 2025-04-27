@@ -100,10 +100,11 @@ return [
             'status' => 'Position',
             'select' => 'All',
             'dns_server' => 'DNS Server',
-            'use_encryption' => 'User Encryption',
+            'use_encryption' => 'Use Encryption',
             'rate_limit' => 'Rate Limit',
             'only_one' => 'Only One',
             'status' => 'Status',
+            'comment' => 'Comment',
         ],
         'placeholder' => [
             'name' => 'Profile Name',

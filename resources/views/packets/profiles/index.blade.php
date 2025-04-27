@@ -53,10 +53,10 @@
                             <th>{{ __('paket.profile.table.name') }}</th>
                             <th>{{ __('paket.profile.table.max_upload') }}</th>
                             <th>{{ __('paket.profile.table.max_download') }}</th>
-                            <th>{{ __('paket.profile.table.min_upload') }}</th>
-                            <th>{{ __('paket.profile.table.min_download') }}</th>
-                            {{-- <th>{{ __('paket.profile.table.cir') }}</th>
-                            <th>{{ __('paket.profile.table.priority') }}</th> --}}
+                            <th>{{ __('paket.profile.table.rate_limit') }}</th>
+                            <th>{{ __('paket.profile.table.use_encryption') }}</th>
+                            <th>{{ __('paket.profile.table.only_one') }}</th>
+                            <th>{{ __('paket.profile.table.comment') }}</th>
                             <th>{{ __('paket.profile.table.status') }}</th>
                             <th class="text-end">{{ __('paket.table.action') }}</th>
                         </tr>
@@ -78,10 +78,16 @@
                                         class="badge {{ $isDisabled ? 'text-secondary' : 'text-primary' }}">{{ $profile->max_download }}</span>
                                 </td>
                                 <td><span
-                                        class="badge {{ $isDisabled ? 'text-secondary' : 'text-primary' }}">{{ $profile->min_upload }}</span>
+                                        class="badge {{ $isDisabled ? 'text-secondary' : 'text-primary' }}">{{ $profile->rate_limit }}</span>
                                 </td>
                                 <td><span
-                                        class="badge {{ $isDisabled ? 'text-secondary' : 'text-primary' }}">{{ $profile->min_download }}</span>
+                                        class="badge {{ $isDisabled ? 'text-secondary' : 'text-primary' }}">{{ $profile->use_encryption }}</span>
+                                </td>
+                                <td><span
+                                        class="badge {{ $isDisabled ? 'text-secondary' : 'text-primary' }}">{{ $profile->only_one }}</span>
+                                </td>
+                                <td><span
+                                        class="badge {{ $isDisabled ? 'text-secondary' : 'text-primary' }}">{{ $profile->comment }}</span>
                                 </td>
                                 <td>
                                     <span
