@@ -1057,9 +1057,9 @@ class BillingController extends Controller
                 'status' => 'LS',
                 'receipt_id' => $getReceipt->id,
             ]);
-            // if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
-            //     $this->messageService->payment_paket($billing, $getReceipt, $payment);
-            // }
+            if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
+                $this->messageService->payment_paket($billing, $getReceipt, $payment);
+            }
             return redirect()->back()->with('success', 'Payment ' . $billing->customer_name . ' successfully.');
         }
     }

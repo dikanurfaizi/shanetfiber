@@ -16,6 +16,7 @@ use Illuminate\Bus\Batch;
 use Illuminate\Support\Facades\Bus;
 use Throwable;
 use App\Jobs\CreatePppProfileToRouter;
+use App\Jobs\UpdateRateLimitProfileSecretJob;
 
 class PppProfileController extends Controller
 {
@@ -243,26 +244,28 @@ class PppProfileController extends Controller
         $data['min_download'] = $limitAtDownload;
         $data['rasio_cir'] = $rasioCir;
 
-        if ($pppProfile->rate_limit !== $rateLimitMikrotik) {
-            dd($pppProfile->rate_limit, $rateLimitMikrotik);
-            $routers = Mikrotik::where('disabled', 'false')->get();
-            foreach ($routers as $router) {
-                $updateResult = $this->secretService->updateRateLimitProfileSecret($router, $rateLimitMikrotik, $pppProfile->profile_name);
+        // if ($pppProfile->rate_limit !== $rateLimitMikrotik) {
+        $routers = Mikrotik::where('disabled', 'false')->get();
+        // foreach ($routers as $router) {
+        //     $updateResult = $this->secretService->updateRateLimitProfileSecret($router, $rateLimitMikrotik, $pppProfile->profile_name);
 
-                if (isset($updateResult['after'])) {
-                    return redirect()->back()->withErrors([
-                        'msg' => $updateResult['after']['message'],
-                    ]);
-                }
-            }
-            $data['rate_limit'] = $rateLimitMikrotik;
+        //     if (isset($updateResult['after'])) {
+        //         return redirect()->back()->withErrors([
+        //             'msg' => $updateResult['after']['message'],
+        //         ]);
+        //     }
+        // }
+        foreach ($routers as $router) {
+            UpdateRateLimitProfileSecretJob::dispatch($router, $pppProfile->profile_name, $rateLimitMikrotik);
         }
+        $data['rate_limit'] = $rateLimitMikrotik;
+        // }
 
         // dd($pppProfile);
         $pppProfile->update($data);
 
         return redirect()->route('ppp-profiles.index')
-            ->with('success', 'Packet updated successfully');
+            ->with('success', 'Profile updated. Update to router is being processed via background job.');
     }
 
     public function delete(PppProfile $pppProfile)

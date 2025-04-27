@@ -75,31 +75,6 @@ class WhatsappMessageService
         }
     }
 
-    // public function getAccountBank()
-    // {
-    //     try {
-    //         $account_banks_text = '';
-    //         $account_banks = Bank::where('disabled', false)->get();
-
-    //         if ($account_banks->isNotEmpty()) {
-    //             $i = 0;
-    //             foreach ($account_banks as $account_bank) {
-    //                 $i++;
-    //                 $account_banks_text .= $i . '. ' . $account_bank->bank . ' - ' . $account_bank->account_number . ' - ' . $account_bank->account_name . '%0a';
-    //             }
-    //         }
-    //         return $account_banks_text;
-    //     } catch (\Exception $e) {
-    //         LogHelper::logError(
-    //             null,
-    //             null,
-    //             500,
-    //             "Error retrieving account bank information: " . $e->getMessage()
-    //         );
-    //         return "Gagal mengambil informasi rekening bank.";
-    //     }
-    // }
-
     public function getDefaultMessage($slug)
     {
         try {
