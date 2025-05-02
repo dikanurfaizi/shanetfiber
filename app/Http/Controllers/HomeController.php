@@ -16,6 +16,7 @@ use App\Services\Routerboard\TestConnectionService;
 use Illuminate\Support\Facades\Log;
 use App\Helpers\LogHelper;
 use App\Helpers\UserAuth;
+use Illuminate\Support\Facades\DB;
 
 class HomeController extends Controller
 {
@@ -285,35 +286,72 @@ class HomeController extends Controller
         return [$lastBillingPeriode, $lastBillings];
     }
 
+    // private function calculateCustomerSummary()
+    // {
+    //     $auth = $this->getUserAuthData();
+    //     $user = $auth['user'];
+    //     $userId = $auth['userId'];
+
+    //     $query = Customer::query();
+
+    //     if ($user->can('view-billings-widget-total') || $user->can('view-billings-widget-customer-count')) {
+    //     } else if ($user->can('view-billings-widget-related')) {
+    //         $query->where('user_id', $userId);
+    //     } else {
+    //         $query->where('user_id', $userId);
+    //     }
+
+    //     $result = $query->selectRaw('
+    //     COUNT(*) as totalCustomers,
+    //     SUM(CASE WHEN disabled = "false" THEN 1 ELSE 0 END) as totalEnabled,
+    //     SUM(CASE WHEN disabled = "true" THEN 1 ELSE 0 END) as totalDisabled,
+    //     SUM(CASE WHEN disabled = "true" AND activation = "false" THEN 1 ELSE 0 END) as totalNonActiveDisabled
+    // ')->first();
+
+    //     return [
+    //         'totalCustomers' => (int) $result->totalCustomers,
+    //         'totalEnabled' => (int) $result->totalEnabled,
+    //         'totalDisabled' => (int) $result->totalDisabled,
+    //         'totalNonActiveDisabled' => (int) $result->totalNonActiveDisabled,
+    //     ];
+    // }
+
     private function calculateCustomerSummary()
     {
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
         $userId = $auth['userId'];
 
-        $query = Customer::query();
+        $customerQuery = Customer::query();
 
-        if ($user->can('view-billings-widget-total') || $user->can('view-billings-widget-customer-count')) {
-        } else if ($user->can('view-billings-widget-related')) {
-            $query->where('user_id', $userId);
-        } else {
-            $query->where('user_id', $userId);
+        if (!($user->can('view-billings-widget-total') || $user->can('view-billings-widget-customer-count'))) {
+            $customerQuery->where('user_id', $userId);
         }
 
-        $result = $query->selectRaw('
+        // Ringkasan total keseluruhan
+        $total = (clone $customerQuery)->selectRaw('
         COUNT(*) as totalCustomers,
         SUM(CASE WHEN disabled = "false" THEN 1 ELSE 0 END) as totalEnabled,
         SUM(CASE WHEN disabled = "true" THEN 1 ELSE 0 END) as totalDisabled,
         SUM(CASE WHEN disabled = "true" AND activation = "false" THEN 1 ELSE 0 END) as totalNonActiveDisabled
     ')->first();
 
+        $perMikrotik = (clone $customerQuery)
+            ->rightJoin('mikrotiks', 'customers.mikrotik_id', '=', 'mikrotiks.id')
+            ->select('mikrotiks.id', 'mikrotiks.name as mikrotik_name', DB::raw('COUNT(customers.id) as total_customers'))
+            ->groupBy('mikrotiks.id', 'mikrotiks.name')
+            ->orderBy('mikrotiks.id') // Urutkan berdasarkan id Mikrotik
+            ->get();
+
         return [
-            'totalCustomers' => (int) $result->totalCustomers,
-            'totalEnabled' => (int) $result->totalEnabled,
-            'totalDisabled' => (int) $result->totalDisabled,
-            'totalNonActiveDisabled' => (int) $result->totalNonActiveDisabled,
+            'totalCustomers' => (int) $total->totalCustomers,
+            'totalEnabled' => (int) $total->totalEnabled,
+            'totalDisabled' => (int) $total->totalDisabled,
+            'totalNonActiveDisabled' => (int) $total->totalNonActiveDisabled,
+            'perMikrotik' => $perMikrotik, // bisa jadi array atau collection
         ];
     }
+
 
     private function calculateBillingSummary($billings)
     {

@@ -352,6 +352,20 @@ class CustomerController extends Controller
             $billingPeriode = $periodeName;
         }
 
+        $profile = pppProfile::find($request->paket_id);
+        if (!$profile) {
+            return back()->withError('Profile PPP tidak ditemukan');
+        }
+
+        $paket = Paket::where('profile', $profile->profile_name)->first();
+        if (!$paket) {
+            return back()->withError('Paket untuk profile ini tidak ditemukan');
+        }
+
+        $paketId = $paket->id;
+
+        // dd($profile, $paket, $paketId);
+
         $customerData = [
             'name' => $request->name,
             'email' => $request->email,
@@ -363,7 +377,7 @@ class CustomerController extends Controller
             'primary_server' => $request->mikrotik_id,
             'discount' => $discount,
             'mikrotik_id' => $request->mikrotik_id,
-            'paket_id' => $request->paket_id,
+            'paket_id' => $paketId,
             'username' => $username,
             'user_id' => $request->user_id,
             'member_id' => $request->member_id,
@@ -856,9 +870,21 @@ class CustomerController extends Controller
             $billingPeriode = $periodeName;
         }
 
+        $profile = pppProfile::find($request->paket_id);
+        if (!$profile) {
+            return back()->withError('Profile PPP tidak ditemukan');
+        }
+
+        $paket = Paket::where('profile', $profile->profile_name)->first();
+        if (!$paket) {
+            return back()->withError('Paket untuk profile ini tidak ditemukan');
+        }
+
+        $paketId = $paket->id;
+
         $customer->update([
             'name' => $request->name,
-            'paket_id' => $request->paket_id,
+            'paket_id' => $paketId,
             'email' => $request->email,
             'address' => $request->address,
             'contact' => $this->formatContact($request->contact),

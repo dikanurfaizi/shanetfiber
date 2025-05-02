@@ -678,9 +678,9 @@ class BillingController extends Controller
     private function dispatchBillingJob($customer, $router, $comment)
     {
         if ($customer->internet_service == 'ppp') {
-            //dispatch(new CreateBillingJob($router, $comment, $customer->secret_id))->onQueue('default');
+            dispatch(new CreateBillingJob($router, $comment, $customer->secret_id))->onQueue('default');
         } else if ($customer->internet_service == 'ip_static') {
-            //dispatch(new CreateBillingIpStaticJob($router, $customer->simpleque_id, $comment))->onQueue('default');
+            dispatch(new CreateBillingIpStaticJob($router, $customer->simpleque_id, $comment))->onQueue('default');
         }
     }
 
@@ -788,9 +788,9 @@ class BillingController extends Controller
                 if ($userSecretId != 'error') {
                     $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
                     if ($secretProfiles == $customerProfile) {
-                        //dispatch(new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerSecretId))->onQueue('default');
+                        dispatch(new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerSecretId))->onQueue('default');
                     } else {
-                        //dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername))->onQueue('default');
+                        dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername))->onQueue('default');
                     }
                 } else {
                     return redirect()->back()->withErrors(['msg' => $customerSecretId . '! Canot find user "' . $customer->username . '" on server ' . $router->name . '.']);
@@ -810,12 +810,12 @@ class BillingController extends Controller
                 if (isset($address_list_customer[0]['list'])) {
                     if ($address_list_customer[0]['list'] == $address_list_isolir) {
                         // $address_list_id = $address_list[0]['.id'];
-                        //dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
+                        dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
                     } else {
-                        //dispatch(new AddPaymentBeforeDueDateJob($router, $simpleque_id, $comment_payment))->onQueue('default');
+                        dispatch(new AddPaymentBeforeDueDateJob($router, $simpleque_id, $comment_payment))->onQueue('default');
                     }
                 } else {
-                    //dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
+                    dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
                 }
             }
         }
@@ -952,9 +952,9 @@ class BillingController extends Controller
                     if ($userSecretId != 'error') {
                         $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
                         if ($secretProfiles == $customerProfile) {
-                            //dispatch(new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerSecretId))->onQueue('default');
+                            dispatch(new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerSecretId))->onQueue('default');
                         } else {
-                            //dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername))->onQueue('default');
+                            dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername))->onQueue('default');
                         }
                     } else {
                         return redirect()->back()->withErrors(['msg' => $customerSecretId . '! Canot find user "' . $customer->username . '" on server ' . $router->name . '.']);
@@ -974,12 +974,12 @@ class BillingController extends Controller
                     if (isset($address_list_customer[0]['list'])) {
                         if ($address_list_customer[0]['list'] == $address_list_isolir) {
                             // $address_list_id = $address_list[0]['.id'];
-                            //dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
+                            dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
                         } else {
-                            //dispatch(new AddPaymentBeforeDueDateJob($router, $simpleque_id, $comment_payment))->onQueue('default');
+                            dispatch(new AddPaymentBeforeDueDateJob($router, $simpleque_id, $comment_payment))->onQueue('default');
                         }
                     } else {
-                        //dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
+                        dispatch(new AddPaymentIpStaticAfterDueDateJob($router, $ip_address, $simpleque_id, $address_list_isolir, $comment_payment, $comment))->onQueue('default');
                     }
                 }
             }
@@ -1091,9 +1091,9 @@ class BillingController extends Controller
                 try {
                     // dispatch(new TestConnectionJob($router))->onQueue('default');
                     if ($day <= $dueDate) {
-                        //dispatch(new CancelPaymentBeforeDueDateJob($router, $comment_unpayment, $secretId))->onQueue('default');
+                        dispatch(new CancelPaymentBeforeDueDateJob($router, $comment_unpayment, $secretId))->onQueue('default');
                     } else {
-                        //dispatch(new CancelPaymentAfterDueDateJob($router, $comment_unpayment, $profileIsolir, $secretId, $username))->onQueue('default');
+                        dispatch(new CancelPaymentAfterDueDateJob($router, $comment_unpayment, $profileIsolir, $secretId, $username))->onQueue('default');
                     }
                 } catch (\Exception $e) {
                     return redirect()->back()->withErrors(['msg' => 'Cant connect to server ' . $router->name . '.']);
@@ -1104,12 +1104,12 @@ class BillingController extends Controller
                 try {
                     if ($day <= $dueDate) {
                         // return dd('tes');
-                        //dispatch(new CancelPaymentIpStaticBeforeDueDateJob($router, $simpleque_id, $comment_unpayment))->onQueue('default');
+                        dispatch(new CancelPaymentIpStaticBeforeDueDateJob($router, $simpleque_id, $comment_unpayment))->onQueue('default');
                     } else {
                         $ip_address = $customer->ip_static;
                         $address_list_isolir = $autoIsolir->address_list_isolir;
                         $comment = $customer->username . '_' . $comment_unpayment;
-                        //dispatch(new CancelPaymentIpStaticAfterDueDateJob($router, $address_list_isolir, $ip_address, $simpleque_id, $comment))->onQueue('default');
+                        dispatch(new CancelPaymentIpStaticAfterDueDateJob($router, $address_list_isolir, $ip_address, $simpleque_id, $comment))->onQueue('default');
                     }
                 } catch (\Exception $e) {
                     return redirect()->back()->withErrors(['msg' => 'Cant connect to Server ' . $router->name . '.']);

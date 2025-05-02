@@ -40,6 +40,7 @@ class UpdateRateLimitProfileSecretJob implements ShouldQueue
     {
         $maxLocalRetries = 3;
         $attempt = 0;
+        $timeToSendWhatsapp = $maxLocalRetries - 1;
 
         while ($attempt < $maxLocalRetries) {
             try {
@@ -51,8 +52,6 @@ class UpdateRateLimitProfileSecretJob implements ShouldQueue
 
                 return; // Berhasil, keluar
             } catch (Exception $e) {
-                $attempt++;
-
                 LogHelper::logWarning(null, [
                     'attempt' => $attempt,
                     'profile' => $this->profileName,
@@ -60,10 +59,12 @@ class UpdateRateLimitProfileSecretJob implements ShouldQueue
                     'error_message' => $e->getMessage()
                 ], 500, "Failed to update rate limit");
 
-                if ($attempt >= $maxLocalRetries) {
+                if ($attempt >= $timeToSendWhatsapp) {
                     $this->failed($e->getMessage());
                     throw $e;
                 }
+
+                $attempt++;
 
                 sleep(10); // Retry setelah jeda
             }

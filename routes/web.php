@@ -120,7 +120,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('/server/{mikrotik:slug}/ppp/profiles', [MikrotikProfileController::class, 'index'])->name('ppp.profiles.index');
         Route::post('/server/{mikrotik:slug}/ppp/profiles/import', [MikrotikProfileController::class, 'clone_profile'])->name('ppp.profiles.clone');
         //==================================New PPP Profiles====================================================
-        Route::resource('/packets/ppp-profiles', PppProfileController::class);
+        Route::resource('/packets/ppp-profiles', PppProfileController::class)->names('ppp-profiles');
         Route::get('/packets/ppp-profiles/{ppp_profile}/delete', [PppProfileController::class, 'delete'])->name('ppp-profiles.delete');
         Route::put('/packets/ppp-profiles/{mikrotik:slug}/disabled/true', [PppProfileController::class, 'disable'])->name('ppp-profiles.disable');
         Route::put('/packets/ppp-profiles/{mikrotik:slug}/disabled/false', [PppProfileController::class, 'enable'])->name('ppp-profiles.enable');
@@ -130,7 +130,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::post('/packets/ppp-profiles/export/{mikrotik:slug}', [PppProfileController::class, 'export'])->name('ppp-profiles.export');
         Route::post('/packets/profiles/import', [PppProfileController::class, 'import'])->name('ppp.profiles.import');
         //==================================Paket====================================================
-        Route::resource('packets', PacketController::class);
+        Route::resource('packets', PacketController::class)->names('packets');
         Route::put('/packets/{packet:slug}/disabled/true', [PacketController::class, 'disable'])->name('disable.package');
         Route::put('/packets/{packet:slug}/disabled/false', [PacketController::class, 'enable'])->name('enable.package');
         Route::get('/packets/{packet:slug}/delete', [PacketController::class, 'delete'])->name('paket.delete');
