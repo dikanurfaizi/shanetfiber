@@ -8,12 +8,22 @@ use App\Models\Websystem;
 use App\Models\Billing\Billing;
 use App\Models\Customer;
 use App\Models\PaymentGateway;
+use App\Models\Receipt;
+use App\Models\Mikrotik;
+use App\Models\AutoIsolir;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Pppoe\SecretResource;
 use App\Http\Controllers\PaymentGateway\TripayController;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Carbon;
 use App\Helpers\LogHelper;
 use App\Services\Midtrans\CreateSnapTokenService;
+use App\Services\Routerboard\Ppp\SecretService;
+use App\Services\Routerboard\IpStaticService;
+use App\Jobs\AddPaymentAfterDueDateJob;
+use App\Jobs\AddPaymentBeforeDueDateJob;
+use App\Jobs\AddPaymentIpStaticAfterDueDateJob;
 
 class OrderController extends Controller
 {
@@ -22,9 +32,13 @@ class OrderController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function __construct()
+    private SecretService $secretService;
+    private IpStaticService $ipStaticService;
+    public function __construct(SecretService $secretService, IpStaticService $ipStaticService)
     {
         $this->middleware('customerauth');
+        $this->secretService = $secretService;
+        $this->ipStaticService = $ipStaticService;
     }
     public function index()
     {
@@ -190,6 +204,24 @@ class OrderController extends Controller
             'footer' => view('customers.components.payment-footer', ['order' => $order])->render(),
             'payment_status' => $order->payment_status,
         ]);
+    }
+
+    private function setView(Order $order)
+    {
+        $shouldShow = !in_array($order->payment_method, ['SHOPEEPAY', 'DANA', 'QRIS', 'QRISC', 'QRIS2']);
+        $isOVO = $order->payment_method === 'OVO';
+        $contact = $order->billing->customer->contact ?? null;
+
+        if ($isOVO && !is_null($contact)) {
+            $contact = preg_replace('/^628/', '08', $contact);
+        }
+
+        $vaNumber = $isOVO && !is_null($contact) ? $contact : $order->va_number;
+
+        return (object)[
+            'shouldShow' => $shouldShow,
+            'vaNumber'   => $vaNumber,
+        ];
     }
 
     private function getWebsystem()
