@@ -108,7 +108,7 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <!-- Pagination -->
             <div>
-                {{ $data->appends(['perPage' => request('perPage')])->links() }}
+                {{ $data->appends(['perPage' => request('perPage')])->links('vendor.pagination.custom') }}
             </div>
 
             <!-- Dropdown dan Export Button -->
@@ -342,7 +342,7 @@
             </table>
         </div>
         {{-- {{ $data->withQueryString()->links() }} --}}
-        {{ $data->appends(['perPage' => request('perPage')])->links() }}
+        {{ $data->appends(['perPage' => request('perPage')])->links('vendor.pagination.custom') }}
     </div>
 
 </x-layouts.cpanel.customers.app-layout>

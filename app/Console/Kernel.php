@@ -23,7 +23,7 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         //      CreateBillingCron::class,
         BillingCheckAndUpdateProfile::class,
-        ArchiveLargeLog::class,
+        // ArchiveLargeLog::class,
     ];
     /**
      * Define the application's command schedule.
@@ -42,7 +42,7 @@ class Kernel extends ConsoleKernel
                 return true; // Logika bisa disesuaikan
             });
 
-        $schedule->command('log:archive-large')->everyFiveMinutes();
+        // $schedule->command('log:archive-large')->everyFiveMinutes();
     }
 
     /**

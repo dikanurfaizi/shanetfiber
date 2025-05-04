@@ -223,7 +223,7 @@ class SendPaymentReminderJob implements ShouldQueue
     private function sendMessagesInBatch($batch, $messageType, $gateway)
     {
         $batchSize = 5; // Jumlah pesan per batch
-        $pauseDuration = 60; // Jeda antar batch dalam detik (1 menit)
+        $successCount = 0;
 
         $chunks = array_chunk($batch, $batchSize);
 
@@ -233,7 +233,7 @@ class SendPaymentReminderJob implements ShouldQueue
                     LogHelper::logWarning(
                         null,
                         null,
-                        404, // Not Found
+                        404,
                         "No customer billing found."
                     );
                     continue;
@@ -250,18 +250,8 @@ class SendPaymentReminderJob implements ShouldQueue
                         'gateway_id' => $gateway->id,
                     ]);
 
-                    // LogHelper::logInfo(
-                    //     null,
-                    //     [
-                    //         'customer_name' => $billing->customer_name,
-                    //         'customer_contact' => $billing->customer_contact,
-                    //         'message_type' => $messageType,
-                    //     ],
-                    //     200, // OK
-                    //     "Successfully sent WhatsApp message."
-                    // );
+                    $successCount++;
                 } catch (\Exception $e) {
-                    // Log kegagalan jika ada error di dalam proses pengiriman
                     LogHelper::logError(
                         null,
                         [
@@ -274,9 +264,18 @@ class SendPaymentReminderJob implements ShouldQueue
                     );
                 }
             }
-
-            // Tunggu sebelum mengirim batch berikutnya
-            sleep($pauseDuration);
         }
+
+        LogHelper::logInfo(
+            null,
+            [
+                'message_type' => $messageType,
+                'gateway_id' => $gateway->id,
+                'success_count' => $successCount,
+                'total_count' => count($batch),
+            ],
+            200,
+            "Message sending completed. Total sent successfully: {$successCount} of " . count($batch)
+        );
     }
 }

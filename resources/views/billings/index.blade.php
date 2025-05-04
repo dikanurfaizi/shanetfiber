@@ -32,7 +32,7 @@
                             </div>
 
                             <!-- Search Address -->
-                            <div class="col-md-4 col-lg-3">
+                            {{-- <div class="col-md-4 col-lg-3">
                                 <select name="search_address" class="form-control">
                                     <option value="">{{ __('billing.placeholder.search-address') }}</option>
                                     <option value="no-address">{{ __('billing.placeholder.search-without-address') }}
@@ -57,23 +57,21 @@
                                     'placeholder' => __('billing.placeholder.search-year'),
                                     'class' => 'form-control',
                                 ]) !!}
-                            </div>
+                            </div> --}}
 
                             <!-- Search Status -->
-                            <div class="col-md-4 col-lg-2">
+                            {{-- <div class="col-md-4 col-lg-2">
                                 <select name="search_status" class="form-control">
                                     <option value="">{{ __('billing.placeholder.select.status') }}</option>
                                     <option value="!LS">{{ __('billing.placeholder.select.unpaid') }}</option>
                                     <option value="PL">{{ __('billing.placeholder.select.paylater') }}</option>
-                                    <option value="LS">{{ __('billing.placeholder.select.paid') }}</option>
-                                    {{-- <option value="NP">{{ __('billing.placeholder.select.notactive') }}</option> --}}
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Admin and Due Date with margin top -->
-                        @canany(['view-customers-widget-total'])
-                            <div class="row gx-3 gy-2 mt-3">
+                                    <option value="LS">{{ __('billing.placeholder.select.paid') }}</option> --}}
+                            {{-- <option value="NP">{{ __('billing.placeholder.select.notactive') }}</option> --}}
+                            {{-- </select> --}}
+                            {{-- </div> --}}
+                            <!-- Admin and Due Date with margin top -->
+                            @canany(['view-customers-widget-total'])
+                                {{-- <div class="row gx-3 gy-2 mt-3"> --}}
                                 <!-- Search Admin -->
                                 <div class="col-md-4 col-lg-3">
                                     {!! Form::select('admin_name', $userAdmin, null, [
@@ -83,12 +81,13 @@
                                 </div>
 
                                 <!-- Due Date -->
-                                <div class="col-md-4 col-lg-3">
-                                    <input id="select-date" type="datetime-local" class="form-control" name="duedate"
-                                        placeholder="Due Date">
-                                </div>
-                            </div>
-                        @endcanany
+                                {{-- <div class="col-md-4 col-lg-3">
+                                <input id="select-date" type="datetime-local" class="form-control" name="duedate"
+                                    placeholder="Due Date">
+                            </div> --}}
+                                {{-- </div> --}}
+                            @endcanany
+                        </div>
 
                         <!-- Additional Options -->
                         <div class="row gx-3 gy-2 mt-3">
@@ -118,7 +117,7 @@
     </div>
 
     <div class="card-body">
-        {{ $data->withQueryString()->links() }}
+        {{ $data->withQueryString()->links('vendor.pagination.simple-numeric') }}
         @if ($totalPrice > 0)
             <div class="alert alert-success mt-2">
                 <strong> Total Bill: @moneyIDR($totalPrice) </strong>
@@ -133,9 +132,9 @@
                         <tr class="text-center align-middle">
                             <th class="text-center align-middle">{{ __('billing.table.no') }}</th>
                             <th class="text-center align-middle">{{ __('billing.table.customer-name') }}</th>
-                            <th class="text-center align-middle">{{ __('billing.table.customer_id') }}</th>
+                            {{-- <th class="text-center align-middle">{{ __('billing.table.customer_id') }}</th> --}}
                             <th class="text-center align-middle">{{ __('billing.table.address') }}</th>
-                            <th class="text-center align-middle">{{ __('billing.table.activation') }}</th>
+                            {{-- <th class="text-center align-middle">{{ __('billing.table.activation') }}</th> --}}
                             <th class="text-center align-middle">{{ __('billing.table.periode') }}</th>
                             <th class="text-center align-middle">{{ __('billing.table.bill') }}</th>
                             <th class="text-center align-middle">{{ __('billing.table.bill-state') }}</th>
@@ -155,15 +154,15 @@
                                         <span
                                             class="badge text-primary">{{ $billing->customer_name ?? 'no name' }}</span></a>
                                 </td>
-                                <td><span
+                                {{-- <td><span
                                         class="badge text-primary">{{ $billing->customer->customer_id ?? 'no customer id' }}</span>
-                                </td>
+                                </td> --}}
                                 <td><span
                                         class="badge text-primary">{{ $billing->customer->address ?? 'no address' }}</span>
                                 </td>
-                                <td><span
+                                {{-- <td><span
                                         class="badge text-primary">{{ Carbon\Carbon::parse($billing->customer->activation_date)->format('d M Y') ?? 'inactive' }}</span>
-                                </td>
+                                </td> --}}
                                 <td><span
                                         class="badge text-primary">{{ Carbon\Carbon::parse($billing->billing_periode->name)->translatedFormat('M Y') ?? 'no periode' }}</span>
                                 </td>
@@ -336,7 +335,7 @@
                 No billing found!
             </div>
         @endif
-        {{ $data->withQueryString()->links() }}
+        {{ $data->withQueryString()->links('vendor.pagination.simple-numeric') }}
     </div>
     @section('custom_styles')
         <link href="{{ asset('css/flatpickr.min.css') }}" rel="stylesheet">
