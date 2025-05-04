@@ -53,14 +53,16 @@ class MidtranController extends Controller
      */
     public function update(Request $request, Midtran $midtran)
     {
-        if ($request->disabled) {
+        // dd($request);
+        if ($request->disabled === "true") {
             // $disabled = 'true';
             $request->request->add(['disabled' => 'true']);
             $request->request->add(['midtrans_is_production' => 'false']);
         } else {
             //$disabled = 'false';
             $request->request->add(['disabled' => 'false']);
-            if ($request->midtrans_is_production == NULL) {
+            // dd($request->midtrans_is_production);
+            if ($request->midtrans_is_production === "false") {
                 $request->request->add(['midtrans_is_production' => 'false']);
                 // $midtrans_is_production = 'false';
                 $this->validate(

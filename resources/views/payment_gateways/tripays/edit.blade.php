@@ -8,9 +8,15 @@
             {!! Form::model($tripay, ['method' => 'PATCH', 'route' => ['paymentgateway.tripay.update', $tripay->slug]]) !!}
             <div class="card-body col-lg-8">
 
+                <!-- Hidden field untuk disabled -->
+                <input type="hidden" name="disabled" value="true">
+                <!-- Hidden field untuk tripays_is_production -->
+                <input type="hidden" name="tripays_is_production" value="true">
+
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
-                        <label for="tripays_merchant_id"><strong>{{ __('websystem.tripay.merchat_id') }}</strong></label>
+                        <label
+                            for="tripays_merchant_id"><strong>{{ __('websystem.tripay.merchat_id') }}</strong></label>
                         <div class="input-group">
                             {!! Form::text('tripays_merchant_id', null, [
                                 'placeholder' => __('websystem.tripay.placeholder.merchant_id'),
@@ -108,14 +114,14 @@
                     <div class="col-md-12 mb-3">
                         <div class="d-flex justify-content-between">
                             <div class="form-switch">
-                                <input class="form-check-input" @if ($tripay->disabled === 'true') checked @endif
-                                    value="true" type="checkbox" id="disabled" name="disabled">
+                                <!-- Checkbox Disabled -->
+                                <input class="form-check-input" value="false" type="checkbox" id="disabled"
+                                    name="disabled" @if ($tripay->disabled === 'false') checked @endif>
                                 <label class="form-check-label" for="disabled"
-                                    data-enable="{{ __('websystem.tripay.enable') }}"
-                                    data-disable="{{ __('websystem.tripay.disable') }}">
+                                    data-disable="{{ __('websystem.tripay.enable') }}"
+                                    data-enable="{{ __('websystem.tripay.disable') }}">
                                 </label>
                             </div>
-
                         </div>
                     </div>
                 </div>
@@ -125,7 +131,6 @@
                         {{ __('router.button.save') }}</button>
                     <a class="btn btn-sm btn-secondary" href="{{ route('paymentgateway.index') }}"><i
                             class="fa fa-arrow-left"></i>&nbsp{{ __('server.button.cancel') }}</a>
-
                 </div>
                 {!! Form::close() !!}
             </div>
@@ -135,24 +140,49 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const tripaysIsProduction = document.getElementById("tripays_is_production");
-        const disabled = document.getElementById("disabled");
-        const productionLabel = document.querySelector("label[for='tripays_is_production']");
-        const disabledLabel = document.querySelector("label[for='disabled']");
+        const checkboxes = [{
+                checkbox: document.getElementById("tripays_is_production"),
+                label: document.querySelector("label[for='tripays_is_production']"),
+                hidden: document.querySelector("input[name='tripays_is_production']"),
+                labelTrue: "data-production",
+                labelFalse: "data-development",
+                hiddenValueTrue: "true",
+                hiddenValueFalse: "false"
+            },
+            {
+                checkbox: document.getElementById("disabled"),
+                label: document.querySelector("label[for='disabled']"),
+                hidden: document.querySelector("input[name='disabled']"),
+                labelTrue: "data-disable",
+                labelFalse: "data-enable",
+                hiddenValueTrue: "false",
+                hiddenValueFalse: "true"
+            }
+        ];
 
-        function updateLabels() {
-            productionLabel.textContent = tripaysIsProduction.checked ?
-                productionLabel.getAttribute("data-production") :
-                productionLabel.getAttribute("data-development");
+        function updateState({
+            checkbox,
+            label,
+            hidden,
+            labelTrue,
+            labelFalse,
+            hiddenValueTrue,
+            hiddenValueFalse
+        }) {
+            if (label) {
+                label.textContent = checkbox.checked ?
+                    label.getAttribute(labelTrue) :
+                    label.getAttribute(labelFalse);
+            }
 
-            disabledLabel.textContent = disabled.checked ?
-                disabledLabel.getAttribute("data-disable") :
-                disabledLabel.getAttribute("data-enable");
+            if (hidden) {
+                hidden.value = checkbox.checked ? hiddenValueTrue : hiddenValueFalse;
+            }
         }
 
-        tripaysIsProduction.addEventListener("change", updateLabels);
-        disabled.addEventListener("change", updateLabels);
-
-        updateLabels(); // Set initial labels based on default state
+        checkboxes.forEach(item => {
+            updateState(item); // Initial render
+            item.checkbox.addEventListener("change", () => updateState(item));
+        });
     });
 </script>

@@ -9,12 +9,19 @@ use Illuminate\Support\Facades\Log;
 use App\Models\Order;
 use App\Traits\TripayHelper;
 use App\Helpers\LogHelper;
-use App\Http\Controllers\OrderController;
 use Illuminate\Support\Carbon;
+use App\Services\PaymentService;
 
 class TripayCallbackController extends Controller
 {
     use TripayHelper;
+
+    private PaymentService $paymentService;
+
+    public function __construct(PaymentService $paymentService)
+    {
+        $this->paymentService = $paymentService;
+    }
 
     public function handle(Request $request)
     {
@@ -31,7 +38,10 @@ class TripayCallbackController extends Controller
             ? $tripay->tripays_sandbox_private_key
             : $tripay->tripays_private_key;
 
-        $callbackSignature = $request->header('HTTP_X_CALLBACK_SIGNATURE');
+        $callbackSignature = $request->header('X-Callback-Signature')
+            ?? $_SERVER['HTTP_X_CALLBACK_SIGNATURE']
+            ?? null;
+
         $json = $request->getContent();
         $signature = hash_hmac('sha256', $json, $privateKey);
 
@@ -55,7 +65,9 @@ class TripayCallbackController extends Controller
             ], 403);
         }
 
-        $callbackEvent = (string) $request->server('HTTP_X_CALLBACK_EVENT');
+        $callbackEvent = (string) ($request->header('X-Callback-Event')
+            ?? $request->server('HTTP_X_CALLBACK_EVENT')
+            ?? '');
 
         // return Response::json([
         //     'payment_status' => $callbackEvent,  // This will show the event you're checking
@@ -102,27 +114,26 @@ class TripayCallbackController extends Controller
                     'message' => 'No order found or already processed: ' . $invoiceId,
                 ]);
             }
-            $orderController = new OrderController();  // Inisiasi objek controller
 
             switch ($status) {
                 case 'UNPAID':
                     $order->update(['payment_status' => Order::STATUS_UNPAID]);
-                    $orderController->processPaymentUnpaid($order, $order->billing);
+                    $this->paymentService->processPaymentUnpaid($order, $order->billing);
                     break;
 
                 case 'PAID':
                     $order->update(['payment_status' => Order::STATUS_PAID]);
-                    $orderController->processPaymentSuccess($order, $order->billing, $paid_at);
+                    $this->paymentService->processPaymentSuccess($order, $order->billing, $paid_at);
                     break;
 
                 case 'EXPIRED':
                     $order->update(['payment_status' => Order::STATUS_EXPIRED]);
-                    $orderController->processUpdatePaymentStatus($order, Order::STATUS_EXPIRED);
+                    $this->paymentService->processUpdatePaymentStatus($order, Order::STATUS_EXPIRED);
                     break;
 
                 case 'FAILED':
                     $order->update(['payment_status' => Order::STATUS_CANCELED]);
-                    $orderController->processUpdatePaymentStatus($order, Order::STATUS_CANCELED);
+                    $this->paymentService->processUpdatePaymentStatus($order, Order::STATUS_CANCELED);
                     break;
 
                 default:

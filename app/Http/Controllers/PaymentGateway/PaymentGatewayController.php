@@ -6,8 +6,7 @@ use App\Models\Websystem;
 use Illuminate\Http\Request;
 use App\Models\PaymentGateway;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 
 class PaymentGatewayController extends Controller
 {
@@ -21,32 +20,21 @@ class PaymentGatewayController extends Controller
     public function index()
     {
         $paymentGateways = PaymentGateway::paginate(10);
-        //$paymentGatewayStatus = Websystem::where('slug', 'websystem')->value('payment_gateway');
         $webSystem = Websystem::where('slug', 'websystem')->first();
 
-        // Menampung status masing-masing payment gateway
-        $gatewayStatuses = [];
+        // Transform status for each gateway
+        $paymentGateways->getCollection()->transform(function ($gateway) {
+            $isDisabled = filter_var($gateway->disabled, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            $gateway->status = $isDisabled == true ? 'Disabled' : 'Enabled';
+            return $gateway;
+        });
 
-        foreach ($paymentGateways as $gateway) {
-            $tableName = $gateway->slug; // Slug merepresentasikan nama tabel
-
-            // Cek apakah tabel ada di database sebelum query
-            if (Schema::hasTable($tableName)) {
-                // Ambil nilai `disabled` dari tabel terkait
-                $status = DB::table($tableName)->value('disabled');
-
-                // Konversi status ke "Enable" atau "Disable"
-                $gatewayStatuses[$tableName] = $status ? 'Disabled' : 'Enabled';
-            }
-        }
-
-        // Tambahkan hasil ke dalam webSystem response
-        $paymentGateways->payment_gateway_statuses = $gatewayStatuses;
-
-        return view('payment_gateways.index', compact('paymentGateways', 'webSystem'))
-            ->with('i', (request()->input('page', 1) - 1) * 10);
+        return view('payment_gateways.index', [
+            'paymentGateways' => $paymentGateways,
+            'webSystem' => $webSystem,
+            'i' => (request()->input('page', 1) - 1) * 10
+        ]);
     }
-
     /**
      * Show the form for creating a new resource.
      */

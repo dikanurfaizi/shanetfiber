@@ -315,7 +315,16 @@ class CustomerController extends Controller
         $mikrotiks = Mikrotik::where('disabled', 'false')->orderBy('name', 'ASC')->pluck('name', 'id');
         $pppservices = PppType::orderBy('name', 'ASC')->pluck('name', 'id');
         // $interfaces = $this->ipStaticService->getInterfaces($mikrotiks);
-        $pppprofiles = PppProfile::where('disabled', 'false')->orderBy('profile_name', 'ASC')->pluck('profile_name', 'id');
+        $pppprofiles = DB::table('pakets')
+            ->join('ppp_profiles', 'pakets.profile', '=', 'ppp_profiles.profile_name')
+            ->where('ppp_profiles.disabled', 'false')
+            ->orderBy('pakets.name')
+            ->select('pakets.id', 'pakets.name', 'pakets.price')
+            ->get()
+            ->mapWithKeys(function ($paket) {
+                $label = $paket->name . ' - Rp ' . number_format($paket->price, 0, ',', '.');
+                return [$paket->id => $label];
+            });
         $users = User::all();
         $members = Member::all();
         return view('customers.create', [
@@ -332,6 +341,7 @@ class CustomerController extends Controller
      */
     public function store(CustomerStoreRequest $request): RedirectResponse
     {
+        // dd($request);
         $discount = $request->discount ?? 0;
         $periode = BillingPeriode::latest('created_at')->first();
 
@@ -352,12 +362,12 @@ class CustomerController extends Controller
             $billingPeriode = $periodeName;
         }
 
-        $profile = pppProfile::find($request->paket_id);
-        if (!$profile) {
-            return back()->withError('Profile PPP tidak ditemukan');
-        }
+        // $profile = pppProfile::find($request->paket_id);
+        // if (!$profile) {
+        //     return back()->withError('Profile PPP tidak ditemukan');
+        // }
 
-        $paket = Paket::where('profile', $profile->profile_name)->first();
+        $paket = Paket::where('id', $request->paket_id)->first();
         if (!$paket) {
             return back()->withError('Paket untuk profile ini tidak ditemukan');
         }

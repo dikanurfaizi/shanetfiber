@@ -47,7 +47,7 @@
                     <div class="col-md-12 mb-3">
                         {!! Form::select('paket_id', $pppprofiles, null, [
                             'placeholder' => 'Select Paket',
-                            'class' => 'form-control d-none',
+                            'class' => 'form-control d-none', // awalnya disembunyikan
                             'id' => 'paket-dropdown',
                             'onchange' => 'updateMemberDropdown(this.value); calculateDiscount();',
                         ]) !!}
@@ -333,25 +333,53 @@
 </x-layouts.cpanel.customers.app-layout>
 
 <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const paketDropdown = document.getElementById('paket-dropdown');
+        const memberDropdown = document.getElementById('member-dropdown');
+        const discountInput = document.getElementById('discount_nominal');
+
+        paketDropdown.addEventListener('change', () => {
+            updateMemberDropdown();
+            calculateDiscount();
+        });
+
+        memberDropdown.addEventListener('change', () => {
+            toggleDiscountField();
+            calculateDiscount();
+        });
+
+        discountInput.addEventListener('input', () => {
+            formatRupiah(discountInput);
+            calculateDiscount();
+        });
+
+        // Trigger awal saat load
+        updateMemberDropdown();
+        toggleDiscountField();
+        calculateDiscount();
+    });
+
     function getPaketPrice() {
         const paketDropdown = document.getElementById('paket-dropdown');
         const selectedOption = paketDropdown.options[paketDropdown.selectedIndex];
         return selectedOption && selectedOption.value ? getCleanPrice(selectedOption.text) : 0;
     }
 
-    function formatRupiah(input) {
-        let value = input.value.replace(/[^,\d]/g, ''); // Hapus karakter selain angka dan koma
-        let paketPrice = getPaketPrice(); // <--- Dideklarasikan di sini, biar bisa diakses di seluruh fungsi
+    function getCleanPrice(text) {
+        const match = text.match(/Rp\.?\s?([\d.,]+)/i);
+        return match ? Number(match[1].replace(/[.,]/g, '')) : 0;
+    }
 
-        // Jika paketPrice masih nol karena belum pilih server, reset ke 0
+    function formatRupiah(input) {
+        let value = input.value.replace(/[^,\d]/g, '');
+        let paketPrice = getPaketPrice();
+
         if (paketPrice === 0) {
             input.value = '0';
             return;
         }
 
-        // Ubah value ke number biar bisa dibandingkan
         let numericValue = parseFloat(value.replace(/\./g, ''));
-
         if (numericValue > paketPrice) {
             numericValue = paketPrice;
         }
@@ -365,118 +393,51 @@
         const billingOptions = document.getElementById('billing-options');
         const monthlyOption = document.getElementById('monthly');
         const oneTimeOption = document.getElementById('one-time');
+        const hiddenMemberInput = document.getElementById('hidden_member_id');
+
         const selectedMember = memberDropdown.options[memberDropdown.selectedIndex];
         const isNonMember = selectedMember.value === 'non-member';
 
-        const hiddenMemberInput = document.getElementById('hidden_member_id');
-        if (!hiddenMemberInput) {
-            console.log('Element hidden_member_id tidak ditemukan');
-            return;
-        }
+        if (!hiddenMemberInput) return;
 
         if (isNonMember) {
             discountNominalField.removeAttribute('readonly');
             discountNominalField.removeAttribute('disabled');
-            discountNominalField.value = ''; // Biarkan kosong biar user bisa input
-            billingOptions.style.display = 'none'; // Sembunyiin billing options
-            billingOptions.value = '0';
+            discountNominalField.value = '';
+            billingOptions.style.display = 'none';
             monthlyOption.checked = false;
             oneTimeOption.checked = false;
-
-            // Set hidden input untuk menyimpan member_id sebagai null
             hiddenMemberInput.value = '';
         } else {
             discountNominalField.setAttribute('readonly', true);
             discountNominalField.setAttribute('disabled', true);
             const discount = parseFloat(selectedMember.getAttribute('data-discount')) || 0;
             discountNominalField.value = discount.toLocaleString('id-ID');
-            billingOptions.style.display = 'block'; // Ini udah bener sekarang!
-
-            // Set hidden input untuk menyimpan member_id yang dipilih
+            billingOptions.style.display = 'block';
             hiddenMemberInput.value = selectedMember.value;
         }
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        updateMemberDropdown(document.getElementById('paket-dropdown').value);
-    });
-
     function calculateDiscount() {
-        let paketPrice = getPaketPrice(); // <--- Dideklarasikan di sini, biar bisa diakses di seluruh fungsi
-
+        let paketPrice = getPaketPrice();
         const memberDropdown = document.getElementById('member-dropdown');
         const selectedMember = memberDropdown.options[memberDropdown.selectedIndex];
         const isNonMember = selectedMember.value === 'non-member';
-        let memberDiscount = parseFloat(selectedMember.getAttribute('data-discount')) || 0;
-
         const discountNominalField = document.getElementById('discount_nominal');
+        const discountField = document.getElementById('discount');
 
-        // Hanya set memberDiscount kalau bukan non-member
         if (!isNonMember) {
+            const memberDiscount = parseFloat(selectedMember.getAttribute('data-discount')) || 0;
             discountNominalField.value = memberDiscount.toLocaleString('id-ID');
         }
 
-        const discountField = document.getElementById('discount');
         const discountNominal = parseFloat(discountNominalField.value.replace(/\./g, '').replace(',', '.')) || 0;
-
-        // Hitung persentase diskon
         const discountPercentage = paketPrice > 0 ? (discountNominal / paketPrice) * 100 : 0;
         discountField.value = discountPercentage.toFixed(2);
     }
 
-    // Event listeners
-    document.getElementById('paket-dropdown').addEventListener('change', () => {
-        updateMemberDropdown();
-    });
-
-    document.getElementById('member-dropdown').addEventListener('change', () => {
-        calculateDiscount();
-    });
-
-    // function getCleanPrice(optionText) {
-    //     console.log("Original optionText: " + optionText);
-
-    //     // Ambil bagian harga yang dimulai dengan "Rp" dan diikuti angka dengan koma
-    //     const priceMatch = optionText.match(/Rp\.?\s*[\d,]+/);
-    //     console.log("priceMatch: ", priceMatch);
-
-    //     if (priceMatch) {
-    //         const priceWithRp = priceMatch[0]; // Harga lengkap misalnya "Rp. 125,000,00"
-    //         console.log("priceWithRp: " + priceWithRp);
-
-    //         // Hapus "Rp" dan spasi
-    //         const withoutRp = priceWithRp.replace(/Rp\.?\s*/, '');
-    //         console.log("withoutRp: " + withoutRp);
-
-    //         // Hapus dua digit di belakang koma (",00")
-    //         const withoutDecimals = withoutRp.replace(/,00$/, '');
-    //         console.log("withoutDecimals: " + withoutDecimals);
-
-    //         // Hapus semua koma pemisah ribuan
-    //         const cleanPrice = withoutDecimals.replace(/,/g, '');
-    //         console.log("cleanPrice: " + cleanPrice);
-
-    //         // Ubah ke number biar gampang diolah
-    //         const numericPrice = parseInt(cleanPrice, 10);
-    //         console.log("numericPrice: " + numericPrice);
-
-    //         return numericPrice;
-    //     }
-
-    //     console.log("No price found, returning 0");
-    //     return 0; // Kalau nggak nemu harga, balikin 0
-    // }
-
-    function getCleanPrice(optionText) {
-        const priceMatch = optionText.match(/Rp\.?\s*([\d,]+)/);
-        return priceMatch ?
-            parseInt(priceMatch[1].replace(/,00$/, '').replace(/,/g, ''), 10) :
-            0;
-    }
-
-    function updateMemberDropdown(selectedPaketId) {
-        let paketPrice = getPaketPrice(); // <--- Dideklarasikan di sini, biar bisa diakses di seluruh fungsi
-
+    function updateMemberDropdown() {
+        const paketPrice = getPaketPrice();
         const memberDropdown = document.getElementById('member-dropdown');
         const members = memberDropdown.options;
 
@@ -505,17 +466,15 @@
             document.getElementById('discount_nominal').value = 0;
             document.getElementById('discount_nominal').readOnly = true;
             document.getElementById('discount').value = 0;
-        } else if (memberDropdown.value === "non-member") {
-            document.getElementById('discount_nominal').readOnly = false;
         } else {
             if (bestValidIndex !== -1) {
                 memberDropdown.selectedIndex = bestValidIndex;
             } else {
                 memberDropdown.selectedIndex = 0;
             }
-            document.getElementById('discount_nominal').readOnly = true;
         }
 
+        toggleDiscountField();
         calculateDiscount();
     }
 </script>

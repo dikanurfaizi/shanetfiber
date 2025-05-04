@@ -69,14 +69,13 @@ class TripayController extends Controller
      */
     public function update(Request $request, Tripay $tripay)
     {
-        if ($request->disabled) {
-            // $disabled = 'true';
+        if ($request->disabled === "true") {
             $request->request->add(['disabled' => 'true']);
             $request->request->add(['tripays_is_production' => 'false']);
         } else {
             // $disabled = 'false';
             $request->request->add(['disabled' => 'false']);
-            if ($request->tripays_is_production == NULL) {
+            if ($request->tripays_is_production === "false") {
                 $request->request->add(['tripays_is_production' => 'false']);
                 // $tripays_is_production = 'false';
                 $this->validate(

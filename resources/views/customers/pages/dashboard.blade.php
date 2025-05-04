@@ -94,22 +94,32 @@
                         <th>{{ __('billing.table.periode') }}</th>
                         <th>{{ __('billing.table.paket-name') }}</th>
                         <th>{{ __('billing.table.paket-price') }}</th>
-                        <th width="180px">{{ __('billing.table.action') }}</th>
+                        @if ($websystem->payment_gateway === 'enable')
+                            <th width="180px">{{ __('billing.table.action') }}</th>
+                        @endif
                     </tr>
                     @foreach ($billings as $billing)
                         <tr>
                             <td>{{ $loop->iteration }}</td>
                             <td>{{ $billing->billing_periode->name }}</td>
                             <td>{{ $billing->paket_name }}</td>
-                            <td>
-                                @moneyIDR($billing->paket_price + $billing->tax)
-                            </td>
-                            <td class="d-flex items-center justify-content">
-                                <a href="{{ route('customer.payment.show', $billing->id) }}"
-                                    class="btn btn-sm btn-success">
-                                    Bayar Online
-                                </a>
-                            </td>
+                            @if ($websystem->enable_tax === 'true')
+                                <td>
+                                    @moneyIDR($totalPrice)
+                                </td>
+                            @else
+                                <td>
+                                    @moneyIDR($priceAfterDiscount)
+                                </td>
+                            @endif
+                            @if ($websystem->payment_gateway === 'enable')
+                                <td class="d-flex items-center justify-content">
+                                    <a href="{{ route('customer.payment.show', $billing->id) }}"
+                                        class="btn btn-sm btn-success">
+                                        Bayar Online
+                                    </a>
+                                </td>
+                            @endif
                         </tr>
                     @endforeach
 
