@@ -85,13 +85,13 @@ class Customer extends Authenticatable
     {
         return $this->hasMany(Billing::class);
     }
-
+    
     public function user()
     {
         return $this->belongsTo(User::class);
     }
-
-    public function member()
+    
+     public function member()
     {
         return $this->belongsTo(Member::class);
     }
@@ -100,7 +100,7 @@ class Customer extends Authenticatable
     // {
     //     return $this->belongsTo(User::class);
     // }
-
+    
     public function pppType()
     {
         return $this->belongsTo(PppType::class, 'ppp_type_id');

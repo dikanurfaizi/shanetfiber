@@ -1130,15 +1130,25 @@ class BillingController extends Controller
 
         $receipt->delete();
 
-        $orderController = new OrderController();
+        // 1. Gunakan first() jika hanya butuh 1 order, atau get() untuk multiple
+        $orders = Order::where('billing_id', $billing->id)->get();
 
-        $order = Order::where('billing_id', $billing->id)->get();
+        // 2. Check jika collection tidak kosong
+        if ($orders->isNotEmpty()) {
+            foreach ($orders as $order) {
+                $order->update([
+                    'payment_status' => Order::STATUS_CANCELED
+                ]);
+            }
 
-        $order = Order::where('billing_id', $billing->id)->get(); // Ambil semua order terkait billing_id
+            // Optional: Log jumlah order yang diupdate
+            LogHelper::logInfo(null, ['order_count' => $orders->count(), 'billing_id' => $billing->id], 200, "Canceled orders");
+        } else {
+            // Handle case ketika tidak ada order
+            LogHelper::logWarning(null, ['billing_id' => $billing->id], 404, "No orders found");
 
-        // Update status setiap order ke CANCELED
-        foreach ($order as $o) {
-            $o->update(['payment_status' => Order::STATUS_CANCELED]);
+            // Jika perlu return response error:
+            // return response()->json(['error' => 'No orders found'], 404);
         }
 
         if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {

@@ -105,8 +105,8 @@
                         <ul class="list-unstyled mb-0">
                             @foreach ($perMikrotik ?? [] as $item)
                                 <li class="d-flex justify-content-between">
-                                    <span class="text-dark">{{ $item->mikrotik_name }}</span>
-                                    <span class="fw-semibold">{{ $item->total_customers }} Customers</span>
+                                    <span class="text-success"> {{ $item->mikrotik_name }}</span>
+                                    <span class="fw-semibold">{{ $item->total_customers }}  Customers</span>
                                 </li>
                             @endforeach
                         </ul>

@@ -148,9 +148,3 @@
     color: #6c757d;
     cursor: not-allowed;
 }
-
-.select2-container--default .select2-selection--single {
-    height: 35px;
-    padding: 5px 10px;
-    font-size: 14px;
-}

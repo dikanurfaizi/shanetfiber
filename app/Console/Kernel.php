@@ -11,7 +11,6 @@ use App\Jobs\SendPaymentReminderJob;
 use App\Services\WhatsappMessageService;
 use Illuminate\Support\Facades\Log;
 use App\Console\Commands\BillingCheckAndUpdateProfile;
-use App\Console\Commands\ArchiveLargeLog;
 
 class Kernel extends ConsoleKernel
 {
@@ -23,7 +22,6 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         //      CreateBillingCron::class,
         BillingCheckAndUpdateProfile::class,
-        // ArchiveLargeLog::class,
     ];
     /**
      * Define the application's command schedule.
@@ -34,15 +32,28 @@ class Kernel extends ConsoleKernel
 
         // $schedule->command('inspire')->hourly();
         // $schedule->command('create_billing:cron')->everyMinute();
-        $schedule->command('messages:send')
+        // $schedule->command('messages:send')->cron('0 9 15-20 * *')->when(function () {
+        //     Log::info("Scheduling messages:send command");
+        //     return true;
+        // });
+        // $schedule->command('messages:send')
+        //     ->cron('* * * * *')  // Menjalankan setiap menit untuk pengujian
+        //     ->when(function () {
+        //         return true;  // Perintah ini akan selalu dijalankan
+        //     });
+        // $schedule->call(function () {
+        //     DB::table('billing_periodes')->create([
+        //         'name' => 'Test'
+        //     ]);
+        // })->everyMinute();
+         //$schedule->command('log:archive-large')->everyFiveMinutes();
+         $schedule->command('messages:send')
             ->withoutOverlapping() // Mencegah eksekusi ganda jika belum selesai
             ->onOneServer()        // Hanya dijalankan pada satu server jika menggunakan load balancer
             ->when(function () {
                 // Kondisi agar hanya dijalankan saat diperlukan
                 return true; // Logika bisa disesuaikan
             });
-
-        // $schedule->command('log:archive-large')->everyFiveMinutes();
     }
 
     /**

@@ -23,17 +23,11 @@ class SendBillingToWhatsAppJob implements ShouldQueue
 
     private WhatsappMessageService $messageService;
 
-    /**
-     * Create a new job instance.
-     */
     public function __construct()
     {
         $this->messageService = app(WhatsappMessageService::class);
     }
 
-    /**
-     * Execute the job.
-     */
     public function handle(): void
     {
         try {
@@ -46,7 +40,7 @@ class SendBillingToWhatsAppJob implements ShouldQueue
                     404, // Not Found
                     "No active WhatsApp gateway found."
                 );
-                return; // Berhenti jika tidak ada gateway
+                return;
             }
 
             $lastBillingPeriode = BillingPeriode::latest('created_at')->first();
@@ -58,32 +52,32 @@ class SendBillingToWhatsAppJob implements ShouldQueue
                     404, // Not Found
                     "No billing period found."
                 );
-                return; // Berhenti jika tidak ada billing periode
+                return;
             }
 
             $billings = Billing::query()
                 ->join('customers', 'billings.customer_id', '=', 'customers.id')
-                ->leftJoin('users', 'customers.user_id', '=', 'users.id') // LEFT JOIN ke tabel users
+                ->leftJoin('users', 'customers.user_id', '=', 'users.id')
                 ->select(
-                    'billings.customer_id', // ID pelanggan dari billings
-                    'customers.customer_id as customer_unique_id', // ID pelanggan unik dari customers
-                    'customers.name as customer_name', // Nama pelanggan
-                    'customers.contact as customer_contact', // Kontak pelanggan
-                    'customers.address as customer_address', // Alamat pelanggan
-                    'billings.due_date', // Tanggal jatuh tempo dari billings
-                    'users.name as admin_name', // Username dari users
-                    DB::raw('COUNT(billings.id) as total_bills'), // Jumlah tagihan
-                    DB::raw('SUM(billings.paket_price) as total_amount') // Total harga tagihan
+                    'billings.customer_id',
+                    'customers.customer_id as customer_unique_id',
+                    'customers.name as customer_name',
+                    'customers.contact as customer_contact',
+                    'customers.address as customer_address',
+                    'billings.due_date',
+                    'users.name as admin_name',
+                    DB::raw('COUNT(billings.id) as total_bills'),
+                    DB::raw('SUM(billings.paket_price) as total_amount')
                 )
-                ->whereNotNull('customers.contact') // Kontak tidak boleh null
-                ->where('customers.contact', '!=', '') // Kontak tidak boleh kosong
+                ->whereNotNull('customers.contact')
+                ->where('customers.contact', '!=', '')
                 ->where(function ($query) {
-                    $query->where('billings.status', 'BL') // Status belum lunas
-                        ->whereNotNull('billings.due_date'); // due_date harus ada
+                    $query->where('billings.status', 'BL')
+                        ->whereNotNull('billings.due_date');
                 })
                 ->orWhere(function ($query) {
-                    $query->where('billings.status', 'PL') // Status pay later
-                        ->whereNotNull('billings.pay_later'); // pay_later harus ada
+                    $query->where('billings.status', 'PL')
+                        ->whereNotNull('billings.pay_later');
                 })
                 ->groupBy(
                     'billings.customer_id',
@@ -97,40 +91,41 @@ class SendBillingToWhatsAppJob implements ShouldQueue
                 ->orderBy('customers.name')
                 ->cursor();
 
-            // Karena pakai cursor(), kita cek dengan cara beda
-            if ($billings->isEmpty() || $billings->count() === 0) {
+            $count = 0;
+            foreach ($billings as $billing) {
+                $count++;
+            }
+
+            if ($count === 0) {
                 LogHelper::logWarning(
                     null,
-                    [
-                        'periode_id' => $lastBillingPeriode->id
-                    ],
-                    404, // Not Found
+                    ['periode_id' => $lastBillingPeriode->id],
+                    404,
                     "No billing data found."
                 );
-                return; // Berhenti jika tidak ada data billing
+                return;
             }
+
+            LogHelper::logInfo(
+                null,
+                ['periode_id' => $lastBillingPeriode->id, 'count' => $count],
+                200,
+                "{$count} billing records found."
+            );
 
             $this->processBillings($billings, 'create_new_bill');
         } catch (RequestException $e) {
-            // Tangkap dan log error spesifik terkait permintaan HTTP
             LogHelper::logError(
                 null,
-                [
-                    'billing_id' => null,
-                    'customer_id' => null,
-                ],
-                500, // Exception
+                ['billing_id' => null, 'customer_id' => null],
+                500,
                 "HTTP Request Exception: " . $e->getMessage()
             );
         } catch (\Exception $e) {
-            // Tangkap error lainnya
             LogHelper::logError(
                 null,
-                [
-                    'billing_id' => null,
-                    'customer_id' => null,
-                ],
-                500, // Exception
+                ['billing_id' => null, 'customer_id' => null],
+                500,
                 "Exception occurred while creating billing: " . $e->getMessage()
             );
         }
@@ -140,49 +135,47 @@ class SendBillingToWhatsAppJob implements ShouldQueue
     {
         $batchSize = 50; // Ukuran batch yang diinginkan
         $batch = [];
-
+    
         foreach ($billings as $billing) {
-            // Log::info("Processing billing for {$billing->customer_name} with Message Type {$messageType}");
-
+            // Add billing record to batch
             $batch[] = $billing;
-
-            // Jika batch sudah penuh, kirim pesan dalam batch
+    
+            // If batch reaches the desired size, send it
             if (count($batch) >= $batchSize) {
-                $this->sendMessagesInBatch($batch, $messageType);
-                $batch = []; // Reset batch setelah pengiriman
+                $this->sendMessagesInBatch($batch, $messageType); // Send full batch
+                $batch = []; // Reset batch after sending
             }
         }
-
-        // Kirim sisa batch jika ada
+    
+        // Send any remaining batch if there are left-over items
         if (count($batch) > 0) {
-            $this->sendMessagesInBatch($batch, $messageType);
+            $this->sendMessagesInBatch($batch, $messageType); // Send remaining batch
         }
     }
-
+    
     private function sendMessagesInBatch($batch, $messageType)
     {
         $batchSize = 5; // Jumlah pesan per batch
-        $pauseDuration = 60; // Jeda antar batch dalam detik (1 menit)
-
-        $chunks = array_chunk($batch, $batchSize);
-
-        foreach ($chunks as $chunk) {
+    
+        // Process the batch in chunks of size $batchSize
+        foreach (array_chunk($batch, $batchSize) as $chunk) {
             foreach ($chunk as $billing) {
-                if (!$billing) {
+                // Make sure we're not dealing with an empty or invalid $billing
+                if (empty($billing) || !is_object($billing)) {
                     LogHelper::logWarning(
                         null,
                         null,
                         404, // Not Found
-                        "No customer billing found in batch processing."
+                        "Invalid or empty billing record encountered in batch processing."
                     );
-                    continue;
+                    continue; // Skip to the next iteration
                 }
-
+    
                 try {
-                    // Kirim pesan
+                    // Try sending the message using the message service
                     $this->messageService->bill_info($billing, $messageType);
-
-                    // Log sukses setelah berhasil mengirim pesan
+    
+                    // Log successful message dispatch
                     LogHelper::logInfo(
                         null,
                         [
@@ -191,20 +184,21 @@ class SendBillingToWhatsAppJob implements ShouldQueue
                             'message_type' => $messageType
                         ],
                         200, // OK
-                        "WhatsApp message creation successful and in the process of sending a request to the messaging service"
+                        "WhatsApp message creation successful and request sent to messaging service"
                     );
                 } catch (\Exception $e) {
+                    // Log any errors that occur while trying to send the message
                     LogHelper::logError(
                         null,
-                        null,
+                        [
+                            'customer_name' => $billing->customer_name,
+                            'customer_contact' => $billing->customer_contact
+                        ],
                         500, // Internal Server Error
                         "Failed to send WhatsApp message to {$billing->customer_name}. Error: {$e->getMessage()}"
                     );
                 }
             }
-
-            // Tunggu sebelum mengirim batch berikutnya
-            sleep($pauseDuration);
         }
     }
 }
