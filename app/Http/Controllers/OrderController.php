@@ -5,17 +5,25 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Midtran;
 use App\Models\Websystem;
-use Illuminate\Http\Request;
 use App\Models\Billing\Billing;
-use App\Http\Controllers\Controller;
-use App\Services\Midtrans\CreateSnapTokenService;
-use App\Http\Controllers\PaymentGateway\TripayController;
 use App\Models\Customer;
-use Illuminate\Support\Facades\Log;
 use App\Models\PaymentGateway;
-use Illuminate\Support\Carbon;
 use App\Models\Receipt;
+use App\Models\Mikrotik;
+use App\Models\AutoIsolir;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Http\Resources\Pppoe\SecretResource;
+use App\Http\Controllers\PaymentGateway\TripayController;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Carbon;
 use App\Helpers\LogHelper;
+use App\Services\Midtrans\CreateSnapTokenService;
+use App\Services\Routerboard\Ppp\SecretService;
+use App\Services\Routerboard\IpStaticService;
+use App\Jobs\AddPaymentAfterDueDateJob;
+use App\Jobs\AddPaymentBeforeDueDateJob;
+use App\Jobs\AddPaymentIpStaticAfterDueDateJob;
 
 class OrderController extends Controller
 {
@@ -24,9 +32,13 @@ class OrderController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function __construct()
+    private SecretService $secretService;
+    private IpStaticService $ipStaticService;
+    public function __construct(SecretService $secretService, IpStaticService $ipStaticService)
     {
         $this->middleware('customerauth');
+        $this->secretService = $secretService;
+        $this->ipStaticService = $ipStaticService;
     }
     public function index()
     {
@@ -238,56 +250,168 @@ class OrderController extends Controller
 
     public function processPaymentSuccess($order, $billing, $payment_time)
     {
-        $customer = Customer::find($order->customer_id);
-        $discount = $customer->member?->discount ?? 0;
-        $price_after_discount = $customer->paket->price - $discount;
-        $member = $customer->member?->type ?? 'Non Member / Tidak Ada';
+        $customer = $order->customer ?? Customer::find($order->customer_id);
+        $user = auth()->user() ?? $customer->user;
+        $now = $payment_time ?? Carbon::now();
 
-        if ($customer->billing_option == 2 && $billing->billing_periode->name === $customer->billing_period) {
-            $customer->update([
-                'billing_option' => '0',
-                'billing_period' => null,
-                'member_id' => null,
-                'discount' => '0'
-            ]);
+        // Customer data
+        $customerData = [
+            'paket_id' => $customer->paket_id,
+            'secret_id' => $customer->secret_id,
+            'username' => $customer->username,
+            'activation_date' => Carbon::parse($customer->activation_date)->format('d'),
+            'mikrotik_id' => $customer->mikrotik_id,
+            'internet_service' => $customer->internet_service,
+            'ip_static' => $customer->ip_static,
+            'simpleque_id' => $customer->simpleque_id,
+        ];
+
+        // Get related models
+        $periodeName = $billing->billing_periode->name;
+        $nextMonth = Carbon::parse($periodeName)->addMonth()->format('m_Y');
+        $customerProfile = $customer->paket->profile;
+        $router = Mikrotik::where('id', $customerData['mikrotik_id'])->first();
+        $autoIsolir = AutoIsolir::where('mikrotik_id', $customerData['mikrotik_id'])->first();
+
+        // Handle auto isolir comment
+        if ($router && $autoIsolir && $autoIsolir->disabled == 'false' && $router->disabled == 'false') {
+            $comment_payment = $autoIsolir->activation_date == 'false'
+                ? $autoIsolir->comment_payment
+                : $this->generateCommentPayment($autoIsolir, $customerData['activation_date'], $nextMonth);
+
+            $this->processMikrotikPayment($customerData, $customerProfile, $router, $autoIsolir, $comment_payment);
         }
 
+        // Handle customer billing options and discounts
+        [$discount, $priceAfterDiscount, $member] = $this->handleCustomerBilling($customer, $billing);
+
+        // Create receipt
         $receiptNumber = $this->generateReceiptNumber();
-        $receipt = Receipt::create([
+
+        $receiptData = [
             'slug' => $billing->slug,
-            'periode' => $billing->billing_periode->name,
+            'periode' => $periodeName,
             'number' => $receiptNumber,
             'billing_number' => $billing->billing_number,
             'customer_id' => $customer->id,
             'customer_name' => $customer->name,
             'customer_address' => $customer->address,
-            'paket_name' => $order->package,
+            'paket_name' => $order->package ?? $customer->paket->name,
             'paket_price' => $customer->paket->price,
             'discount' => $discount,
-            'price_after_discount' => $price_after_discount,
+            'price_after_discount' => $priceAfterDiscount,
             'member_type' => $member,
             'created_name' => $customer->name,
-            'teller_name' => optional($customer->user)->name ?? 'Unknown',
-            'payment_time' => $payment_time,
+            'teller_name' => optional($user)->name ?? 'Unknown',
+            'payment_time' => $now,
             'payment_methode' => $order->payment_method,
             'bank_name' => $order->payment_name,
             'account_name' => $order->payment_name,
             'account_number' => $order->va_number,
-            'deposit_bank_name' => null,
-            'deposit_account_name' => null,
-            'deposit_account_number' => null,
+            'deposit_bank_name' => $order->payment_method === 'transfer' ? $order->payment_name : null,
+            'deposit_account_name' => $order->payment_method === 'transfer' ? $order->payment_name : null,
+            'deposit_account_number' => $order->payment_method === 'transfer' ? $order->va_number : null,
             'reference_id' => $order->number,
             'tax' => $billing->tax,
-        ]);
+        ];
 
+        $receipt = Receipt::create($receiptData);
+
+        // Update billing and order
         $billing->update([
-            'payment_time' => Carbon::now(),
-            'teller_name' => optional($customer->user)->name ?? 'Unknown',
+            'payment_time' => $now,
+            'teller_name' => optional($user)->name ?? 'Unknown',
             'status' => 'LS',
             'receipt_id' => $receipt->id,
         ]);
 
-        $order->update(['payment_time' => $payment_time]);
+        if ($order) {
+            $order->update(['payment_time' => $now]);
+        }
+
+        return $receipt;
+    }
+
+    // Helper methods
+    private function generateCommentPayment($autoIsolir, $activationDate, $nextMonth)
+    {
+        $totalDaysInMonth = Carbon::now()->addMonth()->daysInMonth;
+        $adjustedDate = min($activationDate, $totalDaysInMonth);
+        return $autoIsolir->comment_unpayment . '_' . $adjustedDate . '_' . $nextMonth;
+    }
+
+    private function processMikrotikPayment($customerData, $customerProfile, $router, $autoIsolir, $comment_payment)
+    {
+        try {
+            if ($customerData['internet_service'] == 'ppp') {
+                $userSecretId = $this->secretService->getSecretById($router, $customerData['secret_id']);
+
+                if ($userSecretId == 'error') {
+                    throw new \Exception($customerData['secret_id'] . '! Cannot find user "' . $customerData['username'] . '" on server ' . $router->name . '.');
+                }
+
+                $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
+                $job = ($secretProfiles == $customerProfile)
+                    ? new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerData['secret_id'])
+                    : new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerData['secret_id'], $customerData['username']);
+
+                dispatch($job)->onQueue('default');
+            } elseif ($customerData['internet_service'] == 'ip_static') {
+                $comment = $customerData['username'] . '_' . $comment_payment;
+                $addressListCustomer = $this->ipStaticService->getAddressListByIpAddress($router, $customerData['ip_static']);
+
+                if (isset($addressListCustomer[0]['list']) && $addressListCustomer[0]['list'] != $autoIsolir->address_list_isolir) {
+                    dispatch(new AddPaymentBeforeDueDateJob($router, $customerData['simpleque_id'], $comment_payment))->onQueue('default');
+                } else {
+                    dispatch(new AddPaymentIpStaticAfterDueDateJob(
+                        $router,
+                        $customerData['ip_static'],
+                        $customerData['simpleque_id'],
+                        $autoIsolir->address_list_isolir,
+                        $comment_payment,
+                        $comment
+                    ))->onQueue('default');
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Mikrotik payment processing failed: ' . $e->getMessage());
+        }
+    }
+
+    private function handleCustomerBilling($customer, $billing)
+    {
+        $discount = 0;
+        $member = 'Non Member / Tidak Ada';
+        $priceAfterDiscount = $customer->paket->price;
+
+        if ($customer->billing_option == 1) {
+            // Case 1: Hitung discount tapi tidak update data customer
+            $discount = optional($customer->member)->discount ?? 0;
+            $priceAfterDiscount = $customer->paket->price - $discount;
+            $member = optional($customer->member)->type;
+        } elseif ($customer->billing_option == 2 && $billing->billing_periode->name === $customer->billing_period) {
+            // Case 2: Hitung discount DAN update data customer
+            $discount = optional($customer->member)->discount ?? 0;
+            $priceAfterDiscount = $customer->paket->price - $discount;
+            $member = optional($customer->member)->type;
+
+            $customer->update([
+                'billing_option' => '0',
+                'billing_period' => null,
+                'member_id' => null,
+                'discount' => '0',
+            ]);
+        } else {
+            // Case 3: Update data customer tanpa menghitung discount
+            $customer->update([
+                'billing_option' => '0',
+                'billing_period' => null,
+                'member_id' => null,
+                'discount' => '0',
+            ]);
+        }
+
+        return [$discount, $priceAfterDiscount, $member];
     }
 
     private function generateReceiptNumber()
