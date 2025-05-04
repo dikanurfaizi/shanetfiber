@@ -10,12 +10,10 @@ use App\Models\Billing\Billing;
 use App\Http\Controllers\Controller;
 use App\Services\Midtrans\CreateSnapTokenService;
 use App\Http\Controllers\PaymentGateway\TripayController;
-use App\Models\Tripay;
 use App\Models\Customer;
 use Illuminate\Support\Facades\Log;
 use App\Models\PaymentGateway;
 use Illuminate\Support\Carbon;
-use App\Models\Bank;
 use App\Models\Receipt;
 use App\Helpers\LogHelper;
 
@@ -165,43 +163,13 @@ class OrderController extends Controller
 
     public function checkStatus(Order $order)
     {
-        // dd($order);
-        $tripay = new TripayController();
-        $statusResponse = $tripay->getStatusTransaction($order);
-        $statusArray = json_decode($statusResponse->getContent(), true);
-
-        if (!$statusArray || !isset($statusArray['message'])) {
-            Log::error('Invalid response from Tripay', ['response' => $statusArray]);
-            return response()->json(['error' => 'Invalid response from Tripay'], 500);
-        }
-
-        $paymentStatus = $this->getPaymentStatus($statusArray['message']);
-
-        if (is_null($paymentStatus) || $order->payment_status === $paymentStatus) {
-            return; // Tidak ada perubahan status
-        }
-
-        $order->update(['payment_status' => $paymentStatus]);
+        // Ambil status pembayaran yang terbaru dari database
+        $order = Order::find($order->id);
 
         Log::info('Order Payment Status Updated', [
             'order_id'   => $order->id,
-            'new_status' => $paymentStatus
+            'status' => $order->payment_status
         ]);
-
-        switch ($paymentStatus) {
-            case 1:
-                $this->processPaymentUnpaid($order, $order->billing);
-                break;
-            case 2:
-                $this->processPaymentSuccess($order, $order->billing);
-                break;
-            case 3:
-                $this->processUpdatePaymentStatus($order, 3);
-                break;
-            default:
-                $this->processUpdatePaymentStatus($order, 4);
-                break;
-        }
 
         $viewData = $this->getViewData($order);
 
@@ -212,22 +180,17 @@ class OrderController extends Controller
             ]);
         }
 
+        // Pisahkan hasil render untuk payment-status dan payment-section
         return response()->json([
-            'html' => view('customers.components.payment-status', ['order' => $order])->render()
-                . view('customers.components.payment-section', [
-                    'order'      => $order,
-                    'shouldShow' => $viewData['shouldShow'],
-                    'vaNumber'   => $viewData['vaNumber'],
-                ])->render(),
-
+            'html' => view('customers.components.payment-status', ['order' => $order])->render(),  // hanya status yang ditampilkan di halaman utama
             'modal' => view('customers.components.order-status-modal', [
                 'order'     => $order,
                 'billing'   => $viewData['billing'],
                 'websystem' => $viewData['websystem'],
                 'gateway'   => $viewData['paymentGateway'],
             ])->render(),
-
             'footer' => view('customers.components.payment-footer', ['order' => $order])->render(),
+            'payment_status' => $order->payment_status,
         ]);
     }
 
@@ -249,7 +212,7 @@ class OrderController extends Controller
         return null;
     }
 
-    private function processPaymentUnpaid($order, $billing)
+    public function processPaymentUnpaid($order, $billing)
     {
         $customer = Customer::find($order->customer_id);
 
@@ -273,7 +236,7 @@ class OrderController extends Controller
         ]);
     }
 
-    private function processPaymentSuccess($order, $billing)
+    public function processPaymentSuccess($order, $billing, $payment_time)
     {
         $customer = Customer::find($order->customer_id);
         $discount = $customer->member?->discount ?? 0;
@@ -305,8 +268,8 @@ class OrderController extends Controller
             'member_type' => $member,
             'created_name' => $customer->name,
             'teller_name' => optional($customer->user)->name ?? 'Unknown',
-            'payment_time' => Carbon::now(),
-            'payment_methode' => 'tripay payment',
+            'payment_time' => $payment_time,
+            'payment_methode' => $order->payment_method,
             'bank_name' => $order->payment_name,
             'account_name' => $order->payment_name,
             'account_number' => $order->va_number,
@@ -323,6 +286,8 @@ class OrderController extends Controller
             'status' => 'LS',
             'receipt_id' => $receipt->id,
         ]);
+
+        $order->update(['payment_time' => $payment_time]);
     }
 
     private function generateReceiptNumber()
@@ -333,7 +298,7 @@ class OrderController extends Controller
         return sprintf("KWT-%05d-%s-%s", $number, Carbon::now()->format('F'), Carbon::now()->format('Y'));
     }
 
-    private function processUpdatePaymentStatus($order, $status)
+    public function processUpdatePaymentStatus($order, $status)
     {
         $order->update([
             'payment_status' => $status
@@ -441,8 +406,6 @@ class OrderController extends Controller
             'payment_method' => 'required|string',
         ]);
 
-
-
         $customer = Customer::find($billing->customer_id);
 
         // Generate order number terlebih dahulu
@@ -472,6 +435,8 @@ class OrderController extends Controller
             optional($customer)->email,
             optional($customer)->contact
         );
+
+        // dd($reqTransaction);
 
         // Jika gagal
         if (!is_array($reqTransaction)) {
@@ -515,7 +480,8 @@ class OrderController extends Controller
             'quantity'        => $reqTransaction['order_items'][0]['quantity'] ?? 1,
             'total_amount'    => ($reqTransaction['total_fee'] ?? 0) + $billing->paket_price + $billing->tax,
             'qr_string'       => $reqTransaction['qr_string'] ?? null,
-            'qr_url'          => $reqTransaction['qr_url'] ?? null
+            'qr_url'          => $reqTransaction['qr_url'] ?? null,
+            'merchant_ref'    => $reqTransaction['merchant_ref'] ?? null
         ]);
 
         return redirect()->route('customer.pages.order.tripays.show', $order->id)

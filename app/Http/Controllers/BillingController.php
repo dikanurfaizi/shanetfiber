@@ -26,6 +26,7 @@ use App\Jobs\CreateBillingIpStaticJob;
 use App\Models\Bank;
 use App\Models\Receipt;
 use App\Models\Websystem;
+use App\Models\Order;
 use App\Models\WhatsappGateway\WhatsappGateway;
 use App\Services\Routerboard\IpStaticService;
 use App\Services\Routerboard\Ppp\SecretService;
@@ -1128,6 +1129,17 @@ class BillingController extends Controller
         ]);
 
         $receipt->delete();
+
+        $orderController = new OrderController();
+
+        $order = Order::where('billing_id', $billing->id)->get();
+
+        $order = Order::where('billing_id', $billing->id)->get(); // Ambil semua order terkait billing_id
+
+        // Update status setiap order ke CANCELED
+        foreach ($order as $o) {
+            $o->update(['payment_status' => Order::STATUS_CANCELED]);
+        }
 
         if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
             $this->messageService->payment_paket($billing, $originalReceipt, 'unpayment');

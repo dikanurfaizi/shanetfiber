@@ -61,7 +61,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="number-section">
+                <div class="number-section" id="payment-section">
                     @include('customers.components.payment-section', [
                         'order' => $order,
                         'shouldShow' => $shouldShow,
@@ -553,144 +553,205 @@
 
     <script>
         (function() {
-            // Countdown
-            const countdownElement = document.getElementById("countdown");
-            const expiredAt = {{ $expiredAt ?? 'null' }};
-            if (countdownElement && expiredAt) {
-                function updateCountdown() {
-                    const now = Date.now();
-                    const remaining = Math.max(0, Math.floor((expiredAt - now) / 1000));
+            // Global countdown interval reference
+            let countdownInterval = null;
 
-                    if (remaining <= 0) {
-                        countdownElement.innerText = "Waktu habis!";
-                        clearInterval(interval);
-                        return;
-                    }
+            // Initialize all components
+            function initComponents() {
+                initCountdown();
+                initCopyToClipboard();
+                initPaymentInstructions();
+                initQrModal();
+                initPaymentStatusModal();
+            }
 
-                    const d = Math.floor(remaining / 86400);
-                    const h = Math.floor((remaining % 86400) / 3600);
-                    const m = Math.floor((remaining % 3600) / 60);
-                    const s = remaining % 60;
+            // Countdown function
+            function initCountdown() {
+                const countdownElement = document.getElementById("countdown");
+                const expiredAt = {{ $expiredAt ? $expiredAt : 'null' }}; // Convert to milliseconds
 
-                    countdownElement.innerText = `${d} hari, ${pad(h)} jam, ${pad(m)} menit, ${pad(s)} detik`;
+                // Clear any existing interval
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
                 }
 
-                const pad = num => ('0' + num).slice(-2);
-                const interval = setInterval(updateCountdown, 1000);
-                updateCountdown();
+                if (countdownElement && expiredAt) {
+                    function updateCountdown() {
+                        const now = Date.now();
+                        const remaining = Math.max(0, Math.floor((expiredAt - now) / 1000));
+
+                        if (remaining <= 0) {
+                            countdownElement.innerText = "Waktu habis!";
+                            clearInterval(countdownInterval);
+                            return;
+                        }
+
+                        const d = Math.floor(remaining / 86400);
+                        const h = Math.floor((remaining % 86400) / 3600);
+                        const m = Math.floor((remaining % 3600) / 60);
+                        const s = remaining % 60;
+
+                        countdownElement.innerText = `${d} hari, ${pad(h)} jam, ${pad(m)} menit, ${pad(s)} detik`;
+                    }
+
+                    const pad = num => ('0' + num).slice(-2);
+                    countdownInterval = setInterval(updateCountdown, 1000);
+                    updateCountdown();
+                }
             }
 
             // Copy to clipboard
-            window.copyToClipboard = function() {
-                const va = document.getElementById("va-number");
-                if (!va) return;
+            function initCopyToClipboard() {
+                window.copyToClipboard = function() {
+                    const va = document.getElementById("va-number");
+                    if (!va) return;
 
-                const temp = document.createElement("input");
-                temp.value = va.innerText;
-                document.body.appendChild(temp);
-                temp.select();
-                document.execCommand("copy");
-                document.body.removeChild(temp);
-
-                Swal.fire({
-                    icon: "success",
-                    title: "Berhasil!",
-                    text: "Nomor Virtual Account berhasil disalin!",
-                    confirmButtonColor: "#3085d6"
-                });
-            };
-
-            // Load instructions
-            const btnInstruction = document.getElementById("paymentInstructionBtn");
-            if (btnInstruction) {
-                btnInstruction.addEventListener("click", function() {
-                    const orderId = "{{ $order->id }}";
-                    const url = `{{ url('customer/billings/orders') }}/${orderId}/instruction`;
-
-                    fetch(url)
-                        .then(r => r.json())
-                        .then(res => {
-                            const wrapper = document.getElementById("paymentInstructions");
-                            if (!wrapper) return;
-
-                            if (!res?.data?.length) {
-                                wrapper.innerHTML =
-                                    `<p class="text-danger">Tidak ada instruksi pembayaran.</p>`;
-                                return;
-                            }
-
-                            const html = res.data.map((method, i) => `
-                            <div class="card">
-                                <div class="card-header">
-                                    <button class="btn btn-link" data-toggle="collapse" data-target="#collapse${i}">
-                                        ${method.title}
-                                    </button>
-                                </div>
-                                <div id="collapse${i}" class="collapse ${i === 0 ? 'show' : ''}">
-                                    <div class="card-body">
-                                        <ol>${method.steps.map(s => `<li>${s}</li>`).join("")}</ol>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join("");
-
-                            wrapper.innerHTML = html;
+                    navigator.clipboard.writeText(va.innerText)
+                        .then(() => {
+                            Swal.fire({
+                                icon: "success",
+                                title: "Berhasil!",
+                                text: "Nomor Virtual Account berhasil disalin!",
+                                confirmButtonColor: "#3085d6"
+                            });
                         })
                         .catch(err => {
-                            console.error("Fetch error:", err);
-                            document.getElementById("paymentInstructions").innerHTML =
-                                `<p class="text-danger">Gagal memuat instruksi pembayaran.</p>`;
+                            console.error("Copy failed:", err);
+                            // Fallback to old method if clipboard API fails
+                            const temp = document.createElement("input");
+                            temp.value = va.innerText;
+                            document.body.appendChild(temp);
+                            temp.select();
+                            document.execCommand("copy");
+                            document.body.removeChild(temp);
+
+                            Swal.fire({
+                                icon: "success",
+                                title: "Berhasil!",
+                                text: "Nomor Virtual Account berhasil disalin!",
+                                confirmButtonColor: "#3085d6"
+                            });
                         });
-                });
+                };
+            }
+
+            // Load instructions
+            function initPaymentInstructions() {
+                const btnInstruction = document.getElementById("paymentInstructionBtn");
+                if (btnInstruction) {
+                    btnInstruction.addEventListener("click", function() {
+                        const orderId = "{{ $order->id }}";
+                        const url = `{{ url('customer/billings/orders') }}/${orderId}/instruction`;
+
+                        fetch(url)
+                            .then(r => r.json())
+                            .then(res => {
+                                const wrapper = document.getElementById("paymentInstructions");
+                                if (!wrapper) return;
+
+                                if (!res?.data?.length) {
+                                    wrapper.innerHTML =
+                                        `<p class="text-danger">Tidak ada instruksi pembayaran.</p>`;
+                                    return;
+                                }
+
+                                const html = res.data.map((method, i) => `
+                                <div class="card">
+                                    <div class="card-header">
+                                        <button class="btn btn-link" data-toggle="collapse" data-target="#collapse${i}">
+                                            ${method.title}
+                                        </button>
+                                    </div>
+                                    <div id="collapse${i}" class="collapse ${i === 0 ? 'show' : ''}">
+                                        <div class="card-body">
+                                            <ol>${method.steps.map(s => `<li>${s}</li>`).join("")}</ol>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join("");
+
+                                wrapper.innerHTML = html;
+                            })
+                            .catch(err => {
+                                console.error("Fetch error:", err);
+                                const wrapper = document.getElementById("paymentInstructions");
+                                if (wrapper) {
+                                    wrapper.innerHTML =
+                                        `<p class="text-danger">Gagal memuat instruksi pembayaran.</p>`;
+                                }
+                            });
+                    });
+                }
             }
 
             // QR Modal functions
-            window.openQrModal = () => document.getElementById('qrModal')?.classList.remove('hidden');
-            window.closeQrModal = () => document.getElementById('qrModal')?.classList.add('hidden');
+            function initQrModal() {
+                window.openQrModal = () => document.getElementById('qrModal')?.classList.remove('hidden');
+                window.closeQrModal = () => document.getElementById('qrModal')?.classList.add('hidden');
 
-            window.downloadQr = () => {
-                const imageUrl = '{{ $order->qr_url ?? '' }}';
-                if (!imageUrl) return;
+                window.downloadQr = () => {
+                    const imageUrl = '{{ $order->qr_url ?? '' }}';
+                    if (!imageUrl) return;
 
-                fetch(imageUrl)
-                    .then(res => res.blob())
-                    .then(blob => {
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'qr-code-pembayaran.png';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
-                    })
-                    .catch(() => alert('Gagal mendownload QR code'));
-            };
+                    fetch(imageUrl)
+                        .then(res => res.blob())
+                        .then(blob => {
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'qr-code-pembayaran.png';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                        })
+                        .catch(() => Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal',
+                            text: 'Gagal mendownload QR code'
+                        }));
+                };
+            }
 
-            // Payment status modal (jQuery)
-            $(document).ready(function() {
+            // Payment status modal
+            function initPaymentStatusModal() {
                 $(document).on('click', '.btn-how-payment', function() {
                     const orderId = $(this).data('order-id');
                     const url = `/customer/billings/orders/${orderId}/status`;
 
                     $('#statusModalBody').html(`
-                    <div class="text-center">
-                        <div class="spinner-border text-success" role="status"><span class="sr-only">Memuat...</span></div>
-                    </div>
-                `);
+            <div class="text-center">
+                <div class="spinner-border text-success" role="status">
+                    <span class="sr-only">Memuat...</span>
+                </div>
+            </div>
+        `);
                     $('#statusModal').modal('show');
 
-                    $.get(url, function(data) {
-                        $('#payment-status-wrapper').html(data.html);
-                        $('#statusModalBody').html(data.modal);
-                        $('#payment-footer').html(data.footer);
-                    }).fail(function() {
-                        $('#statusModalBody').html(
-                            '<div class="alert alert-danger">Gagal memuat detail status pembayaran.</div>'
-                        );
-                    });
+                    $.get(url)
+                        .done(function(data) {
+                            $('#payment-status-wrapper').html(data.html);
+                            $('#statusModalBody').html(data.modal);
+                            $('#payment-footer').html(data.footer);
+
+                            // Hide payment section if status != 1
+                            if (data.payment_status != 1) {
+                                $('#payment-section').remove();
+                            }
+
+                            // Reinitialize components after AJAX update
+                            initCountdown();
+                        })
+                        .fail(function() {
+                            $('#statusModalBody').html(
+                                '<div class="alert alert-danger">Gagal memuat detail status pembayaran.</div>'
+                            );
+                        });
                 });
-            });
+            }
+
+            // Initialize all components when page loads
+            initComponents();
         })();
     </script>
 

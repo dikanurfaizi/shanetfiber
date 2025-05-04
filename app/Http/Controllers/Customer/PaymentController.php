@@ -77,8 +77,6 @@ class PaymentController extends Controller
                         ->orderBy('created_at', 'desc')
                         ->first();
 
-                    // dd($order);
-
                     return view('customers.pages.payments.tripays.show', compact('billing', 'websystem', 'gateway', 'channels', 'order'));
                 } else {
                     // Action default jika ada yang lain
