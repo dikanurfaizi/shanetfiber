@@ -559,175 +559,260 @@ class WhatsappMessageService
         }
     }
 
+    // public function bill_info($billing, $action)
+    // {
+    //     try {
+    //         if (!is_object($billing)) {
+    //             LogHelper::logError(
+    //                 null,
+    //                 [
+    //                     'billing_id' => $billing->id ?? null,
+    //                     'action' => $action,
+    //                 ],
+    //                 400, // Bad Request
+    //                 "Billing is not an object"
+    //             );
+    //             return;
+    //         }
+
+    //         $contact = $billing->customer_contact;
+    //         if (empty(trim($contact))) {
+    //             LogHelper::logError(
+    //                 null,
+    //                 [
+    //                     'billing_id' => $billing->id ?? null,
+    //                     'action' => $action,
+    //                 ],
+    //                 400, // Bad Request
+    //                 "Contact number is null or empty"
+    //             );
+    //             return;
+    //         }
+
+    //         $gateway = $this->getGateway();
+    //         $customer_contact = $this->manipulateContactBillInfo($contact, 'broadcast');
+
+    //         if (!$customer_contact) {
+    //             LogHelper::logError(
+    //                 null,
+    //                 [
+    //                     'customer_id' => $billing->customer_id,
+    //                     'contact_customer' => $customer_contact,
+    //                     'gateway' => $gateway
+    //                 ],
+    //                 400, // Bad Request
+    //                 "Gateway or contact missing"
+    //             );
+    //             return;
+    //         }
+
+    //         // Ambil informasi customer
+    //         $customer_name = $billing->customer_name ?? 'Pelanggan';
+    //         $address = $billing->customer_address ?? 'Alamat tidak tersedia';
+    //         $cust_id = $billing->customer_id ?? 'ID tidak tersedia';
+    //         $customer_id = $billing->customer_unique_id ?? 'Customer ID tidak tersedia';
+    //         $admin = $billing->admin_name ?? 'Belum terlink ke admin';
+
+    //         // Ambil informasi bank
+    //         $userId = $billing->customer->user_id;
+
+    //         if ($userId) {
+    //             $accountBank = $this->getBankInfo($userId);
+    //         } else {
+    //             $accountBank = $this->getBankInfo(1);
+    //         }
+
+    //         // Ambil rincian paket
+    //         $pakets = $this->getBillingPackages($cust_id);
+    //         if ($pakets->isEmpty()) {
+    //             LogHelper::logError(
+    //                 null,
+    //                 [
+    //                     'cust_id' => $cust_id,
+    //                     'customer_id' => $billing->customer_id,
+    //                     'contact_customer' => $customer_contact,
+    //                     'gateway' => $gateway
+    //                 ],
+    //                 404, // Not Found
+    //                 "No bills found"
+    //             );
+    //             return;
+    //         }
+
+    //         $userId = $billing->customer->user_id ?? 1;
+    //         $whatsapp_number = $this->manipulateContactBillInfo($this->getWhatsAppNumber($userId), null);
+
+    //         // Hitung jatuh tempo
+    //         $today = Carbon::today();
+    //         $specificTarget = $pakets->first();
+    //         $targetDate = $specificTarget->status == 'BL' ? $specificTarget->due_date : $specificTarget->pay_later;
+    //         $remainingDays = $today->diffInDays(Carbon::parse($targetDate), false);
+
+    //         // Format rincian paket
+    //         $paketsText = $pakets->map(fn($paket) => $this->formatPaketInfo($paket))->implode("\n---\n");
+    //         $totalAmount = $pakets->sum('paket_price');
+
+    //         // Data replace umum
+    //         $replace = [
+    //             '%name%' => $customer_name,
+    //             '%address%' => $address,
+    //             '%customer_id%' => $customer_id,
+    //             '%billing_number%' => $billing->billing_number ?? 'Nomor tidak tersedia',
+    //             '%account_bank%' => $accountBank,
+    //             '%day%' => $remainingDays,
+    //             '%pakets%' => $paketsText,
+    //             '%whatsapp_number%' => $whatsapp_number,
+    //             '%total-bill%' => 'Rp. ' . number_format($totalAmount, 2),
+    //         ];
+
+    //         // Tentukan template pesan
+    //         $messageTemplate = $this->getMessageTemplate($action, $pakets, $admin);
+    //         $message = $this->replaceMessagePlaceholders($messageTemplate, $replace);
+    //         if (!$message) {
+    //             LogHelper::logWarning(
+    //                 null,
+    //                 [
+    //                     'action' => $action,
+    //                     'paket' => $pakets,
+    //                     'admin' => $admin
+    //                 ],
+    //                 404, // Not Found
+    //                 "Message template not found"
+    //             );
+    //             return;
+    //         }
+
+    //         // Kirim pesan via WhatsApp
+    //         try {
+    //             $this->sendWhatsappSingleJob($customer_name, $customer_contact, $gateway, $message);
+
+    //             LogHelper::logInfo(
+    //                 null,
+    //                 [
+    //                     'customer_id' => $cust_id,
+    //                     'billing_customer_id' => $customer_id,
+    //                     'customer_name' => $customer_name,
+    //                     'customer_contact' => $customer_contact,
+    //                     'address' => $address,
+    //                     'message_type' => $action,
+    //                     'admin' => $admin
+    //                 ],
+    //                 200, // OK
+    //                 "Successfully processed message on message service, currently in delivery queue"
+    //             );
+    //         } catch (\Exception $e) {
+    //             LogHelper::logError(
+    //                 null,
+    //                 [
+    //                     'cust_id' => $cust_id ?? null,
+    //                     'customer_id' => $customer_id ?? null,
+    //                     'billing_id' => $billing->id ?? null,
+    //                     'action' => $action ?? null,
+    //                     'error' => $e->getMessage(),
+    //                 ],
+    //                 500, // Internal Error
+    //                 "Failed to processed message on message service"
+    //             );
+    //         }
+    //     } catch (\Exception $e) {
+    //         LogHelper::logError(
+    //             null,
+    //             [
+    //                 'cust_id' => $cust_id ?? null,
+    //                 'customer_id' => $customer_id ?? null,
+    //                 'billing_id' => $billing->id ?? null,
+    //                 'action' => $action ?? null,
+    //                 'error' => $e->getMessage(),
+    //             ],
+    //             500, // Internal Error
+    //             "Error in bill_info method"
+    //         );
+    //     }
+    // }
+
     public function bill_info($billing, $action)
     {
-        try {
-            if (!is_object($billing)) {
-                LogHelper::logError(
-                    null,
-                    [
-                        'billing_id' => $billing->id ?? null,
-                        'action' => $action,
-                    ],
-                    400, // Bad Request
-                    "Billing is not an object"
-                );
-                return;
-            }
-
-            $contact = $billing->customer_contact;
-            if (empty(trim($contact))) {
-                LogHelper::logError(
-                    null,
-                    [
-                        'billing_id' => $billing->id ?? null,
-                        'action' => $action,
-                    ],
-                    400, // Bad Request
-                    "Contact number is null or empty"
-                );
-                return;
-            }
-
-            $gateway = $this->getGateway();
-            $customer_contact = $this->manipulateContactBillInfo($contact, 'broadcast');
-
-            if (!$customer_contact) {
-                LogHelper::logError(
-                    null,
-                    [
-                        'customer_id' => $billing->customer_id,
-                        'contact_customer' => $customer_contact,
-                        'gateway' => $gateway
-                    ],
-                    400, // Bad Request
-                    "Gateway or contact missing"
-                );
-                return;
-            }
-
-            // Ambil informasi customer
-            $customer_name = $billing->customer_name ?? 'Pelanggan';
-            $address = $billing->customer_address ?? 'Alamat tidak tersedia';
-            $cust_id = $billing->customer_id ?? 'ID tidak tersedia';
-            $customer_id = $billing->customer_unique_id ?? 'Customer ID tidak tersedia';
-            $admin = $billing->admin_name ?? 'Belum terlink ke admin';
-
-            // Ambil informasi bank
-            $userId = $billing->customer->user_id;
-
-            if ($userId) {
-                $accountBank = $this->getBankInfo($userId);
-            } else {
-                $accountBank = $this->getBankInfo(1);
-            }
-
-            // Ambil rincian paket
-            $pakets = $this->getBillingPackages($cust_id);
-            if ($pakets->isEmpty()) {
-                LogHelper::logError(
-                    null,
-                    [
-                        'cust_id' => $cust_id,
-                        'customer_id' => $billing->customer_id,
-                        'contact_customer' => $customer_contact,
-                        'gateway' => $gateway
-                    ],
-                    404, // Not Found
-                    "No bills found"
-                );
-                return;
-            }
-
-            $userId = $billing->customer->user_id ?? 1;
-            $whatsapp_number = $this->manipulateContactBillInfo($this->getWhatsAppNumber($userId), null);
-
-            // Hitung jatuh tempo
-            $today = Carbon::today();
-            $specificTarget = $pakets->first();
-            $targetDate = $specificTarget->status == 'BL' ? $specificTarget->due_date : $specificTarget->pay_later;
-            $remainingDays = $today->diffInDays(Carbon::parse($targetDate), false);
-
-            // Format rincian paket
-            $paketsText = $pakets->map(fn($paket) => $this->formatPaketInfo($paket))->implode("\n---\n");
-            $totalAmount = $pakets->sum('paket_price');
-
-            // Data replace umum
-            $replace = [
-                '%name%' => $customer_name,
-                '%address%' => $address,
-                '%customer_id%' => $customer_id,
-                '%billing_number%' => $billing->billing_number ?? 'Nomor tidak tersedia',
-                '%account_bank%' => $accountBank,
-                '%day%' => $remainingDays,
-                '%pakets%' => $paketsText,
-                '%whatsapp_number%' => $whatsapp_number,
-                '%total-bill%' => 'Rp. ' . number_format($totalAmount, 2),
-            ];
-
-            // Tentukan template pesan
-            $messageTemplate = $this->getMessageTemplate($action, $pakets, $admin);
-            $message = $this->replaceMessagePlaceholders($messageTemplate, $replace);
-            if (!$message) {
-                LogHelper::logWarning(
-                    null,
-                    [
-                        'action' => $action,
-                        'paket' => $pakets,
-                        'admin' => $admin
-                    ],
-                    404, // Not Found
-                    "Message template not found"
-                );
-                return;
-            }
-
-            // Kirim pesan via WhatsApp
-            try {
-                $this->sendWhatsappSingleJob($customer_name, $customer_contact, $gateway, $message);
-
-                LogHelper::logInfo(
-                    null,
-                    [
-                        'customer_id' => $cust_id,
-                        'billing_customer_id' => $customer_id,
-                        'customer_name' => $customer_name,
-                        'customer_contact' => $customer_contact,
-                        'address' => $address,
-                        'message_type' => $action,
-                        'admin' => $admin
-                    ],
-                    200, // OK
-                    "Successfully processed message on message service, currently in delivery queue"
-                );
-            } catch (\Exception $e) {
-                LogHelper::logError(
-                    null,
-                    [
-                        'cust_id' => $cust_id ?? null,
-                        'customer_id' => $customer_id ?? null,
-                        'billing_id' => $billing->id ?? null,
-                        'action' => $action ?? null,
-                        'error' => $e->getMessage(),
-                    ],
-                    500, // Internal Error
-                    "Failed to processed message on message service"
-                );
-            }
-        } catch (\Exception $e) {
-            LogHelper::logError(
-                null,
-                [
-                    'cust_id' => $cust_id ?? null,
-                    'customer_id' => $customer_id ?? null,
-                    'billing_id' => $billing->id ?? null,
-                    'action' => $action ?? null,
-                    'error' => $e->getMessage(),
-                ],
-                500, // Internal Error
-                "Error in bill_info method"
-            );
+        // Cek validitas billing dan nomor kontak
+        if (!is_object($billing) || empty(trim($billing->customer_contact))) {
+            LogHelper::logError(null, [
+                'billing_id' => $billing->id ?? null,
+                'action' => $action,
+            ], 400, "Billing atau contact customer tidak valid.");
+            return null;
         }
+
+        // Ambil informasi dasar
+        $address = $billing->customer_address ?? 'Alamat tidak tersedia';
+        $customer_unique_id = $billing->customer_unique_id ?? 'Customer ID tidak tersedia';
+
+        // Normalisasi dan validasi kontak
+        $contacts = [
+            'customer' => [
+                'raw' => $billing->customer_contact ?? null,
+                'label' => 'customer',
+                'check' => 'broadcast',
+                'id' => $billing->customer_id ?? null,
+                'name' => $billing->customer_name ?? null,
+            ],
+            'admin' => [
+                'raw' => $billing->admin_contact ?? null,
+                'label' => 'admin',
+                'check' => null,
+                'id' => $billing->admin_id ?? null,
+                'name' => $billing->admin_name ?? null,
+            ]
+        ];
+
+        foreach ($contacts as $type => $data) {
+            $processed = $this->manipulateContactBillInfo($data['raw'], $data['check']);
+            if (!$processed) {
+                LogHelper::logError(null, [
+                    "{$data['label']}_id" => $data['id'],
+                    "{$data['label']}_name" => $data['name'],
+                    "contact_{$data['label']}" => $data['raw'],
+                ], 400, "Nomor kontak {$data['label']} tidak valid.");
+                return null;
+            }
+            ${"{$type}_contact"} = $processed;
+            ${"{$type}_id"} = $data['id'];
+            ${"{$type}_name"} = $data['name'];
+        }
+
+        // Ambil informasi rekening admin
+        $accountBank = $this->getBankInfo($admin_id ?? 1);
+
+        // Ambil rincian paket dan tagihan
+        $pakets = $this->getBillingPackages($customer_id);
+        if ($pakets->isEmpty()) {
+            LogHelper::logError(null, [
+                'customer_id' => $customer_id,
+                'customer_name' => $customer_name,
+                'contact_customer' => $contact,
+            ], 404, "Paket atau tagihan tidak ditemukan.");
+            return null;
+        }
+
+        $totalAmount = $pakets->sum('paket_price');
+        $remainingDays = Carbon::today()->diffInDays(Carbon::parse($pakets->first()->due_date), false);
+
+        // Format rincian paket
+        $paketsText = $pakets->map(fn($paket) => $this->formatPaketInfo($paket))->implode("\n---\n");
+
+        // Template message
+        $replace = [
+            '%name%' => $customer_name,
+            '%address%' => $address,
+            '%customer_id%' => $customer_unique_id,
+            '%billing_number%' => $billing->billing_number ?? 'Nomor tidak tersedia',
+            '%account_bank%' => $accountBank,
+            '%day%' => $remainingDays,
+            '%pakets%' => $paketsText,
+            '%whatsapp_number%' => $admin_contact,
+            '%total-bill%' => 'Rp. ' . number_format($totalAmount, 2),
+        ];
+
+        $messageTemplate = $this->getMessageTemplate($action, $pakets, $admin_name);
+        return $this->replaceMessagePlaceholders($messageTemplate, $replace);
     }
 
     //================================Manual send by admin=======================================
