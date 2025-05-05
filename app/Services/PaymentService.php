@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\{Customer, Receipt, Order, Mikrotik, AutoIsolir};
+use App\Models\WhatsappGateway\WhatsappGateway;
 use App\Jobs\{AddPaymentBeforeDueDateJob, AddPaymentAfterDueDateJob, AddPaymentIpStaticAfterDueDateJob};
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Routerboard\IpStaticService;
@@ -14,11 +15,13 @@ class PaymentService
 {
     protected SecretService $secretService;
     protected IpStaticService $ipStaticService;
+    private WhatsappMessageService $messageService;
 
     public function __construct(SecretService $secretService, IpStaticService $ipStaticService)
     {
         $this->secretService = $secretService;
         $this->ipStaticService = $ipStaticService;
+        $this->messageService = app(WhatsappMessageService::class);
     }
 
     public function processPaymentUnpaid($order, $billing): void
@@ -51,31 +54,32 @@ class PaymentService
         $user = auth()->user() ?? $customer->user;
         $now = $payment_time ?? Carbon::now();
 
-        //$customerData = $this->mapCustomerData($customer);
+        $customerData = $this->mapCustomerData($customer);
 
-        // Validasi bahwa semua data tidak null
-        // foreach ($customerData as $key => $value) {
-        //     if (is_null($value)) {
-        //         throw new \Exception("Data pelanggan tidak lengkap: {$key} bernilai null");
-        //     }
-        // }
+        //Validasi bahwa semua data tidak null
+        foreach ($customerData as $key => $value) {
+            if (is_null($value)) {
+                throw new \Exception("Data pelanggan tidak lengkap: {$key} bernilai null");
+            }
+        }
 
-        // $periodeName = $billing->billing_periode->name;
-        // $nextMonth = Carbon::parse($periodeName)->addMonth()->format('m_Y');
-        // $router = Mikrotik::find($customerData['mikrotik_id']);
-        // $autoIsolir = AutoIsolir::where('mikrotik_id', $customerData['mikrotik_id'])->first();
+        $periodeName = $billing->billing_periode->name;
+        $nextMonth = Carbon::parse($periodeName)->addMonth()->format('m_Y');
+        $router = Mikrotik::find($customerData['mikrotik_id']);
+        $autoIsolir = AutoIsolir::where('mikrotik_id', $customerData['mikrotik_id'])->first();
 
-        // if ($router && $autoIsolir && $autoIsolir->disabled === 'false' && $router->disabled === 'false') {
-        //     $comment = $autoIsolir->activation_date === 'false'
-        //         ? $autoIsolir->comment_payment
-        //         : $this->generateCommentPayment($autoIsolir, $customerData['activation_date'], $nextMonth);
+        if ($router && $autoIsolir && $autoIsolir->disabled === 'false' && $router->disabled === 'false') {
+            $comment = $autoIsolir->activation_date === 'false'
+                ? $autoIsolir->comment_payment
+                : $this->generateCommentPayment($autoIsolir, $customerData['activation_date'], $nextMonth);
 
-        //     $this->processMikrotikPayment($customerData, $customer->paket->profile, $router, $autoIsolir, $comment);
-        // }
+            $this->processMikrotikPayment($customerData, $customer->paket->profile, $router, $autoIsolir, $comment);
+        }
 
         [$discount, $priceAfterDiscount, $member] = $this->handleCustomerBilling($customer, $billing);
 
         $receipt = Receipt::create($this->generateReceiptData($billing, $order, $customer, $user, $now, $discount, $priceAfterDiscount, $member));
+        $getReceipt = $receipt->fresh();
 
         $billing->update([
             'payment_time' => $now,
@@ -84,7 +88,13 @@ class PaymentService
             'receipt_id' => $receipt->id,
         ]);
 
+        $getBilling = $billing->fresh();
+
         $order->update(['payment_time' => $now]);
+
+        if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
+            $this->messageService->payment_paket($getBilling, $getReceipt, 'payment_gateway');
+        }
 
         return $receipt;
     }
@@ -99,8 +109,8 @@ class PaymentService
             'activation_date' => Carbon::parse($customer->activation_date)->format('d'),
             'mikrotik_id' => $customer->mikrotik_id,
             'internet_service' => $customer->internet_service,
-            'ip_static' => $customer->ip_static,
-            'simpleque_id' => $customer->simpleque_id,
+            // 'ip_static' => $customer->ip_static,
+            // 'simpleque_id' => $customer->simpleque_id,
         ];
     }
 
@@ -196,13 +206,7 @@ class PaymentService
             'created_name' => $customer->name,
             'teller_name' => optional($user)->name ?? 'Unknown',
             'payment_time' => $now,
-            'payment_methode' => $order->payment_method,
-            'bank_name' => $order->payment_name,
-            'account_name' => $order->payment_name,
-            'account_number' => $order->va_number,
-            'deposit_bank_name' => $order->payment_method === 'transfer' ? $order->payment_name : null,
-            'deposit_account_name' => $order->payment_method === 'transfer' ? $order->payment_name : null,
-            'deposit_account_number' => $order->payment_method === 'transfer' ? $order->va_number : null,
+            'payment_methode' => $order->payment_name,
             'reference_id' => $order->number,
             'tax' => $billing->tax,
         ];

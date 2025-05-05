@@ -514,10 +514,11 @@ class WhatsappMessageService
             ];
 
             $messages = [
-                'transfer'  => 'payment',
-                'cash'      => 'payment',
-                'paylater'  => 'paylater',
-                'unpayment' => 'unpayment'
+                'transfer'          => 'payment',
+                'cash'              => 'payment',
+                'paylater'          => 'paylater',
+                'unpayment'         => 'unpayment',
+                'payment_gateway'   => 'payment'
             ];
 
             if (!isset($messages[$action])) {
@@ -821,6 +822,17 @@ class WhatsappMessageService
     public function test_gateway($gateway, $receive_number, $sender_number)
     {
         try {
+            LogHelper::logInfo(
+                null,
+                [
+                    'sender_number' => $sender_number,
+                    'receive_number' => $receive_number,
+                    'gateway_id' => $gateway->id ?? null
+                ],
+                100, // Continue
+                "Starting test_gateway process"
+            );
+
             // Cari instance WhatsappNumber berdasarkan nomor
             $whatsapp_number = WhatsappNumber::where('number', $sender_number)->first();
 
@@ -831,23 +843,39 @@ class WhatsappMessageService
                         'sender_number' => $sender_number ?? null,
                         'whatsapp_number_id' => $whatsapp_number->id ?? null
                     ],
-                    404, // Not Found
-                    "WhatsApp number or gateway not found"
+                    404,
+                    "WhatsApp number not found"
                 );
                 return redirect()->back()->with('error', 'WhatsApp number or gateway not found.');
             }
+
+            LogHelper::logInfo(
+                null,
+                ['whatsapp_number_id' => $whatsapp_number->id],
+                101,
+                "Found WhatsApp number"
+            );
 
             if (!$receive_number) {
                 LogHelper::logWarning(
                     null,
                     ['sender_number' => $sender_number],
-                    400, // Bad Request
+                    400,
                     "Receive number is missing"
                 );
                 return redirect()->back()->with('error', 'Receive number is required.');
             }
 
-            // Kirim pesan
+            LogHelper::logInfo(
+                null,
+                [
+                    'gateway_id' => $gateway->id ?? null,
+                    'receive_number' => $receive_number
+                ],
+                102,
+                "Attempting to send test message"
+            );
+
             try {
                 $message = 'Congratulations!! Test message from Customer Management WA Gateway';
                 $full_name = "Dummy Customer";
@@ -859,7 +887,7 @@ class WhatsappMessageService
                         'receive_number' => $receive_number,
                         'gateway_id' => $gateway->id
                     ],
-                    200, // Success
+                    200,
                     "Test message dispatched successfully"
                 );
                 return redirect()->back()->with('success', 'Test message sent successfully.');
@@ -867,7 +895,7 @@ class WhatsappMessageService
                 LogHelper::logError(
                     null,
                     ['receive_number' => $receive_number],
-                    500, // Internal Server Error
+                    500,
                     "Failed to send WhatsApp message: {$e->getMessage()}"
                 );
                 return redirect()->back()->with('error', 'Failed to send test message.');
@@ -879,7 +907,7 @@ class WhatsappMessageService
                     'sender_number' => $sender_number,
                     'receive_number' => $receive_number
                 ],
-                500, // Internal Server Error
+                500,
                 "Unexpected error in test_gateway: {$e->getMessage()}"
             );
             return redirect()->back()->with('error', 'An unexpected error occurred. Please try again.');

@@ -172,9 +172,7 @@ class TripayController extends Controller
             ? $tripay->tripays_sandbox_api_key
             : $tripay->tripays_api_key;
 
-        $SSLVerif = $tripay->tripays_is_production === 'false'
-            ? false
-            : true;
+        $isProduction = $tripay->tripays_is_production === 'true';
 
         $curl = curl_init();
 
@@ -186,10 +184,10 @@ class TripayController extends Controller
             CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey],
             CURLOPT_FAILONERROR    => false,
             CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
-            CURLOPT_SSL_VERIFYPEER => $SSLVerif,
-            CURLOPT_SSL_VERIFYHOST => $SSLVerif,
-            CURLOPT_TIMEOUT        => 5,  // Timeout total request (5 detik)
-            CURLOPT_CONNECTTIMEOUT => 3,  // Timeout saat mencoba koneksi (3 detik)
+            CURLOPT_SSL_VERIFYPEER => $isProduction,        // hanya verifikasi CA saat production
+            CURLOPT_SSL_VERIFYHOST => $isProduction ? 2 : 0, // hanya verifikasi hostname saat production
+            CURLOPT_TIMEOUT        => 5,
+            CURLOPT_CONNECTTIMEOUT => 3,
         ));
 
         $response = curl_exec($curl);
@@ -239,9 +237,7 @@ class TripayController extends Controller
             ? $tripay->tripays_sandbox_api_key
             : $tripay->tripays_api_key;
 
-        $SSLVerif = $tripay->tripays_is_production === 'false'
-            ? false
-            : true;
+        $isProduction = $tripay->tripays_is_production === 'true';
 
         $data = [
             'method'         => $order->payment_method,
@@ -270,8 +266,8 @@ class TripayController extends Controller
             CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey, 'Content-Type: application/json'],
             CURLOPT_POST           => true,
             CURLOPT_POSTFIELDS     => json_encode($data),
-            CURLOPT_SSL_VERIFYPEER => $SSLVerif,
-            CURLOPT_SSL_VERIFYHOST => $SSLVerif,
+            CURLOPT_SSL_VERIFYPEER => $isProduction,        // hanya verifikasi CA saat production
+            CURLOPT_SSL_VERIFYHOST => $isProduction ? 2 : 0, // hanya verifikasi hostname saat production
             CURLOPT_TIMEOUT        => 5,
             CURLOPT_CONNECTTIMEOUT => 3
         ]);
@@ -312,9 +308,7 @@ class TripayController extends Controller
             ? $tripay->tripays_sandbox_api_key
             : $tripay->tripays_api_key;
 
-        $SSLVerif = $tripay->tripays_is_production === 'false'
-            ? false
-            : true;
+        $isProduction = $tripay->tripays_is_production === 'true';
 
         $payload = ['code' => $order->payment_method];
 
@@ -328,8 +322,8 @@ class TripayController extends Controller
             CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey],
             CURLOPT_FAILONERROR    => false,
             CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
-            CURLOPT_SSL_VERIFYPEER => $SSLVerif,
-            CURLOPT_SSL_VERIFYHOST => $SSLVerif,
+            CURLOPT_SSL_VERIFYPEER => $isProduction,        // hanya verifikasi CA saat production
+            CURLOPT_SSL_VERIFYHOST => $isProduction ? 2 : 0, // hanya verifikasi hostname saat production
             CURLOPT_TIMEOUT        => 5,
             CURLOPT_CONNECTTIMEOUT => 3
         ]);
@@ -365,9 +359,7 @@ class TripayController extends Controller
             ? $tripay->tripays_sandbox_api_key
             : $tripay->tripays_api_key;
 
-        $SSLVerif = $tripay->tripays_is_production === 'false'
-            ? false
-            : true;
+        $isProduction = $tripay->tripays_is_production === 'true';
 
         $payload = [
             'reference' => $order->reference,
@@ -383,8 +375,8 @@ class TripayController extends Controller
             CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey],
             CURLOPT_FAILONERROR    => false,
             CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
-            CURLOPT_SSL_VERIFYPEER => $SSLVerif,
-            CURLOPT_SSL_VERIFYHOST => $SSLVerif,
+            CURLOPT_SSL_VERIFYPEER => $isProduction,        // hanya verifikasi CA saat production
+            CURLOPT_SSL_VERIFYHOST => $isProduction ? 2 : 0, // hanya verifikasi hostname saat production
             CURLOPT_TIMEOUT        => 5,
             CURLOPT_CONNECTTIMEOUT => 3
         ]);
