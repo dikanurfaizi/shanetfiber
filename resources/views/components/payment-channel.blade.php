@@ -50,7 +50,8 @@
 
                         <!-- Radio Button dengan Data Attribute -->
                         <input type="radio" name="payment_method" value="{{ $channel['code'] }}"
-                            data-icon="{{ $channel['icon_url'] }}" class="ml-auto payment-radio">
+                            data-icon="{{ $channel['icon_url'] }}" data-group="{{ $channel['group'] }}"
+                            class="ml-auto payment-radio">
                     </li>
                 @endif
             @endforeach
@@ -108,7 +109,9 @@
             document.querySelectorAll(".payment-radio").forEach(radio => {
                 radio.addEventListener("change", function() {
                     let iconUrl = this.dataset.icon; // Ambil icon_url dari data-attribute
+                    let paymentType = this.dataset.group;
                     document.getElementById("icon_url").value = iconUrl; // Set ke hidden input
+                    document.getElementById("payment_type").value = paymentType;
                 });
             });
         });

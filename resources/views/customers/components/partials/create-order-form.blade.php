@@ -18,6 +18,7 @@
     @endif
 
     <input type="hidden" name="icon_url" id="icon_url">
+    <input type="hidden" id="payment_type" name="payment_type">
 
     <div class="card-footer">
         @if ($billing->status == 'BL' && $websystem->payment_gateway == 'enable')

@@ -15,7 +15,6 @@
                     <tr>
                         <th>#</th>
                         <th>{{ __('whatsapp.message.table.name') }}</th>
-                        <th>{{ __('whatsapp.message.table.number') }}</th>
                         <th>{{ __('whatsapp.message.table.incoming_message') }}</th>
                         <th>{{ __('whatsapp.message.table.description') }}</th>
                         <th>{{ __('whatsapp.message.table.status') }}</th>
@@ -28,10 +27,6 @@
                         <tr class="@if ($data->disabled === 'true') text-secondary @else text-primary @endif">
                             <td><span class="badge rounded-pill">{{ ++$i }}</span></td>
                             <td><span class="badge"><i class="fas fa-chalkboard"></i> {{ $data->name }}</span></td>
-                            <td><span
-                                    class="badge @if ($data->disabled === 'true') text-secondary @else text-primary @endif">
-                                    {{ $data->number }}
-                                </span></td>
                             <td>
                                 {{ $data->incoming_message }}
                             </td>

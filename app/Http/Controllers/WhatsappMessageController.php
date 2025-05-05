@@ -8,8 +8,7 @@ use Illuminate\Validation\Rule;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
-use App\Models\WhatsappGateway\WhatsappNumber;
+use Illuminate\Support\Str;
 use App\Models\WhatsappGateway\WhatsappMessage;
 
 class WhatsappMessageController extends Controller
@@ -28,7 +27,7 @@ class WhatsappMessageController extends Controller
      */
     public function create()
     {
-        //
+        return view('whatsapp_gateways.messages.create');
     }
 
     /**
@@ -36,7 +35,31 @@ class WhatsappMessageController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        // Validasi input dari form
+        $validated = $request->validate([
+            'name'             => 'required|string|max:255',
+            'incoming_message' => 'required|string|max:255',
+            'reply_message'    => 'required|string',
+            'description'      => 'nullable|string|max:255',
+        ]);
+
+        // Generate slug dari incoming_message
+        $slug = Str::of($validated['incoming_message'])->lower()->replace(' ', '_');
+
+        // Simpan ke database
+        $message = new WhatsappMessage();
+        $message->name = $validated['name'];
+        $message->incoming_message = $validated['incoming_message'];
+        $message->reply_message = $validated['reply_message'];
+        $message->description = $validated['description'] ?? null;
+        $message->slug = $slug;
+        $message->default = true;
+        $message->save();
+
+        // Redirect kembali dengan pesan sukses
+        return redirect()
+            ->route('whatsappmessage.index') // ganti ke route tujuan setelah create
+            ->with('success', __('whatsapp.message.notify.success-save-message'));
     }
 
     /**
@@ -110,7 +133,7 @@ class WhatsappMessageController extends Controller
         $whatsappmessage->name = strip_tags($request->input('name'));
         if ($whatsappmessage->default == false) {
             $whatsappmessage->incoming_message = strip_tags($request->input('incoming_message'));
-            $whatsappmessage->whatsapp_number_id = $request->input('whatsapp_number');
+            // $whatsappmessage->whatsapp_number_id = $request->input('whatsapp_number');
         }
 
         $whatsappmessage->reply_message = strip_tags($request->input('reply_message'));

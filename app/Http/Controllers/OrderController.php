@@ -8,22 +8,14 @@ use App\Models\Websystem;
 use App\Models\Billing\Billing;
 use App\Models\Customer;
 use App\Models\PaymentGateway;
-use App\Models\Receipt;
-use App\Models\Mikrotik;
-use App\Models\AutoIsolir;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\Pppoe\SecretResource;
 use App\Http\Controllers\PaymentGateway\TripayController;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Carbon;
 use App\Helpers\LogHelper;
 use App\Services\Midtrans\CreateSnapTokenService;
-use App\Services\Routerboard\Ppp\SecretService;
-use App\Services\Routerboard\IpStaticService;
-use App\Jobs\AddPaymentAfterDueDateJob;
-use App\Jobs\AddPaymentBeforeDueDateJob;
-use App\Jobs\AddPaymentIpStaticAfterDueDateJob;
+use App\Services\WhatsappMessageService;
+use App\Models\WhatsappGateway\WhatsappGateway;
 
 class OrderController extends Controller
 {
@@ -32,13 +24,11 @@ class OrderController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    private SecretService $secretService;
-    private IpStaticService $ipStaticService;
-    public function __construct(SecretService $secretService, IpStaticService $ipStaticService)
+    private WhatsappMessageService $messageService;
+    public function __construct(WhatsappMessageService $messageService)
     {
         $this->middleware('customerauth');
-        $this->secretService = $secretService;
-        $this->ipStaticService = $ipStaticService;
+        $this->messageService = $messageService;
     }
     public function index()
     {
@@ -333,7 +323,7 @@ class OrderController extends Controller
         $reqTransaction = $tripay->requestTransaction(
             $tempOrder,
             optional($customer)->name,
-            optional($customer)->email,
+            optional($customer)->email ?? $customer->user->email,
             optional($customer)->contact
         );
 
@@ -345,9 +335,12 @@ class OrderController extends Controller
                 null,
                 [
                     'customer_id' => $customer?->id,
+                    'customer_name' => optional($customer)->name,
+                    'customer_contact' => optional($customer)->contact,
                     'billing_id'  => $billing->id,
                     'payment_method' => $request->input('payment_method'),
                     'payment_channel' => $request->input('payment_channel'),
+                    'email' => optional($customer)->email ?? $customer->user->email,
                     'raw_response' => json_encode($reqTransaction),
                     'error' => 'Tripay transaction response is not valid.'
                 ],
@@ -357,7 +350,6 @@ class OrderController extends Controller
 
             return redirect()->back()->with('error', 'Gagal membuat transaksi.');
         }
-
 
         // Kalau berhasil, simpan order ke DB
         $order = Order::create([
@@ -382,8 +374,15 @@ class OrderController extends Controller
             'total_amount'    => ($reqTransaction['total_fee'] ?? 0) + $billing->paket_price + $billing->tax,
             'qr_string'       => $reqTransaction['qr_string'] ?? null,
             'qr_url'          => $reqTransaction['qr_url'] ?? null,
-            'merchant_ref'    => $reqTransaction['merchant_ref'] ?? null
+            'merchant_ref'    => $reqTransaction['merchant_ref'] ?? null,
+            'payment_type'    => $request->input('payment_type')
         ]);
+
+        $getOrder = $order->fresh();
+
+        if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
+            $this->messageService->create_order($billing, $getOrder, 'create_order');
+        }
 
         return redirect()->route('customer.pages.order.tripays.show', $order->id)
             ->with('success', 'Order created successfully.');

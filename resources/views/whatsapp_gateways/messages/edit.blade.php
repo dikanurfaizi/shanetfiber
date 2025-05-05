@@ -23,7 +23,7 @@
 
                     </div>
                 </div>
-                @if (!$data->default)
+                {{-- @if (!$data->default)
                     <div class="form-group has-feedback row mb-2" id="input-default-number">
                         <div class="col-md-3">
                             <label for="default_number">{!! trans('whatsapp.message.label.gateway-number') !!}</label>
@@ -35,7 +35,7 @@
                             <div id="error_default_number" class="invalid-feedback"></div>
                         </div>
                     </div>
-                @endif
+                @endif --}}
                 @if (!$data->default)
                     <div class="form-group has-feedback row mb-2" id="input-keyword">
                         <div class="col-md-3">
