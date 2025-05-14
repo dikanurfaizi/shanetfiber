@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Jobs\SendPaymentReminderJob;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
+use App\Helpers\LogHelper;
 use Illuminate\Support\Carbon;
 
 class SendMessages extends Command
@@ -14,7 +14,7 @@ class SendMessages extends Command
      *
      * @var string
      */
-    protected $signature = 'messages:send';
+    protected $signature = 'reminder:messages-send';
 
     /**
      * The console command description.
@@ -28,14 +28,90 @@ class SendMessages extends Command
      */
     public function handle()
     {
-        $currentTime = Carbon::now()->format('Y-m-d H:i:s'); // Mengambil waktu saat ini
-        Log::info("Send reminder messages job started at {$currentTime}");
+        $startTime = microtime(true);
+        $currentDateTime = Carbon::now()->setTimezone('Asia/Jakarta');
+        $formattedDate = $currentDateTime->format('Y-m-d H:i:s');
+        $dayOfMonth = $currentDateTime->day;
 
-        // Menjalankan pekerjaan pengiriman pesan
-        SendPaymentReminderJob::dispatch();
+        // Log command initiation
+        LogHelper::logInfo(
+            'SendMessagesCommand',
+            [
+                'start_time' => $formattedDate,
+                'day_of_month' => $dayOfMonth
+            ],
+            200,
+            "Starting reminder messages sending process"
+        );
 
-        $completedTime = Carbon::now()->format('Y-m-d H:i:s'); // Mengambil waktu setelah dispatch
-        Log::info("Schedule reminder messages finished at {$completedTime}");
-        return 0;
+        $this->info("Starting reminder messages job at {$formattedDate}");
+
+        try {
+            // Validate if today is an allowed date
+            $allowedDates = [10, 15, 20];
+            if (!in_array($dayOfMonth, $allowedDates)) {
+                $message = "Today ({$dayOfMonth}) is not an allowed date for sending reminders. Allowed dates: " . implode(', ', $allowedDates);
+
+                LogHelper::logWarning(
+                    'SendMessagesCommand',
+                    [
+                        'current_day' => $dayOfMonth,
+                        'allowed_days' => $allowedDates
+                    ],
+                    422,
+                    $message
+                );
+
+                $this->warn($message);
+                return 0;
+            }
+
+            // Dispatch the job with logging
+            LogHelper::logInfo(
+                'SendMessagesCommand',
+                [],
+                200,
+                "Dispatching SendPaymentReminderJob to queue"
+            );
+
+            dispatch(new SendPaymentReminderJob())->onQueue('default');
+
+            // Log successful dispatch
+            $dispatchTime = Carbon::now()->format('Y-m-d H:i:s');
+            $executionTime = round(microtime(true) - $startTime, 2);
+
+            LogHelper::logInfo(
+                'SendMessagesCommand',
+                [
+                    'dispatch_time' => $dispatchTime,
+                    'execution_seconds' => $executionTime
+                ],
+                200,
+                "Successfully dispatched SendPaymentReminderJob"
+            );
+
+            $this->info("Successfully dispatched reminder job at {$dispatchTime}");
+            $this->info("Total execution time: {$executionTime} seconds");
+
+            return 0;
+        } catch (\Exception $e) {
+            $errorTime = Carbon::now()->format('Y-m-d H:i:s');
+            $errorMessage = "Failed to dispatch reminder job: " . $e->getMessage();
+
+            LogHelper::logError(
+                'SendMessagesCommand',
+                [
+                    'error_time' => $errorTime,
+                    'exception' => get_class($e),
+                    'error_message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ],
+                500,
+                $errorMessage
+            );
+
+            $this->error($errorTime . " - " . $errorMessage);
+            return 1;
+        }
     }
 }

@@ -2,15 +2,11 @@
 
 namespace App\Console;
 
-use Commands\CreateBillingCron;
-use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\BillingController;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
-use App\Jobs\SendPaymentReminderJob;
-use App\Services\WhatsappMessageService;
 use Illuminate\Support\Facades\Log;
 use App\Console\Commands\BillingCheckAndUpdateProfile;
+use App\Console\Commands\SendMessages;
 
 class Kernel extends ConsoleKernel
 {
@@ -22,6 +18,7 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         //      CreateBillingCron::class,
         BillingCheckAndUpdateProfile::class,
+        SendMessages::class,
     ];
     /**
      * Define the application's command schedule.
@@ -46,14 +43,14 @@ class Kernel extends ConsoleKernel
         //         'name' => 'Test'
         //     ]);
         // })->everyMinute();
-         //$schedule->command('log:archive-large')->everyFiveMinutes();
-         $schedule->command('messages:send')
-            ->withoutOverlapping() // Mencegah eksekusi ganda jika belum selesai
-            ->onOneServer()        // Hanya dijalankan pada satu server jika menggunakan load balancer
-            ->when(function () {
-                // Kondisi agar hanya dijalankan saat diperlukan
-                return true; // Logika bisa disesuaikan
-            });
+        //$schedule->command('log:archive-large')->everyFiveMinutes();
+        //  $schedule->command('messages:send')
+        //     ->withoutOverlapping() // Mencegah eksekusi ganda jika belum selesai
+        //     ->onOneServer()        // Hanya dijalankan pada satu server jika menggunakan load balancer
+        //     ->when(function () {
+        //         // Kondisi agar hanya dijalankan saat diperlukan
+        //         return true; // Logika bisa disesuaikan
+        //     });
     }
 
     /**

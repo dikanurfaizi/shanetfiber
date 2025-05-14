@@ -2,107 +2,82 @@
 
 namespace App\Jobs;
 
-use GuzzleHttp\Client;
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use App\Models\WhatsappGateway\WhatsappGateway;
+use App\Models\MessageLog;
+use Carbon\Carbon;
+use App\Services\WhatsappMessageService;
 use App\Helpers\LogHelper;
-use Illuminate\Support\Facades\Crypt;
 
 class SendWhatsappSingleJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    private string $customerName;
-    private string $receiver;
-    private string $message;
-    private WhatsappGateway $gateway;
-
-    public function __construct(string $customerName, string $receiver, WhatsappGateway $gateway, string $message)
-    {
-        $this->customerName = $customerName;
-        $this->receiver = $this->formatReceiver($receiver);
-        $this->gateway = $gateway;
-        $this->message = $message;
-    }
+    public function __construct(
+        private $billing,
+        private string $messageType,
+        private WhatsappGateway $gateway
+    ) {}
 
     public function handle(): void
     {
-        $urlWithParams = "{$this->gateway->url_callback}/send/message?api_key={$this->gateway->api_key}&sender={$this->gateway->whatsapp_number->number}";
+        $messageService = app(WhatsappMessageService::class);
 
-        try {
-            $decryptPassword = Crypt::decryptString($this->gateway->basic_auth_password);
-            $client = new Client([
-                'auth' => [
-                    $this->gateway->basic_auth_username,
-                    $decryptPassword
+        // Cek jika pesan sudah pernah dikirim
+        $alreadySent = MessageLog::where('customer_id', $this->billing->customer_id)
+            ->where('message_type', $this->messageType)
+            ->whereDate('created_at', Carbon::today())
+            ->exists();
+
+        if ($alreadySent) {
+            LogHelper::logWarning(
+                null,
+                [
+                    'customer_name' => $this->billing->customer_name,
+                    'message_type' => $this->messageType,
                 ],
-                'verify' => false
-            ]);
-
-            $response = $client->post($urlWithParams, [
-                'json' => [
-                    'phone' => $this->receiver,
-                    'message' => $this->message,
-                ],
-            ]);
-
-            $this->logResponse($response->getBody()->getContents(), $urlWithParams);
-        } catch (\GuzzleHttp\Exception\RequestException $e) {
-            $this->logError($e, $urlWithParams);
-        } catch (\Exception $e) {
-            $this->logUnexpectedError($e, $urlWithParams);
+                409,
+                "Skipping redundant message for {$this->billing->customer_name} with type {$this->messageType}."
+            );
+            return;
         }
-    }
 
-    private function formatReceiver(string $receiver): string
-    {
-        if (preg_match('/^62(\d{9,15})$/', $receiver, $matches)) {
-            $numberLength = strlen($matches[1]);
-            $prefix = $numberLength === 9 ? "+" : "";
-            return "{$prefix}62{$matches[1]}@s.whatsapp.net";
+        $message = $messageService->bill_info($this->billing, $this->messageType);
+
+        if ($message) {
+            try {
+                $sendMessage = $messageService->sendWhatsappSingleJob(
+                    $this->billing->customer_name,
+                    $this->billing->customer_contact,
+                    $this->gateway,
+                    $message
+                );
+
+                if ($sendMessage) {
+                    MessageLog::create([
+                        'customer_id'   => $this->billing->customer_id,
+                        'message_type'  => $this->messageType,
+                        'gateway_id'    => $this->gateway->id,
+                        'content'       => $message,
+                        'sent_at'       => now(),
+                    ]);
+                    LogHelper::logInfo(null, ['customer_name' => $this->billing->customer_name], 200, "Successfully sent message");
+                } else {
+                    LogHelper::logError(null, [
+                        'billing_id' => $this->billing->id,
+                        'error' => 'Failed to send message.'
+                    ], 500, "Failed to send WhatsApp message.");
+                }
+            } catch (\Exception $e) {
+                LogHelper::logError(null, [
+                    'billing_id' => $this->billing->id,
+                    'error' => $e->getMessage(),
+                ], 500, "Failed to send message.");
+            }
         }
-        return "$receiver@s.whatsapp.net";
-    }
-
-    private function logResponse(string $responseBody, string $url): void
-    {
-        $decoded = json_decode($responseBody, true);
-        $messageId = $decoded['results']['message_id'] ?? null;
-        $formattedTime = now()->format('d-m-Y H:i:s');
-        $message = "Message sent successfully with ID $messageId on $formattedTime";
-
-        LogHelper::logInfo($url, [
-            'receiver' => $this->receiver,
-            'customer_name' => $this->customerName,
-            'sender' => $this->gateway->whatsapp_number->number,
-        ], 200, $message);
-    }
-
-    private function logError(\GuzzleHttp\Exception\RequestException $e, string $url): void
-    {
-        $response = method_exists($e, 'getResponse') && $e->getResponse()
-            ? $e->getResponse()->getBody()->getContents()
-            : null;
-        $decoded = $response ? json_decode($response, true) : [];
-        $message = $decoded['message'] ?? $e->getMessage();
-
-        LogHelper::logError($url, [
-            'receiver' => $this->receiver,
-            'customer_name' => $this->customerName,
-            'sender' => $this->gateway->whatsapp_number->number,
-        ], $e->getCode(), "Failed to send message: $message");
-    }
-
-    private function logUnexpectedError(\Exception $e, string $url): void
-    {
-        LogHelper::logError($url, [
-            'receiver' => $this->receiver,
-            'customer_name' => $this->customerName,
-            'sender' => $this->gateway->whatsapp_number->number,
-        ], $e->getCode(), "Unexpected error: {$e->getMessage()}");
     }
 }

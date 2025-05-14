@@ -2,9 +2,7 @@
 
 namespace App\Services;
 
-use App\Jobs\SendWhatsappSingleJob;
 use Illuminate\Support\Carbon;
-
 use App\Models\WhatsappGateway\WhatsappNumber;
 use App\Models\WhatsappGateway\WhatsappGateway;
 use App\Models\WhatsappGateway\WhatsappMessage;
@@ -13,6 +11,8 @@ use App\Models\Bank;
 use App\Models\Customer;
 use App\Models\Billing\Billing;
 use App\Helpers\LogHelper;
+use Illuminate\Support\Facades\Crypt;
+use GuzzleHttp\Client;
 
 class WhatsappMessageService
 {
@@ -20,17 +20,62 @@ class WhatsappMessageService
      * Chesk status wa gateway
      * return false = enable, return true = disable
      */
-    // private function sendWhatsappSingleJob($customerName, $receiver, $gateway, $message)
-    // {
-    //     $delay = now()->addMinutes(rand(2, 3));
-    //     dispatch(new SendWhatsappSingleJob($customerName, $receiver, $gateway, $message))->delay($delay);
-    // }
-    private function sendWhatsappSingleJob($customerName, $receiver, $gateway, $message)
+    public function sendWhatsappSingleJob($customerName, $receiver, $gateway, $message)
     {
-        dispatch(new SendWhatsappSingleJob($customerName, $receiver, $gateway, $message));
+        // dispatch(new SendWhatsappSingleJob($customerName, $receiver, $gateway, $message));
+        $urlWithParams = "{$gateway->url_callback}/send/message?api_key={$gateway->api_key}&sender={$gateway->whatsapp_number->number}";
+
+        try {
+            $decryptPassword = Crypt::decryptString($gateway->basic_auth_password);
+            $client = new Client([
+                'auth' => [
+                    $gateway->basic_auth_username,
+                    $decryptPassword
+                ],
+                'verify' => false
+            ]);
+
+            $formatedReceiver = $this->manipulateContactBillInfo($receiver, 'broadcast');
+
+            $response = $client->post($urlWithParams, [
+                'json' => [
+                    'phone' => $formatedReceiver,
+                    'message' => $message,
+                ],
+            ]);
+
+            $decoded = json_decode($response->getBody()->getContents(), true);
+            $messageId = $decoded['results']['message_id'] ?? null;
+            $formattedTime = now()->format('d-m-Y H:i:s');
+            $message = "Message sent successfully with ID $messageId on $formattedTime";
+
+            LogHelper::logInfo($urlWithParams, [
+                'receiver' => $receiver,
+                'customer_name' => $customerName,
+                'sender' => $gateway->whatsapp_number->number,
+            ], 200, $message);
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            $response = method_exists($e, 'getResponse') && $e->getResponse()
+                ? $e->getResponse()->getBody()->getContents()
+                : null;
+            $decoded = $response ? json_decode($response, true) : [];
+            $message = $decoded['message'] ?? $e->getMessage();
+
+            LogHelper::logError($urlWithParams, [
+                'receiver' => $receiver,
+                'customer_name' => $customerName,
+                'sender' => $gateway->whatsapp_number->number,
+            ], $e->getCode(), "Failed to send message: $message");
+        } catch (\Exception $e) {
+            LogHelper::logError($urlWithParams, [
+                'receiver' => $receiver,
+                'customer_name' => $customerName,
+                'sender' => $gateway->whatsapp_number->number,
+            ], $e->getCode(), "Unexpected error: {$e->getMessage()}");
+        }
     }
 
-    public function getGateway()
+    private function getGateway()
     {
         try {
             $gateway = WhatsappGateway::where('slug', 'gateway')->first();
@@ -357,7 +402,7 @@ class WhatsappMessageService
         $admin_number = null;
         try {
             $gateway = $this->getGateway();
-            $customer_contact = $this->manipulateContactBillInfo($customers->contact, 'broadcast');
+            $customer_contact = $customers->contact;
 
             if (!$gateway || !$customer_contact) {
                 LogHelper::logWarning(
@@ -445,7 +490,7 @@ class WhatsappMessageService
     {
         try {
             $gateway = $this->getGateway();
-            $customer_contact = $this->manipulateContactBillInfo($billing->customer->contact, 'broadcast');
+            $customer_contact = $billing->customer->contact;
 
             if (!$gateway || !$customer_contact) {
                 LogHelper::logWarning(
@@ -571,7 +616,7 @@ class WhatsappMessageService
     {
         try {
             $gateway = $this->getGateway();
-            $customer_contact = $this->manipulateContactBillInfo($billing->customer->contact, 'broadcast');
+            $customer_contact = $billing->customer->contact;
 
             if (!$gateway || !$customer_contact) {
                 LogHelper::logWarning(
@@ -599,16 +644,17 @@ class WhatsappMessageService
                 $billingPeriodMatch = $billing->customer->billing_period === $billing->billing_periode->name;
 
                 if ($billingOption == 1 || ($billingOption == 2 && $billingPeriodMatch)) {
-                    $discount = $billing->customer->member->discount;
-                    $member = $billing->customer->member->type;
+                    $discount = optional($billing->customer->member)->discount ?? 0;
+                    $member = optional($billing->customer->member)->type ?? 'Non Member / Tidak Ada';
                 }
 
                 $price_after_discount -= $discount;
             } else {
-                $discount = $receipt->discount;
-                $price_after_discount = $receipt->price_after_discount;
-                $member = $receipt->member_type;
+                $discount = $receipt?->discount ?? 0;
+                $price_after_discount = $receipt?->price_after_discount ?? $billing->paket_price;
+                $member = $receipt?->member_type ?? 'Non Member / Tidak Ada';
             }
+
 
             $replace = [
                 '%name%' => $billing->customer->name,

@@ -16,6 +16,8 @@ use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Facades\DB;
 use App\Models\WhatsAppGateway;
 use App\Helpers\LogHelper;
+use App\Jobs\SendSingleWhatsappMessageJob;
+use Carbon\Carbon;
 
 class SendBillingToWhatsAppJob implements ShouldQueue
 {
@@ -31,9 +33,9 @@ class SendBillingToWhatsAppJob implements ShouldQueue
     public function handle(): void
     {
         try {
-            $gateway = WhatsappGateway::where('disabled', false)->get();
+            $gateway = WhatsAppGateway::where('disabled', false)->first();
 
-            if ($gateway->isEmpty()) {
+            if (!$gateway) {
                 LogHelper::logWarning(
                     null,
                     null,
@@ -59,6 +61,7 @@ class SendBillingToWhatsAppJob implements ShouldQueue
                 ->join('customers', 'billings.customer_id', '=', 'customers.id')
                 ->leftJoin('users', 'customers.user_id', '=', 'users.id')
                 ->select(
+                    'billings.id as billing_id',
                     'billings.customer_id',
                     'customers.customer_id as customer_unique_id',
                     'customers.name as customer_name',
@@ -80,6 +83,7 @@ class SendBillingToWhatsAppJob implements ShouldQueue
                         ->whereNotNull('billings.pay_later');
                 })
                 ->groupBy(
+                    'billings.id',
                     'billings.customer_id',
                     'customers.customer_id',
                     'customers.name',
@@ -92,8 +96,15 @@ class SendBillingToWhatsAppJob implements ShouldQueue
                 ->cursor();
 
             $count = 0;
+            $delayInSeconds = 0;
+
             foreach ($billings as $billing) {
                 $count++;
+                $delayInSeconds += 2; // Increment delay by 2 seconds for each message
+
+                // Dispatch individual message job with cumulative delay
+                SendWhatsappSingleJob::dispatch($billing, 'create_new_bill', $gateway)
+                    ->delay(now()->addSeconds($delayInSeconds));
             }
 
             if ($count === 0) {
@@ -108,12 +119,14 @@ class SendBillingToWhatsAppJob implements ShouldQueue
 
             LogHelper::logInfo(
                 null,
-                ['periode_id' => $lastBillingPeriode->id, 'count' => $count],
+                [
+                    'periode_id' => $lastBillingPeriode->id,
+                    'count' => $count,
+                    'gateway_id' => $gateway->id
+                ],
                 200,
-                "{$count} billing records found."
+                "Dispatched {$count} WhatsApp messages with 2-second intervals"
             );
-
-            $this->processBillings($billings, 'create_new_bill');
         } catch (RequestException $e) {
             LogHelper::logError(
                 null,
@@ -128,77 +141,6 @@ class SendBillingToWhatsAppJob implements ShouldQueue
                 500,
                 "Exception occurred while creating billing: " . $e->getMessage()
             );
-        }
-    }
-
-    private function processBillings($billings, $messageType)
-    {
-        $batchSize = 50; // Ukuran batch yang diinginkan
-        $batch = [];
-    
-        foreach ($billings as $billing) {
-            // Add billing record to batch
-            $batch[] = $billing;
-    
-            // If batch reaches the desired size, send it
-            if (count($batch) >= $batchSize) {
-                $this->sendMessagesInBatch($batch, $messageType); // Send full batch
-                $batch = []; // Reset batch after sending
-            }
-        }
-    
-        // Send any remaining batch if there are left-over items
-        if (count($batch) > 0) {
-            $this->sendMessagesInBatch($batch, $messageType); // Send remaining batch
-        }
-    }
-    
-    private function sendMessagesInBatch($batch, $messageType)
-    {
-        $batchSize = 5; // Jumlah pesan per batch
-    
-        // Process the batch in chunks of size $batchSize
-        foreach (array_chunk($batch, $batchSize) as $chunk) {
-            foreach ($chunk as $billing) {
-                // Make sure we're not dealing with an empty or invalid $billing
-                if (empty($billing) || !is_object($billing)) {
-                    LogHelper::logWarning(
-                        null,
-                        null,
-                        404, // Not Found
-                        "Invalid or empty billing record encountered in batch processing."
-                    );
-                    continue; // Skip to the next iteration
-                }
-    
-                try {
-                    // Try sending the message using the message service
-                    $this->messageService->bill_info($billing, $messageType);
-    
-                    // Log successful message dispatch
-                    LogHelper::logInfo(
-                        null,
-                        [
-                            'customer_name' => $billing->customer_name,
-                            'customer_contact' => $billing->customer_contact,
-                            'message_type' => $messageType
-                        ],
-                        200, // OK
-                        "WhatsApp message creation successful and request sent to messaging service"
-                    );
-                } catch (\Exception $e) {
-                    // Log any errors that occur while trying to send the message
-                    LogHelper::logError(
-                        null,
-                        [
-                            'customer_name' => $billing->customer_name,
-                            'customer_contact' => $billing->customer_contact
-                        ],
-                        500, // Internal Server Error
-                        "Failed to send WhatsApp message to {$billing->customer_name}. Error: {$e->getMessage()}"
-                    );
-                }
-            }
         }
     }
 }
