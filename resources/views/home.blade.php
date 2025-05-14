@@ -106,7 +106,7 @@
                             @foreach ($perMikrotik ?? [] as $item)
                                 <li class="d-flex justify-content-between">
                                     <span class="text-success"> {{ $item->mikrotik_name }}</span>
-                                    <span class="fw-semibold">{{ $item->total_customers }}  Customers</span>
+                                    <span class="fw-semibold">{{ $item->total_customers }} Customers</span>
                                 </li>
                             @endforeach
                         </ul>
@@ -298,61 +298,108 @@
                                             <div class="col-md-6 col-lg-3">
                                                 <div class="card border-0 shadow-sm h-100">
                                                     <div class="card-body">
-                                                        <h6 class="mb-3">{{ $adminData['admin_name'] }}</h6>
-                                                        <div class="d-flex justify-content-between mb-2">
-                                                            <span>Total Customers:</span>
-                                                            <strong>
-                                                                <a href="{{ route('billings.index', [
-                                                                    'admin_name' => $adminData['admin_name'],
-                                                                    'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
-                                                                    'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
-                                                                ]) }}"
-                                                                    class="text-decoration-none">
-                                                                    {{ $adminData['total_customers'] }}
-                                                                </a>
-                                                            </strong>
+                                                        <h6 class="mb-1">{{ $adminData['admin_name'] }}</h6>
+                                                        <h5 class="mb-3 text-primary text-end">@moneyIDR($adminData['total_billing'])</h5>
+
+                                                        <div class="border-top pt-2">
+                                                            <div
+                                                                class="d-flex justify-content-between align-items-center mb-2">
+                                                                <span>Total Customers:</span>
+                                                                <strong class="text-end">
+                                                                    <a href="{{ route('billings.index', [
+                                                                        'admin_name' => $adminData['admin_name'],
+                                                                        'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
+                                                                        'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
+                                                                    ]) }}"
+                                                                        class="text-decoration-none">
+                                                                        {{ number_format($adminData['total_customers'], 0, ',', '.') }}
+                                                                    </a>
+                                                                </strong>
+                                                            </div>
                                                         </div>
-                                                        <div class="d-flex justify-content-between mb-2">
-                                                            <span>Paid:</span>
-                                                            <strong class="text-success">
-                                                                <a href="{{ route('billings.index', [
-                                                                    'admin_name' => $adminData['admin_name'],
-                                                                    'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
-                                                                    'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
-                                                                    'search_status=LS',
-                                                                ]) }}"
-                                                                    class="text-decoration-none text-success">
-                                                                    {{ $adminData['total_paid_customers'] }}
-                                                                </a>
-                                                            </strong>
+
+                                                        <div class="border-top pt-2">
+                                                            <div class="row align-items-center g-0 mb-1">
+                                                                <div class="col">
+                                                                    <span>Paid:</span>
+                                                                </div>
+                                                                <div class="col-auto text-end">
+                                                                    <div>
+                                                                        <strong class="text-success">
+                                                                            <a href="{{ route('billings.index', [
+                                                                                'admin_name' => $adminData['admin_name'],
+                                                                                'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
+                                                                                'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
+                                                                                'search_status' => 'LS',
+                                                                            ]) }}"
+                                                                                class="text-decoration-none text-success">
+                                                                                {{ number_format($adminData['total_paid_customers'], 0, ',', '.') }}
+                                                                            </a>
+                                                                        </strong>
+                                                                    </div>
+                                                                    <div class="text-muted"
+                                                                        style="font-size: 0.85rem;">
+                                                                        Rp.
+                                                                        {{ number_format($adminData['total_paid'], 0, ',', '.') }},00
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                        <div class="d-flex justify-content-between mb-2">
-                                                            <span>Pay Later:</span>
-                                                            <strong class="text-warning">
-                                                                <a href="{{ route('billings.index', [
-                                                                    'admin_name' => $adminData['admin_name'],
-                                                                    'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
-                                                                    'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
-                                                                    'search_status=PL',
-                                                                ]) }}"
-                                                                    class="text-decoration-none text-warning">
-                                                                    {{ $adminData['total_paylater_customers'] }}
-                                                                </a>
-                                                            </strong>
+
+                                                        <div class="border-top pt-2">
+                                                            <div class="row align-items-center g-0 mb-1">
+                                                                <div class="col">
+                                                                    <span>Pay Later:</span>
+                                                                </div>
+                                                                <div class="col-auto text-end">
+                                                                    <div>
+                                                                        <strong class="text-warning">
+                                                                            <a href="{{ route('billings.index', [
+                                                                                'admin_name' => $adminData['admin_name'],
+                                                                                'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
+                                                                                'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
+                                                                                'search_status' => 'PL',
+                                                                            ]) }}"
+                                                                                class="text-decoration-none text-warning">
+                                                                                {{ number_format($adminData['total_paylater_customers'], 0, ',', '.') }}
+                                                                            </a>
+                                                                        </strong>
+                                                                    </div>
+                                                                    <div class="text-muted"
+                                                                        style="font-size: 0.85rem;">
+                                                                        Rp.
+                                                                        {{ number_format($adminData['total_paylater'], 0, ',', '.') }},00
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                        <div class="d-flex justify-content-between">
-                                                            <span>Unpaid:</span>
-                                                            <strong class="text-danger">
-                                                                <a href="{{ route('billings.index', [
-                                                                    'admin_name' => $adminData['admin_name'],
-                                                                    'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
-                                                                    'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
-                                                                    'search_status=BL',
-                                                                ]) }}"
-                                                                    class="text-decoration-none text-danger">
-                                                                    {{ $adminData['total_unpaid_customers'] }}
-                                                                </a>
-                                                            </strong>
+
+                                                        <div class="border-top pt-2">
+                                                            <div class="row align-items-center g-0 mb-1">
+                                                                <div class="col">
+                                                                    <span>Unpaid:</span>
+                                                                </div>
+                                                                <div class="col-auto text-end">
+                                                                    <div>
+                                                                        <strong class="text-danger">
+                                                                            <a href="{{ route('billings.index', [
+                                                                                'admin_name' => $adminData['admin_name'],
+                                                                                'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
+                                                                                'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
+                                                                                'search_status' => 'BL',
+                                                                            ]) }}"
+                                                                                class="text-decoration-none text-danger">
+                                                                                {{ number_format($adminData['total_unpaid_customers'], 0, ',', '.') }}
+                                                                            </a>
+                                                                        </strong>
+                                                                    </div>
+                                                                    <div class="text-muted"
+                                                                        style="font-size: 0.85rem;">
+                                                                        Rp.
+                                                                        {{ number_format($adminData['total_unpaid'], 0, ',', '.') }},00
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
