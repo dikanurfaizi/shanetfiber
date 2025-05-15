@@ -11,7 +11,6 @@ use Illuminate\Support\Carbon;
 use App\Models\WhatsappGateway\WhatsappGateway;
 use App\Models\Billing\Billing;
 use App\Services\WhatsappMessageService;
-use Illuminate\Support\Facades\Log;
 use App\Helpers\LogHelper;
 
 class SendPaymentReminderJob implements ShouldQueue
@@ -27,21 +26,7 @@ class SendPaymentReminderJob implements ShouldQueue
 
     public function handle(): void
     {
-        Carbon::setTimezone('Asia/Jakarta');
         $today = Carbon::today();
-        // $allowedDates = [10, 15, 20];
-
-        // if (!in_array($today->day, $allowedDates)) {
-        //     LogHelper::logWarning(
-        //         null,
-        //         null,
-        //         422,
-        //         "Job will not proceed: date not in allowed list. The allowed list is " . json_encode($allowedDates) . " but today is {$today->format('Y-m-d')}"
-        //     );
-        //     return;
-        // }
-
-        //Log::info("==================== Start Job Send WhatsApp Message Bill Reminder  ====================");
 
         $gateways = WhatsappGateway::where('disabled', false)->get();
 
@@ -56,8 +41,6 @@ class SendPaymentReminderJob implements ShouldQueue
         }
 
         foreach ($gateways as $gateway) {
-            Log::info("Processing gateway: {$gateway->name}, remaining days: {$gateway->remaining_day}");
-
             $billings = [
                 'past_due' => $this->getBillings($today, 'past_due'),
                 'due_today' => $this->getBillings($today, 'due_today'),
@@ -65,6 +48,9 @@ class SendPaymentReminderJob implements ShouldQueue
             ];
 
             foreach ($billings as $type => $billingList) {
+                $count = count($billingList);
+                LogHelper::logInfo(null, [], 200, "Found {$count} billing(s) for type '{$type}' on gateway: {$gateway->name}");
+
                 $messageType = $this->getMessageType($type);
                 $this->dispatchMessages($billingList, $messageType, $gateway);
             }
@@ -73,13 +59,12 @@ class SendPaymentReminderJob implements ShouldQueue
 
     private function dispatchMessages($billings, $messageType, $gateway)
     {
-        $delaySeconds = 0;
-
         foreach ($billings as $billing) {
-            $delaySeconds += 2; // Tambah delay 2 detik untuk setiap pesan
-
-            SendWhatsappSingleJob::dispatch($billing, $messageType, $gateway)
-                ->delay(now()->addSeconds($delaySeconds));
+            SendWhatsappSingleJob::dispatch(
+                $billing->billing_id,
+                $messageType,
+                $gateway->id
+            );
         }
     }
 
@@ -100,7 +85,12 @@ class SendPaymentReminderJob implements ShouldQueue
                 return Billing::query()
                     ->join('customers', 'billings.customer_id', '=', 'customers.id')
                     ->leftJoin('users', 'customers.user_id', '=', 'users.id')  // LEFT JOIN ke tabel users
+                    ->leftJoin('message_logs', function ($join) use ($today) {
+                        $join->on('customers.id', '=', 'message_logs.customer_id')
+                            ->whereDate('message_logs.created_at', '=', $today);
+                    })
                     ->select(
+                        'billings.id as billing_id',
                         'billings.customer_id',
                         'billings.billing_number as billing_number',
                         'customers.customer_id as customer_unique_id',
@@ -113,6 +103,7 @@ class SendPaymentReminderJob implements ShouldQueue
                     )
                     ->whereNotNull('customers.contact')
                     ->where('customers.contact', '!=', '')
+                    ->whereNull('message_logs.id') // hanya yang belum terkirim hari ini
                     ->where(function ($query) use ($today) {
                         $query->where('billings.status', 'BL')
                             ->whereNotNull('billings.due_date')
@@ -124,6 +115,7 @@ class SendPaymentReminderJob implements ShouldQueue
                             });
                     })
                     ->groupBy(
+                        'billings.id',
                         'billings.customer_id',
                         'customers.customer_id',
                         'billings.billing_number',
@@ -134,13 +126,19 @@ class SendPaymentReminderJob implements ShouldQueue
                         'users.name',
                         'users.contact'
                     )
-                    ->cursor();
+                    ->limit(10)
+                    ->get();
 
             case 'due_today':
                 return Billing::query()
                     ->join('customers', 'billings.customer_id', '=', 'customers.id')
                     ->leftJoin('users', 'customers.user_id', '=', 'users.id')  // LEFT JOIN ke tabel users
+                    ->leftJoin('message_logs', function ($join) use ($today) {
+                        $join->on('customers.id', '=', 'message_logs.customer_id')
+                            ->whereDate('message_logs.created_at', '=', $today);
+                    })
                     ->select(
+                        'billings.id as billing_id',
                         'billings.customer_id',
                         'billings.billing_number as billing_number',
                         'customers.customer_id as customer_unique_id',
@@ -153,6 +151,7 @@ class SendPaymentReminderJob implements ShouldQueue
                     )
                     ->whereNotNull('customers.contact')
                     ->where('customers.contact', '!=', '')
+                    ->whereNull('message_logs.id') // hanya yang belum terkirim hari ini
                     ->where(function ($query) use ($today) {
                         $query->where('billings.status', 'BL')
                             ->whereNotNull('billings.due_date')
@@ -164,6 +163,7 @@ class SendPaymentReminderJob implements ShouldQueue
                             });
                     })
                     ->groupBy(
+                        'billings.id',
                         'billings.customer_id',
                         'customers.customer_id',
                         'billings.billing_number',
@@ -174,15 +174,21 @@ class SendPaymentReminderJob implements ShouldQueue
                         'users.name',
                         'users.contact'
                     )
-                    ->cursor();
+                    ->limit(10)
+                    ->get();
 
             case 'upcoming':
                 return Billing::query()
                     ->join('customers', 'billings.customer_id', '=', 'customers.id')
-                    ->leftJoin('users', 'customers.user_id', '=', 'users.id')  // LEFT JOIN ke tabel users
+                    ->leftJoin('users', 'customers.user_id', '=', 'users.id')
+                    ->leftJoin('message_logs', function ($join) use ($today) {
+                        $join->on('customers.id', '=', 'message_logs.customer_id')
+                            ->whereDate('message_logs.created_at', '=', $today);
+                    })
                     ->select(
+                        'billings.id as billing_id',
                         'billings.customer_id',
-                        'billings.billing_number as billing_number',
+                        'billings.billing_number',
                         'customers.customer_id as customer_unique_id',
                         'customers.name as customer_name',
                         'customers.contact as customer_contact',
@@ -193,10 +199,13 @@ class SendPaymentReminderJob implements ShouldQueue
                     )
                     ->whereNotNull('customers.contact')
                     ->where('customers.contact', '!=', '')
+                    ->whereNull('message_logs.id') // hanya yang belum terkirim hari ini
                     ->where(function ($query) use ($today) {
-                        $query->where('billings.status', 'BL')
-                            ->whereNotNull('billings.due_date')
-                            ->whereDate('billings.due_date', '>', $today)
+                        $query->where(function ($q) use ($today) {
+                            $q->where('billings.status', 'BL')
+                                ->whereNotNull('billings.due_date')
+                                ->whereDate('billings.due_date', '>', $today);
+                        })
                             ->orWhere(function ($q) use ($today) {
                                 $q->where('billings.status', 'PL')
                                     ->whereNotNull('billings.pay_later')
@@ -204,9 +213,10 @@ class SendPaymentReminderJob implements ShouldQueue
                             });
                     })
                     ->groupBy(
+                        'billings.id',
                         'billings.customer_id',
-                        'customers.customer_id',
                         'billings.billing_number',
+                        'customers.customer_id',
                         'customers.name',
                         'customers.contact',
                         'customers.address',
@@ -214,7 +224,8 @@ class SendPaymentReminderJob implements ShouldQueue
                         'users.name',
                         'users.contact'
                     )
-                    ->cursor();
+                    ->limit(10)
+                    ->get();
 
             default:
                 return collect(); // Return empty collection if type is not valid

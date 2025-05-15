@@ -48,7 +48,7 @@ class SendMessages extends Command
 
         try {
             // Validate if today is an allowed date
-            $allowedDates = [10, 15, 20];
+            $allowedDates = [10, 15];
             if (!in_array($dayOfMonth, $allowedDates)) {
                 $message = "Today ({$dayOfMonth}) is not an allowed date for sending reminders. Allowed dates: " . implode(', ', $allowedDates);
 

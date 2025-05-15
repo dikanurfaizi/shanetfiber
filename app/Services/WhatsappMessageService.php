@@ -22,7 +22,6 @@ class WhatsappMessageService
      */
     public function sendWhatsappSingleJob($customerName, $receiver, $gateway, $message)
     {
-        // dispatch(new SendWhatsappSingleJob($customerName, $receiver, $gateway, $message));
         $urlWithParams = "{$gateway->url_callback}/send/message?api_key={$gateway->api_key}&sender={$gateway->whatsapp_number->number}";
 
         try {
@@ -39,7 +38,7 @@ class WhatsappMessageService
 
             $response = $client->post($urlWithParams, [
                 'json' => [
-                    'phone' => $formatedReceiver,
+                    'phone'   => $formatedReceiver,
                     'message' => $message,
                 ],
             ]);
@@ -47,13 +46,15 @@ class WhatsappMessageService
             $decoded = json_decode($response->getBody()->getContents(), true);
             $messageId = $decoded['results']['message_id'] ?? null;
             $formattedTime = now()->format('d-m-Y H:i:s');
-            $message = "Message sent successfully with ID $messageId on $formattedTime";
+            $logMessage = "Message sent successfully with ID $messageId on $formattedTime";
 
             LogHelper::logInfo($urlWithParams, [
-                'receiver' => $receiver,
-                'customer_name' => $customerName,
-                'sender' => $gateway->whatsapp_number->number,
-            ], 200, $message);
+                'receiver'       => $receiver,
+                'customer_name'  => $customerName,
+                'sender'         => $gateway->whatsapp_number->number,
+            ], 200, $logMessage);
+
+            return true;
         } catch (\GuzzleHttp\Exception\RequestException $e) {
             $response = method_exists($e, 'getResponse') && $e->getResponse()
                 ? $e->getResponse()->getBody()->getContents()
@@ -62,16 +63,21 @@ class WhatsappMessageService
             $message = $decoded['message'] ?? $e->getMessage();
 
             LogHelper::logError($urlWithParams, [
-                'receiver' => $receiver,
-                'customer_name' => $customerName,
-                'sender' => $gateway->whatsapp_number->number,
+                'receiver'       => $receiver,
+                'customer_name'  => $customerName,
+                'sender'         => $gateway->whatsapp_number->number,
+                'raw_response'   => $response,
             ], $e->getCode(), "Failed to send message: $message");
+
+            return false;
         } catch (\Exception $e) {
             LogHelper::logError($urlWithParams, [
-                'receiver' => $receiver,
-                'customer_name' => $customerName,
-                'sender' => $gateway->whatsapp_number->number,
+                'receiver'       => $receiver,
+                'customer_name'  => $customerName,
+                'sender'         => $gateway->whatsapp_number->number,
             ], $e->getCode(), "Unexpected error: {$e->getMessage()}");
+
+            return false;
         }
     }
 
@@ -153,7 +159,7 @@ class WhatsappMessageService
         }
     }
 
-    public function manipulateContactBillInfo($contact, $action = null)
+    private function manipulateContactBillInfo($contact, $action = null)
     {
         try {
             // Hapus karakter non-digit, kecuali tanda "+" di awal
@@ -169,11 +175,22 @@ class WhatsappMessageService
                 if (str_starts_with($contact, '08')) {
                     $contact = '62' . substr($contact, 1);
                 }
-            } else {
-                // Jika nomor diawali dengan "628", langsung ubah menjadi "08"
-                $contact = preg_replace('/^628/', '08', $contact);
 
-                // Tambahkan tanda "-" sesuai pola nomor HP
+                // Ambil digit setelah prefix 62
+                if (str_starts_with($contact, '62')) {
+                    $numberOnly = substr($contact, 2);
+
+                    // Jika 9 digit → pakai +62
+                    if (strlen($numberOnly) === 9) {
+                        $contact = '+62' . $numberOnly;
+                    } else {
+                        // Tetap pakai "62" (tanpa plus)
+                        $contact = '62' . $numberOnly;
+                    }
+                }
+            } else {
+                // Untuk tampilan biasa (non-broadcast)
+                $contact = preg_replace('/^628/', '08', $contact);
                 $contact = preg_replace('/^(\d{4})(\d{4})(\d+)$/', '$1-$2-$3', $contact);
             }
 
@@ -182,12 +199,13 @@ class WhatsappMessageService
             LogHelper::logWarning(
                 null,
                 null,
-                500, // Bad Request
+                500,
                 "Error manipulating contact bill info for contact: $contact | Action: $action | " . $e->getMessage()
             );
             return null;
         }
     }
+
 
     /**
      * Ambil informasi bank dalam format string
@@ -731,7 +749,7 @@ class WhatsappMessageService
     public function bill_info($billing, $action)
     {
         // Cek validitas billing dan nomor kontak
-        if (!is_object($billing) || empty(trim($billing->customer_contact))) {
+        if (!is_object($billing) || empty(trim($billing->customer->contact))) {
             LogHelper::logError(null, [
                 'billing_id' => $billing->id ?? null,
                 'action' => $action,
@@ -740,24 +758,24 @@ class WhatsappMessageService
         }
 
         // Ambil informasi dasar
-        $address = $billing->customer_address ?? 'Alamat tidak tersedia';
-        $customer_unique_id = $billing->customer_unique_id ?? 'Customer ID tidak tersedia';
+        $address = $billing->customer->address ?? 'Alamat tidak tersedia';
+        $customer_unique_id = $billing->customer->customer_id ?? 'Customer ID tidak tersedia';
 
         // Normalisasi dan validasi kontak
         $contacts = [
             'customer' => [
-                'raw' => $billing->customer_contact ?? null,
+                'raw' => $billing->customer->contact ?? null,
                 'label' => 'customer',
                 'check' => 'broadcast',
                 'id' => $billing->customer_id ?? null,
                 'name' => $billing->customer_name ?? null,
             ],
             'admin' => [
-                'raw' => $billing->admin_contact ?? null,
+                'raw' => $billing->customer->user->contact ?? null,
                 'label' => 'admin',
                 'check' => null,
-                'id' => $billing->admin_id ?? null,
-                'name' => $billing->admin_name ?? null,
+                'id' => $billing->user_id ?? null,
+                'name' => $billing->user->name ?? null,
             ]
         ];
 
