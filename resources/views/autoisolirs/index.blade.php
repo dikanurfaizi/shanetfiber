@@ -28,7 +28,7 @@
                         <td>{{ ++$i }}</td>
                         <td>{{ $autoisolir->mikrotik->name }}</td>
 
-                        <td>{{ $autoisolir->profile_id }}</td>
+                        <td>{{ $autoisolir->profile->profile_name }}</td>
                         <td>
                             @if ($autoisolir->mikrotik->ros_version_id == 1)
                                 {{ __('autoisolir.placeholder.select-version-67') }}

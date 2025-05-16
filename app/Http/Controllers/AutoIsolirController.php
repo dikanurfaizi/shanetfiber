@@ -46,7 +46,7 @@ class AutoIsolirController extends Controller
      */
     public function index()
     {
-        $autoisolirs = AutoIsolir::paginate(10);
+        $autoisolirs = AutoIsolir::with('profile:id,profile_name')->paginate(10);
         return view('autoisolirs.index', compact('autoisolirs'))
             ->with('i', (request()->input('page', 1) - 1) * 10);
     }
@@ -101,7 +101,9 @@ class AutoIsolirController extends Controller
             return redirect()->back()->withErrors(['msg' => 'Router offline, please check your router.']);
         }
 
-        $profile = $request->profile_id;
+        //$profile = $request->profile_id;
+        $profileId = $request->profile_id;
+        $profile = PppProfile::where('id', $profileId)->value('profile_name');
         $nameScript = $nameSchedule = $request->name;
         $activationDate = $request->activation_date;
         $payment = $request->comment_payment;
@@ -260,7 +262,9 @@ class AutoIsolirController extends Controller
             return redirect()->back()->withErrors(['msg' => 'Router offline, please check your router.']);
         }
 
-        $profile = $request->profile_id;
+        //$profile = $request->profile_id;
+        $profileId = $request->profile_id;
+        $profile = PppProfile::where('id', $profileId)->value('profile_name');
         $dueDate = $request->due_date;
         // $nameScript = $nameSchedule = $request->name;
         $payment = $request->comment_payment;
