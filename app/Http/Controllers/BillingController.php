@@ -121,21 +121,22 @@ class BillingController extends Controller
                 });
             })
             ->when($searchPeriode, fn($query) => $query->whereHas('billing_periode', fn($q) => $q->where('name', 'like', "%{$searchPeriode}%")))
-            ->when($searchStatus, function ($query) use ($searchStatus, $searchDuedate) {
+            ->when(!is_null($searchStatus), function ($query) use ($searchStatus, $searchDuedate) {
                 if ($searchStatus === '!LS') {
-                    $query->where('status', '!=', 'LS')
-                        ->where('status', '!=', 'NP');
-                    if ($searchDuedate) $query->where('due_date', 'like', "%{$searchDuedate}%");
+                    // Hanya exclude LS, tapi tetap tampilkan NP
+                    $query->where('status', '!=', 'LS');
+
+                    if ($searchDuedate) {
+                        $query->where('due_date', 'like', "%{$searchDuedate}%");
+                    }
                 } else {
                     $query->where('status', $searchStatus);
+
                     if ($searchDuedate) {
                         $field = $searchStatus === 'LS' ? 'payment_time' : 'pay_later';
                         $query->where($field, 'like', "%{$searchDuedate}%");
                     }
                 }
-            }, function ($query) {
-                // Jika searchStatus tidak di-set, exclude 'NP'
-                $query->where('status', '!=', 'NP');
             })
             ->when($searchUserId, function ($query) use ($searchUserId) {
                 $query->whereHas('customer', function ($q) use ($searchUserId) {

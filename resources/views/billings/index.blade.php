@@ -138,7 +138,7 @@
                             <th class="text-center align-middle">{{ __('billing.table.periode') }}</th>
                             <th class="text-center align-middle">{{ __('billing.table.bill') }}</th>
                             <th class="text-center align-middle">{{ __('billing.table.bill-state') }}</th>
-                            <th class="text-center align-middle">{{ __('Payment Methode') }}</th>
+                            <th class="text-center align-middle">{{ __('billing.table.payment-methode') }}</th>
                             <th class="text-center align-middle">{{ __('customer.table.action') }}</th>
                         </tr>
                     </thead>
@@ -167,14 +167,19 @@
                                         class="badge text-primary">{{ Carbon\Carbon::parse($billing->billing_periode->name)->translatedFormat('M Y') ?? 'no periode' }}</span>
                                 </td>
                                 <td>
-                                    <span
-                                        class="badge bg-blue-soft
-                                            @if ($billing->status === 'LS') text-success
-                                            @elseif ($billing->status === 'NP')
-                                                bg-secondary text-white
-                                            @else
-                                                text-danger @endif
-                                    ">
+                                    @php
+                                        $status = $billing->status;
+                                        $badgeClass = 'badge bg-blue-soft ';
+
+                                        if ($status === 'LS') {
+                                            $badgeClass .= 'text-success';
+                                        } elseif ($status === 'NP') {
+                                            $badgeClass .= 'text-muted'; // abu-abu, tapi hanya teks
+                                        } else {
+                                            $badgeClass .= 'text-danger';
+                                        }
+                                    @endphp
+                                    <span class="{{ $badgeClass }}">
                                         @if ($billing->paket_price === 0)
                                             {{ __('Free') }}
                                         @else
@@ -182,13 +187,14 @@
                                         @endif
                                     </span>
                                 </td>
+
                                 <td>
                                     @php
                                         $billingsUnpaid = App\Models\Billing\Billing::where(
                                             'customer_id',
                                             $billing->customer_id,
                                         )
-                                            ->where('status', '!=', 'LS')
+                                            ->whereNotIn('status', ['LS', 'NP'])
                                             ->get();
                                     @endphp
                                     @if ($billing->status === 'LS')
@@ -208,7 +214,7 @@
                                             {{ __('billing.state.paylater') . ' ' . Carbon\Carbon::parse($billing->pay_later)->translatedFormat('d M Y') }}
                                         </span>
                                     @elseif ($billing->status === 'NP')
-                                        <span class="badge bg-secondary text-white">
+                                        <span class="badge bg-primary text-white">
                                             <i class="fas fa-info-circle"></i>
                                             {{ __('billing.state.tidak-ada-pemakaian') }}
                                         </span>
@@ -233,11 +239,10 @@
                                         </span>
                                     @endif
                                     @php
-                                        $countBillingCustomerUnpaid = count(
-                                            $data
-                                                ->where('customer_id', $billing->customer_id)
-                                                ->where('status', '!=', 'LS'),
-                                        );
+                                        $countBillingCustomerUnpaid = $data
+                                            ->where('customer_id', $billing->customer_id)
+                                            ->whereNotIn('status', ['LS', 'NP'])
+                                            ->count();
                                     @endphp
                                     @if (count($billingsUnpaid) - $countBillingCustomerUnpaid > 0)
                                         </br>
@@ -249,10 +254,10 @@
                                 </td>
                                 <td>
                                     @if ($billing->status === 'NP')
-                                        <span class="badge bg-secondary text-white">
+                                        <span class="badge bg-primary text-white">
                                             <i class="fas fa-times-circle"></i>
-                                            {{ __('Updated') }} on
-                                            {{ Carbon\Carbon::parse($billing->updated_at)->translatedFormat('M Y') }}
+                                            {{ __('billing.state.confirm-on') }}
+                                            {{ Carbon\Carbon::parse($billing->updated_at)->translatedFormat('d M Y') }}
                                         </span>
                                     @elseif ($billing->status != 'LS' && $billing->paket_price > 0)
                                         {!! Form::model($billing, [
