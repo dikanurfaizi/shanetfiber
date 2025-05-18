@@ -21,7 +21,7 @@ class SendMessages extends Command
      *
      * @var string
      */
-    protected $description = 'Send messages at 9:00 AM on the 15th, 16th, and 17th of each month';
+    protected $description = 'Send messages at every 15 minutes in 10th and 15th of each month for reminder';
 
     /**
      * Execute the console command.
@@ -48,7 +48,7 @@ class SendMessages extends Command
 
         try {
             // Validate if today is an allowed date
-            $allowedDates = [10, 15, 18];
+            $allowedDates = [10, 15];
             if (!in_array($dayOfMonth, $allowedDates)) {
                 $message = "Today ({$dayOfMonth}) is not an allowed date for sending reminders. Allowed dates: " . implode(', ', $allowedDates);
 
@@ -69,14 +69,6 @@ class SendMessages extends Command
             // dispatch(new SendPaymentReminderJob())->onQueue('default');
             app(SendPaymentReminderService::class)->sendReminders();
 
-            // Dispatch the job with logging
-            LogHelper::logInfo(
-                'SendMessagesCommand',
-                [],
-                200,
-                "Dispatching SendPaymentReminder to queue"
-            );
-
             // Log successful dispatch
             $dispatchTime = Carbon::now()->format('Y-m-d H:i:s');
             $executionTime = round(microtime(true) - $startTime, 2);
@@ -88,7 +80,7 @@ class SendMessages extends Command
                     'execution_seconds' => $executionTime
                 ],
                 200,
-                "Successfully dispatched SendPaymentReminderJob"
+                "Successfully dispatched {$this->description}"
             );
 
             $this->info("Successfully dispatched reminder job at {$dispatchTime}");

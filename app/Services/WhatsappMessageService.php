@@ -159,7 +159,7 @@ class WhatsappMessageService
         }
     }
 
-    private function manipulateContactBillInfo($contact, $action = null)
+    public function manipulateContactBillInfo($contact, $action = null)
     {
         try {
             // Hapus karakter non-digit, kecuali tanda "+" di awal
@@ -210,7 +210,7 @@ class WhatsappMessageService
     /**
      * Ambil informasi bank dalam format string
      */
-    private function getBankInfo($id)
+    public function getBankInfo($id)
     {
         try {
             // Ambil bank info berdasarkan user_id
@@ -248,7 +248,7 @@ class WhatsappMessageService
     /**
      * Ambil rincian paket pelanggan
      */
-    private function getBillingPackages($cust_id)
+    public function getBillingPackages($cust_id)
     {
         try {
             $packages = Billing::with(['billing_periode', 'customer.paket', 'customer.member'])
@@ -286,7 +286,7 @@ class WhatsappMessageService
     /**
      * Format informasi paket menjadi string
      */
-    private function formatPaketInfo($paket)
+    public function formatPaketInfo($paket)
     {
         try {
             $periode = optional($paket->billing_periode)->name ?? 'Tidak ada periode';
@@ -319,7 +319,7 @@ class WhatsappMessageService
     /**
      * Ambil template pesan berdasarkan aksi
      */
-    private function getMessageTemplate($action, $pakets, $admin)
+    public function getMessageTemplate($action, $pakets, $admin)
     {
         try {
             $replace = ['%count-bill%' => $pakets->count()];
@@ -397,7 +397,7 @@ class WhatsappMessageService
     /**
      * Gantikan placeholder dalam pesan.
      */
-    private function replaceMessagePlaceholders($message, array $replace)
+    public function replaceMessagePlaceholders($message, array $replace)
     {
         try {
             return str_replace(array_keys($replace), array_values($replace), $message);

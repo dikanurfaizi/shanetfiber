@@ -25,32 +25,11 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        Log::info("Starting to schedule commands.");
+        $schedule->call(function () {
+            Log::info('Laravel scheduler tick at ' . now());
+        })->everyMinute();
 
-        // $schedule->command('inspire')->hourly();
-        // $schedule->command('create_billing:cron')->everyMinute();
-        // $schedule->command('messages:send')->cron('0 9 15-20 * *')->when(function () {
-        //     Log::info("Scheduling messages:send command");
-        //     return true;
-        // });
-        // $schedule->command('messages:send')
-        //     ->cron('* * * * *')  // Menjalankan setiap menit untuk pengujian
-        //     ->when(function () {
-        //         return true;  // Perintah ini akan selalu dijalankan
-        //     });
-        // $schedule->call(function () {
-        //     DB::table('billing_periodes')->create([
-        //         'name' => 'Test'
-        //     ]);
-        // })->everyMinute();
-        //$schedule->command('log:archive-large')->everyFiveMinutes();
-        //  $schedule->command('messages:send')
-        //     ->withoutOverlapping() // Mencegah eksekusi ganda jika belum selesai
-        //     ->onOneServer()        // Hanya dijalankan pada satu server jika menggunakan load balancer
-        //     ->when(function () {
-        //         // Kondisi agar hanya dijalankan saat diperlukan
-        //         return true; // Logika bisa disesuaikan
-        //     });
+        $schedule->command('test:scheduler')->everyMinute();
     }
 
     /**
