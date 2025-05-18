@@ -30,62 +30,13 @@
                                     'class' => 'form-control',
                                 ]) !!}
                             </div>
-
-                            <!-- Search Address -->
-                            {{-- <div class="col-md-4 col-lg-3">
-                                <select name="search_address" class="form-control">
-                                    <option value="">{{ __('billing.placeholder.search-address') }}</option>
-                                    <option value="no-address">{{ __('billing.placeholder.search-without-address') }}
-                                    </option>
-                                    @foreach ($address as $addrr)
-                                        <option value="{{ $addrr }}">{{ $addrr }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <!-- Search Month -->
-                            <div class="col-md-4 col-lg-2">
-                                {!! Form::select('search_month', $months, null, [
-                                    'placeholder' => __('billing.placeholder.search-month'),
-                                    'class' => 'form-control',
-                                ]) !!}
-                            </div>
-
-                            <!-- Search Year -->
-                            <div class="col-md-4 col-lg-2">
-                                {!! Form::select('search_year', $years, null, [
-                                    'placeholder' => __('billing.placeholder.search-year'),
-                                    'class' => 'form-control',
-                                ]) !!}
-                            </div> --}}
-
-                            <!-- Search Status -->
-                            {{-- <div class="col-md-4 col-lg-2">
-                                <select name="search_status" class="form-control">
-                                    <option value="">{{ __('billing.placeholder.select.status') }}</option>
-                                    <option value="!LS">{{ __('billing.placeholder.select.unpaid') }}</option>
-                                    <option value="PL">{{ __('billing.placeholder.select.paylater') }}</option>
-                                    <option value="LS">{{ __('billing.placeholder.select.paid') }}</option> --}}
-                            {{-- <option value="NP">{{ __('billing.placeholder.select.notactive') }}</option> --}}
-                            {{-- </select> --}}
-                            {{-- </div> --}}
-                            <!-- Admin and Due Date with margin top -->
                             @canany(['view-customers-widget-total'])
-                                {{-- <div class="row gx-3 gy-2 mt-3"> --}}
-                                <!-- Search Admin -->
                                 <div class="col-md-4 col-lg-3">
                                     {!! Form::select('admin_name', $userAdmin, null, [
                                         'placeholder' => __('billing.placeholder.search-admin'),
                                         'class' => 'form-control',
                                     ]) !!}
                                 </div>
-
-                                <!-- Due Date -->
-                                {{-- <div class="col-md-4 col-lg-3">
-                                <input id="select-date" type="datetime-local" class="form-control" name="duedate"
-                                    placeholder="Due Date">
-                            </div> --}}
-                                {{-- </div> --}}
                             @endcanany
                         </div>
 
@@ -132,9 +83,7 @@
                         <tr class="text-center align-middle">
                             <th class="text-center align-middle">{{ __('billing.table.no') }}</th>
                             <th class="text-center align-middle">{{ __('billing.table.customer-name') }}</th>
-                            {{-- <th class="text-center align-middle">{{ __('billing.table.customer_id') }}</th> --}}
                             <th class="text-center align-middle">{{ __('billing.table.address') }}</th>
-                            {{-- <th class="text-center align-middle">{{ __('billing.table.activation') }}</th> --}}
                             <th class="text-center align-middle">{{ __('billing.table.periode') }}</th>
                             <th class="text-center align-middle">{{ __('billing.table.bill') }}</th>
                             <th class="text-center align-middle">{{ __('billing.table.bill-state') }}</th>
@@ -143,192 +92,84 @@
                         </tr>
                     </thead>
                     <tbody>
-
                         @foreach ($data as $key => $billing)
-                            <tr>
-                                <th class="text-center"><span class="badge text-primary">{{ ++$i }}</span>
-                                </th>
+                            @php
+                                $i++;
+                                $periodeText = Carbon\Carbon::parse($billing->billing_periode->name)->format('M Y');
+                                $billAmount = $billing->paket_price === 0 ? 0 : $billing->paket_price + $billing->tax;
+                                $badgeClass = 'badge bg-blue-soft ';
+                                if ($billing->status === 'LS') {
+                                    $badgeClass .= 'text-success';
+                                } elseif ($billing->status === 'NP') {
+                                    $badgeClass .= 'text-muted';
+                                } else {
+                                    $badgeClass .= 'text-danger';
+                                }
+                            @endphp
 
+                            {{-- ✅ Desktop View --}}
+                            <tr class="d-none d-sm-table-row align-middle">
+                                <th class="text-center"><span class="badge text-primary">{{ $i }}</span>
+                                </th>
                                 <td><a href="{{ route('billings.show', $billing->slug) }}" data-bs-toggle="tooltip"
                                         data-bs-placement="top" title="Show Billing">
                                         <span
                                             class="badge text-primary">{{ $billing->customer_name ?? 'no name' }}</span></a>
                                 </td>
-                                {{-- <td><span
-                                        class="badge text-primary">{{ $billing->customer->customer_id ?? 'no customer id' }}</span>
-                                </td> --}}
                                 <td><span
                                         class="badge text-primary">{{ $billing->customer->address ?? 'no address' }}</span>
                                 </td>
-                                {{-- <td><span
-                                        class="badge text-primary">{{ Carbon\Carbon::parse($billing->customer->activation_date)->format('d M Y') ?? 'inactive' }}</span>
-                                </td> --}}
                                 <td><span
-                                        class="badge text-primary">{{ Carbon\Carbon::parse($billing->billing_periode->name)->translatedFormat('M Y') ?? 'no periode' }}</span>
+                                        class="badge text-primary">{{ Carbon\Carbon::parse($billing->billing_periode->name)->format('M Y') ?? 'no periode' }}</span>
                                 </td>
-                                <td>
-                                    @php
-                                        $status = $billing->status;
-                                        $badgeClass = 'badge bg-blue-soft ';
-
-                                        if ($status === 'LS') {
-                                            $badgeClass .= 'text-success';
-                                        } elseif ($status === 'NP') {
-                                            $badgeClass .= 'text-muted'; // abu-abu, tapi hanya teks
-                                        } else {
-                                            $badgeClass .= 'text-danger';
-                                        }
-                                    @endphp
-                                    <span class="{{ $badgeClass }}">
-                                        @if ($billing->paket_price === 0)
-                                            {{ __('Free') }}
+                                <td><span class="{{ $badgeClass }}">
+                                        @if ($billAmount > 0)
+                                            @moneyIDR($billAmount)
                                         @else
-                                            @moneyIDR($billing->paket_price + $billing->tax)
+                                            {{ __('Free') }}
                                         @endif
-                                    </span>
-                                </td>
+                                    </span></td>
+                                <td>{!! \App\Helpers\BillingHelper::getBillingStatusBadge($billing, $data) !!}</td>
+                                <td>{!! \App\Helpers\BillingHelper::getBillingPaymentSection($billing, $bank) !!}</td>
+                                <td>{!! \App\Helpers\BillingHelper::getBillingActionButton($billing) !!}</td>
+                            </tr>
 
-                                <td>
-                                    @php
-                                        $billingsUnpaid = App\Models\Billing\Billing::where(
-                                            'customer_id',
-                                            $billing->customer_id,
-                                        )
-                                            ->whereNotIn('status', ['LS', 'NP'])
-                                            ->get();
-                                    @endphp
-                                    @if ($billing->status === 'LS')
-                                        <span class="badge bg-success text-white">
-                                            <i class="fas fa-check-circle"></i>
-                                            {{ __('billing.state.lunas') }}
-                                        </span>
-                                    @elseif ($billing->status === 'PL')
-                                        @php
-                                            $otherDate = Carbon\Carbon::parse($billing->pay_later);
-                                            $nowDate = Carbon\Carbon::now();
-                                            $result = $nowDate->gt($otherDate);
-                                        @endphp
-                                        <span
-                                            class="badge @if ($result) bg-danger @else bg-warning @endif text-white">
-                                            <i class="fas fa-ban"></i>
-                                            {{ __('billing.state.paylater') . ' ' . Carbon\Carbon::parse($billing->pay_later)->translatedFormat('d M Y') }}
-                                        </span>
-                                    @elseif ($billing->status === 'NP')
-                                        <span class="badge bg-primary text-white">
-                                            <i class="fas fa-info-circle"></i>
-                                            {{ __('billing.state.tidak-ada-pemakaian') }}
-                                        </span>
-                                    @else
-                                        @php
-                                            $activationDate =
-                                                Carbon\Carbon::now()->translatedFormat('Y-m') .
-                                                '-' .
-                                                Carbon\Carbon::parse(
-                                                    $billing->customer->activation_date,
-                                                )->translatedFormat('d') .
-                                                ' ' .
-                                                Carbon\Carbon::now()->translatedFormat('H:i:s');
-                                            $nowDate = Carbon\Carbon::now();
-                                            $result = $nowDate->gt($activationDate);
-                                        @endphp
-                                        <span
-                                            class="badge @if ($result) bg-danger @else bg-primary @endif text-white">
-                                            <i class="fas fa-ban"></i>
-                                            {{ __('billing.state.belum-lunas') }}
-                                            {{ Carbon\Carbon::parse($billing->due_date)->translatedFormat('d M Y') }}
-                                        </span>
-                                    @endif
-                                    @php
-                                        $countBillingCustomerUnpaid = $data
-                                            ->where('customer_id', $billing->customer_id)
-                                            ->whereNotIn('status', ['LS', 'NP'])
-                                            ->count();
-                                    @endphp
-                                    @if (count($billingsUnpaid) - $countBillingCustomerUnpaid > 0)
-                                        </br>
-                                        <a class="text-xs fw-bold text-danger d-inline-flex align-items-center"
-                                            href="{{ route('billings.index', ['search_status' => '!LS', 'customer' => $billing->customer->slug]) }}">
-                                            {{ __('billing.state.belum-lunas-lainnya', ['count_bill_unpaid' => count($billingsUnpaid) - $countBillingCustomerUnpaid]) }}
-                                        </a>
-                                    @endif
+                            {{-- ✅ Mobile View: Parent Row --}}
+                            <tr class="d-table-row d-sm-none" onclick="toggleExpand('{{ $billing->slug }}')">
+                                <td colspan="8" style="cursor: pointer;">
+                                    <div class="mobile-row-parent">
+                                        <div>
+                                            <strong>#{{ $i }}</strong> - <span
+                                                class="text-primary">{{ $billing->customer_name }}</span><br>
+                                            <small>{!! \App\Helpers\BillingHelper::getBillingStatusBadge($billing, $data) !!}</small>
+                                        </div>
+                                        <div>
+                                            <span class="{{ $badgeClass }}">@moneyIDR($billAmount)</span><br>
+                                            <small>{{ $periodeText }}</small>
+                                        </div>
+                                    </div>
                                 </td>
-                                <td>
-                                    @if ($billing->status === 'NP')
-                                        <span class="badge bg-primary text-white">
-                                            <i class="fas fa-times-circle"></i>
-                                            {{ __('billing.state.confirm-on') }}
-                                            {{ Carbon\Carbon::parse($billing->updated_at)->translatedFormat('d M Y') }}
-                                        </span>
-                                    @elseif ($billing->status != 'LS' && $billing->paket_price > 0)
-                                        {!! Form::model($billing, [
-                                            'method' => 'PATCH',
-                                            'route' => ['billings.payment', $billing->slug],
-                                            'id' => 'form-pay-' . $billing->slug,
-                                        ]) !!}
-                                        <select name="payment_methode" class="form-control"
-                                            style="width:auto; display:inline-block;">
-                                            <option value="cash">Cash</option>
-                                            @if (count($bank))
-                                                <option value="transfer">Transfer</option>
-                                            @endif
-                                            <option value="paylater">Pay Later</option>
-                                            <option value="not-active-periode">Not Active Period</option>
-                                        </select>
-                                        {!! Form::close() !!}
-                                    @elseif ($billing->status === 'LS' && $billing->paket_price > 0)
-                                        <span class="badge bg-success text-white">
-                                            <i class="fas fa-check-circle"></i>
-                                            {{ $billing->receipt->payment_methode ?? '' }} on
-                                            {{ Carbon\Carbon::parse($billing->payment_time)->translatedFormat('d M Y') }}
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="items-center justify-content-end text-center">
-                                    @can('billing-edit')
-                                        @if ($billing->status === 'NP')
-                                            <span class="badge bg-secondary text-white">
-                                                <i class="fas fa-info-circle"></i>
-                                                {{ __('Marked') }}
-                                            </span>
-                                            {{-- Tombol revert status jika ingin ubah kembali jadi unpaid --}}
-                                            {{--
-                                            {!! Form::model($billing, ['method' => 'PATCH', 'route' => ['billings.resetStatus', $billing->slug]]) !!}
-                                                <a class="btn btn-warning btn-sm"
-                                                    onclick="event.preventDefault(); this.closest('form').submit();">
-                                                    <i class="fas fa-undo text-white"></i>
-                                                    {{ __('billing.button.reset_status') }}
-                                                </a>
-                                            {!! Form::close() !!}
-                                            --}}
-                                        @elseif ($billing->status != 'LS')
-                                            @if ($billing->customer->activation === 'true')
-                                                <a class="btn btn-success btn-sm"
-                                                    onclick="document.getElementById('form-pay-{{ $billing->slug }}').submit();">
-                                                    <i class="fas fa-money-bill-wave text-white"></i>
-                                                    {{ __('billing.button.pay') }}
-                                                </a>
-                                            @else
-                                                <form method="POST" class="d-inline"
-                                                    action="{{ route('customers.activation', $billing->customer->slug) }}">
-                                                    @csrf
-                                                    @method('put')
-                                                    <a class="btn btn-success btn-sm"
-                                                        onclick="event.preventDefault(); this.closest('form').submit();">
-                                                        <i class="fa fa-check me-2 text-white"></i>
-                                                        {{ __('billing.button.activation') }}
-                                                    </a>
-                                                </form>
-                                            @endif
-                                        @elseif ($billing->status === 'LS' && $billing->paket_price > 0)
-                                            {!! Form::model($billing, ['method' => 'PATCH', 'route' => ['billings.unpayment', $billing->slug]]) !!}
-                                            <a class="btn btn-danger btn-sm"
-                                                onclick="event.preventDefault(); this.closest('form').submit();">
-                                                <i class="fas fa-money-bill-wave text-white"></i>
-                                                {{ __('billing.button.unpay') }}
-                                            </a>
-                                            {!! Form::close() !!}
-                                        @endif
-                                    @endcan
+                            </tr>
+
+                            {{-- ✅ Mobile View: Expand Row --}}
+                            <tr id="expand-{{ $billing->slug }}" class="d-none">
+                                <td colspan="8">
+                                    <div class="mobile-expand-row">
+                                        <strong>{{ __('billing.table.address') }}:</strong><br>
+                                        {{ $billing->customer->address ?? 'no address' }}<br><br>
+
+                                        <div
+                                            style="display: flex; gap: 10px; justify-content: space-between; flex-wrap: wrap; align-items: center;">
+                                            <div style="flex: 1;">
+                                                <strong>{{ __('billing.table.payment-methode') }}:</strong><br>
+                                                {!! \App\Helpers\BillingHelper::getBillingPaymentSection($billing, $bank) !!}
+                                            </div>
+                                            <div style="flex: 1;">
+                                                <strong>{{ __('customer.table.action') }}:</strong><br>
+                                                {!! \App\Helpers\BillingHelper::getBillingActionButton($billing) !!}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -344,5 +185,31 @@
     </div>
     @section('custom_styles')
         <link href="{{ asset('css/flatpickr.min.css') }}" rel="stylesheet">
+        <style>
+            @media (max-width: 576px) {
+                table.table thead {
+                    display: none;
+                }
+
+                .mobile-row-parent {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 10px;
+                    border-bottom: 1px solid #dee2e6;
+                    background-color: #f8f9fa;
+                }
+
+                .mobile-row-parent:hover {
+                    background-color: #e9ecef;
+                }
+
+                .mobile-expand-row {
+                    padding: 10px;
+                    background-color: #ffffff;
+                    border-bottom: 1px solid #dee2e6;
+                }
+            }
+        </style>
     @endsection
 </x-layouts.cpanel.billings.app-layout>

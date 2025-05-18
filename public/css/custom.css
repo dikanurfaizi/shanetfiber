@@ -148,3 +148,22 @@
     color: #6c757d;
     cursor: not-allowed;
 }
+@media (max-width: 576px) {
+    tr.d-sm-table-row {
+        display: none !important;
+    }
+
+    tr.d-sm-none {
+        display: table-row !important;
+    }
+}
+
+@media (min-width: 577px) {
+    tr.d-sm-none {
+        display: none !important;
+    }
+
+    tr.d-sm-table-row {
+        display: table-row !important;
+    }
+}

@@ -7,15 +7,15 @@ return [
         'no' => 'No',
         'number' => 'Billing No.',
         'customer-name' => 'Name',
-        'periode' => 'Periode',
+        'periode' => 'Period',
         'address' => 'Address',
         'paket-name' => 'Paket',
         'activation' => 'Activation',
         'bill' => 'Bill',
-        'bill-state' => 'Billing Status',
+        'bill-state' => 'Bill Status',
         'paket-price' => 'Price',
         'action' => 'Action',
-        'payment-methode' => 'Payment Methode',
+        'payment-methode' => 'Payment Method',
         'duedate' => 'Due Date',
         'customer_id' => 'Cust ID'
 
@@ -27,7 +27,7 @@ return [
         'search-without-address' => 'Without Address',
         'search-year' => 'All Years',
         'search-teller' => 'All Tellers',
-        'search-payment-methode' => 'All Payment Methode',
+        'search-payment-methode' => 'All Payment Method',
         'search-account-bank' => 'All Bank',
         'search-admin' => 'All Admin',
         'select' => [
@@ -45,12 +45,12 @@ return [
         'edit' => 'Edit Billing',
         'show' => 'View Billing',
         'create-one' => 'Add New Billing',
-        'delete' => 'Delete Billing Periode',
+        'delete' => 'Delete Billing Period',
     ],
     'header' => [
         'index' => 'Billings List',
         'create' => 'Add New Billing',
-        'create-one' => 'Add Billing to Existing Periode',
+        'create-one' => 'Add Billing to Existing Period',
         'edit' => 'Edit Billing',
         'show' => 'Billing Detail',
         'paid-off' => 'Paid Off',
@@ -58,7 +58,7 @@ return [
         'delete' => 'Delete billing periode :billingperiode',
     ],
     'label' => [
-        'periode' => 'Periode:',
+        'periode' => 'Period:',
 
     ],
 
@@ -105,8 +105,8 @@ return [
         'press-button' => 'Press :button-delete button to delete billing periode :billingperiode and press :button-cancel to cancel this operation.',
     ],
     'state' => [
-        'belum-lunas' => 'Unpaid Of',
-        'lunas' => 'Paid Of',
+        'belum-lunas' => 'Unpaid',
+        'lunas' => 'Paid Off',
         'paylater' => 'Pay Later',
         'belum-lunas-lainnya' => 'and :count_bill_unpaid more bills unpaid',
         'tidak-ada-pemakaian' => 'Not Active Period',
