@@ -18,5 +18,7 @@ class MessageLog extends Model
         'customer_id',
         'message_type',
         'gateway_id',
+        'content',
+        'sent_at',
     ];
 }

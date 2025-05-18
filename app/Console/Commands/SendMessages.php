@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\SendPaymentReminderJob;
+use App\Services\BroadcastMessage\SendPaymentReminderService;
 use Illuminate\Console\Command;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Carbon;
@@ -48,7 +48,7 @@ class SendMessages extends Command
 
         try {
             // Validate if today is an allowed date
-            $allowedDates = [10, 15];
+            $allowedDates = [10, 15, 18];
             if (!in_array($dayOfMonth, $allowedDates)) {
                 $message = "Today ({$dayOfMonth}) is not an allowed date for sending reminders. Allowed dates: " . implode(', ', $allowedDates);
 
@@ -66,15 +66,16 @@ class SendMessages extends Command
                 return 0;
             }
 
+            // dispatch(new SendPaymentReminderJob())->onQueue('default');
+            app(SendPaymentReminderService::class)->sendReminders();
+
             // Dispatch the job with logging
             LogHelper::logInfo(
                 'SendMessagesCommand',
                 [],
                 200,
-                "Dispatching SendPaymentReminderJob to queue"
+                "Dispatching SendPaymentReminder to queue"
             );
-
-            dispatch(new SendPaymentReminderJob())->onQueue('default');
 
             // Log successful dispatch
             $dispatchTime = Carbon::now()->format('Y-m-d H:i:s');

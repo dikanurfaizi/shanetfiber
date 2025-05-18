@@ -1,42 +1,25 @@
 <?php
 
-namespace App\Jobs;
+namespace App\Services\BroadcastMessage;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Carbon;
+use Carbon\Carbon;
 use App\Models\WhatsappGateway\WhatsappGateway;
 use App\Models\Billing\Billing;
-use App\Services\WhatsappMessageService;
+use App\Models\MessageLog;
+use App\Jobs\SendWhatsappSingleJob;
 use App\Helpers\LogHelper;
+use App\Services\WhatsappMessageService;
 
-class SendPaymentReminderJob implements ShouldQueue
+class SendPaymentReminderService
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
-    private WhatsappMessageService $messageService;
-
-    public function __construct()
-    {
-        $this->messageService = app(WhatsappMessageService::class);
-    }
-
-    public function handle(): void
+    public function sendReminders(): void
     {
         $today = Carbon::today();
 
         $gateways = WhatsappGateway::where('disabled', false)->get();
 
         if ($gateways->isEmpty()) {
-            LogHelper::logWarning(
-                null,
-                null,
-                404,
-                "No active gateways found"
-            );
+            LogHelper::logWarning(null, null, 404, "No active gateways found");
             return;
         }
 
@@ -48,27 +31,59 @@ class SendPaymentReminderJob implements ShouldQueue
             ];
 
             foreach ($billings as $type => $billingList) {
-                $count = count($billingList);
+                $count = $billingList->count();
                 LogHelper::logInfo(null, [], 200, "Found {$count} billing(s) for type '{$type}' on gateway: {$gateway->name}");
 
                 $messageType = $this->getMessageType($type);
-                $this->dispatchMessages($billingList, $messageType, $gateway);
+                foreach ($billingList as $billing) {
+                    $this->checkSendMessage($billing, $messageType, $gateway);
+                }
             }
         }
     }
 
-    private function dispatchMessages($billings, $messageType, $gateway)
+    private function checkSendMessage($billing, $messageType, $gateway)
     {
-        foreach ($billings as $billing) {
-            SendWhatsappSingleJob::dispatch(
-                $billing->billing_id,
-                $messageType,
-                $gateway->id
-            );
+        $messageService = app(WhatsappMessageService::class);
+
+        // Skip jika sudah pernah dikirim hari ini
+        $alreadySent = MessageLog::where('customer_id', $billing->customer_id)
+            ->where('message_type', $messageType)
+            ->whereDate('created_at', Carbon::today())
+            ->exists();
+
+        if ($alreadySent) {
+            LogHelper::logWarning(null, [
+                'customer_name' => $billing->customer_name,
+                'message_type'  => $messageType,
+            ], 409, "Skipping redundant message for {$billing->customer_name} with type {$messageType}.");
+            return;
+        }
+
+        $message = $messageService->bill_info($billing, $messageType);
+
+        if ($message) {
+            try {
+                SendWhatsappSingleJob::dispatch(
+                    $billing->billing_id,
+                    $messageType,
+                    $gateway->id,
+                    $billing->customer->contact,
+                    $message
+                );
+            } catch (\Exception $e) {
+                LogHelper::logError(null, [
+                    'billing_id'     => $billing->id ?? null,
+                    'customer_id'    => $billing->customer_id ?? null,
+                    'customer_name'  => $billing->customer_name ?? null,
+                    'message_type'   => $messageType,
+                    'error_message'  => $e->getMessage(),
+                ], 500, "Exception while sending WhatsApp message.");
+            }
         }
     }
 
-    private function getMessageType($billingType)
+    private function getMessageType(string $billingType): string
     {
         return match ($billingType) {
             'past_due' => 'warning_bill',
