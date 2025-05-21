@@ -115,6 +115,64 @@
             };
         });
     </script>
+    <script>
+        $(document).ready(function() {
+            // Ketika tombol bayar diklik
+            $(document).on('click', '.billing-submit-btn', function() {
+                const $row = $(this).closest('tr'); // atau '.billing-row'
+                const $select = $row.find('.billing-method-select');
+                const paymentMethod = $select.val();
+
+                if (!paymentMethod) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Metode belum dipilih',
+                        text: 'Pilih metode pembayaran dulu!',
+                    });
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Konfirmasi Pembayaran?',
+                    text: 'Metode pembayaran: ' + paymentMethod.toUpperCase(),
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, bayar',
+                    confirmButtonColor: '#28a745',
+                    cancelButtonColor: '#d33',
+                }).then((result) => {
+                    if (!result.isConfirmed) return;
+
+                    const slug = $(this).data('slug'); // Masih boleh pakai slug statis
+                    const token = $('meta[name="csrf-token"]').attr('content');
+
+                    const form = $('<form>', {
+                        method: 'POST',
+                        action: '/cpanel/billings/' + slug + '/payment/',
+                    });
+
+                    form.append($('<input>', {
+                        type: 'hidden',
+                        name: '_token',
+                        value: token
+                    }));
+                    form.append($('<input>', {
+                        type: 'hidden',
+                        name: '_method',
+                        value: 'PATCH'
+                    }));
+                    form.append($('<input>', {
+                        type: 'hidden',
+                        name: 'payment_methode',
+                        value: paymentMethod
+                    }));
+
+                    $('body').append(form);
+                    form.submit();
+                });
+            });
+        });
+    </script>
     @if ($message = Session::get('success'))
         <script>
             Swal.fire({

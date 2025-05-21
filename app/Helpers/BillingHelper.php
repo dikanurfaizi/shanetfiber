@@ -54,45 +54,20 @@ class BillingHelper
 
     public static function getBillingPaymentSection($billing, $bank)
     {
-        // Jika status NP (Tidak ada pemakaian)
+        // Jika status NP
         if ($billing->status === 'NP') {
             return '<span class="badge bg-primary text-white">
             <i class="fas fa-times-circle"></i> ' .
                 __('billing.state.confirm-on') . ' ' .
-                Carbon::parse($billing->updated_at)->format('F d, Y') .
+                \Carbon\Carbon::parse($billing->updated_at)->format('F d, Y') .
                 '</span>';
-        }
-
-        // Jika belum lunas dan ada harga paket
-        if ($billing->status !== 'LS') {
-            $formId = 'form-pay-' . $billing->slug;
-            $action = route('billings.payment', $billing->slug);
-
-            $html = '<form method="POST" action="' . $action . '" id="' . $formId . '" style="display:inline-block;">';
-            $html .= csrf_field();
-            $html .= method_field('PATCH');
-
-            $html .= '<select name="payment_method" class="form-control form-control-sm" style="min-width: 180px; width: max-content;">';
-            $html .= '<option value="cash">Cash</option>';
-
-            if (!empty($bank) && count($bank)) {
-                $html .= '<option value="transfer">Transfer</option>';
-            }
-
-            $html .= '<option value="paylater">Pay Later</option>';
-            $html .= '<option value="not-active-periode">Not Active Period</option>';
-            $html .= '</select>';
-
-            $html .= '</form>';
-
-            return $html;
         }
 
         // Jika sudah lunas
         if ($billing->status === 'LS') {
             $paymentMethod = $billing->receipt->payment_method ?? '';
             $paymentTime = $billing->payment_time
-                ? Carbon::parse($billing->payment_time)->format('F d, Y')
+                ? \Carbon\Carbon::parse($billing->payment_time)->format('F d, Y')
                 : '';
 
             return '<span class="badge bg-success text-white">
@@ -101,7 +76,22 @@ class BillingHelper
                 '</span>';
         }
 
-        return '';
+        $html = '<select name="payment_method"
+                class="form-control form-control-sm billing-method-select"
+                data-slug="' . $billing->slug . '"
+                style="min-width: 180px; width: max-content;">';
+
+        $html .= '<option value="cash">Cash</option>';
+
+        if (!empty($bank) && count($bank)) {
+            $html .= '<option value="transfer">Transfer</option>';
+        }
+
+        $html .= '<option value="paylater">Pay Later</option>';
+        $html .= '<option value="not-active-periode">Not Active Period</option>';
+        $html .= '</select>';
+
+        return $html;
     }
 
     public static function getBillingActionButton($billing)
@@ -125,11 +115,11 @@ class BillingHelper
         if ($billing->status !== 'LS') {
             // Jika customer sudah aktif
             if ($billing->customer->activation === 'true') {
-                return '<a class="btn btn-success btn-sm"
-                onclick="document.getElementById(\'form-pay-' . $billing->slug . '\').submit();">
-                <i class="fas fa-money-bill-wave text-white"></i> ' .
-                    __('billing.button.pay') .
-                    '</a>';
+                return '<button type="button"
+                    class="btn btn-success btn-sm mt-1 billing-submit-btn"
+                    data-slug="' . $billing->slug . '">
+                    <i class="fas fa-money-bill-wave text-white"></i> ' . __('billing.button.pay') . '
+                </button>';
             } else {
                 $action = route('customers.activation', $billing->customer->slug);
 

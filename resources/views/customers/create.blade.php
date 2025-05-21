@@ -441,38 +441,24 @@
         const memberDropdown = document.getElementById('member-dropdown');
         const members = memberDropdown.options;
 
-        let bestValidIndex = -1;
-        let maxValidDiscount = 0;
+        const discountField = document.getElementById('discount');
+        const discountNominalField = document.getElementById('discount_nominal');
 
-        for (let i = 0; i < members.length; i++) {
-            const memberDiscount = parseFloat(members[i].getAttribute('data-discount')) || 0;
-            if (members[i].value === "non-member") {
-                members[i].disabled = false;
-                continue;
-            }
-            if (memberDiscount > paketPrice) {
-                members[i].disabled = true;
-            } else {
-                members[i].disabled = false;
-                if (memberDiscount > maxValidDiscount) {
-                    maxValidDiscount = memberDiscount;
-                    bestValidIndex = i;
-                }
-            }
+        // Selalu pastikan non-member (index 0) enabled
+        members[0].disabled = false;
+
+        for (let i = 1; i < members.length; i++) {
+            const discount = +members[i].getAttribute('data-discount') || 0;
+            members[i].disabled = discount > paketPrice;
         }
 
-        if (paketPrice === 0) {
-            memberDropdown.selectedIndex = 0;
-            document.getElementById('discount_nominal').value = 0;
-            document.getElementById('discount_nominal').readOnly = true;
-            document.getElementById('discount').value = 0;
-        } else {
-            if (bestValidIndex !== -1) {
-                memberDropdown.selectedIndex = bestValidIndex;
-            } else {
-                memberDropdown.selectedIndex = 0;
-            }
-        }
+        // Reset ke non-member tapi tidak mengganti selectedIndex jika user sudah pilih
+        // Jadi, kita **tidak** mengubah memberDropdown.selectedIndex di sini
+
+        // Reset input diskon
+        discountNominalField.value = 0;
+        discountNominalField.readOnly = true;
+        discountField.value = 0;
 
         toggleDiscountField();
         calculateDiscount();
