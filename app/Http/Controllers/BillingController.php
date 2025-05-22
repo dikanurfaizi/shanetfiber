@@ -425,8 +425,8 @@ class BillingController extends Controller
 
     public function post_paylater(Request $request, Billing $billing)
     {
-        $this->validate($request, [
-            'pay_later' => 'required',
+        $request->validate([
+            'pay_later' => ['required', 'date', 'after_or_equal:' . now()->format('Y-m-d')],
         ]);
         $paylaterDate = Carbon::parse($request->pay_later)->format('d');
         $paylaterMonth = Carbon::parse($request->pay_later)->format('m_Y');

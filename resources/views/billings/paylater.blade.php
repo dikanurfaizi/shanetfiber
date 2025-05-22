@@ -83,7 +83,8 @@
                 <strong>{{ __('billing.pay-later') }}</strong>
                 <span>
                     <input type="datetime-local" class="form-control" name="pay_later"
-                        value="{{ Carbon\Carbon::parse($billing->pay_later)->format('Y-m-d\TH:i') }}">
+                        value="{{ Carbon\Carbon::parse($billing->pay_later)->format('Y-m-d\TH:i') }}"
+                        min="{{ now()->format('Y-m-d') }}T00:00">
                 </span>
                 @if ($errors->has('pay_later'))
                     <span class="text-danger">{{ $errors->first('pay_later') }}</span>
