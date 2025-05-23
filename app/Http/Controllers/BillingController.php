@@ -122,20 +122,39 @@ class BillingController extends Controller
             })
             ->when($searchPeriode, fn($query) => $query->whereHas('billing_periode', fn($q) => $q->where('name', 'like', "%{$searchPeriode}%")))
             ->when(!is_null($searchStatus), function ($query) use ($searchStatus, $searchDuedate) {
-                if ($searchStatus === '!LS') {
-                    // Hanya exclude LS, tapi tetap tampilkan NP
-                    $query->where('status', '!=', 'LS');
+                // Log::info('[Billing Index] search_status (raw): ' . $searchStatus);
+
+                $statuses = explode('-', $searchStatus);
+                // Log::info('[Billing Index] Parsed statuses: ' . json_encode($statuses));
+
+                // Ambil status yang dimulai dengan tanda "!" (artinya dikecualikan)
+                $excludes = array_filter($statuses, fn($s) => str_starts_with($s, '!'));
+                // Log::info('[Billing Index] Raw excludes: ' . json_encode($excludes));
+
+                if (count($excludes) > 0) {
+                    $excludeValues = array_map(fn($s) => ltrim($s, '!'), $excludes);
+                    // Log::info('[Billing Index] → Masuk ke if(count($excludes) > 0)');
+                    // Log::info('[Billing Index] Cleaned excludes (tanpa !): ' . json_encode($excludeValues));
+
+                    $query->whereNotIn('status', $excludeValues);
 
                     if ($searchDuedate) {
+                        // Log::info('[Billing Index] Filter by due_date (karena searchDuedate ada)');
                         $query->where('due_date', 'like', "%{$searchDuedate}%");
                     }
-                } else {
-                    $query->where('status', $searchStatus);
+                } elseif (count($statuses) === 1) {
+                    // Log::info('[Billing Index] → Masuk ke elseif(count($statuses) === 1)');
+                    // Log::info('[Billing Index] Mencari status langsung: ' . $statuses[0]);
+
+                    $query->where('status', $statuses[0]);
 
                     if ($searchDuedate) {
-                        $field = $searchStatus === 'LS' ? 'payment_time' : 'pay_later';
+                        $field = $statuses[0] === 'LS' ? 'payment_time' : 'pay_later';
+                        // Log::info("[Billing Index] Filter by field: {$field}, value: {$searchDuedate}");
                         $query->where($field, 'like', "%{$searchDuedate}%");
                     }
+                } else {
+                    Log::info('[Billing Index] → Tidak masuk ke if/elseif, mungkin status kosong atau tidak sesuai format.');
                 }
             })
             ->when($searchUserId, function ($query) use ($searchUserId) {

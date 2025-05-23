@@ -28,7 +28,7 @@
     <ul class="navbar-nav ml-auto">
         <!-- Link Billings (Hanya tampil di layar besar) -->
         <li class="nav-item d-none d-md-block">
-            <a class="nav-link" href="{{ route('billings.index', 'search_status=!LS') }}">
+            <a class="nav-link" href="{{ route('billings.index', ['search_status' => '!LS-!NP']) }}">
                 <span class="badge text-white {{ $billingsToShow->count() > 0 ? 'bg-danger' : 'bg-success' }}">
                     {{ $billingsToShow->count() > 0 ? "You have {$billingsToShow->count()} bill in all period" : 'No outstanding bills at this time.' }}
                 </span>
