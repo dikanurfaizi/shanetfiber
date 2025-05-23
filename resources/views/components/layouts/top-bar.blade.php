@@ -2,10 +2,12 @@
     $user = auth()->user();
 
     if ($user->can('view-bill-top-bar-total')) {
-        $billingsToShow = $billings->where('status', '!=', 'LS');
+        $billingsToShow = $billings->filter(function ($billing) {
+            return !in_array($billing->status, ['LS', 'NP']);
+        });
     } else {
         $billingsToShow = $billings->filter(function ($billing) use ($user) {
-            return $billing->customer->user_id == $user->id && $billing->status != 'LS';
+            return $billing->customer->user_id == $user->id && !in_array($billing->status, ['LS', 'NP']);
         });
     }
 @endphp
