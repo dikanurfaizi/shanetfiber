@@ -2,20 +2,12 @@
 
 namespace App\Console\Commands;
 
-use Exception;
-use App\Models\Customer;
-use App\Models\Mikrotik;
-use App\Models\AutoIsolir;
-use Illuminate\Support\Str;
-use App\Jobs\CreateBillingJob;
-use Illuminate\Support\Carbon;
-use App\Models\Billing\Billing;
-use Illuminate\Console\Command;
-use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\Log;
+use App\Models\Websystem;
 use App\Models\Billing\BillingPeriode;
-use Illuminate\Support\Facades\Redirect;
-use App\Http\Controllers\BillingController;
+use App\Helpers\LogHelper;
+use Illuminate\Console\Command;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class CreateBillingCron extends Command
 {
@@ -31,84 +23,73 @@ class CreateBillingCron extends Command
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Automatically create billing if conditions are met';
 
     /**
      * Execute the console command.
      */
     public function handle()
     {
-        //
-        // $this->call([BillingController::class, 'store']);
-        //return \App::call([BillingController::class, 'store']);
-        //  app('App\Http\Controllers\BillingController')->store();
-        // return \Redirect::route('billings.store');
-        //$result = app('App\Http\Controllers\BillingController')->store();
-        //$result = (new BillingController::class)->store();
+        $traceId = (string) Str::uuid();
 
-        $periode = Carbon::now()->format('F Y');
-        $billingPeriode = BillingPeriode::create([
-            'name' => $periode,
-        ]);
-        $routersEnable = Mikrotik::where('disabled', 'false')->get();
-        foreach ($routersEnable as $routerEnable) {
-            $customers = Customer::where('disabled', 'false')->where('activation', 'true')->where('mikrotik_id', $routerEnable->id)->get();
-            $monthYear = date_parse($periode);
-            $month = $monthYear['month'];
-            $year = $monthYear['year'];
-            $billing = Billing::select('customer_id')->where('month', $month)
-                ->where('year', $year)
-                ->get();
+        $startTime = microtime(true);
+        $currentDateTime = Carbon::now()->setTimezone('Asia/Jakarta');
+        $formattedDate = $currentDateTime->format('Y-m-d H:i:s');
+        $this->info("Starting create billing periode at {$formattedDate}");
+        try {
+            $periodeNow = Carbon::now()->format('F Y');
+            $billingPeriodeName = BillingPeriode::latest('created_at')->value('name');
 
-            $customersUnbilling = $customers->diff(
-                Customer::whereIn('id', $billing)
-                    ->get()
-            );
-
-            //
-            foreach ($customersUnbilling as $customer) {
-                $customerActivation = date_parse($customer->activation_date);
-
-                $customerActivationDate = $customerActivation['day'];
-
-                if ($customerActivationDate >= 29) {
-                    $customerActivationDate = 28;
-                }
-                $secretId = $customer->secret_id;
-                $mikrotikId = $customer->mikrotik_id;
-                $router = Mikrotik::where('id', $mikrotikId)->first();
-                $autoIsolir = AutoIsolir::where('mikrotik_id', $mikrotikId)->first();
-                if ($autoIsolir != NULL) {
-                    if ($autoIsolir->disabled == 'false') {
-
-                        if ($autoIsolir->activation_date == 'false') {
-                            $comment = $autoIsolir->comment_unpayment;
-                            try {
-                                dispatch(new CreateBillingJob($router, $comment, $secretId))->onQueue('default');
-                            } catch (\Exception $e) {
-                                $billingPeriode->delete();
-                                return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' offline, please check your router.']);
-                            }
-                        }
-                    }
-                }
-                //
-                Billing::create([
-                    'slug' => str($customer->id . '-' . Str::random(4))->slug(),
-                    'month' => $month,
-                    'year' => $year,
-                    'billing_periode_id' => $billingPeriode->id,
-                    'billing_number' => str($customer->id . '-' . Str::random(4)  . '-' . $month . '-' . $year)->slug(),
-                    'customer_id' => $customer->id,
-                    'customer_name' => $customer->name,
-                    'paket_name' => $customer->paket->name,
-                    'paket_price' => $customer->paket->price,
-                    'created_name' => 'System',
-                    'status' => 'BL'
-                ]);
+            // Cek apakah billing periode bulan ini sudah ada
+            if ($periodeNow == $billingPeriodeName) {
+                LogHelper::logInfo(null, [
+                    "periode-now" => $periodeNow,
+                    "last-periode" => $billingPeriodeName
+                ], 202, "Billing Periode '{$periodeNow}' sudah tersedia. Proses dihentikan.", $traceId);
+                return;
             }
-        }
 
-        Log::info("Cron is working fine!");
+            // Ambil konfigurasi dari Websystem
+            $websystem = Websystem::first();
+            if (!$websystem) {
+                LogHelper::logError(null, [], 500, "Konfigurasi Websystem tidak ditemukan");
+                return;
+            }
+            $billingAutoGenerate = $websystem?->billing_auto_generate;
+            $billingAutoDay = $websystem?->billing_auto_day;
+
+            // Jika tidak aktif, log dan berhenti
+            if (!$billingAutoGenerate) {
+                LogHelper::logInfo(null, [], 202, "Auto generate billing tidak aktif di konfigurasi", $traceId);
+                return;
+            }
+
+            // Cek apakah hari ini sama dengan billing_auto_day
+            if ((int) now()->day !== (int) $billingAutoDay) {
+                LogHelper::logInfo(null, [], 202, "Hari ini (" . now()->day . ") bukan tanggal yang dijadwalkan (" . $billingAutoDay . ")", $traceId);
+                return;
+            }
+
+            // Jalankan controller langsung
+            LogHelper::logInfo(null, [], 200, "Mulai eksekusi auto generate billing untuk periode '{$periodeNow}'", $traceId);
+
+            // Jalankan controller dengan request palsu
+            request()->merge(['name' => $periodeNow]);
+            app()->call('App\Http\Controllers\BillingController@store', [
+                'request' => request()
+            ]);
+            LogHelper::logInfo(null, [], 200, "Auto billing untuk periode '{$periodeNow}' berhasil dijalankan.", $traceId);
+
+            $dispatchTime = Carbon::now()->format('Y-m-d H:i:s');
+
+            $this->info("Successfully create billing periode at {$dispatchTime}");
+        } catch (\Throwable $e) {
+            LogHelper::logError(null, ["error" => $e->getMessage()], 400, "Gagal membuat billing otomatis", $traceId);
+            $dispatchTime = Carbon::now()->format('Y-m-d H:i:s');
+
+            $this->info("Failed create billing periode at {$dispatchTime}");
+        }
+        $executionTime = round(microtime(true) - $startTime, 2);
+        $this->info("Total execution time: {$executionTime} seconds");
     }
 }

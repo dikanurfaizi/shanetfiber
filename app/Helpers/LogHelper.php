@@ -6,22 +6,22 @@ use Illuminate\Support\Facades\Log;
 
 class LogHelper
 {
-    public static function logInfo($uri, $body, $statusCode, $description)
+    public static function logInfo($uri, $body, $statusCode, $description, $traceId = null)
     {
-        Log::info(self::formatLog($uri, $body, $statusCode, $description));
+        Log::info(self::formatLog($uri, $body, $statusCode, $description, $traceId));
     }
 
-    public static function logWarning($uri, $body, $statusCode, $description)
+    public static function logWarning($uri, $body, $statusCode, $description, $traceId = null)
     {
-        Log::warning(self::formatLog($uri, $body, $statusCode, $description));
+        Log::warning(self::formatLog($uri, $body, $statusCode, $description, $traceId));
     }
 
-    public static function logError($uri, $body, $statusCode, $description)
+    public static function logError($uri, $body, $statusCode, $description, $traceId = null)
     {
-        Log::error(self::formatLog($uri, $body, $statusCode, $description));
+        Log::error(self::formatLog($uri, $body, $statusCode, $description, $traceId));
     }
 
-    private static function formatLog($uri, $body, $statusCode, $description)
+    private static function formatLog($uri, $body, $statusCode, $description, $traceId)
     {
         $caller = self::getCaller();
 
@@ -29,8 +29,9 @@ class LogHelper
         $body = $body !== null ? json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : 'null';
         $statusCode = $statusCode ?? 'null';
         $description = $description ?? 'null';
+        $traceId = $traceId ?? 'no-trace-id';
 
-        return "$caller | $uri | $body | $statusCode | $description";
+        return "$caller | $traceId | $uri | $body | $statusCode | $description";
     }
 
     private static function getCaller()

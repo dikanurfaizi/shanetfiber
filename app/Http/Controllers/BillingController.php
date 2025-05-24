@@ -74,6 +74,8 @@ class BillingController extends Controller
      */
     public function index(Request $request)
     {
+        $traceId = (string) Str::uuid();
+
         $paginate = 25;
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
@@ -231,6 +233,7 @@ class BillingController extends Controller
 
     public function create()
     {
+        $traceId = (string) Str::uuid();
         $billingPeriodeName = BillingPeriode::latest('created_at')->value('name');
         $periodeNow = Carbon::now()->format('F Y');
         if ($periodeNow == $billingPeriodeName) {
@@ -240,14 +243,19 @@ class BillingController extends Controller
         }
         $data = BillingPeriode::paginate(12);
 
+        $websystem = Websystem::first();
+        $billingAutoGenerate = $websystem?->billing_auto_generate ?? false;
+        $billingAutoDay = $websystem?->billing_auto_day;
+
         //dd($billingPeriodes, $data);
 
-        return view('billings.create', compact('data', 'billingPeriodes'))
+        return view('billings.create', compact('data', 'billingPeriodes', 'billingAutoGenerate', 'billingAutoDay'))
             ->with('i', (request()->input('page', 1) - 1) * 12);
     }
 
     public function create_one()
     {
+        $traceId = (string) Str::uuid();
         $periodes = BillingPeriode::latest()->get();
         return view('billings.create_one', compact('periodes'));
     }
@@ -257,44 +265,58 @@ class BillingController extends Controller
      */
     public function store(Request $request)
     {
+        $traceId = (string) Str::uuid();
         try {
             $periode = $request->name ?? Carbon::now()->format('F Y');
             $billingPeriode = $this->createBillingPeriode($periode);
             $totalBillingCreated = $this->processRouters($billingPeriode);
-            $this->logBillingCompletion($totalBillingCreated);
+            LogHelper::logInfo(
+                null,
+                ['total_billing_created' => $totalBillingCreated],
+                200,
+                "Billing have been successfully created.",
+                $traceId
+            );
             $message = "{$totalBillingCreated} Billing for {$periode} have been successfully created.";
             return redirect()->route('billings.index')
                 ->with('success', $message);
         } catch (QueryException $e) {
             $message = "Database error: {$e->getMessage()}";
-            LogHelper::logInfo(null, null, 500, $message);
+            LogHelper::logInfo(null, null, 500, $message, $traceId);
             return redirect()->route('billings.index')->with('error', 'Terjadi Kesalahan Pada Proses Store Data.');
         } catch (Exception $e) {
             $message = "Something went wrong: {$e->getMessage()}";
-            LogHelper::logInfo(null, null, 500, $message);
+            LogHelper::logInfo(null, null, 500, $message, $traceId);
             return redirect()->route('billings.index')->with('error', 'Terjadi Kesalahan, Silakan Periksa Kembali Inputan Atau Hubungi Tim IT.');
         }
     }
 
     public function store_one(BillingStoreRequest $request)
     {
+        $traceId = (string) Str::uuid();
         try {
             $billingPeriode = BillingPeriode::where('id', $request->name)->first();
             if (!$billingPeriode) {
                 throw new Exception('Billing period not found');
             }
             $totalBillingCreated = $this->processRouters($billingPeriode);
-            $this->logBillingCompletion($totalBillingCreated);
+            LogHelper::logInfo(
+                null,
+                ['total_billing_created' => $totalBillingCreated],
+                200,
+                "Billing have been successfully created.",
+                $traceId
+            );
             $message = "{$totalBillingCreated} Billing for {$billingPeriode->name} have been successfully created.";
             return redirect()->route('billings.index')
                 ->with('success', $message);
         } catch (QueryException $e) {
             $message = "Database error: {$e->getMessage()}";
-            LogHelper::logInfo(null, null, 500, $message);
+            LogHelper::logInfo(null, null, 500, $message, $traceId);
             return redirect()->route('billings.index')->with('error', 'Terjadi Kesalahan Pada Proses Store Data.');
         } catch (Exception $e) {
             $message = "Something went wrong: {$e->getMessage()}";
-            LogHelper::logInfo(null, null, 500, $message);
+            LogHelper::logInfo(null, null, 500, $message, $traceId);
             return redirect()->route('billings.index')->with('error', 'Terjadi Kesalahan, Silakan Periksa Kembali Inputan Atau Hubungi Tim IT.');
         }
     }
@@ -404,16 +426,6 @@ class BillingController extends Controller
         }
     }
 
-    private function logBillingCompletion($totalBillingCreated)
-    {
-        LogHelper::logInfo(
-            null,
-            ['total_billing_created' => $totalBillingCreated],
-            200,
-            "Billing have been successfully created."
-        );
-    }
-
     /**
      * Display the specified resource.
      */
@@ -444,6 +456,7 @@ class BillingController extends Controller
 
     public function post_paylater(Request $request, Billing $billing)
     {
+        $traceId = (string) Str::uuid();
         $request->validate([
             'pay_later' => ['required', 'date', 'after_or_equal:' . now()->format('Y-m-d')],
         ]);
@@ -526,14 +539,14 @@ class BillingController extends Controller
                 $this->messageService->payment_paket($billing, null, 'paylater');
             } else {
                 if ($gatewayStatus) {
-                    Log::warning("Whatsapp Gateway is disabled.");
+                    LogHelper::logWarning(null, [], 202, "Whatsapp Gateway is disabled", $traceId);
                 } elseif (!$customer->contact) {
-                    Log::warning("Customer contact not found.");
+                    LogHelper::logWarning(null, [], "Customer contact not found", $traceId);
                 }
             }
         } catch (\Exception $e) {
             // Tangani error atau exception
-            Log::error("Error occurred while processing payment package: " . $e->getMessage());
+            LogHelper::logError(null, ["error" => $e->getMessage()], "Error occured while processing payment package", $traceId);
             // Opsional: Menampilkan pesan error ke pengguna
             return response()->json(['error' => 'There was an issue processing the payment package. Please try again later.']);
         }
@@ -555,6 +568,7 @@ class BillingController extends Controller
 
     public function payment(Request $request, Billing $billing)
     {
+        $traceId = (string) Str::uuid();
         $paymentMethode = $request->payment_methode;
         if ($paymentMethode == 'transfer') {
             return redirect()->route('billings.transfer', $billing->slug);
@@ -752,6 +766,7 @@ class BillingController extends Controller
 
     public function unpayment(Billing $billing)
     {
+        $traceId = (string) Str::uuid();
         $day = Carbon::now()->format('d');
         $customer = Customer::where('id', $billing->customer_id)->first();
         $mikrotikId = $customer->mikrotik_id;
@@ -827,10 +842,10 @@ class BillingController extends Controller
             }
 
             // Optional: Log jumlah order yang diupdate
-            LogHelper::logInfo(null, ['order_count' => $orders->count(), 'billing_id' => $billing->id], 200, "Canceled orders");
+            LogHelper::logInfo(null, ['order_count' => $orders->count(), 'billing_id' => $billing->id], 200, "Canceled orders", $traceId);
         } else {
             // Handle case ketika tidak ada order
-            LogHelper::logWarning(null, ['billing_id' => $billing->id], 404, "No orders found");
+            LogHelper::logWarning(null, ['billing_id' => $billing->id], 404, "No orders found", $traceId);
 
             // Jika perlu return response error:
             // return response()->json(['error' => 'No orders found'], 404);
@@ -852,5 +867,24 @@ class BillingController extends Controller
     {
         $billingperiode->delete();
         return redirect()->route('billings.create')->with('success', 'Periode billing deleted successfully.');
+    }
+
+    public function billing_auto_generate(Request $request)
+    {
+        $request->validate([
+            'billing_auto_day' => 'nullable|integer|min:1|max:28',
+            'billing_auto_generate' => 'nullable|boolean',
+        ]);
+
+        $websystem = Websystem::first();
+
+        // Jika input tidak ada, dianggap 0 (false)
+        $billingAutoGenerate = $request->input('billing_auto_generate', 0);
+
+        $websystem->billing_auto_generate = (bool) $billingAutoGenerate;
+        $websystem->billing_auto_day = $request->input('billing_auto_day');
+        $websystem->save();
+
+        return redirect()->back()->with('success', 'Automatic billing configuration has been set');
     }
 }

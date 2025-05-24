@@ -170,6 +170,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('billings/{billing:slug}/transfer', [BillingController::class, 'transfer'])->name('billings.transfer');
         Route::patch('billings/{billing:slug}/post_paylater', [BillingController::class, 'post_paylater'])->name('billings.postPaylater');
         Route::patch('billings/{billing:slug}/unpayment', [BillingController::class, 'unpayment'])->name('billings.unpayment');
+        Route::post('billings/auto-generate', [BillingController::class, 'billing_auto_generate'])->name('billings.auto-generate');
         Route::get('/server/{mikrotik:slug}/time', [SystemController::class, 'getTimeRouter'])->name('mikrotik.time');
         Route::get('/server/{mikrotik:slug}/ppp/secret/get-all-ppp-secrets', [SecretController::class, 'getCountPppSecrets'])->name('get.ppp.secrets');
         Route::get('/server/{mikrotik:slug}/ppp/secret/get-all-ppp-secrets-active', [SecretController::class, 'getCountPppSecretsActive'])->name('get.ppp.active');

@@ -59,7 +59,10 @@ return [
     ],
     'label' => [
         'periode' => 'Period:',
-
+        'automatic' => 'Automatic Billing?',
+        'enable-automatic' => 'Enable Automatic Billing',
+        'select-billing-date' => 'Select Billing Date (1–28)',
+        'select-date' => 'Select Date',
     ],
 
     'button' => [
