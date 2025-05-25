@@ -18,5 +18,8 @@ file_put_contents($logFile, "  ============================ $timestamp =========
 // Jalankan Laravel command create_billing:cron
 exec("php {$basePath}/artisan create_billing:cron >> {$logFile} 2>&1");
 
+// Jalankan Laravel command billing:update-paylater-secret
+exec("php {$basePath}/artisan billing:update-paylater-secret >> {$logFile} 2>&1");
+
 // Tambahkan baris kosong sebagai pemisah
 file_put_contents($logFile, "\n", FILE_APPEND);

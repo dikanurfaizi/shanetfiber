@@ -25,11 +25,11 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        $schedule->call(function () {
-            Log::info('Laravel scheduler tick at ' . now());
-        })->everyMinute();
+        // $schedule->call(function () {
+        //     Log::info('Laravel scheduler tick at ' . now());
+        // })->everyMinute();
 
-        $schedule->command('test:scheduler')->everyMinute();
+        // $schedule->command('test:scheduler')->everyMinute();
     }
 
     /**
