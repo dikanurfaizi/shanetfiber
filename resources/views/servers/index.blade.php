@@ -4,6 +4,9 @@
         @can('server-create')
             <span><a class="btn btn-sm btn-success mt-2" href="{{ route('servers.create') }}"><i class="fa fa-plus"></i> Add
                     Server</a></span>
+            <span><a class="btn btn-sm btn-primary mt-2" href="{{ route('servers.preview') }}"><i
+                        class="fa fa-file-import"></i>
+                    Import Customer Data to Mikrotik</a></span>
         @endcan
     </div>
 

@@ -187,6 +187,9 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('settings/users{user:id}/delete', [UserController::class, 'delete'])->name('users.delete');
         Route::put('settings/users/{user:id}/disabled/true', [UserController::class, 'disable'])->name('user.disable');
         Route::put('settings/users/{user:id}/disabled/false', [UserController::class, 'enable'])->name('user.enable');
+        Route::get('settings/servers/preview', [ServerController::class, 'preview'])->name('servers.preview');
+        Route::get('settings/servers/mikrotik/{mikrotik:slug}/preview', [ServerController::class, 'showDataCustomer'])->name('servers.preview.data');
+        Route::post('settings/servers/import/{mikrotik:slug}', [ServerController::class, 'importCustomer'])->name('servers.import.customer');
         Route::resource('settings/servers', ServerController::class);
         Route::resource('settings/routers', RouterController::class);
         Route::get('settings/routers/{router:id}/delete', [RouterController::class, 'delete'])->name('router.delete');

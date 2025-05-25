@@ -10,14 +10,14 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Http\RedirectResponse;
 use App\Http\Requests\ServerStoreRequest;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Carbon;
 use App\Http\Requests\ServerUpdateRequest;
 use App\Models\AutoIsolir;
 use App\Models\Customer;
 use App\Models\Paket;
 use App\Services\Routerboard\SystemService;
-
-
+use App\Helpers\LogHelper;
+use App\Jobs\MigrateCustomerToRouter;
 
 class ServerController extends Controller
 {
@@ -217,5 +217,56 @@ class ServerController extends Controller
             'disabled' => 'false'
         ]);
         return redirect()->back()->with('success', 'Enable server successfully');
+    }
+
+    public function preview()
+    {
+        $servers = Mikrotik::all();
+        // dd($mikrotiks);
+        return view('servers.preview', compact('servers'));
+    }
+
+    public function showDataCustomer(Mikrotik $mikrotik)
+    {
+        $customers = $this->getCustomerDataFromMikrotik($mikrotik);
+        $servers = Mikrotik::all();
+
+        if (request()->ajax()) {
+            return response()->json([
+                'total' => $customers->total(),
+                'serverName' => $mikrotik->name,
+            ]);
+        }
+
+        return view('servers.preview', [
+            'servers' => $servers,
+            'selectedMikrotik' => $mikrotik,
+            'customers' => $customers,
+        ]);
+    }
+
+    private function getCustomerDataFromMikrotik(Mikrotik $mikrotik)
+    {
+        return Customer::where('mikrotik_id', $mikrotik->id)
+            ->where('disabled', 'false')
+            ->orderBy('name')
+            ->paginate(50);
+    }
+
+    public function importCustomer(Mikrotik $mikrotik)
+    {
+        $traceId = (string) Str::uuid();
+        $message = 'Import secret from database';
+
+        try {
+            LogHelper::logInfo(null, [], 200, $message . " started with mikrotik id: " . $mikrotik->id, $traceId);
+            dispatch(new MigrateCustomerToRouter($mikrotik, $mikrotik))->onQueue('default');
+            LogHelper::logInfo(null, [], 200, $message . " finish with mikrotik id: " . $mikrotik->id, $traceId);
+
+            return response()->json(['message' => 'Import customer successfully started']);
+        } catch (\Throwable $e) {
+            LogHelper::logError(null, ["error" => $e->getMessage()], 400, "Failed " . $message, $traceId);
+            return response()->json(['message' => 'An error occurred while starting the import'], 500);
+        }
     }
 }
