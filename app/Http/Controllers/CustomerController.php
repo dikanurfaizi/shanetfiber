@@ -356,7 +356,8 @@ class CustomerController extends Controller
         $billingPeriode = NULL;
 
         $firstName = explode(' ', $request->name)[0];
-        $username = $this->generateUsername($firstName, $request->address, $year, $month);
+        $creds = $this->generateCredential($firstName);
+        $username = $creds['username'];
         $billing_option = $request->billing_option ? $request->billing_option : '0';
         if ($billing_option !== '0' || $billing_option !== '1') {
             $billingPeriode = $periodeName;
@@ -398,7 +399,7 @@ class CustomerController extends Controller
         // dd($customerData);
 
         if ($request->internet_service === 'ppp') {
-            $customerData['password_ppp'] = str(Str::random(6));
+            $customerData['password_ppp'] = $creds['password'];
             $customerData['ppp_type_id'] = $request->ppp_type_id;
         } elseif ($request->internet_service === 'ip_static') {
             $customerData['simpleque_name'] = $username;
@@ -420,13 +421,26 @@ class CustomerController extends Controller
             ->with('success', 'Customer added successfully. Please activate first to create user ppp on server ' . $routerName . '!');
     }
 
-    private function generateUsername(string $firstName, ?string $address, string $year, string $month): string
+    private function generateCredential(string $name): array
     {
-        if ($address) {
-            $addressSlug = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '-', $address));
-            return str($firstName . '-' . $addressSlug . '-' . Str::random(4))->slug();
-        }
-        return str($firstName . '-' . $year . '-' . $month . '-' . Str::random(4))->slug();
+        $today = Carbon::today();
+
+        // Hitung berapa banyak customer yang sudah terdaftar hari ini
+        $countToday = Customer::whereDate('created_at', $today)->count();
+
+        // Tambah 1 untuk yang sekarang
+        $activationNumber = str_pad($countToday + 1, 2, '0', STR_PAD_LEFT);
+
+        // Format tanggal seperti 20250529
+        $datePrefix = $today->format('Ymd') . $activationNumber;
+
+        // Slug nama
+        $nameSlug = strtolower(Str::slug($name));
+
+        return [
+            'username' => $datePrefix . '@' . $nameSlug,
+            'password' => $datePrefix,
+        ];
     }
 
     private function generateCustomerId(Customer $customer, int $mikrotikId): void
@@ -619,6 +633,7 @@ class CustomerController extends Controller
      */
     public function show(Customer $customer)
     {
+        $traceId = (string) Str::uuid();
         $billingPeriodeActive = BillingPeriode::latest('created_at')->first();
         $billingLastPayment = Billing::where('customer_id', $customer->id)
             ->where('status', 'LS')
@@ -643,20 +658,40 @@ class CustomerController extends Controller
         $ont = CustomerOnt::where('customer_id', $customer->id)->first();
         try {
             $customerSecret = $this->secretService->getSecretById($router, $customer->secret_id);
+
             if ($customerSecret == 'error') {
-                return redirect()->route('customers.index')->withErrors(['msg' => 'Cannot find user with name ' . $customer->username . ' on router ' . $customer->mikrotik->name . '!']);
+                return redirect()->route('customers.index')->withErrors([
+                    'msg' => 'Cannot find user with name ' . $customer->username . ' on router ' . $customer->mikrotik->name . '!'
+                ]);
             } else {
                 $secret = SecretResource::collection($customerSecret)->first();
+                LogHelper::logInfo(null, [], 200, 'Secret Resource (Non-active):', $secret?->toArray() ?? [], $traceId);
+
                 $customerSecretActive = $this->secretService->getOnePppSecretActive($router, $customer->username);
                 $secretActive = SecretResource::collection($customerSecretActive)->first();
+                LogHelper::logInfo(null, [], 200, 'Secret Resource (Active):', $secretActive?->toArray() ?? [], $traceId);
             }
+
             $serverDisconnect = 'false';
             $message = 'Server ' . $router->name . ' online';
+
+            LogHelper::logInfo(null, [
+                'router' => $router->name,
+                'customer' => $customer->username,
+                'passwordppp' => $customer->password_ppp,
+                'status' => 'connected'
+            ], 200, 'Router check success', $traceId);
         } catch (\Exception $e) {
             $secret = '';
             $secretActive = '';
             $serverDisconnect = 'true';
             $message = 'Server ' . $router->name . ' offline, data displayed is local data. You cannot change this information.';
+
+            LogHelper::logError(null, [
+                'router' => $router->name,
+                'customer' => $customer->username ?? null,
+                'error' => $e->getMessage(),
+            ], 500, 'Router check failed', $traceId);
         }
         // dd($customer);
         return view('customers.show', [
