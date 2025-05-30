@@ -665,11 +665,11 @@ class CustomerController extends Controller
                 ]);
             } else {
                 $secret = SecretResource::collection($customerSecret)->first();
-                LogHelper::logInfo(null, [], 200, 'Secret Resource (Non-active):', $secret?->toArray() ?? [], $traceId);
+                LogHelper::logInfo(null, ['secret' => $secret], 200, 'Secret Resource (Non-active)', $traceId);
 
                 $customerSecretActive = $this->secretService->getOnePppSecretActive($router, $customer->username);
                 $secretActive = SecretResource::collection($customerSecretActive)->first();
-                LogHelper::logInfo(null, [], 200, 'Secret Resource (Active):', $secretActive?->toArray() ?? [], $traceId);
+                LogHelper::logInfo(null, ['secretActive' => $secretActive], 200, 'Secret Resource (Active)', $traceId);
             }
 
             $serverDisconnect = 'false';

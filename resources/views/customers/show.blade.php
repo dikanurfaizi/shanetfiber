@@ -147,12 +147,13 @@
                 <span class="text-success">
                     {{ $info_msg }}
                 </span>
-                @if ($pppsecret['name'] != $customer->username || $pppsecret['password'] != $customer->password_ppp)
+                {{-- @if ($pppsecret['name'] != $customer->username || $pppsecret['password'] != $customer->password_ppp) --}}
+                @if ($pppsecret['name'] != $customer->username)
                     <div class="alert alert-danger">
-                        {{ __('Warning username or password on server different with database!') }}<br>
+                        {{ __('Warning username on server different with database!') }}<br>
                         On Database :<br>
                         Username: {{ $customer->username }}<br>
-                        Password: {{ $customer->password_ppp }}
+                        {{-- Password: {{ $customer->password_ppp }} --}}
                     </div>
                 @endif
             </div>
@@ -185,10 +186,16 @@
                                     {{ $pppsecret['name'] ?? 'No Data' }}</span>
                             </td>
                             <td class="py-1"><strong>{{ __('customer.label.password-ppp') }}</strong></td>
-                            <td class="py-1">
+                            {{-- <td class="py-1">
                                 {{ __(':') }} <span
                                     class="@if ($pppsecret['password'] != $customer->password_ppp) alert alert-danger @else text-primary @endif">
-                                    {{ $pppsecret['password'] ?? 'No Data' }}</span>
+                                    {{ $customer->password_ppp ?? 'No Data' }}</span>
+                            </td> --}}
+                            <td class="py-1">
+                                {{ __(':') }}
+                                <span class="text-primary">
+                                    {{ $customer->password_ppp ?? 'No Data' }}
+                                </span>
                             </td>
                         </tr>
 
