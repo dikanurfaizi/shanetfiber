@@ -11,21 +11,23 @@ use App\Helpers\LogHelper;
 use Illuminate\Support\Facades\DB;
 use GuzzleHttp\Exception\RequestException;
 use App\Services\WhatsappMessageService;
+use Illuminate\Support\Str;
 
 class InitialPaymentReminderService
 {
     public function sendReminders(): void
     {
+        $traceId = (string) Str::uuid();
         try {
             $gateway = WhatsappGateway::where('disabled', false)->first();
             if (!$gateway) {
-                LogHelper::logWarning(null, null, 404, "No active WhatsApp gateway found.");
+                LogHelper::logWarning(null, null, 404, "No active WhatsApp gateway found.", $traceId);
                 return;
             }
 
             $lastBillingPeriode = BillingPeriode::latest('created_at')->first();
             if (!$lastBillingPeriode) {
-                LogHelper::logWarning(null, null, 404, "No billing period found.");
+                LogHelper::logWarning(null, null, 404, "No billing period found.", $traceId);
                 return;
             }
 
@@ -83,7 +85,8 @@ class InitialPaymentReminderService
                     null,
                     ['periode_id' => $lastBillingPeriode->id],
                     404,
-                    "No billing data found."
+                    "No billing data found.",
+                    $traceId
                 );
                 return;
             }
@@ -102,7 +105,7 @@ class InitialPaymentReminderService
                         'customer_id' => $billing->customer_id,
                         'customer_name' => $billing->customer_name,
                         'contact_customer' => $billing->customer_contact,
-                    ], 404, "Paket atau tagihan tidak ditemukan.");
+                    ], 404, "Paket atau tagihan tidak ditemukan.", $traceId);
                     continue;
                 }
 
@@ -125,6 +128,12 @@ class InitialPaymentReminderService
                 $messageTemplate = $messageService->getMessageTemplate($action, $pakets, $billing->admin_name);
                 $message = $messageService->replaceMessagePlaceholders($messageTemplate, $replace);
 
+                LogHelper::logInfo(null, [
+                    'action' => $action,
+                    'message_template' => $messageTemplate,
+                    'message' => $message,
+                ], 200, "Dispatched {$count} WhatsApp messages.", $traceId);
+
                 SendWhatsappSingleJob::dispatch(
                     $billing->billing_id,
                     $action,
@@ -141,11 +150,11 @@ class InitialPaymentReminderService
                 'periode_name' => $lastBillingPeriode->name,
                 'count' => $count,
                 'gateway_id' => $gateway->id
-            ], 200, "Dispatched {$count} WhatsApp messages.");
+            ], 200, "Dispatched {$count} WhatsApp messages.", $traceId);
         } catch (RequestException $e) {
-            LogHelper::logError(null, [], 500, "HTTP Request Exception: " . $e->getMessage());
+            LogHelper::logError(null, [], 500, "HTTP Request Exception: " . $e->getMessage(), $traceId);
         } catch (\Exception $e) {
-            LogHelper::logError(null, [], 500, "Exception occurred while creating billing: " . $e->getMessage());
+            LogHelper::logError(null, [], 500, "Exception occurred while creating billing: " . $e->getMessage(), $traceId);
         }
     }
 }

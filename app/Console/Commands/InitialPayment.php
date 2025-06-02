@@ -63,7 +63,7 @@ class InitialPayment extends Command
             // Format saat ini: "May 2025"
             $currentPeriod = $now->format('F Y');
 
-            $lastPeriode = BillingPeriode::orderByDesc('name')->first();
+            $lastPeriode = BillingPeriode::orderByDesc('created_at')->first();
 
             if (!$lastPeriode) {
                 $this->error("No billing periode found.");

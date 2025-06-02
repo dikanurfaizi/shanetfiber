@@ -60,7 +60,7 @@ class SendWhatsappSingleJob implements ShouldQueue
             $messageId = $decoded['results']['message_id'] ?? null;
 
             if ($code === 'SUCCESS' && $messageId) {
-                LogHelper::logInfo($url, array_merge($payload, ['message_id' => $messageId]), 200, "Message sent successfully at {$timestamp}");
+                LogHelper::logInfo($url, array_merge($payload, ['message_id' => $messageId, 'message_type' => $this->messageType]), 200, "Message sent successfully at {$timestamp}");
 
                 MessageLog::create([
                     'customer_id'  => $billing->customer_id,
