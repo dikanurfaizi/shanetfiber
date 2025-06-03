@@ -20,5 +20,6 @@ class MessageLogError extends Model
         'gateway_id',
         'message_error',
         'sent_at',
+        'content'
     ];
 }

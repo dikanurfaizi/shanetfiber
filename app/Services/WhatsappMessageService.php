@@ -130,7 +130,7 @@ class WhatsappMessageService
                 'sender' => $sender,
                 'response_code' => $e->getCode(),
                 'response' => $response,
-            ], $e->getCode(), "Failed to send message: $message", $traceId);
+            ], $e->getCode(), "Failed to send message: $error_message", $traceId);
 
             return false;
         } catch (\Exception $e) {

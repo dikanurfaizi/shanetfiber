@@ -118,13 +118,11 @@ class InitialPaymentReminderService
             ->leftJoin('users', 'customers.user_id', '=', 'users.id')
             ->leftJoin('message_logs', function ($join) {
                 $join->on('billings.customer_id', '=', 'message_logs.customer_id')
-                    ->where('message_logs.message_type', '=', 'create_new_bill')
-                    ->whereDate('message_logs.created_at', '=', today());
+                    ->where('message_logs.message_type', '=', 'create_new_bill');
             })
             ->leftJoin('message_log_errors', function ($join) {
                 $join->on('billings.customer_id', '=', 'message_log_errors.customer_id')
-                    ->where('message_log_errors.message_type', '=', 'create_new_bill')
-                    ->whereDate('message_log_errors.created_at', '=', today());
+                    ->where('message_log_errors.message_type', '=', 'create_new_bill');
             })
             ->whereNull('message_logs.id')
             ->whereNull('message_log_errors.id')
