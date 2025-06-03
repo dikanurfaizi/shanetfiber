@@ -10,9 +10,13 @@ use App\Models\User;
 use App\Models\Bank;
 use App\Models\Customer;
 use App\Models\Billing\Billing;
+use App\Models\MessageLog;
+use App\Models\MessageLogError;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Facades\Crypt;
 use GuzzleHttp\Client;
+use App\Helpers\FormatReceiver;
+use Illuminate\Support\Str;
 
 class WhatsappMessageService
 {
@@ -20,11 +24,39 @@ class WhatsappMessageService
      * Chesk status wa gateway
      * return false = enable, return true = disable
      */
-    public function sendWhatsappSingleJob($customerName, $receiver, $gateway, $message)
+
+    private FormatReceiver $formatter;
+
+    public function __construct()
     {
-        $urlWithParams = "{$gateway->url_callback}/send/message?api_key={$gateway->api_key}&sender={$gateway->whatsapp_number->number}";
+        $this->formatter = new FormatReceiver();
+    }
+
+    public function sendWhatsappSingleJob($customerId, $customerName, $receiver, $gateway, $message, $messageType, $traceId)
+    {
+        $sender = optional($gateway->whatsapp_number)->number;
+
+        if (!$sender) {
+            LogHelper::logError(null, ['gateway_id' => $gateway->id], 400, "No WhatsApp number found for gateway", $traceId);
+            return false;
+        }
+
+        $urlWithParams = "{$gateway->url_callback}/send/message?api_key={$gateway->api_key}&sender={$sender}";
 
         try {
+            $alreadySent = MessageLog::where('customer_id', $customerId)
+                ->where('message_type', $messageType)
+                ->whereDate('created_at', now()->toDateString())
+                ->exists();
+
+            if ($alreadySent) {
+                LogHelper::logWarning(null, [
+                    'customer_name' => $customerName,
+                    'message_type'  => $messageType,
+                ], 409, "Skipping redundant message for {$customerName} with type {$messageType}.");
+                return;
+            }
+
             $decryptPassword = Crypt::decryptString($gateway->basic_auth_password);
             $client = new Client([
                 'auth' => [
@@ -34,48 +66,79 @@ class WhatsappMessageService
                 'verify' => false
             ]);
 
-            $formatedReceiver = $this->manipulateContactBillInfo($receiver, 'broadcast');
+            $formattedReceiver = $this->formatter->formatReceiver($receiver, 'broadcast');
 
+            $payload = [
+                'customer_name' => $customerName,
+                'receiver'      => $formattedReceiver,
+                'sender'        => $sender,
+            ];
+
+            $timestamp = now();
             $response = $client->post($urlWithParams, [
                 'json' => [
-                    'phone'   => $formatedReceiver,
+                    'phone'   => $formattedReceiver,
                     'message' => $message,
                 ],
             ]);
 
             $decoded = json_decode($response->getBody()->getContents(), true);
-            $messageId = $decoded['results']['message_id'] ?? null;
-            $formattedTime = now()->format('d-m-Y H:i:s');
-            $logMessage = "Message sent successfully with ID $messageId on $formattedTime";
+            $results = $decoded['results'] ?? [];
+            $messageId = is_array($results) ? ($results['message_id'] ?? null) : null;
+            $code = $decoded['code'] ?? 'ERROR';
 
-            LogHelper::logInfo($urlWithParams, [
-                'receiver'       => $receiver,
-                'customer_name'  => $customerName,
-                'sender'         => $gateway->whatsapp_number->number,
-            ], 200, $logMessage);
+            if ($code === 'SUCCESS' && $messageId) {
+                LogHelper::logInfo($urlWithParams, array_merge($payload, ['message_id' => $messageId, 'message_type' => $messageType]), 200, "Message sent successfully at {$timestamp}", $traceId);
+
+                MessageLog::create([
+                    'customer_id'  => $customerId,
+                    'message_type' => $messageType,
+                    'gateway_id'   => $gateway->id,
+                    'content'      => $message,
+                    'sent_at'      => $timestamp,
+                ]);
+            } else {
+                $errorMessage = isset($decoded['message']) ? $decoded['message'] : 'Unknown error';
+
+                LogHelper::logError($urlWithParams, array_merge($payload, [
+                    'code'     => $code,
+                    'response' => $decoded
+                ]), 401, "WhatsApp Gateway Error: {$errorMessage}", $traceId);
+            }
 
             return true;
         } catch (\GuzzleHttp\Exception\RequestException $e) {
+            $timestamp = now();
             $response = method_exists($e, 'getResponse') && $e->getResponse()
                 ? $e->getResponse()->getBody()->getContents()
                 : null;
             $decoded = $response ? json_decode($response, true) : [];
-            $message = $decoded['message'] ?? $e->getMessage();
+            $error_message = $decoded['message'] ?? $e->getMessage();
+
+            MessageLogError::create([
+                'customer_id'  => $customerId,
+                'message_type' => $messageType,
+                'gateway_id'   => $gateway->id,
+                'message_error' => $error_message,
+                'sent_at'      => $timestamp,
+                'content'       => $message,
+            ]);
 
             LogHelper::logError($urlWithParams, [
-                'receiver'       => $receiver,
-                'customer_name'  => $customerName,
-                'sender'         => $gateway->whatsapp_number->number,
-                'raw_response'   => $response,
-            ], $e->getCode(), "Failed to send message: $message");
+                'receiver' => $receiver,
+                'customer_name' => $customerName,
+                'sender' => $sender,
+                'response_code' => $e->getCode(),
+                'response' => $response,
+            ], $e->getCode(), "Failed to send message: $message", $traceId);
 
             return false;
         } catch (\Exception $e) {
             LogHelper::logError($urlWithParams, [
                 'receiver'       => $receiver,
                 'customer_name'  => $customerName,
-                'sender'         => $gateway->whatsapp_number->number,
-            ], $e->getCode(), "Unexpected error: {$e->getMessage()}");
+                'sender'         => $sender,
+            ], $e->getCode(), "Unexpected error: {$e->getMessage()}", $traceId);
 
             return false;
         }
@@ -158,54 +221,6 @@ class WhatsappMessageService
             return null;
         }
     }
-
-    public function manipulateContactBillInfo($contact, $action = null)
-    {
-        try {
-            // Hapus karakter non-digit, kecuali tanda "+" di awal
-            $contact = preg_replace('/[^\d+]/', '', $contact);
-
-            // Jika nomor diawali dengan "+62", ubah menjadi "62"
-            if (str_starts_with($contact, '+62')) {
-                $contact = substr($contact, 1);
-            }
-
-            if ($action === 'broadcast') {
-                // Jika nomor dimulai dengan "08", ubah ke format "62"
-                if (str_starts_with($contact, '08')) {
-                    $contact = '62' . substr($contact, 1);
-                }
-
-                // Ambil digit setelah prefix 62
-                if (str_starts_with($contact, '62')) {
-                    $numberOnly = substr($contact, 2);
-
-                    // Jika 9 digit → pakai +62
-                    if (strlen($numberOnly) === 9) {
-                        $contact = '+62' . $numberOnly;
-                    } else {
-                        // Tetap pakai "62" (tanpa plus)
-                        $contact = '62' . $numberOnly;
-                    }
-                }
-            } else {
-                // Untuk tampilan biasa (non-broadcast)
-                $contact = preg_replace('/^628/', '08', $contact);
-                $contact = preg_replace('/^(\d{4})(\d{4})(\d+)$/', '$1-$2-$3', $contact);
-            }
-
-            return $contact;
-        } catch (\Exception $e) {
-            LogHelper::logWarning(
-                null,
-                null,
-                500,
-                "Error manipulating contact bill info for contact: $contact | Action: $action | " . $e->getMessage()
-            );
-            return null;
-        }
-    }
-
 
     /**
      * Ambil informasi bank dalam format string
@@ -417,6 +432,7 @@ class WhatsappMessageService
 
     public function activation($customers, $action)
     {
+        $traceId = (string) Str::uuid();
         $admin_number = null;
         try {
             $gateway = $this->getGateway();
@@ -440,7 +456,7 @@ class WhatsappMessageService
             $admin_number = '-';
 
             if (!empty($admin->contact)) {
-                $admin_number = $this->manipulateContactBillInfo($admin->contact, null);
+                $admin_number = $this->formatter->formatReceiver($admin->contact, null);
             }
 
             $accountBank = $this->getBankInfo($admin->id);
@@ -485,7 +501,7 @@ class WhatsappMessageService
             }
 
             $message = $this->replaceMessagePlaceholders($message, $replace);
-            $this->sendWhatsappSingleJob($customers->name, $customer_contact, $gateway, $message);
+            $this->sendWhatsappSingleJob($customers->id, $customers->name, $customer_contact, $gateway, $message, $action, $traceId);
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
@@ -506,6 +522,7 @@ class WhatsappMessageService
 
     public function create_order($billing, $order, $action)
     {
+        $traceId = (string) Str::uuid();
         try {
             $gateway = $this->getGateway();
             $customer_contact = $billing->customer->contact;
@@ -525,7 +542,7 @@ class WhatsappMessageService
             }
 
             $userId = $billing->customer->user_id ?? 1;
-            $whatsapp_number = $this->manipulateContactBillInfo($this->getWhatsAppNumber($userId), null);
+            $whatsapp_number = $this->formatter->formatReceiver($this->getWhatsAppNumber($userId), 'broadcast');
 
             $paymentMethod = strtolower(str_replace(['-', ' '], '', $order->payment_type));
 
@@ -612,7 +629,7 @@ class WhatsappMessageService
             }
 
             $message = $this->replaceMessagePlaceholders($message, $replace);
-            $this->sendWhatsappSingleJob($billing->customer->name, $customer_contact, $gateway, $message);
+            $this->sendWhatsappSingleJob($billing->customer_id, $billing->customer->name, $customer_contact, $gateway, $message, $action, $traceId);
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
@@ -632,6 +649,7 @@ class WhatsappMessageService
      */
     public function payment_paket($billing, $receipt, $action)
     {
+        $traceId = (string) Str::uuid();
         try {
             $gateway = $this->getGateway();
             $customer_contact = $billing->customer->contact;
@@ -651,7 +669,7 @@ class WhatsappMessageService
             }
 
             $userId = $billing->customer->user_id ?? 1;
-            $whatsapp_number = $this->manipulateContactBillInfo($this->getWhatsAppNumber($userId), null);
+            $whatsapp_number = $this->formatter->formatReceiver($this->getWhatsAppNumber($userId), null);
 
             $discount = 0;
             $price_after_discount = $billing->customer->paket->price;
@@ -732,7 +750,7 @@ class WhatsappMessageService
             }
 
             $message = $this->replaceMessagePlaceholders($message, $replace);
-            $this->sendWhatsappSingleJob($billing->customer->name, $customer_contact, $gateway, $message);
+            $this->sendWhatsappSingleJob($billing->customer_id, $billing->customer->name, $customer_contact, $gateway, $message, $action, $traceId);
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
@@ -780,7 +798,7 @@ class WhatsappMessageService
         ];
 
         foreach ($contacts as $type => $data) {
-            $processed = $this->manipulateContactBillInfo($data['raw'], $data['check']);
+            $processed = $this->formatter->formatReceiver($data['raw'], $data['check']);
             if (!$processed) {
                 LogHelper::logError(null, [
                     "{$data['label']}_id" => $data['id'],
@@ -836,6 +854,7 @@ class WhatsappMessageService
 
     public function test_gateway($gateway, $receive_number, $sender_number)
     {
+        $traceId = (string) Str::uuid();
         try {
             LogHelper::logInfo(
                 null,
@@ -894,7 +913,7 @@ class WhatsappMessageService
             try {
                 $message = 'Congratulations!! Test message from Customer Management WA Gateway';
                 $full_name = "Dummy Customer";
-                $this->sendWhatsappSingleJob($full_name, $receive_number, $gateway, $message);
+                $this->sendWhatsappSingleJob(null, $full_name, $receive_number, $gateway, $message, 'test_message', $traceId);
 
                 LogHelper::logInfo(
                     null,

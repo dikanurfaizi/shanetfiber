@@ -13,6 +13,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use App\Helpers\FormatReceiver;
 
 class SendWhatsappSingleJob implements ShouldQueue
 {
@@ -31,7 +32,8 @@ class SendWhatsappSingleJob implements ShouldQueue
         $gateway = WhatsappGateway::findOrFail($this->gatewayId);
         $billing = Billing::findOrFail($this->billingId);
 
-        $formattedReceiver = $this->formatReceiver($this->receiver);
+        $formatter = new FormatReceiver();
+        $formattedReceiver = $formatter->formatReceiver($this->receiver, null);
         $timestamp = now();
         $url = "{$gateway->url_callback}/send/message?api_key={$gateway->api_key}&sender={$gateway->whatsapp_number->number}";
 
@@ -87,31 +89,6 @@ class SendWhatsappSingleJob implements ShouldQueue
             ]), $e->getCode(), "Failed to send message: $messageError");
         } catch (\Exception $e) {
             LogHelper::logError($url, $payload, $e->getCode(), "Unexpected error: {$e->getMessage()}");
-        }
-    }
-
-    private function formatReceiver(string $contact): ?string
-    {
-        try {
-            $contact = preg_replace('/[^\d+]/', '', $contact);
-
-            if (str_starts_with($contact, '+62')) {
-                $contact = substr($contact, 1);
-            }
-
-            if (str_starts_with($contact, '08')) {
-                $contact = '62' . substr($contact, 1);
-            }
-
-            if (str_starts_with($contact, '62')) {
-                $number = substr($contact, 2);
-                return strlen($number) === 9 ? '+62' . $number : '62' . $number;
-            }
-
-            return $contact;
-        } catch (\Exception $e) {
-            LogHelper::logWarning(null, null, 500, "Error formatting contact: $contact | " . $e->getMessage());
-            return null;
         }
     }
 }

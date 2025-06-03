@@ -186,10 +186,10 @@ class HomeController extends Controller
                     'total_billing' => $group->sum('paket_price'),
                     'total_paid' => $group->where('status', 'LS')->sum('paket_price'),
                     'total_paylater' => $group->where('status', 'PL')->sum('paket_price'),
-                    'total_unpaid' => $group->where('status', 'BL')->sum('paket_price'),
+                    'total_unpaid' => $group->whereIn('status', ['BL', 'NP'])->sum('paket_price'),
                     'total_paid_customers' => $group->where('status', 'LS')->unique('customer_id')->count(),
                     'total_paylater_customers' => $group->where('status', 'PL')->unique('customer_id')->count(),
-                    'total_unpaid_customers' => $group->where('status', 'BL')->unique('customer_id')->count(),
+                    'total_unpaid_customers' => $group->whereIn('status', ['BL', 'NP'])->unique('customer_id')->count(),
                 ];
             });
     }
@@ -202,7 +202,7 @@ class HomeController extends Controller
             COUNT(DISTINCT id) as total_customers,
             SUM(CASE WHEN status IN ('LS', 'BL', 'PL') THEN paket_price ELSE 0 END) as total_nominal,
             SUM(CASE WHEN status = 'LS' THEN paket_price ELSE 0 END) as total_paid,
-            SUM(CASE WHEN status IN ('BL', 'PL') THEN paket_price ELSE 0 END) as total_unpaid
+            SUM(CASE WHEN status IN ('BL', 'PL', 'NP') THEN paket_price ELSE 0 END) as total_unpaid
         ")
             ->groupBy('billing_periode_id')
             ->get()
@@ -223,7 +223,7 @@ class HomeController extends Controller
             COUNT(DISTINCT id) as total_customers,
             SUM(CASE WHEN status IN ('LS', 'BL', 'PL') THEN paket_price ELSE 0 END) as total_nominal,
             SUM(CASE WHEN status = 'LS' THEN paket_price ELSE 0 END) as total_paid,
-            SUM(CASE WHEN status IN ('BL', 'PL') THEN paket_price ELSE 0 END) as total_unpaid
+            SUM(CASE WHEN status IN ('BL', 'PL', 'NP') THEN paket_price ELSE 0 END) as total_unpaid
         ")
             ->whereHas('customer.user', fn($q) => $q->where('id', $userId))
             ->groupBy('billing_periode_id')
@@ -245,7 +245,7 @@ class HomeController extends Controller
             COUNT(DISTINCT customer_id) as total_customers,
             SUM(CASE WHEN status = 'LS' THEN 1 ELSE 0 END) as total_paid,
             SUM(CASE WHEN status = 'PL' THEN 1 ELSE 0 END) as total_paylater,
-            SUM(CASE WHEN status = 'BL' THEN 1 ELSE 0 END) as total_unpaid
+            SUM(CASE WHEN status IN ('BL', 'NP') THEN 1 ELSE 0 END) as total_unpaid
         ")
             ->groupBy('billing_periode_id')
             ->get()
@@ -285,36 +285,6 @@ class HomeController extends Controller
 
         return [$lastBillingPeriode, $lastBillings];
     }
-
-    // private function calculateCustomerSummary()
-    // {
-    //     $auth = $this->getUserAuthData();
-    //     $user = $auth['user'];
-    //     $userId = $auth['userId'];
-
-    //     $query = Customer::query();
-
-    //     if ($user->can('view-billings-widget-total') || $user->can('view-billings-widget-customer-count')) {
-    //     } else if ($user->can('view-billings-widget-related')) {
-    //         $query->where('user_id', $userId);
-    //     } else {
-    //         $query->where('user_id', $userId);
-    //     }
-
-    //     $result = $query->selectRaw('
-    //     COUNT(*) as totalCustomers,
-    //     SUM(CASE WHEN disabled = "false" THEN 1 ELSE 0 END) as totalEnabled,
-    //     SUM(CASE WHEN disabled = "true" THEN 1 ELSE 0 END) as totalDisabled,
-    //     SUM(CASE WHEN disabled = "true" AND activation = "false" THEN 1 ELSE 0 END) as totalNonActiveDisabled
-    // ')->first();
-
-    //     return [
-    //         'totalCustomers' => (int) $result->totalCustomers,
-    //         'totalEnabled' => (int) $result->totalEnabled,
-    //         'totalDisabled' => (int) $result->totalDisabled,
-    //         'totalNonActiveDisabled' => (int) $result->totalNonActiveDisabled,
-    //     ];
-    // }
 
     private function calculateCustomerSummary()
     {
@@ -372,7 +342,7 @@ class HomeController extends Controller
                 'totalBilling' => $billings->sum('paket_price'),
                 'totalPaid' => $billings->where('status', 'LS')->sum('paket_price'),
                 'totalPaylater' => $billings->where('status', 'PL')->sum('paket_price'),
-                'totalUnpaid' => $billings->where('status', 'BL')->sum('paket_price'),
+                'totalUnpaid' => $billings->whereIn('status', ['BL', 'NP'])->sum('paket_price'),
             ];
         } catch (\Exception $e) {
             LogHelper::logError(null, [

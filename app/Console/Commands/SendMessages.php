@@ -6,6 +6,7 @@ use App\Services\BroadcastMessage\SendPaymentReminderService;
 use Illuminate\Console\Command;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class SendMessages extends Command
 {
@@ -28,6 +29,7 @@ class SendMessages extends Command
      */
     public function handle()
     {
+        $traceId = (string) Str::uuid();
         $startTime = microtime(true);
         $currentDateTime = Carbon::now()->setTimezone('Asia/Jakarta');
         $formattedDate = $currentDateTime->format('Y-m-d H:i:s');
@@ -41,14 +43,15 @@ class SendMessages extends Command
                 'day_of_month' => $dayOfMonth
             ],
             200,
-            "Starting reminder messages sending process"
+            "Starting reminder messages sending process",
+            $traceId
         );
 
         $this->info("Starting reminder messages job at {$formattedDate}");
 
         try {
             // Validate if today is an allowed date
-            $allowedDates = [10, 15];
+            $allowedDates = [14, 15];
             if (!in_array($dayOfMonth, $allowedDates)) {
                 $message = "Today ({$dayOfMonth}) is not an allowed date for sending reminders. Allowed dates: " . implode(', ', $allowedDates);
 
@@ -59,7 +62,8 @@ class SendMessages extends Command
                         'allowed_days' => $allowedDates
                     ],
                     422,
-                    $message
+                    $message,
+                    $traceId
                 );
 
                 $this->warn($message);
@@ -80,7 +84,8 @@ class SendMessages extends Command
                     'execution_seconds' => $executionTime
                 ],
                 200,
-                "Successfully dispatched {$this->description}"
+                "Successfully dispatched {$this->description}",
+                $traceId
             );
 
             $this->info("Successfully dispatched reminder job at {$dispatchTime}");
@@ -100,7 +105,8 @@ class SendMessages extends Command
                     'trace' => $e->getTraceAsString()
                 ],
                 500,
-                $errorMessage
+                $errorMessage,
+                $traceId
             );
 
             $this->error($errorTime . " - " . $errorMessage);

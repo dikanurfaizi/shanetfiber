@@ -31,7 +31,6 @@ class CreateBillingCron extends Command
     public function handle()
     {
         $traceId = (string) Str::uuid();
-
         $startTime = microtime(true);
         $currentDateTime = Carbon::now()->setTimezone('Asia/Jakarta');
         $formattedDate = $currentDateTime->format('Y-m-d H:i:s');
@@ -78,7 +77,19 @@ class CreateBillingCron extends Command
             app()->call('App\Http\Controllers\BillingController@store', [
                 'request' => request()
             ]);
-            LogHelper::logInfo(null, [], 200, "Auto billing untuk periode '{$periodeNow}' berhasil dijalankan.", $traceId);
+            LogHelper::logInfo(null, [], 200, "Membuat Periode '{$periodeNow}' berhasil dijalankan.", $traceId);
+
+            // Ambil ID dari billing_periodes
+            $billingPeriode = BillingPeriode::where('name', $periodeNow)->latest('id')->first();
+
+            if ($billingPeriode) {
+                request()->merge(['name' => $billingPeriode->id]);
+                app()->call('App\Http\Controllers\BillingController@store_one', [
+                    'request' => request()
+                ]);
+            }
+
+            LogHelper::logInfo(null, [], 200, "Membuat Billing dengan '{$periodeNow}' ke semua pelanggan berhasil dijalankan.", $traceId);
 
             $dispatchTime = Carbon::now()->format('Y-m-d H:i:s');
 

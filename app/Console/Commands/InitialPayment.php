@@ -7,6 +7,7 @@ use Illuminate\Console\Command;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Carbon;
 use App\Models\Billing\BillingPeriode;
+use Illuminate\Support\Str;
 
 class InitialPayment extends Command
 {
@@ -29,6 +30,7 @@ class InitialPayment extends Command
      */
     public function handle()
     {
+        $traceId = (string) Str::uuid();
         $startTime = microtime(true);
         $now = Carbon::now()->setTimezone('Asia/Jakarta');
         $formattedDate = $now->format('Y-m-d H:i:s');
@@ -37,7 +39,7 @@ class InitialPayment extends Command
         LogHelper::logInfo('InitialPaymentCommand', [
             'start_time' => $formattedDate,
             'day_of_month' => $dayOfMonth
-        ], 200, "Starting initial payment messages sending process");
+        ], 200, "Starting initial payment messages sending process", $traceId);
 
         $this->info("Starting initial payment messages job at {$formattedDate}");
 
@@ -84,7 +86,7 @@ class InitialPayment extends Command
             LogHelper::logInfo('InitialPaymentCommand', [
                 'dispatch_time' => $dispatchTime,
                 'execution_seconds' => $executionTime
-            ], 200, "Successfully dispatched {$this->description}");
+            ], 200, "Successfully dispatched {$this->description}", $traceId);
 
             $this->info("Successfully dispatched initial payment message at {$dispatchTime}");
             $this->info("Total execution time: {$executionTime} seconds");
@@ -98,7 +100,7 @@ class InitialPayment extends Command
                 'exception' => get_class($e),
                 'error_message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
-            ], 500, $errorMessage);
+            ], 500, $errorMessage, $traceId);
 
             $this->error($errorTime . " - " . $errorMessage);
             return 1;

@@ -6,20 +6,30 @@ use Carbon\Carbon;
 use App\Models\WhatsappGateway\WhatsappGateway;
 use App\Models\Billing\Billing;
 use App\Models\MessageLog;
-use App\Jobs\SendWhatsappSingleJob;
+use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Services\WhatsappMessageService;
+use Illuminate\Support\Str;
 
 class SendPaymentReminderService
 {
+    private FormatReceiver $formatter;
+
+    public function __construct(
+        protected WhatsappMessageService $messageService
+    ) {
+        $this->formatter = new FormatReceiver();
+    }
+
     public function sendReminders(): void
     {
+        $traceId = (string) Str::uuid();
         $today = Carbon::today();
 
         $gateways = WhatsappGateway::where('disabled', false)->get();
 
         if ($gateways->isEmpty()) {
-            LogHelper::logWarning(null, null, 404, "No active gateways found");
+            LogHelper::logWarning(null, null, 404, "No active gateways found", $traceId);
             return;
         }
 
@@ -32,17 +42,17 @@ class SendPaymentReminderService
 
             foreach ($billings as $type => $billingList) {
                 $count = $billingList->count();
-                LogHelper::logInfo(null, [], 200, "Found {$count} billing(s) for type '{$type}' on gateway: {$gateway->name}");
+                LogHelper::logInfo(null, [], 200, "Found {$count} billing(s) for type '{$type}' on gateway: {$gateway->name}", $traceId);
 
                 $messageType = $this->getMessageType($type);
                 foreach ($billingList as $billing) {
-                    $this->checkSendMessage($billing, $messageType, $gateway);
+                    $this->checkSendMessage($billing, $messageType, $gateway, $traceId);
                 }
             }
         }
     }
 
-    private function checkSendMessage($billing, $messageType, $gateway)
+    private function checkSendMessage($billing, $messageType, $gateway, $traceId)
     {
         $messageService = app(WhatsappMessageService::class);
 
@@ -56,7 +66,7 @@ class SendPaymentReminderService
             LogHelper::logWarning(null, [
                 'customer_name' => $billing->customer_name,
                 'message_type'  => $messageType,
-            ], 409, "Skipping redundant message for {$billing->customer_name} with type {$messageType}.");
+            ], 409, "Skipping redundant message for {$billing->customer_name} with type {$messageType}.", $traceId);
             return;
         }
 
@@ -64,12 +74,14 @@ class SendPaymentReminderService
 
         if ($message) {
             try {
-                SendWhatsappSingleJob::dispatch(
-                    $billing->billing_id,
+                $this->messageService->sendWhatsappSingleJob(
+                    $billing->customer_id,
+                    $billing->customer_name,
+                    $billing->customer_contact,
+                    $gateway,
+                    $message,
                     $messageType,
-                    $gateway->id,
-                    $billing->customer->contact,
-                    $message
+                    $traceId
                 );
             } catch (\Exception $e) {
                 LogHelper::logError(null, [
@@ -78,7 +90,7 @@ class SendPaymentReminderService
                     'customer_name'  => $billing->customer_name ?? null,
                     'message_type'   => $messageType,
                     'error_message'  => $e->getMessage(),
-                ], 500, "Exception while sending WhatsApp message.");
+                ], 500, "Exception while sending WhatsApp message.", $traceId);
             }
         }
     }
@@ -95,155 +107,99 @@ class SendPaymentReminderService
 
     private function getBillings($today, $type)
     {
+        $messageType = $this->getMessageType($type);
+
+        $baseQuery = Billing::query()
+            ->join('customers', 'billings.customer_id', '=', 'customers.id')
+            ->leftJoin('users', 'customers.user_id', '=', 'users.id')
+            ->leftJoin('message_logs', function ($join) use ($today, $messageType) {
+                $join->on('customers.id', '=', 'message_logs.customer_id')
+                    ->whereDate('message_logs.created_at', '=', $today)
+                    ->where('message_logs.message_type', '=', $messageType);
+            })
+            ->leftJoin('message_log_errors', function ($join) use ($today, $messageType) {
+                $join->on('customers.id', '=', 'message_log_errors.customer_id')
+                    ->whereDate('message_log_errors.created_at', '=', $today)
+                    ->where('message_log_errors.message_type', '=', $messageType);
+            })
+            ->select(
+                'billings.id as billing_id',
+                'billings.customer_id',
+                'billings.billing_number',
+                'customers.customer_id as customer_unique_id',
+                'customers.name as customer_name',
+                'customers.contact as customer_contact',
+                'customers.address as customer_address',
+                'users.id as admin_id',
+                'users.name as admin_name',
+                'users.contact as admin_contact'
+            )
+            ->whereNotNull('customers.contact')
+            ->where('customers.contact', '!=', '')
+            ->whereNull('message_logs.id')        // belum sukses kirim
+            ->whereNull('message_log_errors.id');
+
         switch ($type) {
             case 'past_due':
-                return Billing::query()
-                    ->join('customers', 'billings.customer_id', '=', 'customers.id')
-                    ->leftJoin('users', 'customers.user_id', '=', 'users.id')  // LEFT JOIN ke tabel users
-                    ->leftJoin('message_logs', function ($join) use ($today) {
-                        $join->on('customers.id', '=', 'message_logs.customer_id')
-                            ->whereDate('message_logs.created_at', '=', $today);
-                    })
-                    ->select(
-                        'billings.id as billing_id',
-                        'billings.customer_id',
-                        'billings.billing_number as billing_number',
-                        'customers.customer_id as customer_unique_id',
-                        'customers.name as customer_name',
-                        'customers.contact as customer_contact',
-                        'customers.address as customer_address',
-                        'users.id as admin_id',
-                        'users.name as admin_name',
-                        'users.contact as admin_contact'
-                    )
-                    ->whereNotNull('customers.contact')
-                    ->where('customers.contact', '!=', '')
-                    ->whereNull('message_logs.id') // hanya yang belum terkirim hari ini
-                    ->where(function ($query) use ($today) {
-                        $query->where('billings.status', 'BL')
+                $baseQuery->where(function ($query) use ($today) {
+                    $query->where(function ($q) use ($today) {
+                        $q->where('billings.status', 'BL')
                             ->whereNotNull('billings.due_date')
-                            ->whereDate('billings.due_date', '<', $today)
-                            ->orWhere(function ($q) use ($today) {
-                                $q->where('billings.status', 'PL')
-                                    ->whereNotNull('billings.pay_later')
-                                    ->whereDate('billings.pay_later', '<', $today);
-                            });
-                    })
-                    ->groupBy(
-                        'billings.id',
-                        'billings.customer_id',
-                        'customers.customer_id',
-                        'billings.billing_number',
-                        'customers.name',
-                        'customers.contact',
-                        'customers.address',
-                        'users.id',
-                        'users.name',
-                        'users.contact'
-                    )
-                    ->limit(10)
-                    ->get();
+                            ->whereDate('billings.due_date', '<', $today);
+                    })->orWhere(function ($q) use ($today) {
+                        $q->where('billings.status', 'PL')
+                            ->whereNotNull('billings.pay_later')
+                            ->whereDate('billings.pay_later', '<', $today);
+                    });
+                });
+                break;
 
             case 'due_today':
-                return Billing::query()
-                    ->join('customers', 'billings.customer_id', '=', 'customers.id')
-                    ->leftJoin('users', 'customers.user_id', '=', 'users.id')  // LEFT JOIN ke tabel users
-                    ->leftJoin('message_logs', function ($join) use ($today) {
-                        $join->on('customers.id', '=', 'message_logs.customer_id')
-                            ->whereDate('message_logs.created_at', '=', $today);
-                    })
-                    ->select(
-                        'billings.id as billing_id',
-                        'billings.customer_id',
-                        'billings.billing_number as billing_number',
-                        'customers.customer_id as customer_unique_id',
-                        'customers.name as customer_name',
-                        'customers.contact as customer_contact',
-                        'customers.address as customer_address',
-                        'users.id as admin_id',
-                        'users.name as admin_name',
-                        'users.contact as admin_contact'
-                    )
-                    ->whereNotNull('customers.contact')
-                    ->where('customers.contact', '!=', '')
-                    ->whereNull('message_logs.id') // hanya yang belum terkirim hari ini
-                    ->where(function ($query) use ($today) {
-                        $query->where('billings.status', 'BL')
+                $baseQuery->where(function ($query) use ($today) {
+                    $query->where(function ($q) use ($today) {
+                        $q->where('billings.status', 'BL')
                             ->whereNotNull('billings.due_date')
-                            ->whereDate('billings.due_date', $today)
-                            ->orWhere(function ($q) use ($today) {
-                                $q->where('billings.status', 'PL')
-                                    ->whereNotNull('billings.pay_later')
-                                    ->whereDate('billings.pay_later', $today);
-                            });
-                    })
-                    ->groupBy(
-                        'billings.id',
-                        'billings.customer_id',
-                        'customers.customer_id',
-                        'billings.billing_number',
-                        'customers.name',
-                        'customers.contact',
-                        'customers.address',
-                        'users.id',
-                        'users.name',
-                        'users.contact'
-                    )
-                    ->limit(10)
-                    ->get();
+                            ->whereDate('billings.due_date', '=', $today);
+                    })->orWhere(function ($q) use ($today) {
+                        $q->where('billings.status', 'PL')
+                            ->whereNotNull('billings.pay_later')
+                            ->whereDate('billings.pay_later', '=', $today);
+                    });
+                });
+                break;
 
             case 'upcoming':
-                return Billing::query()
-                    ->join('customers', 'billings.customer_id', '=', 'customers.id')
-                    ->leftJoin('users', 'customers.user_id', '=', 'users.id')
-                    ->leftJoin('message_logs', function ($join) use ($today) {
-                        $join->on('customers.id', '=', 'message_logs.customer_id')
-                            ->whereDate('message_logs.created_at', '=', $today);
-                    })
-                    ->select(
-                        'billings.id as billing_id',
-                        'billings.customer_id',
-                        'billings.billing_number',
-                        'customers.customer_id as customer_unique_id',
-                        'customers.name as customer_name',
-                        'customers.contact as customer_contact',
-                        'customers.address as customer_address',
-                        'users.id as admin_id',
-                        'users.name as admin_name',
-                        'users.contact as admin_contact'
-                    )
-                    ->whereNotNull('customers.contact')
-                    ->where('customers.contact', '!=', '')
-                    ->whereNull('message_logs.id') // hanya yang belum terkirim hari ini
-                    ->where(function ($query) use ($today) {
-                        $query->where(function ($q) use ($today) {
-                            $q->where('billings.status', 'BL')
-                                ->whereNotNull('billings.due_date')
-                                ->whereDate('billings.due_date', '>', $today);
-                        })
-                            ->orWhere(function ($q) use ($today) {
-                                $q->where('billings.status', 'PL')
-                                    ->whereNotNull('billings.pay_later')
-                                    ->whereDate('billings.pay_later', '>', $today);
-                            });
-                    })
-                    ->groupBy(
-                        'billings.id',
-                        'billings.customer_id',
-                        'billings.billing_number',
-                        'customers.customer_id',
-                        'customers.name',
-                        'customers.contact',
-                        'customers.address',
-                        'users.id',
-                        'users.name',
-                        'users.contact'
-                    )
-                    ->limit(10)
-                    ->get();
+                $baseQuery->where(function ($query) use ($today) {
+                    $query->where(function ($q) use ($today) {
+                        $q->where('billings.status', 'BL')
+                            ->whereNotNull('billings.due_date')
+                            ->whereDate('billings.due_date', '>', $today);
+                    })->orWhere(function ($q) use ($today) {
+                        $q->where('billings.status', 'PL')
+                            ->whereNotNull('billings.pay_later')
+                            ->whereDate('billings.pay_later', '>', $today);
+                    });
+                });
+                break;
 
             default:
-                return collect(); // Return empty collection if type is not valid
+                return collect();
         }
+
+        return $baseQuery
+            ->groupBy(
+                'billings.id',
+                'billings.customer_id',
+                'billings.billing_number',
+                'customers.customer_id',
+                'customers.name',
+                'customers.contact',
+                'customers.address',
+                'users.id',
+                'users.name',
+                'users.contact'
+            )
+            ->limit(20)
+            ->get();
     }
 }
