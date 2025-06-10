@@ -125,6 +125,7 @@ return [
         'responsibility' => 'Admin',
         'vlan_id' => 'VLAN ID',
         'all-responsibility' => 'All Admin',
+        'no-type-available' => 'No Type Available',
     ],
     'button' => [
         'create' => 'Create a Customer',
@@ -170,6 +171,8 @@ return [
             'bill-not-payed' => 'The amount of unpaid bills: '
         ],
     ],
-
+    'message' => [
+        'error-loading-types' => 'Error Loading Types',
+    ],
 
 ];

@@ -334,6 +334,19 @@
                                             class="fa fa-trash me-2 text-danger"></i>&nbsp{{ __('customer.action.delete') }}</a>
                                 </li>
                             @endcan
+                            @can('secret-edit')
+                                <li>
+                                    <form method="POST" action="{{ route('customers.pppoe.export', $customer->slug) }}">
+                                        @csrf
+                                        @method('PUT') <!-- atau method lainnya -->
+                                        <a class="dropdown-item" href="#"
+                                            onclick="event.preventDefault(); this.closest('form').submit();">
+                                            <i class="fas fa-file-export me-2 text-info"></i>
+                                            {{ __('pppoe.secret.export') }}
+                                        </a>
+                                    </form>
+                                </li>
+                            @endcan
                         </x-drop-down-action>
                     @endcanany
                 </td>

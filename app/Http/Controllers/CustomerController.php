@@ -1046,11 +1046,39 @@ class CustomerController extends Controller
 
     public function editRouter(Customer $customer)
     {
+        // Get customer router data with null check
         $customerRouter = CustomerOnt::where('customer_id', $customer->id)->first();
-        $merkRouters = MerkRouter::where('disabled', 'false')->orderBy('name', 'ASC')->get();
-        $merkRouterId = MerkRouter::where('disabled', 'false')->where('name', $customerRouter->merk_ont)->value('id');
-        $typeRouters = TypeRouter::where('disabled', 'false')->where('merk_router_id', $merkRouterId)->orderBy('name', 'ASC')->get();
-        return view('customers.edit_router', compact('merkRouters', 'customer', 'customerRouter', 'typeRouters'));
+
+        // Get all merk routers
+        $merkRouters = MerkRouter::where('disabled', 'false')
+            ->orderBy('name', 'ASC')
+            ->get();
+
+        // Initialize variables with default values
+        $merkRouterId = null;
+        $typeRouters = collect(); // Empty collection as default
+
+        // Check if customer router exists and has merk_ont
+        if ($customerRouter && !empty($customerRouter->merk_ont)) {
+            $merkRouterId = MerkRouter::where('disabled', 'false')
+                ->where('name', $customerRouter->merk_ont)
+                ->value('id');
+
+            // If merk router found, get type routers
+            if ($merkRouterId) {
+                $typeRouters = TypeRouter::where('disabled', 'false')
+                    ->where('merk_router_id', $merkRouterId)
+                    ->orderBy('name', 'ASC')
+                    ->get();
+            }
+        }
+
+        return view('customers.edit_router', compact(
+            'merkRouters',
+            'customer',
+            'customerRouter',
+            'typeRouters'
+        ));
     }
 
     /**
@@ -1381,5 +1409,105 @@ class CustomerController extends Controller
         }
 
         return $contact;
+    }
+
+    public function exportSecret(Customer $customer): RedirectResponse
+    {
+        $internet_service = $customer->internet_service;
+        $mikrotikId = $customer->mikrotik_id;
+        $router = Mikrotik::where('id', $mikrotikId)->first();
+        $profile = Paket::where('id', $customer->paket_id)->value('profile');
+        if ($router->disabled == 'true') {
+            return redirect()->back()->withErrors(['msg' => 'Server ' . $router->name . ' disable, please enable first.']);
+        }
+        $autoIsolir = AutoIsolir::where('mikrotik_id', $mikrotikId)->first();
+        if (isset($autoIsolir)) {
+            if ($autoIsolir->activation_date == 'true') {
+                $totalDaysInNextMonth = Carbon::now()->addMonth()->daysInMonth;
+                $day = Carbon::now()->format('d');
+                if ($day > $totalDaysInNextMonth) {
+                    $day = $totalDaysInNextMonth;
+                }
+                $nextMonth = Carbon::now()->addMonth()->format('m_Y');
+                $comment_payment = $autoIsolir->comment_unpayment . '_' . $day . '_' . $nextMonth;
+            } else {
+                $comment_payment = $autoIsolir->comment_payment;
+            }
+        } else {
+            $comment_payment = 'create_from_customer_management';
+        }
+        $username = $customer->username;
+        if ($internet_service == 'ppp') {
+            $password = $customer->password_ppp;
+            $serviceName = PppType::where('id', $customer->ppp_type_id)->value('name');
+            try {
+                $createSecret = $this->secretService->createSecret($router, $username, $password, $serviceName, $profile, $comment_payment);
+                if (isset($createSecret['after']['message'])) {
+                    return redirect()->back()->withErrors(['msg' => 'Cant create user ppp on server ' . $router->name . '.']);
+                } else {
+                    $secretId = $createSecret['after']['ret'];
+                    $customer->update([
+                        'activation' => 'true',
+                        'disabled' => 'false',
+                        'secret_id' => $secretId,
+                    ]);
+                    $this->secretService->enableSecret($router, $username);
+                }
+            } catch (\Exception $e) {
+                return redirect()->back()->withErrors(['msg' => 'Cant connect to the server ' . $router->name . '.']);
+            }
+        } else if ($internet_service == 'ip_static') {
+            $comment = $customer->username ?? 'Create from Customer Management';
+            $profile_on_mikrotik = $this->secretService->getPppProfileByName($router, $profile);
+            $profile = $profile_on_mikrotik[0];
+            return dd($profile);
+            if ($profile['rate-limit']) {
+                return redirect()->back()->withErrors(['msg' => 'Please create limitasi PPP Profile ' . $profile['name'] . ' on server ' . $router->name . '!']);
+            }
+            $valueLimitasi = $profile['rate-limit'] ?? '';
+            if (strlen($valueLimitasi) == 0) {
+                return redirect()->back()->withErrors(['msg' => 'Please create limitasi PPP Profile ' . $profile['name'] . ' on server ' . $router->name . '!']);
+            }
+            $parts = explode(' ', $valueLimitasi);
+            $ip_static = $customer->ip_static;
+            $mac_address = $customer->mac_address;
+            $interface = $customer->interface;
+            $parent = $profile['parent-queue'] ?? 'none';
+            $priority = $parts[4] . '/' . $parts[4];
+            $queuetype = $profile['queue-type'] ?? '';
+            $limitat = $parts[5];
+            $maxlimit = $parts[0];
+            try {
+                $createLimitasi = $this->queueService->createSimpleQueue($router, $username, $ip_static, $parent, $priority, $queuetype, $limitat, $maxlimit, $comment_payment);
+                if (isset($createLimitasi['after']['message'])) {
+                    return redirect()->back()->withErrors(['msg' => 'Cant create limitasi on server ' . $router->name . ', ' . $createLimitasi['after']['message'] . '.']);
+                } else {
+                    $simpleque_id = $createLimitasi['after']['ret'];
+                }
+                $createArp = $this->ipStaticService->addIpToArp($router, $ip_static, $mac_address, $interface, $comment);
+                // $createArp = $this->ipStaticService->addIpToArp($router, $ip_static, $interface, $comment);
+
+                if (isset($createArp['after']['message'])) {
+                    //if ($simpleque_id) {
+                    $this->ipStaticService->deleteIpFromSimpleQueue($router, $simpleque_id);
+                    //  }
+
+                    return redirect()->back()->withErrors(['msg' => 'Cant create arp to ip ' . $ip_static . ' on server ' . $router->name . ', ' . $createArp['after']['message'] . ' .']);
+                } else {
+                    $arp_id = $createArp['after']['ret'];
+                }
+            } catch (\Exception $e) {
+                return redirect()->back()->withErrors(['msg' => 'Cant connect to the server ' . $router->name . '.']);
+            }
+
+            $customer->update([
+                'activation' => 'true',
+                'disabled' => 'false',
+                'simpleque_id' => $simpleque_id,
+                'arp_id' => $arp_id,
+            ]);
+        }
+        return redirect()->back()
+            ->with('success', 'Succesfully to Export Pppoe Secret Customer');
     }
 }

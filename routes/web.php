@@ -148,6 +148,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('/customers/{customer:slug}/router/edit', [CustomerController::class, 'editRouter'])->name('customers.edit.router');
         Route::patch('/customers/{customer:slug}/router/update', [CustomerController::class, 'updateRouter'])->name('customers.update.router');
         Route::put('/customers/{customer:slug}/activation', [CustomerController::class, 'activation'])->name('customers.activation');
+        Route::put('/customers/{customer:slug}/export/secret', [CustomerController::class, 'exportSecret'])->name('customers.pppoe.export');
         Route::get('/customers/file/export', [CustomerController::class, 'export'])->name('customers.export');
         //========================ROUTE Member================================
         Route::resource('members', MemberController::class);

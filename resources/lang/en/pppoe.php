@@ -33,6 +33,7 @@ return [
         'password' => 'Password',
         'service' => 'Service',
         'profile' => 'Profile',
+        'export' => 'Export Secret',
         'button' => [
             'back' => 'Back',
             'cancel' => 'Cancel',
