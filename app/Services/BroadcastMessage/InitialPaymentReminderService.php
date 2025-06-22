@@ -153,7 +153,7 @@ class InitialPaymentReminderService
                 'users.contact',
             ])
             ->orderBy('customers.name')
-            ->limit(10)
+            ->limit(20)
             ->get();
     }
 
@@ -197,7 +197,8 @@ class InitialPaymentReminderService
             $gateway,
             $message,
             $action,
-            $traceId
+            $traceId,
+            null
         );
     }
 }

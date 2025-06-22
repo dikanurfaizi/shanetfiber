@@ -39,6 +39,10 @@ use App\Http\Controllers\WhatsappGatewayController;
 use App\Http\Controllers\WhatsappMessageController;
 use App\Http\Controllers\WhatsappNumberController;
 use App\Http\Controllers\MemberController;
+use App\Http\Controllers\TelegramGatewayController;
+use App\Http\Controllers\TelegramMessageController;
+use App\Http\Controllers\TelegramChatIdController;
+use App\Models\TelegramGateway\TelegramChatId;
 
 /*
 |--------------------------------------------------------------------------
@@ -253,6 +257,24 @@ Route::group(['prefix' => 'cpanel'], function () {
         //     dispatch(new SendPaymentReminderJob(app(WhatsappMessageService::class)));
         //     return 'Job dispatched!';
         // })->name('test-job')->middleware('auth');
+
+        //Telegram Gateway
+        Route::get('settings/telegramgateway', [TelegramGatewayController::class, 'index'])->name('telegramgateway.index');
+        Route::get('settings/telegramgateway/{telegramGateway}/edit_description', [TelegramGatewayController::class, 'edit_description'])->name('telegramgateway.edit_description');
+        Route::get('settings/telegramgateway/{telegramGateway}/edit_gateway', [TelegramGatewayController::class, 'edit_gateway'])->name('telegramgateway.edit_gateway');
+        Route::patch('settings/telegramgateway/{telegramGateway}/test_gateway', [TelegramGatewayController::class, 'test_gateway'])->name('telegramgateway.test_gateway');
+        Route::patch('settings/telegramgateway/{telegramGateway}/update_description', [TelegramGatewayController::class, 'update_description'])->name('telegramgateway.update_description');
+        Route::patch('settings/telegramgateway/{telegramGateway}/update_gateway', [TelegramGatewayController::class, 'update_gateway'])->name('telegramgateway.update_gateway');
+        Route::get('settings/telegramchat/get_updates', [TelegramChatIdController::class, 'get_updates'])->name('telegramchatid.get_updates');
+        Route::patch('settings/telegramchat/delete/{telegramchat}', [TelegramChatIdController::class, 'softDelete'])->name('telegramchatid.soft_delete');
+        Route::patch('settings/telegramchat/{telegramchat}/update_telegram_data', [TelegramChatIdController::class, 'update_telegram_data'])->name('telegramchat.update_telegram_data');
+        Route::resource('settings/telegramchat', TelegramChatIdController::class);
+        // Route::put('settings/telegramchat/{telegramchat}/disabled', [TelegramChatIdController::class, 'disable_chat_id'])->name('telegramchatid.disable');
+        Route::post('settings/telegramchat/{telegramchat}/test_message', [TelegramChatIdController::class, 'test_message'])->name('telegramchatid.test_message');
+        Route::resource('settings/telegrammessage', TelegramMessageController::class);
+        Route::put('settings/telegrammessage/{telegrammessage}/disabled', [TelegramMessageController::class, 'disable_message'])->name('telegrammessage.disable');
+        Route::get('settings/telegrammessage/{telegrammessage}/delete', [TelegramMessageController::class, 'delete'])->name('telegrammessage.delete');
+        Route::get('settings/telegramgateway/trigger-job', [TelegramGatewayController::class, 'dispatchJob'])->name('trigger-job');
     });
 });
 

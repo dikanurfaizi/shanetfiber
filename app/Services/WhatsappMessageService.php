@@ -32,7 +32,7 @@ class WhatsappMessageService
         $this->formatter = new FormatReceiver();
     }
 
-    public function sendWhatsappSingleJob($customerId, $customerName, $receiver, $gateway, $message, $messageType, $traceId)
+    public function sendWhatsappSingleJob($customerId, $customerName, $receiver, $gateway, $message, $messageType, $traceId, $test)
     {
         $sender = optional($gateway->whatsapp_number)->number;
 
@@ -90,13 +90,15 @@ class WhatsappMessageService
             if ($code === 'SUCCESS' && $messageId) {
                 LogHelper::logInfo($urlWithParams, array_merge($payload, ['message_id' => $messageId, 'message_type' => $messageType]), 200, "Message sent successfully at {$timestamp}", $traceId);
 
-                MessageLog::create([
-                    'customer_id'  => $customerId,
-                    'message_type' => $messageType,
-                    'gateway_id'   => $gateway->id,
-                    'content'      => $message,
-                    'sent_at'      => $timestamp,
-                ]);
+                if (strtolower($test) !== 'yes') {
+                    MessageLog::create([
+                        'customer_id'  => $customerId,
+                        'message_type' => $messageType,
+                        'gateway_id'   => $gateway->id,
+                        'content'      => $message,
+                        'sent_at'      => $timestamp,
+                    ]);
+                }
             } else {
                 $errorMessage = isset($decoded['message']) ? $decoded['message'] : 'Unknown error';
 
@@ -430,29 +432,29 @@ class WhatsappMessageService
         }
     }
 
-    public function activation($customers, $action)
+    public function activation($customerId, $action, $traceId)
     {
-        $traceId = (string) Str::uuid();
         $admin_number = null;
         try {
             $gateway = $this->getGateway();
-            $customer_contact = $customers->contact;
+            $customer = Customer::find($customerId);
+            $customer_contact = $customer->contact;
 
             if (!$gateway || !$customer_contact) {
                 LogHelper::logWarning(
                     null,
                     [
-                        'customer_id' => $customers->id,
+                        'customer_id' => $customer->id,
                         'gateway' => $gateway ? 'Available' : 'Not Available',
                         'customer_contact' => $customer_contact ? 'Available' : 'Not Available',
                     ],
                     400, // Bad Request
-                    "Gateway atau kontak pelanggan tidak tersedia untuk billing ID: {$customers->id}."
+                    "Gateway atau kontak pelanggan tidak tersedia untuk billing ID: {$customer->id}."
                 );
                 return;
             }
 
-            $admin = User::where('id', $customers->user_id)->first() ?? 1;
+            $admin = User::where('id', $customer->user_id)->first() ?? 1;
             $admin_number = '-';
 
             if (!empty($admin->contact)) {
@@ -461,23 +463,15 @@ class WhatsappMessageService
 
             $accountBank = $this->getBankInfo($admin->id);
 
-            // Log hasil accountBank setelah getBankInfo
-            LogHelper::logInfo(
-                null,
-                null,
-                200,
-                "Final bank info for notification:\n{$accountBank}"
-            );
-
             $replace = [
-                '%name%' => $customers->name,
-                '%address%' => $customers->address,
-                '%email%' => $customers->email ?? '-',
+                '%name%' => $customer->name,
+                '%address%' => $customer->address,
+                '%email%' => $customer->email ?? '-',
                 '%customer_service%' => $admin_number,
-                '%customer_id%' => $customers->customer_id,
+                '%customer_id%' => $customer->customer_id,
                 '%admin%' => $admin->name,
-                '%paket%' => $customers->paket->name,
-                '%bill%' => 'Rp. ' . number_format($customers->paket->price, 2, ',', '.'),
+                '%paket%' => $customer->paket->name,
+                '%bill%' => 'Rp. ' . number_format($customer->paket->price, 2, ',', '.'),
                 '%account_bank%' => $accountBank,
             ];
 
@@ -486,32 +480,32 @@ class WhatsappMessageService
                 LogHelper::logWarning(
                     null,
                     [
-                        'id' => $customers->id,
-                        'name' => $customers->name,
-                        'address' => $customers->address,
+                        'id' => $customer->id,
+                        'name' => $customer->name,
+                        'address' => $customer->address,
                         'email' => $customers->email ?? '-',
                         'customer_service' => $admin_number,
-                        'customer_id' => $customers->customer_id,
+                        'customer_id' => $customer->customer_id,
                         'action' => $action,
                     ],
                     404, // Not Found
-                    "Template pesan untuk aksi '{$action}' tidak ditemukan untuk customer ID: {$customers->id}"
+                    "Template pesan untuk aksi '{$action}' tidak ditemukan untuk customer ID: {$customer->id}"
                 );
                 return;
             }
 
             $message = $this->replaceMessagePlaceholders($message, $replace);
-            $this->sendWhatsappSingleJob($customers->id, $customers->name, $customer_contact, $gateway, $message, $action, $traceId);
+            $this->sendWhatsappSingleJob($customer->id, $customer->name, $customer_contact, $gateway, $message, $action, $traceId, null);
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
                 [
-                    'id' => $customers->id,
-                    'name' => $customers->name,
-                    'address' => $customers->address,
-                    'email' => $customers->email ?? '-',
+                    'id' => $customer->id,
+                    'name' => $customer->name,
+                    'address' => $customer->address,
+                    'email' => $customer->email ?? '-',
                     'customer_service' => $admin_number,
-                    'customer_id' => $customers->customer_id,
+                    'customer_id' => $customer->customer_id,
                     'action' => $action,
                 ],
                 500, // Internal Error
@@ -629,7 +623,7 @@ class WhatsappMessageService
             }
 
             $message = $this->replaceMessagePlaceholders($message, $replace);
-            $this->sendWhatsappSingleJob($billing->customer_id, $billing->customer->name, $customer_contact, $gateway, $message, $action, $traceId);
+            $this->sendWhatsappSingleJob($billing->customer_id, $billing->customer->name, $customer_contact, $gateway, $message, $action, $traceId, null);
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
@@ -750,7 +744,7 @@ class WhatsappMessageService
             }
 
             $message = $this->replaceMessagePlaceholders($message, $replace);
-            $this->sendWhatsappSingleJob($billing->customer_id, $billing->customer->name, $customer_contact, $gateway, $message, $action, $traceId);
+            $this->sendWhatsappSingleJob($billing->customer_id, $billing->customer->name, $customer_contact, $gateway, $message, $action . '_payment', $traceId, null);
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
@@ -764,10 +758,10 @@ class WhatsappMessageService
         }
     }
 
-    public function bill_info($billing, $action)
+    public function bill_info($billing, $action, $traceId)
     {
         // Cek validitas billing dan nomor kontak
-        if (!is_object($billing) || empty(trim($billing->customer->contact))) {
+        if (!is_object($billing) || empty(trim($billing->customer_contact ?? ''))) {
             LogHelper::logError(null, [
                 'billing_id' => $billing->id ?? null,
                 'action' => $action,
@@ -776,24 +770,24 @@ class WhatsappMessageService
         }
 
         // Ambil informasi dasar
-        $address = $billing->customer->address ?? 'Alamat tidak tersedia';
-        $customer_unique_id = $billing->customer->customer_id ?? 'Customer ID tidak tersedia';
+        $address = $billing->customer_address ?? 'Alamat tidak tersedia';
+        $customer_unique_id = $billing->customer_unique_id ?? 'Customer ID tidak tersedia';
 
         // Normalisasi dan validasi kontak
         $contacts = [
             'customer' => [
-                'raw' => $billing->customer->contact ?? null,
+                'raw' => $billing->customer_contact ?? null,
                 'label' => 'customer',
                 'check' => 'broadcast',
                 'id' => $billing->customer_id ?? null,
                 'name' => $billing->customer_name ?? null,
             ],
             'admin' => [
-                'raw' => $billing->customer->user->contact ?? null,
+                'raw' => $billing->admin_contact ?? null,
                 'label' => 'admin',
                 'check' => null,
-                'id' => $billing->user_id ?? null,
-                'name' => $billing->user->name ?? null,
+                'id' => $billing->admin_id ?? null,
+                'name' => $billing->admin_name ?? null,
             ]
         ];
 
@@ -810,7 +804,25 @@ class WhatsappMessageService
             ${"{$type}_contact"} = $processed;
             ${"{$type}_id"} = $data['id'];
             ${"{$type}_name"} = $data['name'];
+
+            if ($type === 'admin') {
+                $admin_id = $data['id'];
+                $admin_contact = $data['raw'];
+            }
         }
+
+        // LogHelper::logInfo(
+        //     null,
+        //     [
+        //         'address' => $address,
+        //         'customer_unique_id' => $customer_unique_id,
+        //         'admin_id' => $admin_id,
+        //         'admin_contact' => $admin_contact
+        //     ],
+        //     200,
+        //     "admin id",
+        //     $traceId
+        // );
 
         // Ambil informasi rekening admin
         $accountBank = $this->getBankInfo($admin_id ?? 1);
@@ -913,7 +925,7 @@ class WhatsappMessageService
             try {
                 $message = 'Congratulations!! Test message from Customer Management WA Gateway';
                 $full_name = "Dummy Customer";
-                $this->sendWhatsappSingleJob(null, $full_name, $receive_number, $gateway, $message, 'test_message', $traceId);
+                $this->sendWhatsappSingleJob(null, $full_name, $receive_number, $gateway, $message, 'test_message', $traceId, 'yes');
 
                 LogHelper::logInfo(
                     null,

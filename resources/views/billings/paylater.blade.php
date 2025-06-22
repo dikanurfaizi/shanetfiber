@@ -24,7 +24,7 @@
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>Periode:</strong>
-                {{ $billing->month ?? 'no data' }} - {{ $billing->year ?? 'no data' }}
+                {{ $billing->billing_periode->name }}
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
@@ -81,10 +81,19 @@
         <div class="col-xs-6 col-sm-6 col-md-6">
             <div class="form-group">
                 <strong>{{ __('billing.pay-later') }}</strong>
+                {{-- @php
+                    dd([
+                        'pay_later' => $billing->pay_later,
+                        'value_attr' => $billing->pay_later
+                            ? \Carbon\Carbon::parse($billing->pay_later)->format('Y-m-d\TH:i')
+                            : now()->format('Y-m-d\TH:i'),
+                    ]);
+                @endphp --}}
                 <span>
-                    <input type="datetime-local" class="form-control" name="pay_later"
-                        value="{{ Carbon\Carbon::parse($billing->pay_later)->format('Y-m-d\TH:i') }}"
-                        min="{{ now()->format('Y-m-d') }}T00:00">
+                    <input type="text" class="form-control flatpickr-date" name="pay_later" autocomplete="off"
+                        value="{{ $billing->pay_later ? \Carbon\Carbon::parse($billing->pay_later)->format('d F Y') : now()->format('d F Y') }}">
+                    <input type="hidden" name="pay_later_db"
+                        value="{{ $billing->pay_later ? \Carbon\Carbon::parse($billing->pay_later)->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s') }}">
                 </span>
                 @if ($errors->has('pay_later'))
                     <span class="text-danger">{{ $errors->first('pay_later') }}</span>
@@ -113,11 +122,15 @@
     @section('custom_scripts')
         <script src="{{ asset('js/flatpickr') }}"></script>
         <script>
-            config = {
-                enableTime: false,
-                dateFormat: 'd F Y',
-            }
-            flatpickr("input[type=datetime-local]", config);
+            flatpickr(".flatpickr-date", {
+                dateFormat: "d F Y",
+                defaultDate: "{{ $billing->pay_later ?? now() }}",
+                minDate: "today",
+                onChange: function(selectedDates, dateStr, instance) {
+                    document.querySelector('[name="pay_later_db"]').value =
+                        selectedDates[0].toISOString().slice(0, 19).replace('T', ' ');
+                }
+            });
         </script>
     @endsection
 </x-layouts.cpanel.billings.app-layout>

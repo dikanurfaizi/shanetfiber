@@ -132,12 +132,42 @@
     </li>
 @endcanany
 @can('is-admin')
+    <li class="nav-item @if (request()->routeIs('telegramgateway*') || request()->routeIs('telegrammessage*')) active @endif">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseTelGateway"
+            aria-expanded="true" aria-controls="collapseSetting" style="padding-top: inherit;">
+            <i class="fab fa-telegram-plane"></i>
+            <span>{{ __(' Telegram Gateways') }}</span>
+        </a>
+        <div id="collapseTelGateway" class="collapse collapse @if (request()->routeIs('telegramgateway*') || request()->routeIs('telegrammessage*'))  @endif"
+            aria-labelledby="headingBilling" data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+
+                <a class="collapse-item @if (request()->routeIs('telegramgateway*')) active @endif"
+                    href="{{ route('telegramgateway.index') }}">
+                    <i class="fas fa-plug"></i>
+                    <span> {{ __(' Gateways') }}</span>
+                </a>
+                <a class="collapse-item @if (request()->routeIs('telegramchat*')) active @endif"
+                    href="{{ route('telegramchat.index') }}">
+                    <i class="fas fa-user-tag"></i>
+                    <span> {{ __(' Chat ID') }}</span>
+                </a>
+                <a class="collapse-item @if (request()->routeIs('telegrammessage*')) active @endif"
+                    href="{{ route('telegrammessage.index') }}">
+                    <i class="fas fa-comment-dots"></i>
+                    <span> {{ __(' Messages') }}</span>
+                </a>
+            </div>
+        </div>
+    </li>
+@endcan
+@can('is-admin')
     <li class="nav-item @if (request()->routeIs('whatsappgateway*') ||
             request()->routeIs('whatsappnumber*') ||
             request()->routeIs('whatsappmessage*')) active @endif">
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseGateway"
             aria-expanded="true" aria-controls="collapseSetting" style="padding-top: inherit;">
-            <i class="fas fa-user-shield"></i>
+            <i class="fab fa-whatsapp"></i>
             <span>{{ __(' Whatsapp Gateways') }}</span>
         </a>
         <div id="collapseGateway" class="collapse collapse @if (request()->routeIs('whatsappgateway*') ||
@@ -148,17 +178,17 @@
 
                 <a class="collapse-item @if (request()->routeIs('whatsappgateway*')) active @endif"
                     href="{{ route('whatsappgateway.index') }}">
-                    <i class="fas fa-server"></i>
+                    <i class="fas fa-plug"></i>
                     <span> {{ __(' Gateways') }}</span>
                 </a>
                 <a class="collapse-item @if (request()->routeIs('whatsappnumber*')) active @endif"
                     href="{{ route('whatsappnumber.index') }}">
-                    <i class="fas fa-server"></i>
+                    <i class="fas fa-hashtag"></i>
                     <span> {{ __(' Numbers') }}</span>
                 </a>
                 <a class="collapse-item @if (request()->routeIs('whatsappmessage*')) active @endif"
                     href="{{ route('whatsappmessage.index') }}">
-                    <i class="fas fa-server"></i>
+                    <i class="fas fa-comment-dots"></i>
                     <span> {{ __(' Messages') }}</span>
                 </a>
             </div>

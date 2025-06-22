@@ -447,11 +447,7 @@ class BillingController extends Controller
 
     public function paylater(Request $request, Billing $billing)
     {
-        $billingCustomerId = $billing->customer_id;
-        $billings = Billing::where('customer_id', $billingCustomerId)->where('status', 'BL')->get();
-        return view('billings.paylater', compact('billing'), [
-            'billings' => $billings,
-        ]);
+        return view('billings.paylater', compact('billing'));
     }
 
     public function post_paylater(Request $request, Billing $billing)

@@ -6,7 +6,6 @@ use App\Models\Paket;
 use App\Models\PppType;
 use App\Models\Customer;
 use App\Models\Mikrotik;
-use Illuminate\View\View;
 use App\Models\AutoIsolir;
 use App\Models\MerkRouter;
 use App\Models\TypeRouter;
@@ -14,55 +13,60 @@ use App\Models\CustomerOnt;
 use App\Models\User;
 use App\Models\DeleteCustomer;
 use App\Models\Paket\PppProfile;
-
-use Illuminate\Support\Str;
-use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use App\Models\Billing\Billing;
 use App\Models\DeletedCustomer;
-use Illuminate\Validation\Rule;
+use App\Models\Billing\BillingPeriode;
+use App\Models\Member;
+use App\Models\TelegramGateway\TelegramChatId;
+use App\Models\Receipt;
+use App\Models\Websystem;
+use App\Models\WhatsappGateway\WhatsappGateway;
+
 use App\Jobs\DeletePppSecretJob;
 use App\Jobs\EnablePppSecretJob;
 use App\Jobs\DisablePppSecretJob;
+use App\Jobs\AddPaymentAfterDueDateJob;
+use App\Jobs\AddPaymentBeforeDueDateJob;
+use App\Jobs\AddPaymentIpStaticAfterDueDateJob;
+use App\Jobs\AddPaymentIpStaticBeforeDueDateJob;
+//use App\Jobs\ActivationCustomerJob;
+use App\Jobs\DeleteIpStaticJob;
+use App\Jobs\SendMessage;
+
+use App\Services\Routerboard\IpStaticService;
+use App\Services\Routerboard\QueueService;
+use App\Services\Routerboard\TestConnectionService;
+use App\Services\Routerboard\SystemService;
+use App\Services\Routerboard\Ppp\SecretService;
+use App\Services\WhatsappMessageService;
+use App\Services\TelegramMessageService;
+
+use Illuminate\View\View;
+use Illuminate\Support\Str;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\RedirectResponse;
-use App\Models\Billing\BillingPeriode;
-use App\Jobs\AddPaymentAfterDueDateJob;
 use RouterOS\Exceptions\QueryException;
-use App\Jobs\AddPaymentBeforeDueDateJob;
 use RouterOS\Exceptions\ClientException;
 use RouterOS\Exceptions\ConfigException;
 use RouterOS\Exceptions\ConnectException;
 use App\Http\Requests\CustomerUpdateRequest;
 use App\Http\Resources\Pppoe\SecretResource;
 use App\Http\Requests\CustomerPppUpdateRequest;
-use App\Services\Routerboard\Ppp\SecretService;
 use RouterOS\Exceptions\BadCredentialsException;
 use App\Http\Requests\CustomerRouterUpdateRequest;
 use App\Http\Requests\CustomerStoreRequest;
 use App\Http\Resources\InterfaceResource;
-use App\Jobs\AddPaymentIpStaticAfterDueDateJob;
-use App\Jobs\AddPaymentIpStaticBeforeDueDateJob;
-//use App\Jobs\ActivationCustomerJob;
-use App\Jobs\DeleteIpStaticJob;
-use App\Models\Receipt;
-use App\Models\Websystem;
-use App\Models\WhatsappGateway\WhatsappGateway;
-use App\Services\Routerboard\IpStaticService;
-use App\Services\Routerboard\QueueService;
-use App\Services\Routerboard\TestConnectionService;
-use App\Services\Routerboard\SystemService;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Helpers\LogHelper;
-use App\Models\Member;
-use App\Services\WhatsappMessageService;
 use App\Exports\CustomersExport;
 use Maatwebsite\Excel\Facades\Excel;
-
 //use ArielMejiaDev\LarapexCharts\Facades\LarapexChart;
 use ArielMejiaDev\LarapexCharts\LarapexChart;
 use Illuminate\Support\Facades\DB;
@@ -85,16 +89,24 @@ class CustomerController extends Controller
     private QueueService $queueService;
     private IpStaticService $ipStaticService;
     private WhatsappMessageService $whatsappMessageService;
+    private TelegramMessageService $telegramMessageService;
 
-
-    public function __construct(SecretService $secretService, TestConnectionService $testConnectionService, SystemService $systemService, QueueService $queueService, IpStaticService $ipStaticService, WhatsappMessageService $whatsappMessageService)
-    {
+    public function __construct(
+        SecretService $secretService,
+        TestConnectionService $testConnectionService,
+        SystemService $systemService,
+        QueueService $queueService,
+        IpStaticService $ipStaticService,
+        WhatsappMessageService $whatsappMessageService,
+        TelegramMessageService $telegramMessageService
+    ) {
         $this->secretService = $secretService;
         $this->testConnectionService = $testConnectionService;
         $this->systemService = $systemService;
         $this->queueService = $queueService;
         $this->ipStaticService = $ipStaticService;
         $this->whatsappMessageService = $whatsappMessageService;
+        $this->telegramMessageService = $telegramMessageService;
         $this->middleware('permission:customer-list|customer-create|customer-edit|customer-delete|secret-disable|secret-edit', ['only' => ['index', 'show']]);
         $this->middleware('permission:customer-create', ['only' => ['create', 'store', 'activation']]);
         $this->middleware('permission:customer-edit', ['only' => ['edit', 'update', 'activation', 'editRouter', 'updateRouter']]);
@@ -492,6 +504,7 @@ class CustomerController extends Controller
 
     public function activation(Customer $customer): RedirectResponse
     {
+        $traceId = (string) Str::uuid();
         $internet_service = $customer->internet_service;
         $activationDate = Carbon::now();
         $mikrotikId = $customer->mikrotik_id;
@@ -621,9 +634,7 @@ class CustomerController extends Controller
             'status' => 'LS',
             'receipt_id' => $getReceipt->id,
         ]);
-        if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
-            $this->whatsappMessageService->activation($customer, 'activation_customer');
-        }
+        SendMessage::dispatch($customer->id, 'activation_customer', $traceId)->onQueue('default');
         return redirect()->back()
             ->with('success', 'Customer activated.');
     }
@@ -1274,7 +1285,7 @@ class CustomerController extends Controller
     public function forceDisable(Customer $customer)
     {
         $customer->update([
-            'disabled' => 'false'
+            'disabled' => 'true'
         ]);
         return redirect()->back()->with('success', 'Disable customer successfully but not in server');
     }

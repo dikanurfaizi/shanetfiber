@@ -36,16 +36,16 @@ class SendMessages extends Command
         $dayOfMonth = $currentDateTime->day;
 
         // Log command initiation
-        LogHelper::logInfo(
-            'SendMessagesCommand',
-            [
-                'start_time' => $formattedDate,
-                'day_of_month' => $dayOfMonth
-            ],
-            200,
-            "Starting reminder messages sending process",
-            $traceId
-        );
+        // LogHelper::logInfo(
+        //     'SendMessagesCommand',
+        //     [
+        //         'start_time' => $formattedDate,
+        //         'day_of_month' => $dayOfMonth
+        //     ],
+        //     200,
+        //     "Starting reminder messages sending process",
+        //     $traceId
+        // );
 
         $this->info("Starting reminder messages job at {$formattedDate}");
 
@@ -60,6 +60,25 @@ class SendMessages extends Command
                     [
                         'current_day' => $dayOfMonth,
                         'allowed_days' => $allowedDates
+                    ],
+                    422,
+                    $message,
+                    $traceId
+                );
+
+                $this->warn($message);
+                return 0;
+            }
+
+            $currentHour = $currentDateTime->hour;
+            if ($currentHour < 8 || $currentHour >= 22) {
+                $message = "Current time ({$currentHour}:00 WIB) is outside the allowed range (08:00 - 22:00 WIB). Command will not proceed.";
+
+                LogHelper::logWarning(
+                    'SendMessagesCommand',
+                    [
+                        'current_hour' => $currentHour,
+                        'allowed_range' => '08:00 - 22:00'
                     ],
                     422,
                     $message,

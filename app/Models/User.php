@@ -25,6 +25,7 @@ class User extends Authenticatable
         'password',
         'disabled',
         'contact',
+        'telegram_chat_id'
     ];
 
     /**
@@ -46,7 +47,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
-    
+
     public function customers()
     {
         return $this->hasMany(Customer::class);

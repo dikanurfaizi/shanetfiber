@@ -36,10 +36,10 @@ class InitialPayment extends Command
         $formattedDate = $now->format('Y-m-d H:i:s');
         $dayOfMonth = $now->day;
 
-        LogHelper::logInfo('InitialPaymentCommand', [
-            'start_time' => $formattedDate,
-            'day_of_month' => $dayOfMonth
-        ], 200, "Starting initial payment messages sending process", $traceId);
+        // LogHelper::logInfo('InitialPaymentCommand', [
+        //     'start_time' => $formattedDate,
+        //     'day_of_month' => $dayOfMonth
+        // ], 200, "Starting initial payment messages sending process", $traceId);
 
         $this->info("Starting initial payment messages job at {$formattedDate}");
 
@@ -56,6 +56,25 @@ class InitialPayment extends Command
                     ],
                     422,
                     $message
+                );
+
+                $this->warn($message);
+                return 0;
+            }
+
+            $currentHour = $now->hour;
+            if ($currentHour < 8 || $currentHour >= 22) {
+                $message = "Current time ({$currentHour}:00 WIB) is outside the allowed range (08:00 - 22:00 WIB). Command will not proceed.";
+
+                LogHelper::logWarning(
+                    'SendMessagesCommand',
+                    [
+                        'current_hour' => $currentHour,
+                        'allowed_range' => '08:00 - 22:00'
+                    ],
+                    422,
+                    $message,
+                    $traceId
                 );
 
                 $this->warn($message);

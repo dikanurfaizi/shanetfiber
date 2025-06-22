@@ -70,7 +70,9 @@ class SendPaymentReminderService
             return;
         }
 
-        $message = $messageService->bill_info($billing, $messageType);
+        // LogHelper::logInfo(null, 200, json_encode(['billing' => $billing->toArray()]), 'Informasi Billing', $traceId);
+
+        $message = $messageService->bill_info($billing, $messageType, $traceId);
 
         if ($message) {
             try {
@@ -81,7 +83,8 @@ class SendPaymentReminderService
                     $gateway,
                     $message,
                     $messageType,
-                    $traceId
+                    $traceId,
+                    null
                 );
             } catch (\Exception $e) {
                 LogHelper::logError(null, [
