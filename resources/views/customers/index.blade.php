@@ -372,20 +372,20 @@
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <span class="badge bg-secondary-soft">#{{ ++$i }}</span>
                             @if ($customer->activation == 'false')
-                                <span class="badge bg-danger-soft">
+                                <span class="custom-badge bg-danger">
                                     <i class="fa fa-times text-warning me-2"></i>
                                     {{ __('customer.info.not-activation') }}
                                 </span>
                             @else
                                 @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
                                     <span
-                                        class="badge text-white @if ($customer->disabled === 'false') bg-success-soft @endif">
+                                        class="custom-badge text-white @if ($customer->disabled === 'false') bg-success @endif">
                                         <i class="fas fa-lock-open"></i> {{ __('pppoe.secret.enabled') }}
                                     </span>
                                 @endif
                                 @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
                                     <span
-                                        class="badge text-white @if ($customer->disabled === 'false') bg-secondary-soft @endif">
+                                        class="custom-badge text-white @if ($customer->disabled === 'false') bg-secondary @endif">
                                         <i class="fas fa-lock"></i> {{ __('pppoe.secret.disabled') }}
                                     </span>
                                 @endif
@@ -404,15 +404,8 @@
                                     {{ $customer->name }}
                                 @endcan
                             </h6>
-                            @php
-                                $badgeClass =
-                                    $customer->disabled === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value
-                                        ? 'bg-danger-soft text-danger'
-                                        : 'bg-success-soft text-success';
-                            @endphp
-
-                            <span class="custom-badge text-truncate {{ $badgeClass }}" style="max-width: 50%;"
-                                title="{{ $customer->paket->name }}">
+                            <span class="custom-badge text-truncate bg-turquoise-soft text-turquoise"
+                                style="max-width: 50%;" title="{{ $customer->paket->name }}">
                                 {{ $customer->paket->name }}
                             </span>
                         </div>
@@ -436,7 +429,7 @@
 
                         {{-- Baris 4: Alamat + Harga --}}
                         <div class="d-flex justify-content-between align-items-start mb-2">
-                            <small class="text-muted" style="max-width: 60%;">{{ $customer->address }}</small>
+                            <small class="text-muted" style="max-width: 100%;">{{ $customer->address }}</small>
                         </div>
 
                         {{-- Garis pembatas --}}
@@ -600,19 +593,14 @@
                 pointer-events: none !important;
             }
 
-            .bg-success-soft {
-                background-color: #d1e7dd !important;
-                color: #0f5132 !important;
+            .bg-turquoise-soft {
+                background-color: #e0f7f4;
+                /* warna hijau tosca yang lembut */
             }
 
-            .bg-danger-soft {
-                background-color: #f8d7da !important;
-                color: #842029 !important;
-            }
-
-            .bg-secondary-soft {
-                background-color: #e2e3e5 !important;
-                color: #41464b !important;
+            .text-turquoise {
+                color: #009688;
+                /* warna hijau tosca */
             }
         </style>
     @endsection
