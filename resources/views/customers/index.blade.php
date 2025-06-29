@@ -130,241 +130,492 @@
                 </a>
             </form>
         </div>
-        <div style="overflow-x: auto;">
-            <table id="customersTable" cellspacing="0" width="100%"
-                class="table table-bordered table-striped table-hover">
-                <tr class="table-secondary text-center">
-                    <th>
-                        <span class="badge bg-danger-soft text-primary">
-                            {{ __('customer.table.no') }}
-                        </span>
-                    </th>
-                    <th>
-                        <span class="badge bg-danger-soft text-primary">
-                            {{ __('customer.table.name') }}
-                        </span>
-                    </th>
-                    <th>
-                        <span class="badge bg-danger-soft text-primary">
-                            {{ __('customer.table.contact') }}
-                        </span>
-                    </th>
-                    <th>
-                        <span class="badge bg-danger-soft text-primary">
-                            {{ __('customer.table.address') }}
-                        </span>
-                    </th>
-                    <th>
-                        <span class="badge bg-danger-soft text-primary">
-                            {{ __('customer.table.activation_date') }}
-                        </span>
-                    </th>
-                    <th>
-                        <span class="badge bg-danger-soft text-primary">
-                            {{ __('customer.table.package') }}
-                        </span>
-                    </th>
-                    <th>
-                        <span class="badge bg-danger-soft text-primary">
-                            {{ __('customer.table.bill') }}
-                        </span>
-                    </th>
-                    <th>
-                        <span class="badge bg-danger-soft text-primary">
-                            {{ __('customer.table.responsibility') }}
-                        </span>
-                    </th>
-                    <th>
-                        <span class="badge bg-danger-soft text-primary">
-                            {{ __('customer.table.state') }}
-                        </span>
-                    </th>
-                    <th width="80px">
-                        <span class="badge bg-danger-soft text-primary">
-                            {{ __('customer.table.action') }}
-                        </span>
-                    </th>
-                </tr>
-                @foreach ($data as $key => $customer)
-                    <tr class="@if ($customer->disabled === 'true') text-secondary @else text-primary @endif">
-                        <td>
-                            <span class="badge bg-danger-soft">
-                                {{ ++$i }}
+        <div class="d-none d-md-block">
+            <div style="overflow-x: auto;">
+                <table id="customersTable" cellspacing="0" width="100%"
+                    class="table table-bordered table-striped table-hover">
+                    <tr class="table-secondary text-center">
+                        <th>
+                            <span class="badge bg-danger-soft text-primary">
+                                {{ __('customer.table.no') }}
                             </span>
-                        </td>
-                        <td>
-                            @can('customer-list')
-                                <a class="@if ($customer->disabled === 'true') text-secondary @else text-primary @endif"
-                                    href="{{ route('customers.show', $customer->slug) }}">{{ $customer->name }}</a>
-                            @else
-                                {{ $customer->name }}
-                            @endcan
-                        </td>
-                        <td>
-                            <span class="badge bg-danger-soft">
-                                {{ $customer->contact }}
+                        </th>
+                        <th>
+                            <span class="badge bg-danger-soft text-primary">
+                                {{ __('customer.table.name') }}
                             </span>
-                        </td>
-                        <td>
-                            <span class="badge bg-danger-soft">
-                                {{ $customer->address }}
+                        </th>
+                        <th>
+                            <span class="badge bg-danger-soft text-primary">
+                                {{ __('customer.table.contact') }}
                             </span>
-                        </td>
-                        <td>
-                            <span class="badge bg-danger-soft">
-                                @if ($customer->activation == 'true')
-                                    {{ Carbon\Carbon::parse($customer->activation_date)->translatedFormat('d F Y') ?? 'No Data' }}
+                        </th>
+                        <th>
+                            <span class="badge bg-danger-soft text-primary">
+                                {{ __('customer.table.address') }}
+                            </span>
+                        </th>
+                        <th>
+                            <span class="badge bg-danger-soft text-primary">
+                                {{ __('customer.table.activation_date') }}
+                            </span>
+                        </th>
+                        <th>
+                            <span class="badge bg-danger-soft text-primary">
+                                {{ __('customer.table.package') }}
+                            </span>
+                        </th>
+                        <th>
+                            <span class="badge bg-danger-soft text-primary">
+                                {{ __('customer.table.bill') }}
+                            </span>
+                        </th>
+                        <th>
+                            <span class="badge bg-danger-soft text-primary">
+                                {{ __('customer.table.responsibility') }}
+                            </span>
+                        </th>
+                        <th>
+                            <span class="badge bg-danger-soft text-primary">
+                                {{ __('customer.table.state') }}
+                            </span>
+                        </th>
+                        <th width="80px">
+                            <span class="badge bg-danger-soft text-primary">
+                                {{ __('customer.table.action') }}
+                            </span>
+                        </th>
+                    </tr>
+                    @foreach ($data as $key => $customer)
+                        <tr class="@if ($customer->disabled === 'true') text-secondary @else text-primary @endif">
+                            <td>
+                                <span class="badge bg-danger-soft">
+                                    {{ ++$i }}
+                                </span>
+                            </td>
+                            <td>
+                                @can('customer-list')
+                                    <a class="@if ($customer->disabled === 'true') text-secondary @else text-primary @endif"
+                                        href="{{ route('customers.show', $customer->slug) }}">{{ $customer->name }}</a>
                                 @else
-                                    <i class="text-danger">{{ __('Not Activated') }}</i>
-                                @endif
-                        </td>
-                        </span>
-                        <td>
-                            <span class="badge bg-danger-soft">
-                                <i class="fas fa-chalkboard"></i> {{ $customer->paket->name }}
+                                    {{ $customer->name }}
+                                @endcan
+                            </td>
+                            <td>
+                                <span class="badge bg-danger-soft">
+                                    {{ $customer->contact }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-danger-soft">
+                                    {{ $customer->address }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-danger-soft">
+                                    @if ($customer->activation == 'true')
+                                        {{ Carbon\Carbon::parse($customer->activation_date)->translatedFormat('d F Y') ?? 'No Data' }}
+                                    @else
+                                        <i class="text-danger">{{ __('Not Activated') }}</i>
+                                    @endif
+                            </td>
                             </span>
-                        </td>
-                        <td>
-                            <span class="badge bg-danger-soft">
-                                @if ($customer->billing_option === 1 || ($customer->billing_option === 2 && $customer->billing_period === $periodeName))
-                                    @moneyIDR(optional($customer->paket)->price - optional($customer->member)->discount)
+                            <td>
+                                <span class="badge bg-danger-soft">
+                                    <i class="fas fa-chalkboard"></i> {{ $customer->paket->name }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-danger-soft">
+                                    @if ($customer->billing_option === 1 || ($customer->billing_option === 2 && $customer->billing_period === $periodeName))
+                                        @moneyIDR(optional($customer->paket)->price - optional($customer->member)->discount)
+                                    @else
+                                        @moneyIDR(optional($customer->paket)->price)
+                                    @endif
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="badge bg-danger-soft">
+                                    <i class="fas fa-user-shield"></i>
+                                    {{ $customer->user?->name ?? 'No Linked User' }}
+                                </span>
+                            </td>
+
+                            <td>
+                                @if ($customer->activation == 'false')
+                                    <span class="badge bg-danger">
+                                        <i class="fa fa-times text-warning me-2"></i>
+                                        {{ __('customer.info.not-activation') }}
+                                    </span>
                                 @else
-                                    @moneyIDR(optional($customer->paket)->price)
-                                @endif
-                            </span>
-                        </td>
+                                    @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
+                                        <span
+                                            class="badge text-white @if ($customer->disabled === 'false') bg-success @endif">
+                                            <i class="fas fa-lock-open"></i> {{ __('pppoe.secret.enabled') }}
+                                        </span>
+                                    @endif
+                                    @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
+                                        <span
+                                            class="badge text-white @if ($customer->disabled === 'false') bg-secondary @endif">
+                                            <i class="fas fa-lock"></i> {{ __('pppoe.secret.disabled') }}
+                                        </span>
+                                    @endif
+                            </td>
+                    @endif
+                    <td class="items-center justify-content-end">
+                        @canany(['secret-disable', 'customer-edit', 'secret-edit', 'customer-delete'])
+                            <x-drop-down-action>
+                                @can('customer-edit')
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('customers.edit', $customer->slug) }}">
+                                            <i class="far fa-edit me-2 text-success"></i>
+                                            {{ __('customer.action.edit') }}
+                                        </a>
+                                    </li>
+                                    <li>
+                                        @if ($customer->activation == 'false')
+                                            <form method="POST" class="d-inline"
+                                                action="{{ route('customers.activation', $customer->slug) }}">
+                                                @csrf
+                                                @method('put')
+                                                <a class="dropdown-item" href="#"
+                                                    onclick="event.preventDefault(); this.closest('form').submit();">
+                                                    <i class="fa fa-check me-2 text-success"></i>
+                                                    {{ __('customer.action.activation') }}
+                                                </a>
+                                            </form>
+                                        @else
+                                            @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
+                                                <form method="POST" class="d-inline"
+                                                    action="{{ route('customers.enable', $customer->slug) }}">
+                                                    @csrf
+                                                    @method('put')
+                                                    <a class="dropdown-item" href="#"
+                                                        onclick="event.preventDefault(); this.closest('form').submit();">
+                                                        <i class="fa fa-check me-2 text-success"></i>
+                                                        {{ __('pppoe.secret.enable') }}
+                                                    </a>
+                                                </form>
+                                                <form method="POST" class="d-inline"
+                                                    action="{{ route('customers.forceEnable', $customer->slug) }}">
+                                                    @csrf
+                                                    @method('put')
+                                                    <a class="dropdown-item" href="#"
+                                                        onclick="event.preventDefault(); this.closest('form').submit();">
+                                                        <i class="fa fa-check me-2 text-success"></i>
+                                                        {{ __('pppoe.secret.force-enable') }}
+                                                    </a>
+                                                </form>
+                                            @elseif ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
+                                                <form method="POST" class="d-inline"
+                                                    action="{{ route('customers.disable', $customer->slug) }}">
+                                                    @csrf
+                                                    @method('put')
+                                                    <a class="dropdown-item" href="#"
+                                                        onclick="event.preventDefault(); this.closest('form').submit();">
+                                                        <i class="fa fa-times text-warning me-2"></i>
+                                                        {{ __('pppoe.secret.disable') }}
+                                                    </a>
+                                                </form>
+                                                <form method="POST" class="d-inline"
+                                                    action="{{ route('customers.forceDisable', $customer->slug) }}">
+                                                    @csrf
+                                                    @method('put')
+                                                    <a class="dropdown-item" href="#"
+                                                        onclick="event.preventDefault(); this.closest('form').submit();">
+                                                        <i class="fa fa-times text-warning me-2"></i>
+                                                        {{ __('pppoe.secret.force-disable') }}
+                                                    </a>
+                                                </form>
+                                            @endif
+                                        @endif
+                                    </li>
+                                @endcan
+                                @can('customer-delete')
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('customers.delete', $customer->slug) }}"><i
+                                                class="fa fa-trash me-2 text-danger"></i>&nbsp{{ __('customer.action.delete') }}</a>
+                                    </li>
+                                @endcan
+                                @can('secret-edit')
+                                    <li>
+                                        <form method="POST" action="{{ route('customers.pppoe.export', $customer->slug) }}">
+                                            @csrf
+                                            @method('PUT') <!-- atau method lainnya -->
+                                            <a class="dropdown-item" href="#"
+                                                onclick="event.preventDefault(); this.closest('form').submit();">
+                                                <i class="fas fa-file-export me-2 text-info"></i>
+                                                {{ __('pppoe.secret.export') }}
+                                            </a>
+                                        </form>
+                                    </li>
+                                @endcan
+                            </x-drop-down-action>
+                        @endcanany
+                    </td>
+                    </tr>
+                    @endforeach
+                </table>
+            </div>
+            {{-- {{ $data->withQueryString()->links() }} --}}
+            {{ $data->appends(['perPage' => request('perPage')])->links('vendor.pagination.custom') }}
+        </div>
 
-                        <td>
-                            <span class="badge bg-danger-soft">
-                                <i class="fas fa-user-shield"></i> {{ $customer->user?->name ?? 'No Linked User' }}
-                            </span>
-                        </td>
+        <!-- Mobile View -->
+        <div class="d-md-none">
+            @foreach ($data as $key => $customer)
+                <div class="card mb-3">
+                    <div class="card-body p-2">
 
-                        <td>
+                        {{-- Baris 1: #No dan status --}}
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="badge bg-secondary-soft">#{{ ++$i }}</span>
                             @if ($customer->activation == 'false')
-                                <span class="badge text-white bg-danger">
+                                <span class="badge bg-danger-soft">
                                     <i class="fa fa-times text-warning me-2"></i>
                                     {{ __('customer.info.not-activation') }}
                                 </span>
                             @else
                                 @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
-                                    <span class="badge text-white @if ($customer->disabled === 'false') bg-success @endif">
+                                    <span
+                                        class="badge text-white @if ($customer->disabled === 'false') bg-success-soft @endif">
                                         <i class="fas fa-lock-open"></i> {{ __('pppoe.secret.enabled') }}
                                     </span>
                                 @endif
                                 @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
-                                    <span class="badge @if ($customer->disabled === 'false') bg-secondary @endif">
+                                    <span
+                                        class="badge text-white @if ($customer->disabled === 'false') bg-secondary-soft @endif">
                                         <i class="fas fa-lock"></i> {{ __('pppoe.secret.disabled') }}
                                     </span>
                                 @endif
-                        </td>
-                @endif
-                <td class="items-center justify-content-end">
-                    @canany(['secret-disable', 'customer-edit', 'secret-edit', 'customer-delete'])
-                        <x-drop-down-action>
-                            @can('customer-edit')
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('customers.edit', $customer->slug) }}">
-                                        <i class="far fa-edit me-2 text-success"></i>
-                                        {{ __('customer.action.edit') }}
+                            @endif
+                        </div>
+
+                        {{-- Baris 2: Nama + Nama Paket --}}
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h6 class="mb-0" style="max-width: 60%">
+                                @can('customer-list')
+                                    <a class="text white {{ $customer->disabled === 'true' ? 'text-secondary' : 'text-primary' }}"
+                                        href="{{ route('customers.show', $customer->slug) }}">
+                                        {{ $customer->name }}
                                     </a>
-                                </li>
-                                <li>
-                                    @if ($customer->activation == 'false')
-                                        <form method="POST" class="d-inline"
-                                            action="{{ route('customers.activation', $customer->slug) }}">
+                                @else
+                                    {{ $customer->name }}
+                                @endcan
+                            </h6>
+                            @php
+                                $badgeClass =
+                                    $customer->disabled === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value
+                                        ? 'bg-danger-soft text-danger'
+                                        : 'bg-success-soft text-success';
+                            @endphp
+
+                            <span class="custom-badge text-truncate {{ $badgeClass }}" style="max-width: 50%;"
+                                title="{{ $customer->paket->name }}">
+                                {{ $customer->paket->name }}
+                            </span>
+                        </div>
+
+                        {{-- Baris 3: Nomor Telepon & Force Action --}}
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <small class="text-muted text-truncate" style="max-width: 60%;">
+                                {{ $customer->contact }}
+                            </small>
+                            <small class="fw-semibold">
+                                @php
+                                    $harga =
+                                        $customer->billing_option === 1 ||
+                                        ($customer->billing_option === 2 && $customer->billing_period === $periodeName)
+                                            ? optional($customer->paket)->price - optional($customer->member)->discount
+                                            : optional($customer->paket)->price;
+                                @endphp
+                                @moneyIDR($harga)
+                            </small>
+                        </div>
+
+                        {{-- Baris 4: Alamat + Harga --}}
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <small class="text-muted" style="max-width: 60%;">{{ $customer->address }}</small>
+                        </div>
+
+                        {{-- Garis pembatas --}}
+                        <hr class="my-2" />
+
+                        {{-- Baris 4: Admin + Dropdown Action --}}
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">{{ $customer->user?->name ?? 'No Admin' }}</small>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button"
+                                    id="dropdownMenuButton" data-bs-toggle="dropdown">
+                                    ⋮
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end">
+                                    @can('customer-edit')
+                                        <a class="dropdown-item" href="{{ route('customers.edit', $customer->slug) }}"><i
+                                                class="far fa-edit me-2 text-success"></i>
+                                            {{ __('customer.action.edit') }}</a>
+                                        @if ($customer->activation == 'false')
+                                            <form method="POST" class="d-inline"
+                                                action="{{ route('customers.activation', $customer->slug) }}">
+                                                @csrf
+                                                @method('put')
+                                                <a class="dropdown-item" href="#"
+                                                    onclick="event.preventDefault(); this.closest('form').submit();">
+                                                    <i class="fa fa-check me-2 text-success"></i>
+                                                    {{ __('customer.action.activation') }}
+                                                </a>
+                                            </form>
+                                        @else
+                                            @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
+                                                <form method="POST" class="d-inline"
+                                                    action="{{ route('customers.enable', $customer->slug) }}">
+                                                    @csrf
+                                                    @method('put')
+                                                    <a class="dropdown-item" href="#"
+                                                        onclick="event.preventDefault(); this.closest('form').submit();">
+                                                        <i class="fa fa-check me-2 text-success"></i>
+                                                        {{ __('pppoe.secret.enable') }}
+                                                    </a>
+                                                </form>
+                                                <form method="POST" class="d-inline"
+                                                    action="{{ route('customers.forceEnable', $customer->slug) }}">
+                                                    @csrf
+                                                    @method('put')
+                                                    <a class="dropdown-item" href="#"
+                                                        onclick="event.preventDefault(); this.closest('form').submit();">
+                                                        <i class="fa fa-check me-2 text-success"></i>
+                                                        {{ __('pppoe.secret.force-enable') }}
+                                                    </a>
+                                                </form>
+                                            @elseif ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
+                                                <form method="POST" class="d-inline"
+                                                    action="{{ route('customers.disable', $customer->slug) }}">
+                                                    @csrf
+                                                    @method('put')
+                                                    <a class="dropdown-item" href="#"
+                                                        onclick="event.preventDefault(); this.closest('form').submit();">
+                                                        <i class="fa fa-times text-warning me-2"></i>
+                                                        {{ __('pppoe.secret.disable') }}
+                                                    </a>
+                                                </form>
+                                                <form method="POST" class="d-inline"
+                                                    action="{{ route('customers.forceDisable', $customer->slug) }}">
+                                                    @csrf
+                                                    @method('put')
+                                                    <a class="dropdown-item" href="#"
+                                                        onclick="event.preventDefault(); this.closest('form').submit();">
+                                                        <i class="fa fa-times text-warning me-2"></i>
+                                                        {{ __('pppoe.secret.force-disable') }}
+                                                    </a>
+                                                </form>
+                                            @endif
+                                        @endif
+                                    @endcan
+                                    <div class="dropdown-divider"></div>
+                                    @can('customer-delete')
+                                        <a class="dropdown-item text-danger"
+                                            href="{{ route('customers.delete', $customer->slug) }}"><i
+                                                class="fa fa-trash me-2 text-danger"></i>&nbsp{{ __('customer.action.delete') }}</a>
+                                    @endcan
+                                    @can('secret-edit')
+                                        <form method="POST"
+                                            action="{{ route('customers.pppoe.export', $customer->slug) }}">
                                             @csrf
-                                            @method('put')
+                                            @method('PUT') <!-- atau method lainnya -->
                                             <a class="dropdown-item" href="#"
                                                 onclick="event.preventDefault(); this.closest('form').submit();">
-                                                <i class="fa fa-check me-2 text-success"></i>
-                                                {{ __('customer.action.activation') }}
+                                                <i class="fas fa-file-export me-2 text-info"></i>
+                                                {{ __('pppoe.secret.export') }}
                                             </a>
                                         </form>
-                                    @else
-                                        @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
-                                            <form method="POST" class="d-inline"
-                                                action="{{ route('customers.enable', $customer->slug) }}">
-                                                @csrf
-                                                @method('put')
-                                                <a class="dropdown-item" href="#"
-                                                    onclick="event.preventDefault(); this.closest('form').submit();">
-                                                    <i class="fa fa-check me-2 text-success"></i>
-                                                    {{ __('pppoe.secret.enable') }}
-                                                </a>
-                                            </form>
-                                            <form method="POST" class="d-inline"
-                                                action="{{ route('customers.forceEnable', $customer->slug) }}">
-                                                @csrf
-                                                @method('put')
-                                                <a class="dropdown-item" href="#"
-                                                    onclick="event.preventDefault(); this.closest('form').submit();">
-                                                    <i class="fa fa-check me-2 text-success"></i>
-                                                    {{ __('pppoe.secret.force-enable') }}
-                                                </a>
-                                            </form>
-                                        @elseif ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
-                                            <form method="POST" class="d-inline"
-                                                action="{{ route('customers.disable', $customer->slug) }}">
-                                                @csrf
-                                                @method('put')
-                                                <a class="dropdown-item" href="#"
-                                                    onclick="event.preventDefault(); this.closest('form').submit();">
-                                                    <i class="fa fa-times text-warning me-2"></i>
-                                                    {{ __('pppoe.secret.disable') }}
-                                                </a>
-                                            </form>
-                                            <form method="POST" class="d-inline"
-                                                action="{{ route('customers.forceDisable', $customer->slug) }}">
-                                                @csrf
-                                                @method('put')
-                                                <a class="dropdown-item" href="#"
-                                                    onclick="event.preventDefault(); this.closest('form').submit();">
-                                                    <i class="fa fa-times text-warning me-2"></i>
-                                                    {{ __('pppoe.secret.force-disable') }}
-                                                </a>
-                                            </form>
-                                        @endif
-                                    @endif
-                                </li>
-                            @endcan
-                            @can('customer-delete')
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('customers.delete', $customer->slug) }}"><i
-                                            class="fa fa-trash me-2 text-danger"></i>&nbsp{{ __('customer.action.delete') }}</a>
-                                </li>
-                            @endcan
-                            @can('secret-edit')
-                                <li>
-                                    <form method="POST" action="{{ route('customers.pppoe.export', $customer->slug) }}">
-                                        @csrf
-                                        @method('PUT') <!-- atau method lainnya -->
-                                        <a class="dropdown-item" href="#"
-                                            onclick="event.preventDefault(); this.closest('form').submit();">
-                                            <i class="fas fa-file-export me-2 text-info"></i>
-                                            {{ __('pppoe.secret.export') }}
-                                        </a>
-                                    </form>
-                                </li>
-                            @endcan
-                        </x-drop-down-action>
-                    @endcanany
-                </td>
-                </tr>
-                @endforeach
-            </table>
+                                    @endcan
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            @endforeach
+
+            {{-- PAGINATION --}}
+            @if ($data->lastPage() > 1)
+                <nav>
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item {{ $data->onFirstPage() ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ $data->previousPageUrl() }}">&laquo;</a>
+                        </li>
+                        <li class="page-item {{ $data->hasMorePages() ? '' : 'disabled' }}">
+                            <a class="page-link" href="{{ $data->nextPageUrl() }}">&raquo;</a>
+                        </li>
+                    </ul>
+                    <div class="text-center text-muted small">
+                        Page {{ $data->currentPage() }} of {{ $data->lastPage() }}
+                    </div>
+                </nav>
+            @endif
+
+            {{-- PER PAGE --}}
+            <form method="GET" class="mt-3">
+                <div class="form-group">
+                    <label>Show:</label>
+                    <select name="perPage" class="form-control" onchange="this.form.submit()">
+                        <option value="10" {{ request('perPage') == 10 ? 'selected' : '' }}>10</option>
+                        <option value="25" {{ request('perPage') == 25 ? 'selected' : '' }}>25</option>
+                        <option value="50" {{ request('perPage') == 50 ? 'selected' : '' }}>50</option>
+                    </select>
+                </div>
+            </form>
         </div>
-        {{-- {{ $data->withQueryString()->links() }} --}}
-        {{ $data->appends(['perPage' => request('perPage')])->links('vendor.pagination.custom') }}
     </div>
 
-</x-layouts.cpanel.customers.app-layout>
+    @section('custom_scripts')
+        <script>
+            function updatePerPage() {
+                let perPage = document.getElementById('perPage').value;
+                let url = new URL(window.location.href);
+                url.searchParams.set('perPage', perPage);
+                window.location.href = url.toString();
+            }
+        </script>
+    @endsection
 
-<script>
-    function updatePerPage() {
-        let perPage = document.getElementById('perPage').value;
-        let url = new URL(window.location.href);
-        url.searchParams.set('perPage', perPage);
-        window.location.href = url.toString();
-    }
-</script>
+    @section('custom_styles')
+        <style>
+            .custom-badge {
+                background-color: #d1e7dd;
+                /* Soft green */
+                color: #0f5132;
+                border-radius: 0.25rem;
+                padding: 0.25em 0.6em;
+                font-size: 0.75rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                display: inline-block;
+            }
+
+            .btn-disabled {
+                opacity: 0.3 !important;
+                pointer-events: none !important;
+            }
+
+            .bg-success-soft {
+                background-color: #d1e7dd !important;
+                color: #0f5132 !important;
+            }
+
+            .bg-danger-soft {
+                background-color: #f8d7da !important;
+                color: #842029 !important;
+            }
+
+            .bg-secondary-soft {
+                background-color: #e2e3e5 !important;
+                color: #41464b !important;
+            }
+        </style>
+    @endsection
+
+
+</x-layouts.cpanel.customers.app-layout>
