@@ -1,44 +1,79 @@
 <?php
 
+/**
+ * archive‑laravel‑log.php
+ * Pindah log Laravel ke folder arsip harian + hapus arsip >30 hari
+ */
+
 date_default_timezone_set('Asia/Jakarta');
 
-// Path dasar aplikasi Laravel
-$basePath = '/www/wwwroot/www.shanetfiber.co.id';
+// ===  Konfigurasi dasar  =====================================================
+$basePath      = '/www/wwwroot/www.shanetfiber.co.id';      // root proyek
+$logFile       = $basePath . '/storage/logs/laravel.log';   // file log aktif
+$archiveBase   = $basePath . '/storage/logs/archived';      // direktori arsip
+$retentionDays = 30;                                        // lama penyimpanan
 
-// Lokasi file log Laravel
-$logFile = $basePath . '/storage/logs/laravel.log';
-
-// Lokasi folder arsip log
-$archiveBase = $basePath . '/storage/logs/archived';
-
-// Format tanggal dan timestamp untuk nama arsip
-$date = date('Y-m-d');
-$timestamp = date('Y-m-d_H-i-s');
-$archiveFolder = $archiveBase . '/' . $date;
-$archivedLog = $archiveFolder . "/laravel_{$timestamp}.log";
-
-// Cek apakah log file ada dan ukurannya > 0 KB
+// ===  1) Arsipkan log hari ini  ==============================================
 if (file_exists($logFile) && filesize($logFile) > 0) {
+    $date         = date('Y-m-d');
+    $timestamp    = date('Y-m-d_H-i-s');
+    $archiveDir   = $archiveBase . '/' . $date;
+    $archivedLog  = $archiveDir . "/laravel_{$timestamp}.log";
 
-    // Cek apakah folder arsip sudah ada, jika belum buat foldernya
-    if (!is_dir($archiveFolder)) {
-        mkdir($archiveFolder, 0755, true);
-    }
-
-    // Pindahkan log lama ke arsip
-    if (rename($logFile, $archivedLog)) {
-        echo "Log archived to {$archivedLog}\n";
-
-        // Buat file kosong baru untuk log
-        touch($logFile);
-        chmod($logFile, 0664);
-        chown($logFile, 'www'); // Ganti dengan user yang sesuai, misalnya www-data
-    } else {
-        echo "Failed to archive log.\n";
+    // Pastikan folder arsip harian ada
+    if (!is_dir($archiveDir) && !mkdir($archiveDir, 0755, true)) {
+        fwrite(STDERR, "❌  Gagal membuat folder arsip $archiveDir\n");
         exit(1);
     }
 
+    // Pindahkan log
+    if (rename($logFile, $archivedLog)) {
+        echo "✅  Log di‑arsipkan ke $archivedLog\n";
+        // Buat file log baru kosong untuk Laravel
+        touch($logFile);
+        chmod($logFile, 0664);
+        chown($logFile, 'www');          // sesuaikan user (mis. www-data)
+    } else {
+        fwrite(STDERR, "❌  Gagal memindahkan log ke $archivedLog\n");
+        exit(1);
+    }
 } else {
-    echo "Log file is empty or does not exist, skipping archive.\n";
-    exit(0); // Tidak ada arsip jika file kosong atau tidak ada
+    echo "ℹ️  Log kosong atau tidak ada, lewati proses arsip.\n";
+}
+
+// ===  2) Hapus folder arsip lama  ============================================
+// Hitung batas waktu
+$cutOff = new DateTime("-{$retentionDays} days");
+
+$objects = new FilesystemIterator($archiveBase, FilesystemIterator::SKIP_DOTS);
+foreach ($objects as $object) {
+    if (!$object->isDir()) {
+        // Hanya dipakai untuk folder berformat YYYY-MM-DD
+        continue;
+    }
+
+    $folderName = $object->getBasename();
+    // Validasi format tanggal supaya tidak menghapus folder tak terduga
+    $folderDate = DateTime::createFromFormat('Y-m-d', $folderName);
+    if ($folderDate === false) {
+        continue;
+    }
+
+    if ($folderDate < $cutOff) {
+        // Rekursif hapus folder & isinya
+        deleteDir($object->getPathname());
+        echo "🗑️  Arsip $folderName dihapus (lebih dari $retentionDays hari)\n";
+    }
+}
+
+/**
+ * Hapus direktori secara rekursif
+ */
+function deleteDir(string $dir): void
+{
+    $items = new FilesystemIterator($dir, FilesystemIterator::SKIP_DOTS);
+    foreach ($items as $item) {
+        $item->isDir() ? deleteDir($item->getPathname()) : unlink($item->getPathname());
+    }
+    rmdir($dir);
 }

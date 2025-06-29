@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Helpers\Format;
 
 class RouterboardResource extends JsonResource
 {
@@ -27,12 +28,12 @@ class RouterboardResource extends JsonResource
             'totalHdd' => $this['total-hdd-space'],
             'arc' => $this['architecture-name'],
             'boardName' => $this['board-name'],
-            'freeMemorySpace' => formatByte($this['free-memory']),
-            'totalMemorySpace' => formatByte($this['total-memory']),
-            'freeHddSpace' => formatByte($this['free-hdd-space']),
-            'totalHddSpace' => formatByte($this['total-hdd-space']),
-            'hddUsage' => formatByte($this['total-hdd-space'] - $this['free-hdd-space']),
-            'memoryUsage' => formatByte($this['total-memory'] - $this['free-memory']),
+            'freeMemorySpace'  => Format::byte($this['free-memory']),
+            'totalMemorySpace' => Format::byte($this['total-memory']),
+            'freeHddSpace'     => Format::byte($this['free-hdd-space']),
+            'totalHddSpace'    => Format::byte($this['total-hdd-space']),
+            'hddUsage'         => Format::byte($this['total-hdd-space'] - $this['free-hdd-space']),
+            'memoryUsage'      => Format::byte($this['total-memory'] - $this['free-memory'])
         ];
     }
 }
