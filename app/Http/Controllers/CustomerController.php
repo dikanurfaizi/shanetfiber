@@ -171,7 +171,8 @@ class CustomerController extends Controller
             ->when($searchParams['status'] ?? null, fn($query, $status) => $this->applyStatusFilter($query, $status))
             ->when($searchParams['server_search'] ?? null, fn($query, $server) => $query->where('mikrotik_id', $server))
             ->when($searchParams['search_paket'] ?? null, fn($query, $paket) => $query->where('paket_id', $paket))
-            ->orderBy('address')->orderBy('name');
+            // ->orderBy('address')->orderBy('name');
+            ->orderBy('name');
 
         $data = $customers->paginate($perPage)->appends($request->query());
 

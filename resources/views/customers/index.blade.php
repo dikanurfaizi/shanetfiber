@@ -95,12 +95,12 @@
     </div>
 
 
-    <div class="card-header py-3">
+    {{-- <div class="card-header py-3">
         @can('customer-create')
             <span><a class="btn btn-sm btn-success mt-2" href="{{ route('customers.create') }}"><i class="fa fa-plus"></i>
                     Add New Customer </a></span>
         @endcan
-    </div>
+    </div> --}}
 
 
     <div class="card-body">
@@ -370,10 +370,12 @@
 
                         {{-- Baris 1: #No dan status --}}
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="badge bg-secondary-soft">#{{ ++$i }}</span>
+                            <span class="badge bg-secondary-soft">
+                                #{{ $data->firstItem() + $loop->index }}
+                            </span>
                             @if ($customer->activation == 'false')
-                                <span class="custom-badge bg-danger">
-                                    <i class="fa fa-times text-warning me-2"></i>
+                                <span class="custom-badge text-white bg-danger">
+                                    <i class="fa fa-times text-white me-2"></i>
                                     {{ __('customer.info.not-activation') }}
                                 </span>
                             @else
@@ -436,7 +438,7 @@
                         <hr class="my-2" />
 
                         {{-- Baris 4: Admin + Dropdown Action --}}
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex justify-content-between align-items-center bg-gray-soft px-2 py-1 rounded">
                             <small class="text-muted">{{ $customer->user?->name ?? 'No Admin' }}</small>
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button"
@@ -531,34 +533,12 @@
                 </div>
             @endforeach
 
-            {{-- PAGINATION --}}
-            @if ($data->lastPage() > 1)
-                <nav>
-                    <ul class="pagination justify-content-center">
-                        <li class="page-item {{ $data->onFirstPage() ? 'disabled' : '' }}">
-                            <a class="page-link" href="{{ $data->previousPageUrl() }}">&laquo;</a>
-                        </li>
-                        <li class="page-item {{ $data->hasMorePages() ? '' : 'disabled' }}">
-                            <a class="page-link" href="{{ $data->nextPageUrl() }}">&raquo;</a>
-                        </li>
-                    </ul>
-                    <div class="text-center text-muted small">
-                        Page {{ $data->currentPage() }} of {{ $data->lastPage() }}
-                    </div>
-                </nav>
-            @endif
-
-            {{-- PER PAGE --}}
-            <form method="GET" class="mt-3">
-                <div class="form-group">
-                    <label>Show:</label>
-                    <select name="perPage" class="form-control" onchange="this.form.submit()">
-                        <option value="10" {{ request('perPage') == 10 ? 'selected' : '' }}>10</option>
-                        <option value="25" {{ request('perPage') == 25 ? 'selected' : '' }}>25</option>
-                        <option value="50" {{ request('perPage') == 50 ? 'selected' : '' }}>50</option>
-                    </select>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <!-- Pagination -->
+                <div>
+                    {{ $data->appends(['perPage' => request('perPage')])->links('vendor.pagination.custom') }}
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -601,6 +581,11 @@
             .text-turquoise {
                 color: #009688;
                 /* warna hijau tosca */
+            }
+
+            .bg-gray-soft {
+                background-color: lightgray !important;
+                /* abu-abu soft sedang */
             }
         </style>
     @endsection
