@@ -75,7 +75,7 @@
                     </tr>
                     @foreach ($data as $key => $billingPeriode)
                         <tr>
-                            <td>{{ ++$i }}</td>
+                            <td>{{ $loop->iteration }}</td>
 
                             <td>{{ $billingPeriode->name }}</td>
 
