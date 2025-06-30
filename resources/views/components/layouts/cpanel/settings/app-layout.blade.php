@@ -125,6 +125,11 @@
         </script>
     @endif
 
+    <button id="floatingSidebarToggle" class="btn btn-toggle-sidebar rounded-circle shadow d-md-none position-fixed"
+        style="top: calc(50% - 28px); right: 20px; width: 56px; height: 56px; z-index: 1050;">
+        <i id="toggleIcon" class="fas fa-bars"></i>
+    </button>
+
 </body>
 
 </html>

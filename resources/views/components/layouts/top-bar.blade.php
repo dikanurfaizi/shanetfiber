@@ -13,12 +13,6 @@
 @endphp
 
 <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
-    <!-- Sidenav Toggle Button (Titik Tiga Vertikal) -->
-    <button class="btn btn-icon btn-transparent-dark order-1 order-lg-0 me-2 ms-lg-2 me-lg-0" id="sidebarToggle">
-        <!-- Ikon titik tiga vertikal -->
-        <i class="fas fa-ellipsis-v"></i>
-    </button>
-
     <!-- Link Donasi (Pindahkan ke posisi paling kiri) -->
     <a class="nav-link" href="/cpanel/home">
         <img src="/images/donate.png" alt="Saweria" style="height: 30px !important;">

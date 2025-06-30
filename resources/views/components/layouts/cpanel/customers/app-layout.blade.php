@@ -8,19 +8,19 @@
     <meta name="description" content="">
     <meta name="author" content="Ari Purnawan">
     <meta name="csrf-token" content="{{ csrf_token() }}" />
-    <title>{{$title ?? 'Customer Management'}}</title>
-    <link rel="apple-touch-icon" sizes="120x120" href="{{asset('images/favicon/apple-touch-icon.png')}}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{asset('images/favicon/favicon-32x32.png')}}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{asset('images/favicon/favicon-16x16.png')}}">
+    <title>{{ $title ?? 'Customer Management' }}</title>
+    <link rel="apple-touch-icon" sizes="120x120" href="{{ asset('images/favicon/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/favicon/favicon-16x16.png') }}">
     <link rel="icon" type="image/x-icon" href="{{ asset('images/favicon/favicon.png') }}" />
-    <link rel="manifest" href="{{asset('assets/site.webmanifest')}}">
-    <link rel="mask-icon" href="{{asset('images/favicon/safari-pinned-tab.svg')}}" color="#5bbad5">
+    <link rel="manifest" href="{{ asset('assets/site.webmanifest') }}">
+    <link rel="mask-icon" href="{{ asset('images/favicon/safari-pinned-tab.svg') }}" color="#5bbad5">
     @vite('resources/sass/app.scss')
     <!-- Custom fonts for this template-->
     <link href="{{ asset('css/fontawsome-free-all.min.css') }}" rel="stylesheet" type="text/css">
-    <link href="{{asset('assets/notify/notify.min.css')}}" rel="stylesheet">
-    <link href="{{asset('assets/sweet-alert/sweet-alert.min.css')}}" rel="stylesheet">
-    <link href="{{asset('assets/vendor/datatables/datatables.min.css')}}" rel="stylesheet">
+    <link href="{{ asset('assets/notify/notify.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('assets/sweet-alert/sweet-alert.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('assets/vendor/datatables/datatables.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
 
     <!-- Custom styles for this template-->
@@ -48,24 +48,24 @@
                 <x-layouts.top-bar />
                 <!-- End of Topbar -->
                 @if ($errors->any())
-                <div class="container-fluid">
-                    <div class="card shadow mb-4">
+                    <div class="container-fluid">
+                        <div class="card shadow mb-4">
 
-                        <div class="card-body">
-                            <div class="form-group mt-4 mb-4">
-                                <div class="pull-right alert alert-danger">
-                                    <strong>Whoops!</strong> There were some problems.<br><br>
-                                    <ul>
-                                        @foreach ($errors->all() as $error)
-                                        <li>{{ $error }}</li>
-                                        @endforeach
-                                    </ul>
+                            <div class="card-body">
+                                <div class="form-group mt-4 mb-4">
+                                    <div class="pull-right alert alert-danger">
+                                        <strong>Whoops!</strong> There were some problems.<br><br>
+                                        <ul>
+                                            @foreach ($errors->all() as $error)
+                                                <li>{{ $error }}</li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
+                        </div>
                     </div>
-                </div>
                 @endif
                 <!-- Main page content-->
                 <div class="container-fluid">
@@ -97,33 +97,36 @@
     <!-- Core plugin JavaScript-->
     <script src="{{ asset('assets/vendor/jquery/jquery.min.js') }}"></script>
     <script src="{{ asset('js/jquery.easing-1.4.1.min.js') }}"></script>
-    <script src="{{asset('js/bootstrap.bundle.min.js')}}" crossorigin="anonymous"></script>
+    <script src="{{ asset('js/bootstrap.bundle.min.js') }}" crossorigin="anonymous"></script>
     <!-- Custom scripts for all pages-->
     <script src="{{ asset('js/sb-admin-2.min.js') }}"></script>
-    <script src="{{asset('assets/notify/notify.min.js')}}"></script>
-    <script src="{{asset('assets/sweet-alert/sweet-alert.min.js')}}"></script>
-    <script src="{{asset('assets/vendor/datatables/datatables.min.js')}}"></script>
+    <script src="{{ asset('assets/notify/notify.min.js') }}"></script>
+    <script src="{{ asset('assets/sweet-alert/sweet-alert.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/datatables/datatables.min.js') }}"></script>
     <!-- Page level custom scripts -->
     @yield('custom_scripts')
     @if ($message = Session::get('success'))
-
-    <script>
-        Swal.fire({
-            icon: 'success',
-            text: '{{ $message }}',
-        })
-    </script>
+        <script>
+            Swal.fire({
+                icon: 'success',
+                text: '{{ $message }}',
+            })
+        </script>
     @endif
 
     @if ($message = Session::get('error'))
-
-    <script>
-        Swal.fire({
-            icon: 'error',
-            text: '{{ $message }}',
-        })
-    </script>
+        <script>
+            Swal.fire({
+                icon: 'error',
+                text: '{{ $message }}',
+            })
+        </script>
     @endif
+
+    <button id="floatingSidebarToggle" class="btn btn-toggle-sidebar rounded-circle shadow d-md-none position-fixed"
+        style="top: calc(50% - 28px); right: 20px; width: 56px; height: 56px; z-index: 1050;">
+        <i id="toggleIcon" class="fas fa-bars"></i>
+    </button>
 
 </body>
 

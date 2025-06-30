@@ -10416,3 +10416,25 @@ body.sidebar-toggled footer.sticky-footer {
     height: 100%;
     border: 0;
 }
+#floatingSidebarToggle i {
+    transition: transform 0.3s ease;
+}
+
+#floatingSidebarToggle:hover i {
+    transform: scale(1.2);
+}
+.btn-toggle-sidebar {
+    background-color: rgba(108, 117, 125, 0.2); /* gray semi transparan */
+    color: #6c757d; /* text-gray */
+    border: 1px solid rgba(108, 117, 125, 0.3); /* border halus */
+    border-radius: 0.5rem; /* rounded kotak lembut */
+    backdrop-filter: blur(4px); /* efek blur lembut */
+    transition: all 0.3s ease;
+}
+
+.btn-toggle-sidebar:hover {
+    background-color: rgba(108, 117, 125, 0.3);
+    color: #495057; /* sedikit lebih gelap */
+    transform: translateY(-2px);
+}
+
