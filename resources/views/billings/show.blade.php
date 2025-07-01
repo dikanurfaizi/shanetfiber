@@ -63,28 +63,12 @@
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>Registered as:</strong>
-                @php
-                    $member =
-                        $billing->customer->billing_option === 1 ||
-                        ($billing->customer->billing_option === 2 &&
-                            $billing->customer->billing_period === $billing->billing_period->name)
-                            ? $billing->customer->member?->type ?? 'Non Member'
-                            : 'Non Member';
-                @endphp
-                {{ $member }}
+                {{ $memberDisplay }}
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>Discount:</strong>
-                @php
-                    $discount =
-                        $billing->customer->billing_option === 1 ||
-                        ($billing->customer->billing_option === 2 &&
-                            $billing->customer->billing_period === $billing->billing_period->name)
-                            ? $billing->customer->member?->discount ?? 0
-                            : 0;
-                @endphp
                 @moneyIDR($discount)
             </div>
         </div>

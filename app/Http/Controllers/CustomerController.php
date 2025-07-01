@@ -764,11 +764,17 @@ class CustomerController extends Controller
             "Successfully get detail customers"
         );
 
-        // dd($members);
+        $currentPeriode = BillingPeriode::latest('created_at')->first();
 
-        // dd($customer, $pakets, $customer_number, $users, $serverDisconnect);
+        $availablePeriodes = collect();
+        $current = Carbon::createFromFormat('F Y', $currentPeriode->name); // misal '202507'
 
-        return view('customers.edit', compact('customer', 'pakets', 'customer_number', 'users', 'serverDisconnect', 'members'));
+        for ($i = 0; $i < 3; $i++) {
+            $availablePeriodes->push($current->copy()->format('F Y')); // ex: July 2025, August 2025, September 2025
+            $current->addMonth();
+        }
+
+        return view('customers.edit', compact('availablePeriodes', 'customer', 'pakets', 'customer_number', 'users', 'serverDisconnect', 'members'));
     }
 
 
@@ -918,15 +924,6 @@ class CustomerController extends Controller
             $customer->update(['password' => Hash::make($request->password)]);
         }
 
-        $billingPeriode = NULL;
-        $periode = BillingPeriode::latest('created_at')->first();
-        $periodeName = $periode->name;
-
-        $billing_option = $request->billing_option ? $request->billing_option : '0';
-        if ($billing_option !== '0' || $billing_option !== '1') {
-            $billingPeriode = $periodeName;
-        }
-
         $profile = pppProfile::find($request->paket_id);
         if (!$profile) {
             return back()->withError('Profile PPP tidak ditemukan');
@@ -939,6 +936,21 @@ class CustomerController extends Controller
 
         $paketId = $paket->id;
 
+        $member_id = null;
+        $billing_option = null;
+        $billing_period = null;
+
+        if (!empty($request->member_id)) {
+            $member_id = $request->member_id;
+
+            if (!empty($request->billing_option)) {
+                $billing_option = $request->billing_option;
+                $billing_period = $request->periode_billing;
+            }
+        }
+
+        $oldMemberId = $customer->member_id;
+
         $customer->update([
             'name' => $request->name,
             'paket_id' => $paketId,
@@ -947,10 +959,48 @@ class CustomerController extends Controller
             'contact' => $this->formatContact($request->contact),
             'discount' => $discount,
             'user_id' => $request->user_id,
-            'member_id' => $request->member_id,
+            'member_id' => $member_id,
             'billing_option' => $billing_option,
-            'billing_period' => $billingPeriode
+            'billing_period' => $billing_period
         ]);
+
+        if ($oldMemberId !== $customer->member_id) {
+
+            // ── Hitung harga baru ──────────────────────────────────────────────────
+            $customer->loadMissing(['paket', 'member']);
+
+            $basePrice = (int) $customer->paket->price;
+            $discount  = (int) ($customer->member->discount ?? 0);
+            $newPrice  = max(0, $basePrice - $discount);   // tidak boleh negatif
+
+            // ── Tentukan apakah perlu update ke tabel billings ────────────────────
+            $currentPeriode = BillingPeriode::latest('created_at')->first();   // contoh: July 2025
+            $shouldUpdate   = false;
+            $periodeId      = null;
+
+            if ($customer->billing_option == 1) {
+                // Flat/bulanan → selalu update periode berjalan
+                $shouldUpdate = true;
+                $periodeId    = $currentPeriode->id;
+            } elseif (
+                $customer->billing_option == 2
+                && $customer->billing_period == $currentPeriode->name
+            ) {
+
+                // 1‑Time Bill & periodenya sama dgn periode aktif
+                $shouldUpdate = true;
+                $periodeId    = $currentPeriode->id;
+            }
+
+            // ── Jalankan update bila syarat terpenuhi ─────────────────────────────
+            if ($shouldUpdate && $periodeId) {
+                Billing::where('customer_id', $customer->id)
+                    ->where('billing_periode_id', $periodeId)
+                    ->whereIn('status', ['BL', 'PL'])          // hanya tagihan belum lunas
+                    ->update(['paket_price' => $newPrice]);
+            }
+        }
+
         return redirect()->back()
             ->with('success', 'Customer ' . $customer->name . ' updated!');
     }

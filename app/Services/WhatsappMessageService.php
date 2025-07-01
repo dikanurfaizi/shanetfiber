@@ -12,6 +12,7 @@ use App\Models\Customer;
 use App\Models\Billing\Billing;
 use App\Models\MessageLog;
 use App\Models\MessageLogError;
+use App\Models\Billing\BillingPeriode;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Facades\Crypt;
 use GuzzleHttp\Client;
@@ -268,15 +269,46 @@ class WhatsappMessageService
     public function getBillingPackages($cust_id)
     {
         try {
+            $activePeriodeName = BillingPeriode::latest('created_at')->value('name');
+
             $packages = Billing::with(['billing_periode', 'customer.paket', 'customer.member'])
-                ->select('pakets.name as paket_name', 'billings.billing_periode_id', 'billings.paket_price', 'pakets.price', 'members.discount', 'members.type', 'billings.status', 'billings.due_date', 'billings.pay_later', 'billing_periodes.name as periode_name')
-                ->leftJoin('customers', 'billings.customer_id', '=', 'customers.id')
-                ->leftJoin('pakets', 'customers.paket_id', '=', 'pakets.id')
-                ->leftJoin('members', 'customers.member_id', '=', 'members.id')
+                ->leftJoin('customers',        'billings.customer_id',       '=', 'customers.id')
+                ->leftJoin('pakets',           'customers.paket_id',         '=', 'pakets.id')
+                ->leftJoin('members',          'customers.member_id',        '=', 'members.id')
                 ->leftJoin('billing_periodes', 'billings.billing_periode_id', '=', 'billing_periodes.id')
                 ->where('billings.customer_id', $cust_id)
                 ->whereIn('billings.status', ['BL', 'PL'])
-                ->orderByRaw("CASE WHEN billings.status = 'BL' THEN billings.due_date ELSE billings.pay_later END DESC")
+                ->selectRaw('
+                        pakets.name AS paket_name,
+                        billings.billing_periode_id,
+                        CASE
+                            WHEN customers.billing_option = 2
+                                 AND customers.billing_period = ?
+                                 THEN pakets.price - COALESCE(members.discount,0)
+                            WHEN customers.billing_option = 1
+                                 THEN pakets.price - COALESCE(members.discount,0)
+                            ELSE pakets.price
+                        END AS paket_price,
+                        pakets.price,
+                        CASE
+                            WHEN customers.billing_option = 2 AND customers.billing_period = ?
+                                THEN COALESCE(members.discount,0)
+                            WHEN customers.billing_option = 1
+                                THEN COALESCE(members.discount,0)
+                            ELSE 0
+                        END AS discount,
+                        members.type,
+                        billings.status,
+                        billings.due_date,
+                        billings.pay_later,
+                        billing_periodes.name AS periode_name
+                    ', [$activePeriodeName])          // bind periode aktif di sini
+                ->orderByRaw("
+                        CASE
+                            WHEN billings.status = 'BL' THEN billings.due_date
+                            ELSE billings.pay_later
+                        END DESC
+                    ")
                 ->get();
 
             if ($packages->isEmpty()) {

@@ -95,6 +95,10 @@ return [
         'discount-type' => 'Discount Type',
         'source-server' => 'Source Server',
         'destination-server' => 'Destination Server',
+        'select-billing-period' => 'Select Billing Periode',
+        'monthly' => 'Monthly',
+        '1-time-bill' => '1 Time Bill',
+        'billing-options' => 'Billing Options',
     ],
     'placeholder' => [
         'name' => 'Insert customer name',

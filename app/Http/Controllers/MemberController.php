@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Member;
-use Pest\Support\Str;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 
 class MemberController extends Controller

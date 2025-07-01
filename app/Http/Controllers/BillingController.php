@@ -178,9 +178,9 @@ class BillingController extends Controller
                     ->whereColumn('billing_periodes.id', 'billings.billing_periode_id'),
                 'DESC'
             )
-            ->orderBy(
-                Customer::select('address')->whereColumn('customers.id', 'billings.customer_id')
-            )
+            // ->orderBy(
+            //     Customer::select('address')->whereColumn('customers.id', 'billings.customer_id')
+            // )
             ->orderBy('customer_name', 'ASC');
 
         $totalPrice = $billingsQuery->sum('paket_price');
@@ -431,17 +431,48 @@ class BillingController extends Controller
      */
     public function show(Billing $billing)
     {
-        $billingCustomerId = $billing->customer_id;
-        $websystem = Websystem::where('slug', 'websystem')->first();
-        $billings = Billing::where('customer_id', $billingCustomerId)
+        // ── Pastikan relasi tersedia, hindari N+1 ───────────────────────────────
+        $billing->loadMissing(['customer.member', 'billing_periode']);
+
+        // ── Semua tagihan customer yg belum lunas (sekali query) ────────────────
+        $billings = Billing::where('customer_id', $billing->customer_id)
             ->where('status', '!=', 'LS')
             ->get();
-        $totalPrice = Billing::where('customer_id', $billingCustomerId)
-            ->where('status', '!=', 'LS')
-            ->sum('paket_price');
-        // dd($billing, $totalPrice, $websystem);
-        return view('billings.show', compact('billing', 'totalPrice', 'websystem'), [
-            'billings' => $billings,
+
+        $totalPrice = $billings->sum('paket_price');      // hitung di koleksi → 0 query ekstra
+
+        // ── Data Websystem sekali query (pakai firstWhere) ──────────────────────
+        $websystem = Websystem::firstWhere('slug', 'websystem');
+
+        // ── Hitung status member & diskon (logic dipindah dari Blade) ───────────
+        $customer         = $billing->customer;
+        $currentPeriode   = $billing->billing_periode?->name;
+
+        $isValidMember = match (true) {
+            ! $customer                              => false,
+            $customer->billing_option === 1          => true,
+            $customer->billing_option === 2
+                && $customer->billing_period === $currentPeriode
+            => true,
+            default                                  => false,
+        };
+
+        $memberDisplay = $isValidMember
+            ? ($customer->member?->type ?? 'Non Member')
+            : 'Non Member';
+
+        $discount = $isValidMember
+            ? ($customer->member?->discount ?? 0)
+            : 0;
+
+        // ── Kirim ke view ───────────────────────────────────────────────────────
+        return view('billings.show', [
+            'billing'       => $billing,
+            'billings'      => $billings,
+            'totalPrice'    => $totalPrice,
+            'websystem'     => $websystem,
+            'memberDisplay' => $memberDisplay,
+            'discount'      => $discount,
         ]);
     }
 
