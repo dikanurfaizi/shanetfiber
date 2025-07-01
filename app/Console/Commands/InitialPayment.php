@@ -45,6 +45,7 @@ class InitialPayment extends Command
 
         try {
             $allowedDates = [1, 2, 3];
+            [$startDate, $endDate] = $this->getAllowedDateRange($allowedDates);
             if (!in_array($dayOfMonth, $allowedDates)) {
                 $message = "Today ({$dayOfMonth}) is not an allowed date. Allowed dates: " . implode(', ', $allowedDates);
 
@@ -97,7 +98,7 @@ class InitialPayment extends Command
             }
 
             // Jalankan proses pengiriman pesan
-            app(InitialPaymentReminderService::class)->sendReminders();
+            app(InitialPaymentReminderService::class)->sendReminders($startDate, $endDate);
 
             $dispatchTime = now()->format('Y-m-d H:i:s');
             $executionTime = round(microtime(true) - $startTime, 2);
@@ -124,5 +125,16 @@ class InitialPayment extends Command
             $this->error($errorTime . " - " . $errorMessage);
             return 1;
         }
+    }
+
+    private function getAllowedDateRange(array $allowedDates): array
+    {
+        $startDay = min($allowedDates);
+        $endDay   = max($allowedDates);
+
+        $startDate = Carbon::now()->startOfMonth()->setDay($startDay)->startOfDay();
+        $endDate   = Carbon::now()->startOfMonth()->setDay($endDay)->addDay()->startOfDay();
+
+        return [$startDate, $endDate];
     }
 }

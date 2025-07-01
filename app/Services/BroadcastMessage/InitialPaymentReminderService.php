@@ -24,7 +24,7 @@ class InitialPaymentReminderService
         $this->formatter = new FormatReceiver();
     }
 
-    public function sendReminders(): void
+    public function sendReminders(Carbon $startDate, Carbon $endDate): void
     {
         $traceId = (string) Str::uuid();
 
@@ -35,7 +35,7 @@ class InitialPaymentReminderService
             $periode = $this->getLastBillingPeriod($traceId);
             if (!$periode) return;
 
-            $billings = $this->getEligibleBillings();
+            $billings = $this->getEligibleBillings($startDate, $endDate);
             if ($billings->isEmpty()) {
                 LogHelper::logWarning(null, ['periode_id' => $periode->id], 404, "No billing data found.", $traceId);
                 return;
@@ -85,59 +85,57 @@ class InitialPaymentReminderService
         return $periode;
     }
 
-    private function getEligibleBillings(): Collection
+    private function getEligibleBillings(Carbon $startDate, Carbon $endDate): Collection
     {
-        $periodeNow = Carbon::now()->format('F Y');
-
-        $billingPeriodeId = BillingPeriode::where('name', $periodeNow)
-            ->orderByDesc('id')
-            ->value('id');
+        $billingPeriodeId = BillingPeriode::where('name', $startDate->format('F Y'))
+            ->latest('id')->value('id');
 
         if (!$billingPeriodeId) {
-            // Jika tidak ada periode sekarang, bisa handle error atau return kosong
-            return collect(); // misal return collection kosong
+            return collect();
         }
 
         return Billing::query()
             ->select([
-                'billings.id as billing_id',
+                'billings.id   as billing_id',
                 'billings.billing_number',
                 'billings.customer_id',
-                'customers.customer_id as customer_unique_id',
-                'customers.name as customer_name',
-                'customers.contact as customer_contact',
-                'customers.address as customer_address',
+                'customers.customer_id      as customer_unique_id',
+                'customers.name             as customer_name',
+                'customers.contact          as customer_contact',
+                'customers.address          as customer_address',
                 'billings.due_date',
-                'users.name as admin_name',
-                'users.id as admin_id',
+                'users.name  as admin_name',
+                'users.id    as admin_id',
                 'users.contact as admin_contact',
-                DB::raw('COUNT(billings.id) as total_bills'),
+                DB::raw('COUNT(*)  as total_bills'),
                 DB::raw('SUM(billings.paket_price) as total_amount'),
             ])
             ->join('customers', 'billings.customer_id', '=', 'customers.id')
             ->leftJoin('users', 'customers.user_id', '=', 'users.id')
-            ->leftJoin('message_logs', function ($join) {
-                $join->on('billings.customer_id', '=', 'message_logs.customer_id')
-                    ->where('message_logs.message_type', '=', 'create_new_bill');
+
+            /* === batasi hanya LOG tanggal 1–3 bulan ini ====================== */
+            ->leftJoin('message_logs as ml', function ($join) use ($startDate, $endDate) {
+                $join->on('billings.customer_id', '=', 'ml.customer_id')
+                    ->where('ml.message_type', '=', 'create_new_bill')
+                    ->whereBetween('ml.created_at', [$startDate, $endDate]);
             })
-            ->leftJoin('message_log_errors', function ($join) {
-                $join->on('billings.customer_id', '=', 'message_log_errors.customer_id')
-                    ->where('message_log_errors.message_type', '=', 'create_new_bill');
+            ->leftJoin('message_log_errors as me', function ($join) use ($startDate, $endDate) {
+                $join->on('billings.customer_id', '=', 'me.customer_id')
+                    ->where('me.message_type', '=', 'create_new_bill')
+                    ->whereBetween('me.created_at', [$startDate, $endDate]);
             })
-            ->whereNull('message_logs.id')
-            ->whereNull('message_log_errors.id')
+            /* ================================================================= */
+
+            ->whereNull('ml.id')
+            ->whereNull('me.id')
             ->whereNotNull('customers.contact')
             ->where('customers.contact', '!=', '')
             ->where('billings.billing_periode_id', $billingPeriodeId)
-            ->where(function ($query) {
-                $query->where(function ($q) {
-                    $q->where('billings.status', 'BL')
-                        ->whereNotNull('billings.due_date');
-                })
-                    ->orWhere(function ($q) {
-                        $q->where('billings.status', 'PL')
-                            ->whereNotNull('billings.pay_later');
-                    });
+            ->where(function ($q) {
+                $q->where(fn($q1) => $q1->where('billings.status', 'BL')
+                    ->whereNotNull('billings.due_date'))
+                    ->orWhere(fn($q2) => $q2->where('billings.status', 'PL')
+                        ->whereNotNull('billings.pay_later'));
             })
             ->groupBy([
                 'billings.id',
