@@ -8,14 +8,14 @@
     <meta name="description" content="">
     <meta name="author" content="Mehrdad Amini">
     <meta name="csrf-token" content="{{ csrf_token() }}" />
-    <title>{{$title ?? 'Customer Management'}}</title>
+    <title>{{ $title ?? 'Customer Management' }}</title>
 
     @vite('resources/sass/app.scss')
     <!-- Custom fonts for this template-->
     <link href="{{ asset('css/fontawsome-free-all.min.css') }}" rel="stylesheet" type="text/css">
-    <link href="{{asset('assets/notify/notify.min.css')}}" rel="stylesheet">
-    <link href="{{asset('assets/sweet-alert/sweet-alert.min.css')}}" rel="stylesheet">
-    <link href="{{asset('assets/vendor/datatables/datatables.min.css')}}" rel="stylesheet">
+    <link href="{{ asset('assets/notify/notify.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('assets/sweet-alert/sweet-alert.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('assets/vendor/datatables/datatables.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
 
     <!-- Custom styles for this template-->
@@ -71,33 +71,36 @@
     <!-- Core plugin JavaScript-->
     <script src="{{ asset('assets/vendor/jquery/jquery.min.js') }}"></script>
     <script src="{{ asset('js/jquery.easing-1.4.1.min.js') }}"></script>
-    <script src="{{asset('js/bootstrap.bundle.min.js')}}" crossorigin="anonymous"></script>
+    <script src="{{ asset('js/bootstrap.bundle.min.js') }}" crossorigin="anonymous"></script>
     <!-- Custom scripts for all pages-->
     <script src="{{ asset('js/sb-admin-2.min.js') }}"></script>
-    <script src="{{asset('assets/notify/notify.min.js')}}"></script>
-    <script src="{{asset('assets/sweet-alert/sweet-alert.min.js')}}"></script>
-    <script src="{{asset('assets/vendor/datatables/datatables.min.js')}}"></script>
+    <script src="{{ asset('assets/notify/notify.min.js') }}"></script>
+    <script src="{{ asset('assets/sweet-alert/sweet-alert.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/datatables/datatables.min.js') }}"></script>
     <!-- Page level custom scripts -->
     @yield('custom_scripts')
     @if ($message = Session::get('success'))
-
-    <script>
-        Swal.fire({
-            icon: 'success',
-            text: '{{ $message }}',
-        })
-    </script>
+        <script>
+            Swal.fire({
+                icon: 'success',
+                text: '{{ $message }}',
+            })
+        </script>
     @endif
 
     @if ($message = Session::get('error'))
-
-    <script>
-        Swal.fire({
-            icon: 'error',
-            text: '{{ $message }}',
-        })
-    </script>
+        <script>
+            Swal.fire({
+                icon: 'error',
+                text: '{{ $message }}',
+            })
+        </script>
     @endif
+
+    <button id="floatingSidebarToggle" class="btn btn-toggle-sidebar rounded-circle shadow d-md-none position-fixed"
+        style="top: calc(50% - 28px); right: 20px; width: 56px; height: 56px; z-index: 1050;">
+        <i id="toggleIcon" class="fas fa-bars"></i>
+    </button>
 
 </body>
 
