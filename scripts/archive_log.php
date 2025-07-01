@@ -8,7 +8,7 @@
 date_default_timezone_set('Asia/Jakarta');
 
 // ===  Konfigurasi dasar  =====================================================
-$basePath      = '/www/wwwroot/www.shanetfiber.co.id';      // root proyek
+$basePath      = dirname(__DIR__);                          // root proyek
 $logFile       = $basePath . '/storage/logs/laravel.log';   // file log aktif
 $archiveBase   = $basePath . '/storage/logs/archived';      // direktori arsip
 $retentionDays = 30;                                        // lama penyimpanan
@@ -64,6 +64,18 @@ foreach ($objects as $object) {
         deleteDir($object->getPathname());
         echo "🗑️  Arsip $folderName dihapus (lebih dari $retentionDays hari)\n";
     }
+}
+
+// ===  3) Jalankan Artisan: hapus message_logs lama  ===========================
+echo "➡️  Menjalankan Artisan logs:delete-old-messages...\n";
+$cmd = escapeshellcmd("php $basePath/artisan logs:delete-old-messages");
+exec($cmd, $output, $exitCode);
+
+echo implode("\n", $output) . "\n";
+if ($exitCode === 0) {
+    echo "✅  Artisan command selesai.\n";
+} else {
+    fwrite(STDERR, "❌  Artisan logs:delete-old-messages gagal (exit $exitCode)\n");
 }
 
 /**
