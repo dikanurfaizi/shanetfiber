@@ -132,6 +132,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('/packets/ppp-profiles/{mikrotik}/list', [PppProfileController::class, 'get_mikrotik_profiles'])->name('ppp.profiles.get.mikrotik.profiles');
         Route::get('/packets/ppp-profiles/import/data', [PppProfileController::class, 'viewServer'])->name('ppp-profiles.import.data');
         Route::post('/packets/ppp-profiles/export/{mikrotik:slug}', [PppProfileController::class, 'export'])->name('ppp-profiles.export');
+        Route::post('/packets/ppp-profiles/export-one/{mikrotik:id}', [PppProfileController::class, 'export_one'])->name('ppp-profiles.export-one');
         Route::post('/packets/profiles/import', [PppProfileController::class, 'import'])->name('ppp.profiles.import');
         //==================================Paket====================================================
         Route::resource('packets', PacketController::class)->names('packets');

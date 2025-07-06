@@ -63,118 +63,189 @@ class PppProfileController extends Controller
      */
     public function store(Request $request, PppProfile $pppProfile)
     {
-        // dd($request);
-        // Validasi input
-        $this->validate(
-            $request,
-            [
-                'profile_name' => 'required|unique:ppp_profiles,profile_name',
-                'dns_server' => 'nullable|string',
-                'use_encryption' => 'required|string',
-                'max_upload' => 'required_if:rate_limit,true',  // Jika rate_limit diaktifkan, max_upload harus diisi
-                'max_download' => 'required_if:rate_limit,true', // Jika rate_limit diaktifkan, max_download harus diisi
-                'rasio_cir' => 'required|numeric',
-                'priority' => 'required',
-            ],
-            [
-                'profile_name.required' => 'Profile name is required.',
-                'profile_name.unique' => 'Profile name already exists.',
-                'max_upload.required_if' => 'Maximum upload is required when rate limit is enabled.',
-                'max_download.required_if' => 'Maximum download is required when rate limit is enabled.',
-                'use_encryption.required' => 'Encryption setting is required.',
-            ]
-        );
-
-        $calculation = $this->calculation($request->max_upload, $request->max_download, $request->rasio_cir ?? 3.33);
-        $maxUpload = $calculation['maxLimitUpload'];
-        $maxDownload = $calculation['maxLimitDownload'];
-        $limitAtUpload = $calculation['limitAtUpload'];
-        $limitAtDownload = $calculation['limitAtDownload'];
-        $rasioCir = $calculation['rasioCir'];
-        $rateLimitMikrotik = $calculation['rateLimitMikrotik'];
-
-        // $rateLimitMikrotik = $maxUpload . '/' . $maxDownload . ' 0/0 0/0 0/0 ' . $request->priority . ' ' . $limitAtUpload . 'k/' . $limitAtDownload . 'k';
-
-        // Menyiapkan data untuk disimpan
-        $pppProfile->create([
-            'profile_name' => $request->profile_name,
-            'local_address' => $request->local_address ?? null,
-            'remote_address' => $request->remote_address ?? null,
-            'dns_server' => $request->dns_server ?? '8.8.8.8, 8.8.4.4',
-            'max_upload' => $maxUpload,
-            'max_download' => $maxDownload,
-            'min_upload' => $limitAtUpload,
-            'min_download' => $limitAtDownload,
-            'rasio_cir' => $rasioCir,
-            'parent_queue' => $request->parent_queue ?? null,
-            'queue_type' => $request->queue_type ?? null,
-            'insert_queue_before' => $request->insert_before ?? null,
-            'rate_limit' => $rateLimitMikrotik,
-            'use_encryption' => $request->use_encryption ?? null,
-            'script_on_up' => $request->on_up ?? null,
-            'script_on_down' => $request->on_down ?? null,
-            'change_tcp_mss' => $request->change_tcp_mss,
-            'use_upnp' => $request->use_upnp,
-            'comment' => $request->comment ?? null,
-            'only_one' => $request->only_one ?? 'yes',
+        $validated = $request->validate([
+            'profile_name' => 'required|unique:ppp_profiles,profile_name',
+            'dns_server' => 'nullable|string',
+            'use_encryption' => 'required|string',
+            'max_upload' => 'required_if:rate_limit,true',
+            'max_download' => 'required_if:rate_limit,true',
+            'rasio_cir' => 'required|numeric',
+            'priority' => 'required',
+        ], [
+            'profile_name.required' => 'Profile name is required.',
+            'profile_name.unique' => 'Profile name already exists.',
+            'max_upload.required_if' => 'Maximum upload is required when rate limit is enabled.',
+            'max_download.required_if' => 'Maximum download is required when rate limit is enabled.',
+            'use_encryption.required' => 'Encryption setting is required.',
         ]);
 
-        // Redirect ke halaman index setelah berhasil
+        $calculation = $this->calculation(
+            $request->max_upload,
+            $request->max_download,
+            $request->rasio_cir ?? 3.33,
+            $request->burst_upload ?? '',
+            $request->burst_download ?? '',
+            $request->threshold_upload ?? '',
+            $request->threshold_download ?? '',
+            $request->burst_time_upload ?? '',
+            $request->burst_time_download ?? '',
+            $request->limit_at_upload ?? '',
+            $request->limit_at_download ?? '',
+            $request->priority ?? '',
+        );
+
+        // Destructuring hasil perhitungan
+        [
+            'maxLimitUpload'         => $maxUpload,
+            'maxLimitDownload'       => $maxDownload,
+            'minLimitUpload'         => $minUpload,
+            'minLimitDownload'       => $minDownload,
+            'rasioCir'               => $rasioCir,
+            'rateLimitMikrotik'      => $rateLimit,
+            'burstLimitUpload'       => $burstUpload,
+            'burstLimitDownload'     => $burstDownload,
+            'thresholdUpload'        => $thresholdUpload,
+            'thresholdDownload'      => $thresholdDownload,
+            'burstTimeUpload'        => $burstTimeUpload,
+            'burstTimeDownload'      => $burstTimeDownload,
+            'limitAtUpload'          => $limitAtUpload,
+            'limitAtDownload'        => $limitAtDownload,
+        ] = $calculation;
+
+        $data = array_merge($validated, [
+            'local_address'           => $request->local_address,
+            'remote_address'          => $request->remote_address,
+            'dns_server'              => $request->dns_server ?? '8.8.8.8, 8.8.4.4',
+            'parent_queue'            => $request->parent_queue,
+            'queue_type'              => $request->queue_type,
+            'insert_queue_before'     => $request->insert_before,
+            'rate_limit'              => $rateLimit,
+            'use_encryption'          => $request->use_encryption,
+            'script_on_up'            => $request->on_up,
+            'script_on_down'          => $request->on_down,
+            'change_tcp_mss'          => $request->change_tcp_mss,
+            'use_upnp'                => $request->use_upnp,
+            'comment'                 => $request->comment,
+            'only_one'                => $request->only_one ?? 'yes',
+
+            'max_upload'              => $maxUpload,
+            'max_download'            => $maxDownload,
+            'min_upload'              => $minUpload,
+            'min_download'            => $minDownload,
+            'rasio_cir'               => $rasioCir,
+
+            'burst_upload'            => $burstUpload,
+            'burst_download'          => $burstDownload,
+            'burst_threshold_upload'  => $thresholdUpload,
+            'burst_threshold_download' => $thresholdDownload,
+            'burst_time_upload'       => $burstTimeUpload,
+            'burst_time_download'     => $burstTimeDownload,
+            'limit_at_upload'         => $limitAtUpload,
+            'limit_at_download'       => $limitAtDownload,
+        ]);
+
+        $pppProfile->create($data);
+
         return redirect()->route('ppp-profiles.index')
             ->with('success', 'PPP Profile created successfully.');
     }
 
-    private function calculation($max_upload, $max_download, $rasio_cir = 3.33)
-    {
-        // Inputan
-        $maxLimitUpload = str_replace(',', '.', $max_upload);    // Ganti koma ke titik
-        $maxLimitDownload = str_replace(',', '.', $max_download);
+    private function calculation(
+        string  $max_upload,
+        string  $max_download,
+        float   $rasio_cir = 3.33,
+        ?string $burst_up = null,
+        ?string $burst_down = null,
+        ?string $threshold_up = null,
+        ?string $threshold_down = null,
+        ?string $burst_time_up = null,
+        ?string $burst_time_down = null,
+        ?string $limit_at_upload = null,
+        ?string $limit_at_download = null,
+        ?int    $priority = 8
+    ) {
+        // ── Helper untuk normalisasi input ──
+        $normalize = function (?string $raw, bool $allowEmpty = true) {
+            if ($raw === null || trim($raw) === '') {
+                return $allowEmpty ? [null, null] : throw new \Exception('Input wajib diisi.');
+            }
 
-        // ==== Upload ====
-        $unitUploadRaw = preg_replace('/[0-9\.\,]/', '', $maxLimitUpload); // Ambil huruf satuannya
-        $unitUpload = strtolower($unitUploadRaw) === 'm' ? 'M' : 'k';       // Kalau 'm' jadi 'M', lainnya 'k'
-        $maxLimitUploadValue = floatval(preg_replace('/[^0-9\.\,]/', '', $maxLimitUpload)); // Ambil angka pecahan
+            $clean = str_replace(',', '.', trim($raw));
+            $unit = strtolower(preg_replace('/[0-9.\s]/', '', $clean)) ?: 'k'; // Default ke K jika hanya angka
 
-        // ==== Download ====
-        $unitDownloadRaw = preg_replace('/[0-9\.\,]/', '', $maxLimitDownload);
-        $unitDownload = strtolower($unitDownloadRaw) === 'm' ? 'M' : 'k';
-        $maxLimitDownloadValue = floatval(preg_replace('/[^0-9\.\,]/', '', $maxLimitDownload));
+            if (!in_array($unit, ['k', 'm'])) {
+                throw new \Exception("Satuan harus k atau M (input: $raw)");
+            }
 
-        // Pastikan hanya k atau M
-        if (!in_array($unitUpload, ['k', 'M']) || !in_array($unitDownload, ['k', 'M'])) {
-            throw new \Exception('Satuan upload dan download harus "k" atau "M"');
+            $value = floatval(preg_replace('/[^0-9.]/', '', $clean));
+            return [$value, $value . strtoupper($unit)];
+        };
+
+        // ── Normalisasi semua field ──
+        $maxUp  = $normalize($max_upload, false);
+        $maxDn  = $normalize($max_download, false);
+
+        $burstUp = $normalize($burst_up);
+        $burstDn = $normalize($burst_down);
+
+        $thresUp = $normalize($threshold_up);
+        $thresDn = $normalize($threshold_down);
+
+        $limUp   = $normalize($limit_at_upload);
+        $limDn   = $normalize($limit_at_download);
+
+        $btUp = $burst_time_up !== null ? trim($burst_time_up) : null;
+        $btDn = $burst_time_down !== null ? trim($burst_time_down) : null;
+
+        // ── Bantu susun pasangan ──
+        $pair = fn($a, $b) => ($a && $b) ? "$a/$b" : null;
+
+        // Ambil string satuan (M/k)
+        [$maxUpStr, $maxDnStr]     = [$maxUp[1], $maxDn[1]];
+        [$burstUpStr, $burstDnStr] = [$burstUp[1] ?? null, $burstDn[1] ?? null];
+        [$thresUpStr, $thresDnStr] = [$thresUp[1] ?? null, $thresDn[1] ?? null];
+        [$limUpStr, $limDnStr]     = [$limUp[1] ?? null, $limDn[1] ?? null];
+
+        $burst   = $pair($burstUpStr, $burstDnStr);
+        $thres   = $pair($thresUpStr, $thresDnStr);
+        $burstT  = $pair($btUp, $btDn);
+        $limitAt = $pair($limUpStr, $limDnStr);
+        $max     = $pair($maxUpStr, $maxDnStr);
+
+        // Cek apakah hanya max yang valid
+        $hasPartialOther = $burst && $thres && $burstT && $limitAt;
+        $onlyMaxFilled = $max && !$hasPartialOther;
+
+        // Susun final segments
+        $segments = [];
+        if ($max) $segments[] = $max;
+
+        if (!$onlyMaxFilled) {
+            if ($burst)   $segments[] = $burst;
+            if ($thres)   $segments[] = $thres;
+            if ($burstT)  $segments[] = $burstT;
+            $segments[] = $priority ?? 8;
+            if ($limitAt) $segments[] = $limitAt;
         }
 
-        // Max Limit (Upload/Download)
-        $maxUpload = $maxLimitUploadValue . $unitUpload;
-        $maxDownload = $maxLimitDownloadValue . $unitDownload;
+        $rateLimit = implode(' ', $segments);
 
-        // Hitung Limit-At (Min Limit, biasanya 30% dari Max Limit dibagi rasio)
-        if ($unitUpload === 'k') {
-            $limitAtUploadValue = $maxLimitUploadValue / $rasio_cir;
-        } else { // 'M'
-            $limitAtUploadValue = ($maxLimitUploadValue * 1000) / $rasio_cir;
-        }
-        $limitAtUpload = $limitAtUploadValue . 'k';
-
-        if ($unitDownload === 'k') {
-            $limitAtDownloadValue = $maxLimitDownloadValue / $rasio_cir;
-        } else { // 'M'
-            $limitAtDownloadValue = ($maxLimitDownloadValue * 1000) / $rasio_cir;
-        }
-        $limitAtDownload = $limitAtDownloadValue . 'k';
-
-        // Final Rate Limit Format
-        $rateLimitMikrotik = "{$maxUpload}/{$maxDownload}";
-
-        // Return semua data
         return [
-            'maxLimitUpload' => $maxUpload,
-            'maxLimitDownload' => $maxDownload,
-            'limitAtUpload' => $limitAtUpload,
-            'limitAtDownload' => $limitAtDownload,
-            'rasioCir' => $rasio_cir,
-            'rateLimitMikrotik' => $rateLimitMikrotik,
+            'maxLimitUpload'      => $maxUpStr,
+            'maxLimitDownload'    => $maxDnStr,
+            'minLimitUpload'      => $limUpStr,
+            'minLimitDownload'    => $limDnStr,
+            'limitAtUpload'       => $limUpStr,
+            'limitAtDownload'     => $limDnStr,
+            'burstLimitUpload'    => $burstUpStr,
+            'burstLimitDownload'  => $burstDnStr,
+            'thresholdUpload'     => $thresUpStr,
+            'thresholdDownload'   => $thresDnStr,
+            'burstTimeUpload'     => $btUp,
+            'burstTimeDownload'   => $btDn,
+            'priority'            => $priority ?? 8,
+            'rasioCir'            => $rasio_cir,
+            'rateLimitMikrotik'   => $rateLimit,
         ];
     }
 
@@ -226,42 +297,55 @@ class PppProfileController extends Controller
             'comment',
         ]);
 
-        $data['script_on_up'] = $request->input('on_up');
-        $data['script_on_down'] = $request->input('on_down');
-        $data['insert_queue_before'] = $request->input('insert_before');
+        $data = array_merge($data, [
+            'script_on_up' => $request->input('on_up'),
+            'script_on_down' => $request->input('on_down'),
+            'insert_queue_before' => $request->input('insert_before'),
+        ]);
 
-        $calculation = $this->calculation($request->max_upload, $request->max_download, $request->rasio_cir ?? 3.33);
-        $maxUpload = $calculation['maxLimitUpload'];
-        $maxDownload = $calculation['maxLimitDownload'];
-        $limitAtUpload = $calculation['limitAtUpload'];
-        $limitAtDownload = $calculation['limitAtDownload'];
-        $rasioCir = $calculation['rasioCir'];
-        $rateLimitMikrotik = $calculation['rateLimitMikrotik'];
+        $calculation = $this->calculation(
+            $request->max_upload,
+            $request->max_download,
+            $request->rasio_cir ?? 3.33,
+            $request->burst_upload ?? '',
+            $request->burst_download ?? '',
+            $request->threshold_upload ?? '',
+            $request->threshold_download ?? '',
+            $request->burst_time_upload ?? '',
+            $request->burst_time_download ?? '',
+            $request->limit_at_upload ?? '',
+            $request->limit_at_download ?? '',
+            $request->priority ?? '',
+        );
 
-        $data['max_upload'] = $maxUpload;
-        $data['max_download'] = $maxDownload;
-        $data['min_upload'] = $limitAtUpload;
-        $data['min_download'] = $limitAtDownload;
-        $data['rasio_cir'] = $rasioCir;
+        [
+            'maxLimitUpload'      => $data['max_upload'],
+            'maxLimitDownload'    => $data['max_download'],
+            'minLimitUpload'      => $data['min_upload'],
+            'minLimitDownload'    => $data['min_download'],
+            'rasioCir'            => $data['rasio_cir'],
+            'rateLimitMikrotik'   => $rateLimitMikrotik,
+            'burstLimitUpload'    => $data['burst_upload'],
+            'burstLimitDownload'  => $data['burst_download'],
+            'thresholdUpload'     => $data['burst_threshold_upload'],
+            'thresholdDownload'   => $data['burst_threshold_download'],
+            'burstTimeUpload'     => $data['burst_time_upload'],
+            'burstTimeDownload'   => $data['burst_time_download'],
+            'limitAtUpload'       => $data['limit_at_upload'],
+            'limitAtDownload'     => $data['limit_at_download'],
+        ] = $calculation;
 
-        // if ($pppProfile->rate_limit !== $rateLimitMikrotik) {
         $routers = Mikrotik::where('disabled', 'false')->get();
-        // foreach ($routers as $router) {
-        //     $updateResult = $this->secretService->updateRateLimitProfileSecret($router, $rateLimitMikrotik, $pppProfile->profile_name);
-
-        //     if (isset($updateResult['after'])) {
-        //         return redirect()->back()->withErrors([
-        //             'msg' => $updateResult['after']['message'],
-        //         ]);
-        //     }
-        // }
         foreach ($routers as $router) {
-            UpdateRateLimitProfileSecretJob::dispatch($router, $pppProfile->profile_name, $rateLimitMikrotik);
+            UpdateRateLimitProfileSecretJob::dispatch(
+                $router,
+                $pppProfile->profile_name,
+                $rateLimitMikrotik,
+                auth()->user()
+            );
         }
-        $data['rate_limit'] = $rateLimitMikrotik;
-        // }
 
-        // dd($pppProfile);
+        $data['rate_limit'] = $rateLimitMikrotik;
         $pppProfile->update($data);
 
         return redirect()->route('ppp-profiles.index')
@@ -294,6 +378,7 @@ class PppProfileController extends Controller
 
     public function get_mikrotik_profiles(Request $request)
     {
+        $traceId = (string) Str::uuid();
         $sourceMikrotikId = $request->mikrotik_id;
         if (!$sourceMikrotikId) {
             return response()->json(['error' => 'Mikrotik ID is required'], 400);
@@ -322,16 +407,12 @@ class PppProfileController extends Controller
                 }
             }
 
-            // LogHelper::logWarning(null, [
-            //     'mikrotik_profiles' => $mikrotikProfiles,
-            //     'db_profiles' => $dbProfiles,
-            // ], 200, 'Successfully get Profile Data');
-
             return response()->json($profileList, 200);
         } catch (ModelNotFoundException $e) {
+            LogHelper::logError($e, ['error' => $e->getMessage()], 500, 'Gagal mendapat informasi mikrotik', $traceId);
             return response()->json(['error' => 'Mikrotik server not found'], 404);
         } catch (\Exception $e) {
-            LogHelper::logError($e, [], 500, 'Gagal mengambil profil dari Mikrotik.');
+            LogHelper::logError($e, ['error' => $e->getMessage()], 500, 'Gagal mengambil profil dari Mikrotik.', $traceId);
             return response()->json(['error' => 'Gagal mengambil profil dari Mikrotik.'], 500);
         }
     }
@@ -414,6 +495,7 @@ class PppProfileController extends Controller
 
     public function export($mikrotikSlug)
     {
+        $traceId = (string) Str::uuid();
         $uri = request()->path(); // Get current URI
         $logBase = 'ppp-profiles/export';
 
@@ -425,7 +507,7 @@ class PppProfileController extends Controller
             LogHelper::logInfo(request()->path(), [
                 'mikrotik' => $mikrotik->slug,
                 'step' => 'export_started'
-            ], 200, 'Export initiated');
+            ], 200, 'Export initiated', $traceId);
 
             // Get all active profiles
             $profilesToExport = PppProfile::where('disabled', 'false')
@@ -441,7 +523,8 @@ class PppProfileController extends Controller
                         'profile_count' => 0
                     ],
                     404,
-                    'Export failed: No active profiles found'
+                    'Export failed: No active profiles found',
+                    $traceId
                 );
 
                 return response()->json([
@@ -514,7 +597,8 @@ class PppProfileController extends Controller
                     'profile_count' => $profilesToExport->count()
                 ],
                 202,
-                "$logBase started"
+                "$logBase started",
+                $traceId
             );
 
             return response()->json([
@@ -528,10 +612,16 @@ class PppProfileController extends Controller
                 'timestamp' => now()->toDateTimeString()
             ], 202);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            LogHelper::logError(request()->path(), [
-                'slug' => $mikrotikSlug,
-                'error' => 'Mikrotik not found'
-            ], 404, 'Mikrotik lookup failed');
+            LogHelper::logError(
+                request()->path(),
+                [
+                    'slug' => $mikrotikSlug,
+                    'error' => 'Mikrotik not found'
+                ],
+                404,
+                'Mikrotik lookup failed',
+                $traceId
+            );
 
             return response()->json([
                 'success' => false,
@@ -546,7 +636,8 @@ class PppProfileController extends Controller
                     'trace' => substr($e->getTraceAsString(), 0, 500) // Truncated trace
                 ],
                 500,
-                "$logBase exception"
+                "$logBase exception",
+                $traceId
             );
 
             return response()->json([
@@ -554,6 +645,65 @@ class PppProfileController extends Controller
                 'message' => 'Failed to start export process',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function export_one($profileId)
+    {
+        $traceId = (string) Str::uuid();
+        $uri = request()->path();
+        $logBase = 'ppp-profiles/export';
+
+        $mikrotik = Mikrotik::where('disabled', 'false')->get();
+
+        if ($mikrotik->isEmpty()) {
+            return redirect()->route('ppp-profiles.index')
+                ->with('error', 'Tidak ada perangkat Mikrotik yang tersedia untuk ekspor.');
+        }
+
+        // Ambil profil (boleh aktif/tidak dulu) untuk akses namanya
+        $profile = PppProfile::find($profileId);
+        $profileName = optional($profile)->profile_name ?? 'Unknown Profile';
+
+        // Validasi profil aktif dan punya nama
+        if (!$profile || !$profile->profile_name || $profile->disabled === 'true') {
+            LogHelper::logWarning(
+                $uri,
+                [
+                    'mikrotik' => $mikrotik->map->only(['id', 'name']),
+                    'profile_id' => $profileId
+                ],
+                404,
+                'Export failed: Profile not found or not active',
+                $traceId
+            );
+
+            return redirect()->route('ppp-profiles.index')
+                ->with('error', "Profil {$profileName} tidak ditemukan atau tidak aktif.");
+        }
+
+        try {
+            foreach ($mikrotik as $device) {
+                dispatch(new CreatePppProfileToRouter($device, $profile));
+                LogHelper::logInfo($uri, [], 200, 'Export job dispatched', $traceId);
+            }
+
+            return redirect()->route('ppp-profiles.index')
+                ->with('success', "Ekspor profil {$profileName} berhasil dimulai.");
+        } catch (Throwable $e) {
+            LogHelper::logError(
+                $uri,
+                [
+                    'error' => $e->getMessage(),
+                    'trace' => Str::limit($e->getTraceAsString(), 500)
+                ],
+                500,
+                "$logBase exception",
+                $traceId
+            );
+
+            return redirect()->route('ppp-profiles.index')
+                ->with('error', "Gagal mengekspor profil {$profileName}: " . $e->getMessage());
         }
     }
 

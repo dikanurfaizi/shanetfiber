@@ -8,14 +8,17 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Mikrotik;
-use App\Models\WhatsAppGateway;
-use App\Models\Websystem;
+use App\Models\TelegramGateway\TelegramGateway;
+use App\Models\TelegramGateway\TelegramChatId;
+use App\Models\User;
 use App\Helpers\LogHelper;
 use Exception;
 use RouterOS\Query;
 use RouterOS\Client;
 use RouterOS\Config;
 use RouterOS\Exceptions\StreamException;
+use App\Services\TelegramMessageService;
+use Illuminate\Support\Str;
 
 class UpdateRateLimitProfileSecretJob implements ShouldQueue
 {
@@ -24,20 +27,23 @@ class UpdateRateLimitProfileSecretJob implements ShouldQueue
     protected $router;
     protected $profileName;
     protected $rateLimit;
+    protected $user;
 
     public $tries = 5;
     public $timeout = 60;
     public $maxExceptions = 3;
 
-    public function __construct(Mikrotik $router, string $profileName, string $rateLimit)
+    public function __construct(Mikrotik $router, string $profileName, string $rateLimit, ?User $user = null)
     {
         $this->router = $router;
         $this->profileName = $profileName;
         $this->rateLimit = $rateLimit;
+        $this->user = $user;
     }
 
     public function handle()
     {
+        $traceId = (string) Str::uuid();
         $maxLocalRetries = 3;
         $attempt = 0;
         $timeToSendWhatsapp = $maxLocalRetries - 1;
@@ -47,31 +53,47 @@ class UpdateRateLimitProfileSecretJob implements ShouldQueue
                 $this->updateRateLimitProfileSecret(
                     $this->router,
                     $this->rateLimit,
-                    $this->profileName
+                    $this->profileName,
+                    $this->user,
+                    $traceId
                 );
 
-                return; // Berhasil, keluar
-            } catch (Exception $e) {
+                return; // Berhasil – keluar dari job
+            } catch (StreamException $e) {          // ⬅️  baru
                 LogHelper::logWarning(null, [
-                    'attempt' => $attempt,
-                    'profile' => $this->profileName,
-                    'router' => $this->router->name,
+                    'attempt'       => $attempt,
+                    'profile'       => $this->profileName,
+                    'router'        => $this->router->name,
+                    'error_message' => 'Stream timed out: ' . $e->getMessage()
+                ], 504, "Stream timeout while updating rate limit");
+
+                if ($attempt >= $timeToSendWhatsapp) {
+                    $this->failed($e->getMessage(), $traceId, $this->user);   // kirim Telegram setelah 3× gagal
+                    throw $e;                           // biar supervisor queue men‑mark job failed
+                }
+
+                $attempt++;
+                sleep(10); // jeda sebelum retry
+            } catch (Exception $e) {                  // existing generic catch
+                LogHelper::logWarning(null, [
+                    'attempt'       => $attempt,
+                    'profile'       => $this->profileName,
+                    'router'        => $this->router->name,
                     'error_message' => $e->getMessage()
                 ], 500, "Failed to update rate limit");
 
                 if ($attempt >= $timeToSendWhatsapp) {
-                    $this->failed($e->getMessage());
+                    $this->failed($e->getMessage(), $traceId, $this->user);
                     throw $e;
                 }
 
                 $attempt++;
-
-                sleep(10); // Retry setelah jeda
+                sleep(10);
             }
         }
     }
 
-    public function failed(string $message)
+    public function failed(string $message, $traceId, $user)
     {
         LogHelper::logError(null, [
             'profile' => $this->profileName,
@@ -79,26 +101,16 @@ class UpdateRateLimitProfileSecretJob implements ShouldQueue
             'error_message' => $message
         ], 500, "UpdateRateLimitProfileSecretJob failed");
 
-        $gateway = WhatsappGateway::where('slug', 'gateway')->first();
-        $websystem = Websystem::first();
+        $telegramGateway = TelegramGateway::where('disabled', false)->get();
+        $userId = $user?->id ?? '1';
+        $chat = TelegramChatId::where('user_id', $userId)->get();
 
-        if (!$websystem) {
-            LogHelper::logError(null, [
-                'profile' => $this->profileName,
-                'router' => $this->router->name,
-                'error_message' => 'Websystem data not found'
-            ], 500, "Websystem data missing");
-            return;
-        }
+        if ($chat) {
+            $message = "❗ Gagal update rate limit PPP Profile `{$this->profileName}` di router `{$this->router->name}`. Error: {$message}";
 
-        $operatorPhone = ltrim($websystem->phone ?? '');
-        $customerName = $websystem->title ?? 'Admin';
-
-        if (preg_match('/^(\+?62|08|8)/', $operatorPhone)) {
-            $whatsappMessage = "❗ Gagal update rate limit PPP Profile `{$this->profileName}` di router `{$this->router->name}`. Error: {$message}";
-
-            if ($gateway && $gateway->disabled === 'false') {
-                dispatch(new SendWhatsappSingleJob($customerName, $operatorPhone, $gateway, $whatsappMessage));
+            if ($telegramGateway && $telegramGateway->disabled) {
+                $telegramMessageService = app(TelegramMessageService::class);
+                $telegramMessageService->send($chat->chat_id, $message, $traceId);
             }
         } else {
             LogHelper::logError(null, [
@@ -114,7 +126,7 @@ class UpdateRateLimitProfileSecretJob implements ShouldQueue
         return [30, 60, 120];
     }
 
-    private function updateRateLimitProfileSecret($mikrotik, $rateLimit, $profileName)
+    private function updateRateLimitProfileSecret($mikrotik, $rateLimit, $profileName, $user, $traceId)
     {
         $client = $this->getMikrotik($mikrotik);
 
@@ -135,9 +147,9 @@ class UpdateRateLimitProfileSecretJob implements ShouldQueue
                 'host' => $mikrotik->host ?? 'Unknown Host',
                 'name' => $mikrotik->name,
                 'profile_name' => $profileName
-            ], 404, "PPP Profile not found during rate limit update");
+            ], 404, "PPP Profile not found during rate limit update", $traceId);
 
-            $this->failed("Profile '{$profileName}' not found in Mikrotik '{$mikrotik->name}' with host '{$mikrotik->host}'");
+            $this->failed("Profile '{$profileName}' not found in Mikrotik '{$mikrotik->name}' with host '{$mikrotik->host}'", $traceId, $user);
             throw new Exception("Profile '{$profileName}' not found in Mikrotik '{$mikrotik->name}' with host '{$mikrotik->host}'");
         }
 
@@ -147,6 +159,38 @@ class UpdateRateLimitProfileSecretJob implements ShouldQueue
 
         return $client->query($updateQuery)->read();
     }
+
+    // private function updateRateLimitProfileSecret($mikrotik, $rateLimit, $profileName, $user, $traceId)
+    // {
+    //     // Dummy simulasi validasi: misalnya profileName harus tidak kosong
+    //     if (empty($profileName)) {
+    //         LogHelper::logWarning(null, [
+    //             'host' => $mikrotik->host ?? 'Unknown Host',
+    //             'name' => $mikrotik->name,
+    //             'profile_name' => $profileName
+    //         ], 404, "PPP Profile not found during rate limit update (dummy)");
+
+    //         $this->failed("Profile '{$profileName}' not found in Mikrotik '{$mikrotik->name}' with host '{$mikrotik->host}'", $traceId, $user);
+    //         throw new Exception("Profile '{$profileName}' not found in Mikrotik '{$mikrotik->name}' with host '{$mikrotik->host}'");
+    //     }
+
+    //     // Simulasi dummy log info (tanpa eksekusi query)
+    //     LogHelper::logInfo(null, [
+    //         'host' => $mikrotik->host,
+    //         'name' => $mikrotik->name,
+    //         'profile_name' => $profileName,
+    //         'rate_limit' => $rateLimit,
+    //         'user' => $user?->name ?? 'unknown',
+    //         'user_id' => $user?->id ?? 'unknown',
+    //         'trace_id' => $traceId
+    //     ], 200, "Dummy success update rate limit PPP profile");
+
+    //     // Return dummy response seperti hasil asli
+    //     return [
+    //         'status' => 'success',
+    //         'message' => "Rate limit '{$rateLimit}' applied to profile '{$profileName}' on router '{$mikrotik->name}'"
+    //     ];
+    // }
 
     private function getMikrotik($mikrotik): ?Client
     {

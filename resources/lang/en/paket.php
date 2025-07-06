@@ -52,7 +52,7 @@ return [
         'edit' => 'Edit this paket',
         'delete' => 'Delete this paket',
         'enable' => 'Enable',
-        'disable' => 'Disable',
+        'disable' => 'Disable'
     ],
 
     'info' => [
@@ -78,7 +78,19 @@ return [
             'remote_address' => 'Remote Address',
             'dns_server' => 'DNS Server',
             'max_limit' => 'Max Limit (Up/Down)',
-            'format_max_limit' => '* Ex. 3M or 3000k',
+            'max_upload' => 'Max Upload',
+            'max_download' => 'Max Download',
+            'burst_limit' => 'User Burst Limit',
+            'burst_upload' => 'Burst Upload',
+            'burst_download' => 'Burst Download',
+            'threshold_upload' => 'Threshold Upload',
+            'threshold_download' => 'Threshold Download',
+            'burst_time_upload' => 'Burst Time Upload',
+            'burst_time_download' => 'Burst Time Download',
+            'limit_at_upload' => 'Limit at Upload',
+            'limit_at_download' => 'Limit at Download',
+            'format_max_limit' => 'Masukkan nilai seperti 5M atau 512k. Jika hanya angka, otomatis dianggap satuan "K".',
+            'exclude_format' => 'Kecuali untuk Burst Time Upload dan Download (hanya angka).',
             'cir' => 'Cir',
             'priority' => 'Priority',
             'name' => 'Profile Name',
@@ -138,6 +150,7 @@ return [
             'disable' => 'Disable',
             'enable' => 'Enable',
             'delete' => 'Delete this profile',
+            'export' => 'Export profile',
         ],
     ],
 

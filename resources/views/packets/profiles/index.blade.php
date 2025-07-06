@@ -51,8 +51,6 @@
                         <tr>
                             <th>#</th>
                             <th>{{ __('paket.profile.table.name') }}</th>
-                            <th>{{ __('paket.profile.table.max_upload') }}</th>
-                            <th>{{ __('paket.profile.table.max_download') }}</th>
                             <th>{{ __('paket.profile.table.rate_limit') }}</th>
                             <th>{{ __('paket.profile.table.use_encryption') }}</th>
                             <th>{{ __('paket.profile.table.only_one') }}</th>
@@ -70,12 +68,6 @@
                                 <td><span class="badge rounded-pill text-secondary">{{ ++$i }}</span></td>
                                 <td><span
                                         class="badge {{ $isDisabled ? 'text-secondary' : 'text-primary' }}">{{ $profile->profile_name }}</span>
-                                </td>
-                                <td><span
-                                        class="badge {{ $isDisabled ? 'text-secondary' : 'text-primary' }}">{{ $profile->max_upload }}</span>
-                                </td>
-                                <td><span
-                                        class="badge {{ $isDisabled ? 'text-secondary' : 'text-primary' }}">{{ $profile->max_download }}</span>
                                 </td>
                                 <td><span
                                         class="badge {{ $isDisabled ? 'text-secondary' : 'text-primary' }}">{{ $profile->rate_limit }}</span>
@@ -96,14 +88,6 @@
                                         {{ $isDisabled ? 'Disabled' : 'Enabled' }}
                                     </span>
                                 </td>
-                                {{-- <td>
-                                    <span class="badge text-primary">
-                                        @if ($profile->rasio_cir)
-                                            1 : {{ $profile->rasio_cir }}
-                                        @endif
-                                    </span>
-                                </td> --}}
-                                {{-- <td><span class="badge text-primary">{{ $profile->priority }}</span></td> --}}
                                 <td class="text-end">
                                     <div class="dropdown">
                                         <button class="btn btn-sm btn-secondary dropdown-toggle" type="button"
@@ -152,6 +136,18 @@
                                                             </a>
                                                         </form>
                                                     @endif
+                                                </li>
+                                            @endcan
+                                            @can('packet-export')
+                                                <li>
+                                                    <form method="POST"
+                                                        action="{{ route('ppp-profiles.export-one', $profile->id) }}">
+                                                        @csrf
+                                                        <button type="submit" class="dropdown-item w-100 text-start">
+                                                            <i class="fa fa-upload me-2 text-primary"></i>
+                                                            {{ __('paket.profile.action.export') }}
+                                                        </button>
+                                                    </form>
                                                 </li>
                                             @endcan
                                             @can('packet-delete')
