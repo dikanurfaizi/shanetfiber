@@ -13,7 +13,7 @@
         {!! Form::text('max_upload', $pppProfile->max_upload ?? old('max_upload'), [
             'class' => 'form-control',
             'id' => 'max_upload',
-            'placeholder' => 'Contoh: 5M',
+            'placeholder' => 'Ex: 5M',
         ]) !!}
     </div>
     <div class="col-sm-6 col-md-3 mb-3">
@@ -21,7 +21,7 @@
         {!! Form::text('max_download', $pppProfile->max_download ?? old('max_download'), [
             'class' => 'form-control',
             'id' => 'max_download',
-            'placeholder' => 'Contoh: 10M',
+            'placeholder' => 'Ex: 10M',
         ]) !!}
     </div>
 
@@ -30,7 +30,7 @@
         {!! Form::text('burst_upload', $pppProfile->burst_upload ?? old('burst_upload'), [
             'class' => 'form-control',
             'id' => 'burst_upload',
-            'placeholder' => 'Contoh: 10M',
+            'placeholder' => 'Ex: 10M',
         ]) !!}
     </div>
     <div class="col-sm-6 col-md-3 mb-3">
@@ -38,7 +38,7 @@
         {!! Form::text('burst_download', $pppProfile->burst_download ?? old('burst_download'), [
             'class' => 'form-control',
             'id' => 'burst_download',
-            'placeholder' => 'Contoh: 20M',
+            'placeholder' => 'Ex: 20M',
         ]) !!}
     </div>
 </div>
@@ -50,7 +50,7 @@
         {!! Form::text('threshold_upload', $pppProfile->burst_threshold_upload ?? old('threshold_upload'), [
             'class' => 'form-control',
             'id' => 'threshold_upload',
-            'placeholder' => 'Contoh: 8M',
+            'placeholder' => 'Ex: 8M',
         ]) !!}
     </div>
     <div class="col-sm-6 col-md-3 mb-3">
@@ -58,7 +58,7 @@
         {!! Form::text('threshold_download', $pppProfile->burst_threshold_download ?? old('threshold_download'), [
             'class' => 'form-control',
             'id' => 'threshold_download',
-            'placeholder' => 'Contoh: 15M',
+            'placeholder' => 'Ex: 15M',
         ]) !!}
     </div>
 
@@ -67,7 +67,7 @@
         {!! Form::text('burst_time_upload', $pppProfile->burst_time_upload ?? old('burst_time_upload'), [
             'class' => 'form-control',
             'id' => 'burst_time_upload',
-            'placeholder' => 'Contoh: 8',
+            'placeholder' => 'Ex: 8',
             'inputmode' => 'numeric',
             'oninput' => "this.value = this.value.replace(/[^0-9]/g, '')",
         ]) !!}
@@ -77,7 +77,7 @@
         {!! Form::text('burst_time_download', $pppProfile->burst_time_download ?? old('burst_time_download'), [
             'class' => 'form-control',
             'id' => 'burst_time_download',
-            'placeholder' => 'Contoh: 8',
+            'placeholder' => 'Ex: 8',
             'inputmode' => 'numeric',
             'oninput' => "this.value = this.value.replace(/[^0-9]/g, '')",
         ]) !!}
@@ -127,21 +127,33 @@
     </div>
 </div>
 
-{{-- Optional note --}}
+{{-- Catatan Format Input --}}
 <div class="row mb-2">
     <div class="col-12">
-        <small class="text-muted d-block mb-1">
-            <strong>Format:</strong> Gunakan format seperti <code>5M</code> atau <code>512k</code>. Jika hanya angka,
-            sistem akan menganggap satuan <strong>K</strong>.
-        </small>
-        <small class="text-muted d-block mb-1">
-            <strong>Pengecualian:</strong> Format ini tidak berlaku untuk <strong>Burst Time Upload</strong> dan
-            <strong>Burst Time Download</strong>.
-        </small>
-        <small class="text-muted d-block">
-            <strong>Perhatian:</strong> Masukkan nilai <strong>Upload</strong> &amp; <strong>Download</strong> secara
-            berpasangan. Bila hanya salah satu yang diisi, sistem akan mengabaikan pasangan tersebut dan hanya menyimpan
-            <strong>Max Limit</strong>.
-        </small>
+        <label class="text-primary fw-semibold d-block mb-1">Catatan:</label>
+        <ul class="text-muted small ps-3 mb-0">
+            <li>
+                Gunakan format seperti <code>5M</code> atau <code>512k</code>.
+                Jika hanya angka, sistem akan menganggap satuan <strong>K</strong>.
+            </li>
+            <li>
+                Format ini tidak berlaku untuk <strong>Burst Time Upload</strong> dan
+                <strong>Burst Time Download</strong>, cukup isi angka saja (dalam detik).
+            </li>
+            <li>
+                Nilai <strong>Upload</strong> &amp; <strong>Download</strong> harus diisi
+                secara berpasangan.
+                Jika hanya salah satu yang diisi, maka nilai tersebut tidak akan dihitung ke dalam
+                <strong>rate-limit</strong>,
+                namun tetap akan disimpan ke database sebagai referensi tambahan.
+            </li>
+            <li>
+                Jika nilai <strong>Burst</strong>, <strong>Threshold</strong>, <strong>Burst Time</strong>, dan
+                <strong>Limit At</strong>
+                tidak lengkap berpasangan, maka yang dihitung dalam <strong>rate-limit</strong> hanya <strong>Max
+                    Limit</strong> dan
+                <strong>Min Upload/Download</strong>.
+            </li>
+        </ul>
     </div>
 </div>

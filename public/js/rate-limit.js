@@ -71,80 +71,81 @@ $(function () {
         }, 250);
     });
 
-    // Function to calculate rate limit
+    /* ───── Helper ───── */
+    const getValueAndUnit = (raw) => {
+        if (!raw) return [null, null];
+
+        const clean = raw.trim().replace(",", ".");
+        const unit = (clean.match(/[a-zA-Z]/g) || ["k"])[0].toUpperCase(); // default K
+        const number = parseFloat(clean.replace(/[^0-9.]/g, "")) || null;
+        if (!number) return [null, null];
+
+        return [number, unit];
+    };
+    const pair = (up, dn) =>
+        up && dn ? `${up}${dn === "" ? "" : "/" + dn}` : null;
+
+    /* ───── Main calc ───── */
     function calculateRateLimit() {
-        let uploadInput = $('input[name="max_upload"]').val().trim();
-        let downloadInput = $('input[name="max_download"]').val().trim();
-        let priority = $('select[name="priority"]').val();
+        // ambil semua input
+        const maxUpRaw = $("#max_upload").val();
+        const maxDnRaw = $("#max_download").val();
+        const burstUpRaw = $("#burst_upload").val();
+        const burstDnRaw = $("#burst_download").val();
+        const thUpRaw = $("#threshold_upload").val();
+        const thDnRaw = $("#threshold_download").val();
+        const btUpRaw = $("#burst_time_upload").val();
+        const btDnRaw = $("#burst_time_download").val();
+        const limUpRaw = $("#limit_at_upload").val();
+        const limDnRaw = $("#limit_at_download").val();
+        const priority = $("#priority").val() || 8;
 
-        // Reset error message
-        $("#error-max-upload").text("");
-        $("#error-max-download").text("");
+        /* ─ Normalize ─ */
+        const [maxUpVal, maxUpUnit] = getValueAndUnit(maxUpRaw);
+        const [maxDnVal, maxDnUnit] = getValueAndUnit(maxDnRaw);
+        const [burstUpVal, burstUpUnit] = getValueAndUnit(burstUpRaw);
+        const [burstDnVal, burstDnUnit] = getValueAndUnit(burstDnRaw);
+        const [thUpVal, thUpUnit] = getValueAndUnit(thUpRaw);
+        const [thDnVal, thDnUnit] = getValueAndUnit(thDnRaw);
+        const limUp = limUpRaw?.trim(); // Limit‑At sudah satuan ‘k’
+        const limDn = limDnRaw?.trim();
 
-        // Ekstrak angka dan unit
-        let uploadValue = 0;
-        let downloadValue = 0;
+        const maxPair =
+            maxUpVal && maxDnVal
+                ? `${maxUpVal}${maxUpUnit}/${maxDnVal}${maxDnUnit}`
+                : null;
+        const burstPair =
+            burstUpVal && burstDnVal
+                ? `${burstUpVal}${burstUpUnit}/${burstDnVal}${burstDnUnit}`
+                : null;
+        const thPair =
+            thUpVal && thDnVal
+                ? `${thUpVal}${thUpUnit}/${thDnVal}${thDnUnit}`
+                : null;
+        const btPair = btUpRaw && btDnRaw ? `${btUpRaw}/${btDnRaw}` : null;
+        const limPair = limUp && limDn ? `${limUp}/${limDn}` : null;
 
-        if (uploadInput) {
-            uploadValue =
-                parseFloat(
-                    uploadInput.replace(/[^0-9\.\,]/g, "").replace(",", ".")
-                ) || 0;
+        /* ─ Business rule check ─ */
+        let rateLimit = "";
+        const allOtherFilled = burstPair && thPair && btPair && limPair;
+
+        if (maxPair && allOtherFilled) {
+            rateLimit = `${maxPair} ${burstPair} ${thPair} ${btPair} ${priority} ${limPair}`;
+        } else if (maxPair) {
+            // aturannya: hanya Max yang dipakai
+            rateLimit = maxPair;
         }
 
-        let uploadUnitRaw = uploadInput.replace(/[^a-zA-Z]/g, "");
-
-        if (downloadInput) {
-            downloadValue =
-                parseFloat(
-                    downloadInput.replace(/[^0-9\.\,]/g, "").replace(",", ".")
-                ) || 0;
-        }
-
-        let downloadUnitRaw = downloadInput.replace(/[^a-zA-Z]/g, "");
-
-        // Normalisasi unit
-        let uploadUnit = "";
-        let downloadUnit = "";
-        let hasError = false;
-
-        if (uploadUnitRaw.toLowerCase() === "k") {
-            uploadUnit = "k";
-        } else if (uploadUnitRaw.toLowerCase() === "m") {
-            uploadUnit = "M";
-        } else {
-            $("#error-max-upload").text(
-                'Input Upload harus menggunakan satuan "k" atau "M"'
-            );
-            hasError = true;
-        }
-
-        if (downloadUnitRaw.toLowerCase() === "k") {
-            downloadUnit = "k";
-        } else if (downloadUnitRaw.toLowerCase() === "m") {
-            downloadUnit = "M";
-        } else {
-            $("#error-max-download").text(
-                'Input Download harus menggunakan satuan "k" atau "M"'
-            );
-            hasError = true;
-        }
-
-        if (hasError) {
-            return;
-        }
-
-        if (uploadValue && downloadValue && priority) {
-            // Format rate limit
-            let rateLimit = `${uploadValue}${uploadUnit}/${downloadValue}${downloadUnit}`;
-            $("#rate-limit").val(rateLimit);
-        }
+        $("#rate-limit").val(rateLimit); // hidden / readonly field
     }
 
+    /* ───── Event binding ───── */
     $(document).on(
         "input",
-        'input[name="max_upload"], input[name="max_download"], input[name="rasio_cir"]',
+        "#max_upload, #max_download, #burst_upload, #burst_download," +
+            " #threshold_upload, #threshold_download, #burst_time_upload, #burst_time_download," +
+            " #limit_at_upload, #limit_at_download",
         calculateRateLimit
     );
-    $(document).on("change", 'select[name="priority"]', calculateRateLimit);
+    $("#priority").on("change", calculateRateLimit);
 });
