@@ -52,7 +52,19 @@ class CreatePppProfileToRouter implements ShouldQueue
             return;
         }
 
-        if (!empty($exists) && $exists !== 'error') {
+        if (is_string($exists) && trim(strtolower($exists)) === 'error') {
+            // Anggap sebagai error, tidak lanjut
+            LogHelper::logError(
+                null,
+                ['error' => $exists],
+                500,
+                'Terjadi error',
+                $this->traceId
+            );
+            return;
+        }
+
+        if (!empty($exists)) {
             LogHelper::logWarning(
                 null,
                 ['profile_name' => $profile->profile_name],
