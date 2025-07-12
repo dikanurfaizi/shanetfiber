@@ -42,7 +42,6 @@ use App\Http\Controllers\MemberController;
 use App\Http\Controllers\TelegramGatewayController;
 use App\Http\Controllers\TelegramMessageController;
 use App\Http\Controllers\TelegramChatIdController;
-use App\Models\TelegramGateway\TelegramChatId;
 
 /*
 |--------------------------------------------------------------------------
@@ -139,6 +138,10 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::put('/packets/{packet:slug}/disabled/true', [PacketController::class, 'disable'])->name('disable.package');
         Route::put('/packets/{packet:slug}/disabled/false', [PacketController::class, 'enable'])->name('enable.package');
         Route::get('/packets/{packet:slug}/delete', [PacketController::class, 'delete'])->name('paket.delete');
+        //========================ROUTE Restore Customer======================
+        Route::get('/customers/trashed', [CustomerController::class, 'trashed'])->name('customers.trashed');
+        Route::put('/customers/{customer:slug}/restore', [CustomerController::class, 'restore'])->name('customers.restore');
+        Route::delete('/customers/{customer:slug}/force-delete', [CustomerController::class, 'forceDelete'])->name('customers.forceDelete');
         //========================ROUTE CUSTOMER===============================
         Route::resource('customers', CustomerController::class);
         Route::get('/customers/search', [PaymentController::class, 'index'])->name('customers.search');

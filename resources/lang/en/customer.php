@@ -155,6 +155,8 @@ return [
         'edit' => 'Edit',
         'delete' => 'Delete',
         'activation' => 'Activation',
+        'force-delete' => 'Force Delete',
+        'restore' => 'Restore',
     ],
 
     'info' => [
@@ -163,6 +165,7 @@ return [
         'server-offline' => 'Server Offline: :server',
         'not-activation' => 'Not Activated',
         'activation-count' => 'Activation :customer customer',
+        'deleted' => 'Deleted'
     ],
     'page' => [
         'header' => [
@@ -178,5 +181,60 @@ return [
     'message' => [
         'error-loading-types' => 'Error Loading Types',
     ],
+    'restore' => [
+        'header' => [
+            'index' => 'Deleted Customer List',
+            'search' => 'Search',
+        ],
+        'label' => [],
+        'placeholder' => [
+            'name' => 'Insert customer name',
+            'email' => 'Insert customer email',
+            'password' => 'Password:',
+            'confirm-password' => 'Confirm your password',
+            'address' => 'Address customer',
+            'contact' => 'Mobile Phone Number',
+            'username' => 'Username PPP on server',
+            'password-ppp' => 'Password PPP on server',
+            'username-router' => 'Default admin/superadmin/telecomadmin',
+            'password-router' => 'Default admin/suportadmin/telecomadmin',
+            'mac-address' => 'Mac Address',
+            'description' => 'Description',
+            'port-router' => 'Default 80',
+            'activation-date' => 'Please select activation date',
+            'select-merk-router' => 'Select Merk Router',
+            'select-type-router' => 'Select Type Router',
+            'select-address' => 'All Address',
+            'without-address' => 'Without Address',
+            'discount' => '00',
+            'discount_nominal' => '0',
+            'paket' => 'Select Paket',
+            'caller-id' => 'Caller ID',
+            'all-internet-service' => 'All Internet Service',
+            'ppp' => 'ppp',
+            'ip-static' => 'IP Static',
+            'responsibility' => 'Admin',
+            'vlan_id' => 'VLAN ID',
+            'all-responsibility' => 'All Admin',
+            'no-type-available' => 'No Type Available',
+        ],
+        'button' => [
+            'create' => 'Create a Customer',
+            'edit' => 'Edit Customer',
+            'edit-ppp' => 'Edit User PPPoE',
+            'save' => 'Add Customer',
+            'update' => 'Update Customer Data',
+            'delete' => 'Delete Customer',
+            'back' => 'Back',
+            'cancel' => 'Cancel',
+            'update-ppp' => 'Update Secret Data',
+            'export' => 'Export',
+            'create-router' => 'Add New Router',
+            'update-router' => 'Update Router',
+            'edit-router' => 'Edit Router',
+            'activation-all' => 'Activation Now',
+            'search' => 'Search',
 
+        ],
+    ]
 ];

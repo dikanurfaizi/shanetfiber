@@ -49,7 +49,11 @@
                                     <span
                                         class="badge text-primary">{{ $data->customer->customer_id ?? 'no customer ID' }}</span></a>
                             </td>
-                            <td><span class="badge text-primary">{{ $data->customer_address ?? 'no address' }}</span>
+                            <td>
+                                <span class="badge text-primary"
+                                    style="white-space: normal; text-align: left; display: inline-block; max-width: 220px; line-height: 1.4;">
+                                    {{ $data->customer_address ?? 'no address' }}
+                                </span>
                             </td>
                             <td><span
                                     class="badge text-primary">{{ Carbon\Carbon::parse($data->periode)->translatedFormat('M Y') ?? 'no periode' }}</span>
@@ -64,19 +68,33 @@
                                 </span>
                             </td>
                             <td>
+                                @php
+                                    $method = match ($data->payment_methode) {
+                                        null => __('No Payment Method'),
+                                        'cash' => __('Cash'),
+                                        'transfer' => 'Transfer',
+                                        default => $data->payment_methode,
+                                    };
+
+                                    $isInline = in_array($data->payment_methode, ['cash', 'transfer']);
+                                    $formattedDate = \Carbon\Carbon::parse($data->payment_time)->translatedFormat(
+                                        'd M Y',
+                                    );
+                                @endphp
+
                                 <span class="badge bg-success text-white">
                                     <i class="fas fa-check-circle"></i>
-                                    @if ($data->payment_methode === 'cash')
-                                        {{ __('Cash') }}
-                                    @elseif ($data->payment_methode === 'transfer')
-                                        {{ 'Transfer ' }}
+                                    {{ $method }}
+
+                                    @if ($isInline)
+                                        on {{ $formattedDate }}
                                     @else
-                                        {{ __('No Payment Methode') }}
+                                        <div style="margin-top: 4px;">
+                                            on {{ $formattedDate }}
+                                        </div>
                                     @endif
-                                    on {{ Carbon\Carbon::parse($data->payment_time)->translatedFormat('d M Y') }}
                                 </span>
                             </td>
-
                             <td class="d-flex items-center justify-content-end">
                                 @can('billing-edit')
                                     <a class="btn btn-success btn-sm" href="{{ route('receipts.print', $data->slug) }}"

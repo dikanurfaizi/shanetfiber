@@ -496,7 +496,6 @@ class CustomerController extends Controller
             'customer_id' => $customer->id,
             'customer_name' => $customer->name,
             'paket_name' => $customer->paket->name,
-            //'paket_price' => $customer->paket->price * ((100 - $customer->discount) / 100),
             'paket_price' => $total_price,
             'created_name' => auth()->user()->name,
             'status' => 'BL',
@@ -555,10 +554,6 @@ class CustomerController extends Controller
             $comment = $customer->username ?? 'Create from Customer Management';
             $profile_on_mikrotik = $this->secretService->getPppProfileByName($router, $profile);
             $profile = $profile_on_mikrotik[0];
-            // return dd($profile);
-            //  if ($profile['rate-limit'] ) {
-            //      return redirect()->back()->withErrors(['msg' => 'Please create limitasi PPP Profile ' . $profile['name'] . ' on server ' . $router->name . '!']);
-            //  }
             $valueLimitasi = $profile['rate-limit'] ?? '';
             if (strlen($valueLimitasi) == 0) {
                 return redirect()->back()->withErrors(['msg' => 'Please create limitasi PPP Profile ' . $profile['name'] . ' on server ' . $router->name . '!']);
@@ -1108,25 +1103,20 @@ class CustomerController extends Controller
 
     public function editRouter(Customer $customer)
     {
-        // Get customer router data with null check
         $customerRouter = CustomerOnt::where('customer_id', $customer->id)->first();
 
-        // Get all merk routers
         $merkRouters = MerkRouter::where('disabled', 'false')
             ->orderBy('name', 'ASC')
             ->get();
 
-        // Initialize variables with default values
         $merkRouterId = null;
-        $typeRouters = collect(); // Empty collection as default
+        $typeRouters = collect();
 
-        // Check if customer router exists and has merk_ont
         if ($customerRouter && !empty($customerRouter->merk_ont)) {
             $merkRouterId = MerkRouter::where('disabled', 'false')
                 ->where('name', $customerRouter->merk_ont)
                 ->value('id');
 
-            // If merk router found, get type routers
             if ($merkRouterId) {
                 $typeRouters = TypeRouter::where('disabled', 'false')
                     ->where('merk_router_id', $merkRouterId)
@@ -1191,13 +1181,16 @@ class CustomerController extends Controller
         }
 
         try {
-            $this->moveCustomerToDeleted($customer);
-            $customer->forceDelete();
+            $customer->update([
+                'activation' => 'false',
+                'disabled' => 'true',
+            ]);
+            $customer->delete();
             LogHelper::logInfo(
                 null,
-                ['customer_id' => $customer->id, 'customer_name' => $customer->name],
+                ['customer_id' => $customer->id],
                 200,
-                "Customer not found."
+                "Customer soft deleted."
             );
 
             return redirect()->route('customers.index')
@@ -1287,22 +1280,45 @@ class CustomerController extends Controller
     private function moveCustomerToDeleted(Customer $customer)
     {
         $deleteCustomer = [
+            'id' => $customer->id, // penting: agar id tetap sama untuk keperluan restore
             'name' => $customer->name,
             'slug' => $customer->slug,
             'password' => $customer->password,
             'email' => $customer->email,
             'paket_id' => $customer->paket_id,
             'mikrotik_id' => $customer->mikrotik_id,
+            'internet_service' => $customer->internet_service,
             'secret_id' => $customer->secret_id,
             'username' => $customer->username,
             'password_ppp' => $customer->password_ppp,
             'ppp_type_id' => $customer->ppp_type_id,
+            'simpleque_id' => $customer->simpleque_id,
+            'simpleque_name' => $customer->simpleque_name,
+            'ip_static' => $customer->ip_static,
+            'mac_address' => $customer->mac_address,
+            'interface' => $customer->interface,
+            'arp_id' => $customer->arp_id,
+            'address_list_id' => $customer->address_list_id,
             'address' => $customer->address,
             'contact' => $this->formatContact($customer->contact),
+            'disabled' => $customer->disabled,
+            'activation' => $customer->activation,
+            'created_at' => $customer->created_at,
+            'updated_at' => $customer->updated_at,
+            'deleted_at' => now(), // waktu dihapus
+            'primary_server' => $customer->primary_server,
+            'discount' => $customer->discount,
+            'customer_id' => $customer->customer_id,
             'activation_date' => $customer->activation_date,
+            'caller_id' => $customer->caller_id,
+            'user_id' => $customer->user_id,
+            'member_id' => $customer->member_id,
+            'billing_option' => $customer->billing_option,
+            'billing_period' => $customer->billing_period,
         ];
 
         DeletedCustomer::create($deleteCustomer);
+
         LogHelper::logInfo(
             null,
             ['customer_id' => $customer->id],
@@ -1571,5 +1587,120 @@ class CustomerController extends Controller
         }
         return redirect()->back()
             ->with('success', 'Succesfully to Export Pppoe Secret Customer');
+    }
+
+    public function trashed(Request $request)
+    {
+        $perPage = $request->input('perPage', 25); // default 25
+        $searchParams = $request->only([
+            'search_name',
+            'search_address',
+            'server_search',
+            'search_paket',
+            'status',
+            'search_admin'
+        ]);
+
+        $customers = Customer::onlyTrashed()
+            ->with(['user', 'paket', 'member'])
+            ->when($searchParams['search_name'] ?? null, fn($query, $name) => $query->where('name', 'like', "%{$name}%"))
+            ->when($searchParams['search_address'] ?? null, function ($query, $address) {
+                if ($address === 'NULL') {
+                    $query->whereNull('address');
+                } else {
+                    $query->where('address', $address);
+                }
+            })
+            ->when($searchParams['search_admin'] ?? null, function ($query, $admin) {
+                if ($admin === 'NULL') {
+                    $query->whereNull('user_id');
+                } else {
+                    $query->where('user_id', $admin);
+                }
+            })
+            ->when($searchParams['server_search'] ?? null, fn($query, $server) => $query->where('mikrotik_id', $server))
+            ->when($searchParams['search_paket'] ?? null, fn($query, $paket) => $query->where('paket_id', $paket))
+            ->orderBy('name')
+            ->paginate($perPage)
+            ->appends($request->query());
+
+        return view('customers.trashed', [
+            'data' => $customers,
+            'address' => Customer::onlyTrashed()->select('address')->distinct()->pluck('address', 'address'),
+            'allServers' => Mikrotik::where('disabled', 'false')->orderBy('name')->pluck('name', 'id'),
+            'allAdmin' => User::where('disabled', 'false')->orderBy('name')->pluck('name', 'id'),
+            'periodeName' => BillingPeriode::latest('created_at')->value('name'),
+            'perPage' => $perPage
+        ])->with('i', (request()->input('page', 1) - 1) * $perPage);
+    }
+
+    public function restore($slug)
+    {
+        $customer = Customer::onlyTrashed()->where('slug', $slug)->firstOrFail();
+
+        $customer->restore();
+
+        LogHelper::logInfo(
+            null,
+            ['customer_id' => $customer->id],
+            200,
+            "Customer restored."
+        );
+
+        return redirect()->route('customers.index')->with('success', 'Customer restored successfully.');
+    }
+
+    public function forceDelete($slug)
+    {
+        $customer = Customer::onlyTrashed()->where('slug', $slug)->firstOrFail();
+
+        if ($customer->activation === 'true') {
+            $router = Mikrotik::find($customer->mikrotik_id);
+            $autoisolir = AutoIsolir::where('mikrotik_id', $customer->mikrotik_id)->first();
+
+            try {
+                $this->handleInternetService($customer, $router, $autoisolir);
+            } catch (\Exception $e) {
+                LogHelper::logError(
+                    null,
+                    ['customer_id' => $customer->id, 'error' => $e->getMessage()],
+                    500,
+                    "Error handling internet service."
+                );
+                return redirect()->back()
+                    ->withErrors(['msg' => 'An error occurred while handling the router. Please try again.']);
+            }
+        }
+
+        try {
+            $this->moveCustomerToDeleted($customer);
+            $customer->forceDelete();
+            LogHelper::logInfo(
+                null,
+                ['customer_id' => $customer->id],
+                200,
+                "Customer soft deleted."
+            );
+
+            return redirect()->route('customers.trashed')->with('success', 'Customer permanently deleted.');
+        } catch (ModelNotFoundException $e) {
+            LogHelper::logError(
+                null,
+                ['customer_id' => $customer->id, 'error' => $e->getMessage()],
+                404,
+                "Customer not found."
+            );
+            return redirect()->back()
+                ->withErrors(['msg' => 'Customer not found.']);
+        } catch (\Exception $e) {
+            LogHelper::logError(
+                null,
+                ['customer_id' => $customer->id, 'error' => $e->getMessage()],
+                404,
+                "Error occurred while deleting customer."
+            );
+            return redirect()->back()
+                ->withErrors(['msg' => 'An error occurred while deleting the customer. Please try again.']);
+        }
     }
 }

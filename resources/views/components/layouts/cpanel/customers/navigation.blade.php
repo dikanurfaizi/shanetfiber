@@ -29,6 +29,8 @@
                 <div class="bg-white py-2 collapse-inner rounded">
                     <a class="collapse-item @if (request()->routeIs('customers.member')) active @endif"
                         href="{{ route('members.index') }}">{{ __('navigation.members.index') }}</a>
+                    <a class="collapse-item @if (request()->routeIs('customers.trashed')) active @endif"
+                        href="{{ route('customers.trashed') }}">{{ __('navigation.customers.trashed') }}</a>
                 </div>
             @endcanany
         </div>

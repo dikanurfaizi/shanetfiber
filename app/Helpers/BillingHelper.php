@@ -65,7 +65,7 @@ class BillingHelper
 
         // Jika sudah lunas
         if ($billing->status === 'LS') {
-            $paymentMethod = $billing->receipt->payment_method ?? '';
+            $paymentMethod = $billing->receipt->payment_methode ?? '';
             $paymentTime = $billing->payment_time
                 ? \Carbon\Carbon::parse($billing->payment_time)->format('F d, Y')
                 : '';
@@ -152,5 +152,4 @@ class BillingHelper
 
         return '';
     }
-    // Tambahkan juga fungsi getBillingPaymentSection(), getBillingActionButton() jika ingin
 }

@@ -25,7 +25,7 @@
                         <div class="row gx-3 gy-2">
                             <!-- Search Customer Name -->
                             <div class="col-md-4 col-lg-3">
-                                {!! Form::text('search_name', null, [
+                                {!! Form::input('search', 'search_name', null, [
                                     'placeholder' => __('billing.placeholder.search-customer-name'),
                                     'class' => 'form-control',
                                 ]) !!}

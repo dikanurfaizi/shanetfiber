@@ -112,7 +112,7 @@ class BillingController extends Controller
         }
 
         // Query utama
-        $billingsQuery = Billing::query()
+        $billingsQuery = Billing::with(['receipt', 'billing_periode', 'customer'])
             ->when($searchName, fn($query) => $query->where('customer_name', 'like', "%{$searchName}%"))
             ->when($customerSlug, fn($query) => $query->whereHas('customer', fn($q) => $q->where('slug', $customerSlug)))
             ->when($searchAddress, function ($query) use ($searchAddress) {
@@ -123,40 +123,40 @@ class BillingController extends Controller
                 });
             })
             ->when($searchPeriode, fn($query) => $query->whereHas('billing_periode', fn($q) => $q->where('name', 'like', "%{$searchPeriode}%")))
-            ->when(!is_null($searchStatus), function ($query) use ($searchStatus, $searchDuedate) {
-                Log::info('[Billing Index] search_status (raw): ' . $searchStatus);
+            ->when(!is_null($searchStatus), function ($query) use ($searchStatus, $searchDuedate, $traceId) {
+                // Log::info('[Billing Index] search_status (raw): ' . $searchStatus);
 
                 $statuses = explode('-', $searchStatus);
-                Log::info('[Billing Index] Parsed statuses: ' . json_encode($statuses));
+                // Log::info('[Billing Index] Parsed statuses: ' . json_encode($statuses));
 
                 // Ambil status yang dimulai dengan tanda "!" (artinya dikecualikan)
                 $excludes = array_filter($statuses, fn($s) => str_starts_with($s, '!'));
-                Log::info('[Billing Index] Raw excludes: ' . json_encode($excludes));
+                // Log::info('[Billing Index] Raw excludes: ' . json_encode($excludes));
 
                 if (count($excludes) > 0) {
                     $excludeValues = array_map(fn($s) => ltrim($s, '!'), $excludes);
-                    Log::info('[Billing Index] → Masuk ke if(count($excludes) > 0)');
-                    Log::info('[Billing Index] Cleaned excludes (tanpa !): ' . json_encode($excludeValues));
+                    // Log::info('[Billing Index] → Masuk ke if(count($excludes) > 0)');
+                    // Log::info('[Billing Index] Cleaned excludes (tanpa !): ' . json_encode($excludeValues));
 
                     $query->whereNotIn('status', $excludeValues);
 
                     if ($searchDuedate) {
-                        Log::info('[Billing Index] Filter by due_date (karena searchDuedate ada)');
+                        // Log::info('[Billing Index] Filter by due_date (karena searchDuedate ada)');
                         $query->where('due_date', 'like', "%{$searchDuedate}%");
                     }
                 } elseif (count($statuses) === 1) {
-                    Log::info('[Billing Index] → Masuk ke elseif(count($statuses) === 1)');
-                    Log::info('[Billing Index] Mencari status langsung: ' . $statuses[0]);
+                    // Log::info('[Billing Index] → Masuk ke elseif(count($statuses) === 1)');
+                    // Log::info('[Billing Index] Mencari status langsung: ' . $statuses[0]);
 
                     $query->where('status', $statuses[0]);
 
                     if ($searchDuedate) {
                         $field = $statuses[0] === 'LS' ? 'payment_time' : 'pay_later';
-                        Log::info("[Billing Index] Filter by field: {$field}, value: {$searchDuedate}");
+                        // Log::info("[Billing Index] Filter by field: {$field}, value: {$searchDuedate}");
                         $query->where($field, 'like', "%{$searchDuedate}%");
                     }
                 } else {
-                    Log::info('[Billing Index] → Tidak masuk ke if/elseif, mungkin status kosong atau tidak sesuai format.');
+                    logHelper::logInfo(null, [], 404, '[Billing Index] → Tidak masuk ke if/elseif, mungkin status kosong atau tidak sesuai format.', $traceId);
                 }
             })
             ->when($searchUserId, function ($query) use ($searchUserId) {
@@ -214,6 +214,20 @@ class BillingController extends Controller
             ]);
             return $pdf->download("Tagihan_{$searchName}_{$searchAddress}_{$searchStatus}_{$months}_{$years}.pdf");
         }
+
+        // $sularnoBilling = $data->firstWhere('customer_name', 'Sularno');
+        // $dummyUserBilling = $data->firstWhere('customer_name', 'Dummy User');
+
+        // if ($sularnoBilling) {
+        //     $paymentMethod = optional($sularnoBilling->receipt)->payment_methode ?? 'No Payment Method';
+        //     $paymentMethod2 = optional($dummyUserBilling->receipt)->payment_methode ?? 'No Payment Method';
+        //     logHelper::logInfo(null, [
+        //         'customer1' => $sularnoBilling->customer_name,
+        //         'payment_methode1' => $paymentMethod,
+        //         'customer2' => $dummyUserBilling->customer_name,
+        //         'payment_methode2' => $paymentMethod2,
+        //     ], 200, "Found Data", $traceId);
+        // }
 
         return view('billings.index', compact(
             'data',

@@ -244,7 +244,7 @@
 
                             <td>
                                 @if ($customer->activation == 'false')
-                                    <span class="badge bg-danger">
+                                    <span class="badge text-white bg-danger">
                                         <i class="fa fa-times text-warning me-2"></i>
                                         {{ __('customer.info.not-activation') }}
                                     </span>
