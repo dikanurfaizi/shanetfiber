@@ -15,10 +15,12 @@ class UserAuth
     {
         $user = Auth::user();
         $userId = $user->id;
+        $userName = $user->name;
 
         return [
             'user' => $user,
             'userId' => $userId,
+            'userName' => $userName, // Tambahkan ini
         ];
     }
 }

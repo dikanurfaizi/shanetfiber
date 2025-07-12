@@ -58,32 +58,6 @@
                 </div>
             </div>
 
-            <!-- Server Status Card -->
-            {{-- <div class="col-12 col-md-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-uppercase text-muted mb-2">Server Status</h6>
-                                <h3 class="mb-0">{{ $countRouterOnline + $countRouterOffline }}</h3>
-                            </div>
-                            <div class="bg-info bg-opacity-10 p-3 rounded">
-                                <i class="fas fa-network-wired text-white fs-4"></i>
-                            </div>
-                        </div>
-                        <hr class="my-3">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-success">
-                                <i class="fas fa-wifi me-1"></i> {{ $countRouterOnline }} Online
-                            </span>
-                            <span class="text-danger">
-                                <i class="fas fa-plug me-1"></i> {{ $countRouterOffline }} Offline
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div> --}}
-
             <!-- Total Customer Card -->
             <div class="col-12 col-md-4">
                 <div class="card border-0 shadow-sm h-100">
@@ -159,48 +133,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Customer Status Card -->
-        {{-- <div class="col-md-6 col-lg-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-uppercase text-muted mb-2">Connection Status</h6>
-                                <h3 class="mb-0">{{ $totalCustomers ?? 0 }}</h3>
-                            </div>
-                            <div class="bg-warning bg-opacity-10 p-3 rounded">
-                                <i class="fas fa-signal text-white fs-4"></i>
-                            </div>
-                        </div>
-                        <hr class="my-3">
-                        <div class="d-flex flex-column">
-                            <span class="text-success mb-1">
-                                <i class="fas fa-link me-1"></i>
-                                <a href="{{ route('customers.index', ['status' => 'online']) }}"
-                                    class="text-decoration-none">
-                                    {{ $sumCustomersOnline - $sumCustomersIsolir }} Connected
-                                </a>
-                            </span>
-                            <span class="text-danger mb-1">
-                                <i class="fas fa-unlink me-1"></i>
-                                <a href="{{ route('customers.index', ['status' => 'offline']) }}"
-                                    class="text-decoration-none">
-                                    {{ $sumCustomersOffline }} Disconnected
-                                </a>
-                            </span>
-                            <span class="text-secondary">
-                                <i class="fas fa-ban me-1"></i>
-                                <a href="{{ route('customers.index', ['status' => 'isolir']) }}"
-                                    class="text-decoration-none">
-                                    {{ $sumCustomersIsolir - $totalNonActiveDisabled }} Isolir
-                                </a>
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-    </div> --}}
 
         <!-- Billing Section -->
         @if ($lastBillings)
@@ -428,6 +360,182 @@
             </div>
         @endcanany
 
+        <!-- Customer Registration/Churn Section -->
+        @canany(['view-customer-registration-chart', 'view-customer-churn-chart'])
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Customer Movement Analysis</h5>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-primary active" data-view-type="chart">
+                                    <i class="fas fa-chart-line"></i> Chart View
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" data-view-type="table">
+                                    <i class="fas fa-table"></i> Table View
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <!-- Chart View -->
+                            <div id="customerMovementChartView">
+                                <div id="customerRegistrationChurnChart" style="min-height: 350px;"></div>
+                            </div>
+
+                            <!-- Table View (Initially Hidden) -->
+                            <div id="customerMovementTableView" style="display: none;">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover" id="customerMovementTable">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Month</th>
+                                                @if ($isSuperAdmin)
+                                                    @foreach (array_keys($registrationData) as $adminId)
+                                                        <th colspan="2" class="text-center">
+                                                            {{ $registrationData[$adminId]['adminName'] }}</th>
+                                                    @endforeach
+                                                @else
+                                                    <th>New Registrations</th>
+                                                    <th>Churned Customers</th>
+                                                @endif
+                                            </tr>
+                                            <tr>
+                                                <th></th>
+                                                @if ($isSuperAdmin)
+                                                    @foreach (array_keys($registrationData) as $adminId)
+                                                        <th class="text-end text-success">Registrations</th>
+                                                        <th class="text-end text-danger">Churned</th>
+                                                    @endforeach
+                                                @else
+                                                    <th class="text-end text-success">Registrations</th>
+                                                    <th class="text-end text-danger">Churned</th>
+                                                @endif
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($months as $index => $month)
+                                                <tr>
+                                                    <td>{{ $month }}</td>
+                                                    @if ($isSuperAdmin)
+                                                        @foreach (array_keys($registrationData) as $adminId)
+                                                            <td class="text-end">
+                                                                {{ $registrationData[$adminId]['counts'][$index] ?? 0 }}
+                                                            </td>
+                                                            <td class="text-end">
+                                                                {{ $churnData[$adminId]['counts'][$index] ?? 0 }}</td>
+                                                        @endforeach
+                                                    @else
+                                                        @php
+                                                            $adminId = array_keys($registrationData)[0];
+                                                        @endphp
+                                                        <td class="text-end">
+                                                            {{ $registrationData[$adminId]['counts'][$index] ?? 0 }}</td>
+                                                        <td class="text-end">
+                                                            {{ $churnData[$adminId]['counts'][$index] ?? 0 }}</td>
+                                                    @endif
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endcanany
+
+        <!-- Popular Packages Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0 d-inline-block me-3">Popular Packages</h5>
+                            <span class="badge text-white bg-primary">Total Packages:
+                                {{ $packageSummary->count() }}</span>
+                        </div>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-primary active" data-view="table">
+                                <i class="fas fa-table"></i> Table View
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" data-view="chart">
+                                <i class="fas fa-chart-bar"></i> Chart View
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        @if ($packageSummary->isEmpty())
+                            <div class="alert alert-warning m-3">
+                                <i class="fas fa-info-circle me-2"></i> No package data available
+                            </div>
+                        @else
+                            <!-- Table View -->
+                            <div id="packageTableView" class="table-responsive"
+                                style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-hover table-striped mb-0">
+                                    <thead class="thead-light sticky-top" style="background-color: #f8f9fa;">
+                                        <tr>
+                                            <th class="ps-4">#</th>
+                                            <th>Package Name</th>
+                                            <th class="text-end pe-4">Customers</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @php
+                                            $totalCustomers = 0;
+                                            $maxCustomers = max(
+                                                array_column($packageSummary->toArray(), 'total_customers'),
+                                            );
+                                        @endphp
+
+                                        @foreach ($packageSummary as $index => $paket)
+                                            @php
+                                                $percentage =
+                                                    $maxCustomers > 0
+                                                        ? ($paket->total_customers / $maxCustomers) * 100
+                                                        : 0;
+                                                $totalCustomers += $paket->total_customers;
+                                            @endphp
+                                            <tr>
+                                                <td class="ps-4">{{ $index + 1 }}</td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="progress flex-grow-1 me-3" style="height: 20px;">
+                                                            <div class="progress-bar bg-info" role="progressbar"
+                                                                style="width: {{ $percentage }}%"
+                                                                aria-valuenow="{{ $percentage }}" aria-valuemin="0"
+                                                                aria-valuemax="100">
+                                                            </div>
+                                                        </div>
+                                                        <span>{{ $paket->paket_name }}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="text-end pe-4">
+                                                    <span class="fw-bold">{{ $paket->total_customers }}</span>
+                                                    <small class="text-muted ms-1">customers</small>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+
+                                        <tr class="bg-light sticky-bottom">
+                                            <td colspan="2" class="ps-4 fw-bold">Total Customers</td>
+                                            <td class="text-end pe-4 fw-bold">{{ $totalCustomers }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Chart View (Hidden by Default) -->
+                            <div id="packageChartView" style="display: none; height: 400px; padding: 15px;">
+                                <div id="popularPackagesChart" style="height: 100%;"></div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Router Status Section -->
         <div class="row g-4">
             @foreach ($routersEnable as $mikrotik)
@@ -502,6 +610,102 @@
         </div>
     </div>
 
+    @section('custom_styles')
+        <style>
+            #customerRegistrationChurnChart {
+                min-height: 400px;
+                position: relative;
+            }
+
+            /* Untuk label miring */
+            .apexcharts-xaxis-label {
+                transform: translateY(5px);
+                white-space: nowrap;
+            }
+
+            @media (max-width: 600px) {
+                #customerRegistrationChurnChart {
+                    min-height: 300px;
+                }
+
+                .apexcharts-xaxis-label {
+                    font-size: 8px !important;
+                }
+            }
+        </style>
+        <style>
+            /* Table styling */
+            #customerMovementTable th {
+                white-space: nowrap;
+                position: sticky;
+                top: 0;
+                background-color: #f8f9fa;
+            }
+
+            #customerMovementTable .text-success {
+                color: #28a745 !important;
+            }
+
+            #customerMovementTable .text-danger {
+                color: #dc3545 !important;
+            }
+
+            /* Responsive adjustments */
+            @media (max-width: 768px) {
+
+                #customerMovementTable th,
+                #customerMovementTable td {
+                    padding: 0.5rem;
+                    font-size: 0.85rem;
+                }
+            }
+        </style>
+        <style>
+            /* Custom styling for the table */
+            .table-responsive {
+                scrollbar-width: thin;
+                scrollbar-color: #dee2e6 #f8f9fa;
+            }
+
+            .table-responsive::-webkit-scrollbar {
+                height: 8px;
+                width: 8px;
+            }
+
+            .table-responsive::-webkit-scrollbar-thumb {
+                background-color: #dee2e6;
+                border-radius: 4px;
+            }
+
+            .table-responsive::-webkit-scrollbar-track {
+                background-color: #f8f9fa;
+            }
+
+            /* Progress bar in table cells */
+            .progress {
+                background-color: #e9ecef;
+                border-radius: 4px;
+            }
+
+            /* Sticky header and footer */
+            .sticky-top {
+                top: 0;
+                position: sticky;
+                z-index: 10;
+            }
+
+            .sticky-bottom {
+                bottom: 0;
+                position: sticky;
+                z-index: 10;
+            }
+
+            /* Hover effects */
+            .table-hover tbody tr:hover {
+                background-color: rgba(0, 0, 0, 0.02);
+            }
+        </style>
+    @endsection
     @section('custom_scripts')
         <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
         <script>
@@ -785,6 +989,419 @@
                     });
                 @endforeach
             @endif
+        </script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                fetchCustomerRegistrationChurnData();
+                setInterval(fetchCustomerRegistrationChurnData, 300000);
+
+                const viewButtons = document.querySelectorAll('[data-view-type]');
+                viewButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        viewButtons.forEach(btn => btn.classList.remove('active'));
+                        this.classList.add('active');
+
+                        if (this.dataset.viewType === 'table') {
+                            document.getElementById('customerMovementChartView').style.display = 'none';
+                            document.getElementById('customerMovementTableView').style.display =
+                                'block';
+                        } else {
+                            document.getElementById('customerMovementChartView').style.display =
+                                'block';
+                            document.getElementById('customerMovementTableView').style.display = 'none';
+                        }
+                    });
+                });
+
+                // Initialize DataTable if needed
+                if ($.fn.DataTable) {
+                    $('#customerMovementTable').DataTable({
+                        dom: '<"top"f>rt<"bottom"lip><"clear">',
+                        pageLength: 12,
+                        responsive: true,
+                        order: [
+                            [0, 'desc']
+                        ],
+                        language: {
+                            search: "_INPUT_",
+                            searchPlaceholder: "Search months...",
+                        }
+                    });
+                }
+            });
+
+            async function fetchCustomerRegistrationChurnData() {
+                try {
+                    const apiUrl = "{{ route('customer.registration') }}";
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Network response not OK:', {
+                            status: response.status,
+                            statusText: response.statusText,
+                            responseText: errorText
+                        });
+                        throw new Error(`Network response was not ok: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    if (data.error) {
+                        console.error('API returned error:', data.error);
+                        return;
+                    }
+
+                    renderCustomerRegistrationChurnChart(data);
+                } catch (error) {
+                    console.error('Error in fetchCustomerRegistrationChurnData:', {
+                        errorName: error.name,
+                        errorMessage: error.message,
+                        errorStack: error.stack
+                    });
+                }
+            }
+
+            function renderCustomerRegistrationChurnChart(data) {
+                try {
+                    const {
+                        months,
+                        registrationData,
+                        churnData,
+                        isSuperAdmin
+                    } = data;
+
+                    if (!months || !registrationData) {
+                        console.error('Invalid chart data:', {
+                            months,
+                            registrationData
+                        });
+                        return;
+                    }
+
+                    const series = [];
+                    const colors = [];
+
+                    if (isSuperAdmin) {
+                        Object.keys(registrationData).forEach((adminId, index) => {
+                            const adminName = registrationData[adminId]?.adminName || `Admin ${adminId}`;
+                            const color = getColorForAdmin(index);
+
+                            series.push({
+                                name: `${adminName} (Signup)`,
+                                data: registrationData[adminId]?.counts || [],
+                                type: 'line'
+                            });
+
+                            series.push({
+                                name: `${adminName} (Unsubscribe)`,
+                                data: churnData[adminId]?.counts || Array(months.length).fill(0),
+                                type: 'line'
+                            });
+
+                            colors.push(color, color);
+                        });
+                    } else {
+                        const adminId = Object.keys(registrationData)[0];
+                        if (adminId) {
+                            series.push({
+                                name: 'Signup',
+                                data: registrationData[adminId]?.counts || [],
+                                type: 'line'
+                            });
+                            series.push({
+                                name: 'Unsubscribe',
+                                data: churnData[adminId]?.counts || Array(months.length).fill(0),
+                                type: 'line'
+                            });
+                            colors.push('#4e73df', '#e74a3b');
+                        }
+                    }
+
+                    const options = {
+                        series: series,
+                        chart: {
+                            type: 'line',
+                            height: '100%',
+                            toolbar: {
+                                show: true
+                            },
+                            animations: {
+                                enabled: false
+                            },
+                            zoom: {
+                                enabled: true
+                            }
+                        },
+                        colors: colors,
+                        stroke: {
+                            width: 3,
+                            curve: 'smooth'
+                        },
+                        dataLabels: {
+                            enabled: false
+                        },
+                        title: {
+                            text: 'Monthly Customer Signup vs Unsubscribe Trend',
+                            align: 'center',
+                            style: {
+                                fontSize: '16px'
+                            }
+                        },
+                        xaxis: {
+                            categories: months.map(m => m || ''),
+                            labels: {
+                                rotate: -45,
+                                formatter: function(value) {
+                                    try {
+                                        if (!value) return '';
+                                        const strValue = String(value).trim();
+                                        if (window.innerWidth < 768) {
+                                            const monthPart = strValue.split(' ')[0];
+                                            return monthPart ? monthPart.substring(0, 3) : '';
+                                        }
+                                        return strValue;
+                                    } catch (e) {
+                                        console.warn('Error formatting label:', e);
+                                        return '';
+                                    }
+                                }
+                            }
+                        },
+                        yaxis: {
+                            title: {
+                                text: 'Number of Customers'
+                            },
+                            min: 0,
+                            forceNiceScale: true,
+                            labels: {
+                                formatter: val => Math.floor(val)
+                            }
+                        },
+                        legend: {
+                            position: 'bottom',
+                            horizontalAlign: 'center',
+                            fontSize: '12px',
+                            itemMargin: {
+                                horizontal: 10
+                            },
+                            markers: {
+                                radius: 5
+                            }
+                        },
+                        grid: {
+                            borderColor: '#f1f1f1',
+                            padding: {
+                                top: 20,
+                                bottom: 40
+                            }
+                        },
+                        tooltip: {
+                            y: {
+                                formatter: val => `${val} customer`
+                            }
+                        },
+                        responsive: [{
+                            breakpoint: 600,
+                            options: {
+                                chart: {
+                                    height: 300
+                                },
+                                xaxis: {
+                                    labels: {
+                                        rotate: -45,
+                                        style: {
+                                            fontSize: '8px'
+                                        }
+                                    }
+                                },
+                                legend: {
+                                    fontSize: '10px',
+                                    itemMargin: {
+                                        horizontal: 5
+                                    }
+                                }
+                            }
+                        }]
+                    };
+
+                    const chartEl = document.getElementById("customerRegistrationChurnChart");
+                    if (!chartEl) {
+                        console.error('Chart container not found!');
+                        return;
+                    }
+
+                    if (window.customerChart) {
+                        window.customerChart.destroy();
+                    }
+
+                    chartEl.innerHTML = '';
+                    window.customerChart = new ApexCharts(chartEl, options);
+                    window.customerChart.render();
+                } catch (error) {
+                    console.error('Failed to render chart:', error);
+                }
+            }
+
+            let resizeTimer;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    if (window.customerChart) {
+                        window.customerChart.updateOptions({
+                            xaxis: {
+                                labels: {
+                                    formatter: function(value) {
+                                        if (window.innerWidth < 768) {
+                                            return value.split(' ')[0].substring(0, 3);
+                                        }
+                                        return value;
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }, 200);
+            });
+
+            function getColorForAdmin(index) {
+                const colors = [
+                    '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e',
+                    '#e74a3b', '#858796', '#5a5c69', '#3a3b45',
+                    '#2e59d9', '#17a673', '#2c9faf', '#dda20a',
+                    '#be2617', '#656773', '#42444e', '#24252e'
+                ];
+                return colors[index % colors.length];
+            }
+        </script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // View Toggle Functionality
+                const viewButtons = document.querySelectorAll('[data-view]');
+                viewButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        viewButtons.forEach(btn => btn.classList.remove('active'));
+                        this.classList.add('active');
+
+                        if (this.dataset.view === 'chart') {
+                            document.getElementById('packageTableView').style.display = 'none';
+                            document.getElementById('packageChartView').style.display = 'block';
+
+                            // Render chart if not already rendered
+                            if (!window.packageChart) {
+                                renderPackageChart();
+                            }
+                        } else {
+                            document.getElementById('packageTableView').style.display = 'block';
+                            document.getElementById('packageChartView').style.display = 'none';
+                        }
+                    });
+                });
+
+                // Render Chart Function
+                function renderPackageChart() {
+                    const packageData = @json($packageSummary);
+                    const categories = packageData.map(p => p.paket_name);
+                    const seriesData = packageData.map(p => p.total_customers);
+
+                    const options = {
+                        series: [{
+                            name: 'Customers',
+                            data: seriesData
+                        }],
+                        chart: {
+                            type: 'bar',
+                            height: '100%',
+                            toolbar: {
+                                show: true,
+                                tools: {
+                                    download: true,
+                                    selection: false,
+                                    zoom: false,
+                                    zoomin: false,
+                                    zoomout: false,
+                                    pan: false,
+                                    reset: true
+                                }
+                            }
+                        },
+                        colors: ['#4e73df'],
+                        plotOptions: {
+                            bar: {
+                                borderRadius: 4,
+                                horizontal: true,
+                                distributed: false,
+                                barHeight: '80%',
+                            }
+                        },
+                        dataLabels: {
+                            enabled: true,
+                            formatter: function(val) {
+                                return val;
+                            },
+                            style: {
+                                fontSize: '12px',
+                                colors: ['#fff']
+                            }
+                        },
+                        xaxis: {
+                            categories: categories,
+                            title: {
+                                text: 'Number of Customers',
+                                style: {
+                                    fontSize: '12px'
+                                }
+                            },
+                            labels: {
+                                trim: true,
+                                hideOverlappingLabels: true
+                            }
+                        },
+                        yaxis: {
+                            labels: {
+                                style: {
+                                    fontSize: '12px'
+                                }
+                            }
+                        },
+                        tooltip: {
+                            y: {
+                                formatter: function(val) {
+                                    return val + " customers";
+                                }
+                            }
+                        },
+                        responsive: [{
+                            breakpoint: 600,
+                            options: {
+                                chart: {
+                                    height: 400
+                                },
+                                plotOptions: {
+                                    bar: {
+                                        horizontal: false
+                                    }
+                                }
+                            }
+                        }]
+                    };
+
+                    window.packageChart = new ApexCharts(
+                        document.querySelector("#popularPackagesChart"),
+                        options
+                    );
+                    window.packageChart.render();
+                }
+            });
         </script>
     @endsection
 </x-layouts.app-layout>

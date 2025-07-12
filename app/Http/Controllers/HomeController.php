@@ -10,6 +10,7 @@ use App\Models\Billing\Billing;
 use App\Models\AutoIsolir;
 use App\Models\Billing\BillingPeriode;
 use App\Models\Websystem;
+use App\Models\User;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Routerboard\SystemService;
 use App\Services\Routerboard\TestConnectionService;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\Log;
 use App\Helpers\LogHelper;
 use App\Helpers\UserAuth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class HomeController extends Controller
 {
@@ -39,6 +41,12 @@ class HomeController extends Controller
             $this->version = Websystem::where('slug', 'websystem')->value('version');
         }
     }
+
+    private function getUserAuthData()
+    {
+        return UserAuth::getUserDetails();
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -49,6 +57,7 @@ class HomeController extends Controller
      */
     public function __invoke(Request $request)
     {
+        $traceId = (string) Str::uuid();
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
         $userId = $auth['userId'];
@@ -66,7 +75,7 @@ class HomeController extends Controller
             ->get();
 
         // Process router stats
-        $routerStats = $this->processRouters($routersEnable);
+        $routerStats = $this->processRouters($routersEnable, $traceId);
         extract($routerStats);
 
         // Get Mikrotik list
@@ -75,15 +84,22 @@ class HomeController extends Controller
         // Get customer summary
         $customerSummary = $this->calculateCustomerSummary();
 
+        // Get package summary
+        $packageSummary = $this->calculatePackageSummary();
+
         // Get last billing data
         [$lastBillingPeriode, $lastBillings] = $this->getLastBillingData();
 
         // Calculate billing summary
-        $summaryTotals = $this->calculateBillingSummary($lastBillings);
+        $summaryTotals = $this->calculateBillingSummary($lastBillings, $traceId);
 
         // Initialize admin billing summary
         $adminBillingSummary = $user->can('view-billings-widget-total') ?
             $this->getOwnerBillingSummary($lastBillingPeriode->id) : null;
+
+        $movementData = $this->calculateCustomerRegistrationChurnData($request, $traceId);
+
+        extract($movementData);
 
         $isMobile = (new \Jenssegers\Agent\Agent())->isMobile();
 
@@ -98,16 +114,16 @@ class HomeController extends Controller
             'countRouterOffline',
             'lastBillingPeriode',
             'lastBillings',
-            'adminBillingSummary'
+            'adminBillingSummary',
+            'packageSummary',
+            'months',
+            'registrationData',
+            'churnData',
+            'isSuperAdmin',
         ), $summaryTotals, $customerSummary));
     }
 
-    private function getUserAuthData()
-    {
-        return UserAuth::getUserDetails();
-    }
-
-    private function processRouters($routersEnable)
+    private function processRouters($routersEnable, $traceId)
     {
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
@@ -322,8 +338,123 @@ class HomeController extends Controller
         ];
     }
 
+    private function calculatePackageSummary()
+    {
+        $auth = $this->getUserAuthData();
+        $user = $auth['user'];
+        $userId = $auth['userId'];
 
-    private function calculateBillingSummary($billings)
+        // Base query untuk menghitung jumlah customer per paket
+        $query = Customer::query()
+            ->select('pakets.id', 'pakets.name as paket_name', DB::raw('COUNT(customers.id) as total_customers'))
+            ->join('pakets', 'customers.paket_id', '=', 'pakets.id')
+            ->whereNull('customers.deleted_at')
+            ->groupBy('pakets.id', 'pakets.name')
+            ->orderByDesc('total_customers');
+
+        // Filter berdasarkan role/permission
+        if ($user->can('view-customer-registration-chart')) {
+            // Superadmin: tidak ada filter tambahan
+        } elseif ($user->can('view-customer-churn-chart')) {
+            $query->where('customers.user_id', $userId);
+        } else {
+            // Tidak punya akses
+            return collect();
+        }
+
+        return $query->get();
+    }
+
+    private function calculateCustomerRegistrationChurnData($request, $traceId): array
+    {
+        $auth = $this->getUserAuthData();
+        $user = $auth['user'];
+        $userId = $auth['userId'];
+        $userName = $auth['userName'];
+
+        $isSuperAdmin = $user->can('view-customer-registration-chart');
+        $months = collect();
+        $registrationData = [];
+        $churnData = [];
+
+        $startDate = now()->subMonths(11)->startOfMonth();
+        $endDate = now()->endOfMonth();
+
+        $current = $startDate->copy();
+        while ($current <= $endDate) {
+            $months->push($current->format('M Y'));
+            $current->addMonth();
+        }
+
+        if ($isSuperAdmin) {
+            $admins = User::where('disabled', 'false')->get();
+            foreach ($admins as $admin) {
+                $adminId = $admin->id;
+                $registrationData[$adminId] = [
+                    'adminName' => $admin->name,
+                    'counts' => []
+                ];
+                $churnData[$adminId] = ['counts' => []];
+
+                $current = $startDate->copy();
+                while ($current <= $endDate) {
+                    $monthStart = $current->startOfMonth();
+                    $monthEnd = $current->copy()->endOfMonth();
+
+                    $registrationCount = Customer::where('user_id', $adminId)
+                        ->whereBetween('created_at', [$monthStart, $monthEnd])
+                        ->count();
+
+                    $churnCount = Customer::where('user_id', $adminId)
+                        ->where(function ($q) {
+                            $q->where('disabled', true)
+                                ->orWhereNotNull('deleted_at');
+                        })
+                        ->whereBetween('deleted_at', [$monthStart, $monthEnd])
+                        ->count();
+
+                    $registrationData[$adminId]['counts'][] = $registrationCount;
+                    $churnData[$adminId]['counts'][] = $churnCount;
+                    $current->addMonth();
+                }
+            }
+        } else {
+            $adminId = $userId;
+            $registrationData[$adminId] = ['adminName' => $userName, 'counts' => []];
+            $churnData[$adminId] = ['counts' => []];
+
+            $current = $startDate->copy();
+            while ($current <= $endDate) {
+                $monthStart = $current->startOfMonth();
+                $monthEnd = $current->copy()->endOfMonth();
+
+                $registrationCount = Customer::where('user_id', $adminId)
+                    ->whereBetween('created_at', [$monthStart, $monthEnd])
+                    ->count();
+
+                $churnCount = Customer::where('user_id', $adminId)
+                    ->where(function ($q) {
+                        $q->where('disabled', true)
+                            ->orWhereNotNull('deleted_at');
+                    })
+                    ->whereBetween('deleted_at', [$monthStart, $monthEnd])
+                    ->count();
+
+                $registrationData[$adminId]['counts'][] = $registrationCount;
+                $churnData[$adminId]['counts'][] = $churnCount;
+                $current->addMonth();
+            }
+        }
+
+        return [
+            'months' => $months,
+            'registrationData' => $registrationData,
+            'churnData' => $churnData,
+            'isSuperAdmin' => $isSuperAdmin,
+        ];
+    }
+
+    private function calculateBillingSummary($billings, $traceId)
     {
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
@@ -348,7 +479,7 @@ class HomeController extends Controller
             LogHelper::logError(null, [
                 'billings' => $billings instanceof \Illuminate\Support\Collection ? $billings->toArray() : [],
                 'error_message' => $e->getMessage(),
-            ], 500, 'Error calculating billing totals');
+            ], 500, 'Error calculating billing totals', $traceId);
             return [
                 'totalBilling' => 0,
                 'totalPaid' => 0,
@@ -388,5 +519,21 @@ class HomeController extends Controller
             'billingSummary' => $billingSummary,
             'permissions' => $permissions, // Kirim hanya permissions yang dibutuhkan
         ]);
+    }
+
+    public function getCustomerRegistrationChurnData(Request $request)
+    {
+        $traceId = (string) Str::uuid();
+        try {
+            return response()->json($this->calculateCustomerRegistrationChurnData($request, $traceId));
+        } catch (\Exception $e) {
+            logHelper::logError(null, [
+                'error_message' => $e->getMessage(),
+                'stack_trace' => $e->getTraceAsString(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ], 500, 'ERROR getCustomerRegistrationChurnData');
+            return response()->json(['error' => 'Failed to fetch data'], $traceId);
+        }
     }
 }

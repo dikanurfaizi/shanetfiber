@@ -9,7 +9,7 @@ return [
         'show-isolir' => 'Isolir Customers',
         'create' => 'Add New Customer',
         'member' => 'Member List',
-        'trashed' => 'Deleted Customer',
+        'trashed' => 'Deleted Customers',
     ],
 
     'billings' => [

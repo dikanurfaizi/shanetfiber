@@ -294,6 +294,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('api/fetch-account-bank', [DropdownController::class, 'fetchAccountBank'])->name('fetch.account.bank');
     Route::post('api/fetch-interfaces', [DropdownController::class, 'fetchInterface'])->name('fetch.interface');
     Route::post('api/fetch-monthly-summary', [HomeController::class, 'getBillingMonthly'])->name('monthly.summary');
+    Route::post('api/customer-registration-churn-data', [HomeController::class, 'getCustomerRegistrationChurnData'])->name('customer.registration');
     // Route::post('api/send-whatsapp', [WhatsAppGatewayController::class, 'sendMessage']);
     // Route::post('api/send-broadcast', [WhatsAppGatewayController::class, 'sendBroadcastMessage']);
 });

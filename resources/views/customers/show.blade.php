@@ -217,7 +217,7 @@
                             <td class="py-1"><strong>{{ __('customer.label.service') }}</strong></td>
                             <td class="py-1">
                                 {{ __(':') }} <span class="text-primary">
-                                    {{ $customer->ppp_type->name }}</span>
+                                    {{ $customer->pppType->name }}</span>
                             </td>
                         </tr>
 
@@ -360,7 +360,7 @@
                         <td class="py-1"><strong>{{ __('customer.label.service') }}</strong></td>
                         <td class="py-1">
                             {{ __(':') }} <span class="text-primary">
-                                {{ $customer->ppp_type->name ?? 'No Service' }}</span>
+                                {{ $customer->pppType->name ?? 'No Service' }}</span>
                         </td>
                         <td class="py-1"><strong>{{ __('customer.label.state') }}</strong></td>
                         <td class="py-1">
