@@ -1390,6 +1390,7 @@ class CustomerController extends Controller
 
     public function activation_all_customer(Request $request)
     {
+        $traceId = (string) Str::uuid();
         $mikrotikId = $request->servers_activation;
         $server = Mikrotik::where('id', $mikrotikId)->value('name');
         $activationDate = Carbon::now()->format('d F Y');
@@ -1400,6 +1401,7 @@ class CustomerController extends Controller
                 'activation' => 'true',
                 'disabled' => 'false',
             ]);
+            SendMessage::dispatch($customer->id, 'activation_customer', $traceId)->onQueue('default');
         }
         return redirect()->back()
             ->with('success', 'Activated ' . count($customers) . ' customers on server ' . $server . '.');

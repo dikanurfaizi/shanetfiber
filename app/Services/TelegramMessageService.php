@@ -41,13 +41,27 @@ class TelegramMessageService
             'parse_mode' => 'HTML',
         ]);
 
+        $logResponse = [
+            'message_id' => $response['message_id'] ?? null,
+            'from' => [
+                'first_name' => $response['from']['first_name'] ?? null,
+                'username'   => $response['from']['username'] ?? null,
+            ],
+            'chat' => [
+                'first_name' => $response['chat']['first_name'] ?? null,
+                'last_name'  => $response['chat']['last_name'] ?? null,
+                'username'   => $response['chat']['username'] ?? null,
+            ],
+            'date' => isset($response['date']) ? date('Y-m-d H:i:s', $response['date']) : null,
+        ];
+
         LogHelper::logInfo(
             null,
             [
-                'response'  => $response, // bisa langsung array
+                'response' => $logResponse,
             ],
             200,
-            "Test message successfully sent via Telegram gateway",
+            "Message successfully sent via Telegram",
             $traceId
         );
 
