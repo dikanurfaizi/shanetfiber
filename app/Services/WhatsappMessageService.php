@@ -302,7 +302,7 @@ class WhatsappMessageService
                         billings.due_date,
                         billings.pay_later,
                         billing_periodes.name AS periode_name
-                    ', [$activePeriodeName])          // bind periode aktif di sini
+                    ', [$activePeriodeName, $activePeriodeName])    // bind periode aktif di sini
                 ->orderByRaw("
                         CASE
                             WHEN billings.status = 'BL' THEN billings.due_date
@@ -797,7 +797,7 @@ class WhatsappMessageService
             LogHelper::logError(null, [
                 'billing_id' => $billing->id ?? null,
                 'action' => $action,
-            ], 400, "Billing atau contact customer tidak valid.");
+            ], 400, "Billing atau contact customer tidak valid.", $traceId);
             return null;
         }
 
@@ -848,11 +848,12 @@ class WhatsappMessageService
         //     [
         //         'address' => $address,
         //         'customer_unique_id' => $customer_unique_id,
+        //         'customer_id' => $billing->customer_id,
         //         'admin_id' => $admin_id,
         //         'admin_contact' => $admin_contact
         //     ],
         //     200,
-        //     "admin id",
+        //     "Just Informational",
         //     $traceId
         // );
 
@@ -860,13 +861,13 @@ class WhatsappMessageService
         $accountBank = $this->getBankInfo($admin_id ?? 1);
 
         // Ambil rincian paket dan tagihan
-        $pakets = $this->getBillingPackages($customer_id);
+        $pakets = $this->getBillingPackages($billing->customer_id);
         if ($pakets->isEmpty()) {
             LogHelper::logError(null, [
-                'customer_id' => $customer_id,
+                'customer_id' => $billing->customer_id,
                 'customer_name' => $customer_name,
                 'contact_customer' => $contact,
-            ], 404, "Paket atau tagihan tidak ditemukan.");
+            ], 404, "Paket atau tagihan tidak ditemukan.", $traceId);
             return null;
         }
 
