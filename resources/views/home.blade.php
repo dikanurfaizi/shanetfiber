@@ -67,7 +67,7 @@
                                 <h6 class="text-uppercase text-muted mb-2">Total Customers</h6>
                                 <h3 class="mb-0">
                                     <a href="{{ route('customers.index') }}" class="text-decoration-none">
-                                        {{ $totalCustomers ?? 0 }}
+                                        {{ $totalActiveCustomers ?? 0 }}
                                     </a>
                                 </h3>
                             </div>
@@ -109,23 +109,22 @@
                         <div class="d-flex flex-column mb-2">
                             <span class="text-success mb-1">
                                 <i class="fas fa-user-check"></i>
-                                <a href="{{ route('customers.index', ['status' => 'false']) }}"
+                                <a href="{{ route('customers.index', ['status' => 'active']) }}"
                                     class="text-decoration-none">
                                     {{ $totalEnabled }} Active
                                 </a>
                             </span>
                             <span class="text-warning mb-1">
                                 <i class="fas fa-user-slash text-secondary"></i>
-                                <a href="{{ route('customers.index', ['status' => 'true']) }}"
+                                <a href="{{ route('customers.index', ['status' => 'inactive']) }}"
                                     class="text-decoration-none">
-                                    {{ $totalDisabled }} Disabled
+                                    {{ $totalDisabled }} Inactive
                                 </a>
                             </span>
                             <span class="text-danger">
                                 <i class="fas fa-user-times text-danger"></i>
-                                <a href="{{ route('customers.index', ['status' => 'deactivated']) }}"
-                                    class="text-decoration-none">
-                                    {{ $totalNonActiveDisabled }} Deactivated
+                                <a href="{{ route('customers.trashed') }}" class="text-decoration-none">
+                                    {{ $totalNonActiveDisabled }} Suspend
                                 </a>
                             </span>
                         </div>

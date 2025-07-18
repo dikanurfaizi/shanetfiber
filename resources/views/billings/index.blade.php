@@ -1,6 +1,7 @@
 <x-layouts.cpanel.billings.app-layout title="Billings">
 
     <div class="card-header py-3">
+
         <h5 class="mb-2 font-weight-bold text-primary">{{ __('billing.header.index') }}</h5>
         @if (isset($message))
             <div class="alert alert-danger mt-2">
@@ -11,6 +12,12 @@
             <div class="alert alert-success mt-2">
                 <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
                 {{ $data->total() }} billings found.
+            </div>
+        @endif
+        @if (session('warning'))
+            <div class="alert alert-warning mt-2">
+                <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                {{ session('warning') }}
             </div>
         @endif
         <span>

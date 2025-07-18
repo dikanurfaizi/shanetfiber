@@ -335,7 +335,7 @@
                                 @can('customer-delete')
                                     <li>
                                         <a class="dropdown-item" href="{{ route('customers.delete', $customer->slug) }}"><i
-                                                class="fa fa-trash me-2 text-danger"></i>&nbsp{{ __('customer.action.delete') }}</a>
+                                                class="fa fa-trash me-2 text-danger"></i>&nbsp{{ __('customer.action.suspend') }}</a>
                                     </li>
                                 @endcan
                                 @can('secret-edit')

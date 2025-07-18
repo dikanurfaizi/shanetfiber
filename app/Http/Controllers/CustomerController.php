@@ -305,11 +305,19 @@ class CustomerController extends Controller
 
     private function applyStatusFilter($query, $status)
     {
-        return match ($status) {
-            'deactivated' => $query->where('activation', 'false'),
-            'free' => $query->where('discount', 100),
-            default => $query->where('disabled', $status)->where('activation', 'true'),
+        $query = match ($status) {
+            'active' => $query
+                ->where('activation', 'true')
+                ->where('disabled', 'false'),
+
+            'inactive' => $query
+                ->where('activation', 'false')
+                ->where('disabled', 'true'),
+
+            default => $query,
         };
+
+        return $query;
     }
 
     public function export()
@@ -1157,6 +1165,21 @@ class CustomerController extends Controller
      */
     public function delete(Customer $customer)
     {
+        $hasUnpaidBills = Billing::where('customer_id', $customer->id)
+            ->whereNotIn('status', ['NP', 'LS'])
+            ->exists();
+
+        if ($hasUnpaidBills) {
+            // return redirect()->route('billings.index', [
+            //     'search_name' => $customer->name,
+            // ])->with('warning', 'Customer memiliki tagihan aktif. Harap konfirmasi status billing sebelum melanjutkan penghapusan.');
+            return redirect()->route('billings.index', [
+                'search_name' => $customer->name,
+                'source' => 'customer-delete',
+                'customer_name' => $customer->name,
+            ])->with('warning', 'Customer memiliki tagihan aktif. Harap konfirmasi status billing sebelum melanjutkan penghapusan.');
+        }
+
         return view('customers.delete', compact('customer'));
     }
 

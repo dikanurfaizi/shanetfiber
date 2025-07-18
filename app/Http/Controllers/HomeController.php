@@ -189,8 +189,12 @@ class HomeController extends Controller
 
     private function getOwnerBillingSummary($billingPeriodeId)
     {
-        // Jika Super Admin, ambil semua billing
-        return Billing::with(['customer', 'customer.user'])
+        return Billing::with(['customer' => function ($q) {
+            $q->whereNull('deleted_at');
+        }, 'customer.user'])
+            ->whereHas('customer', function ($q) {
+                $q->whereNull('deleted_at');
+            })
             ->where('billing_periode_id', $billingPeriodeId)
             ->get()
             ->groupBy(fn($b) => $b->customer->user->id ?? 'Not Linked')
@@ -308,7 +312,7 @@ class HomeController extends Controller
         $user = $auth['user'];
         $userId = $auth['userId'];
 
-        $customerQuery = Customer::query();
+        $customerQuery = Customer::withTrashed()->newQuery();
 
         if (!($user->can('view-billings-widget-total') || $user->can('view-billings-widget-customer-count'))) {
             $customerQuery->where('user_id', $userId);
@@ -316,21 +320,38 @@ class HomeController extends Controller
 
         // Ringkasan total keseluruhan
         $total = (clone $customerQuery)->selectRaw('
-        COUNT(*) as totalCustomers,
-        SUM(CASE WHEN disabled = "false" THEN 1 ELSE 0 END) as totalEnabled,
-        SUM(CASE WHEN disabled = "true" THEN 1 ELSE 0 END) as totalDisabled,
-        SUM(CASE WHEN disabled = "true" AND activation = "false" THEN 1 ELSE 0 END) as totalNonActiveDisabled
-    ')->first();
+            COUNT(*) as totalCustomers,
+            SUM(CASE WHEN disabled = "false" AND activation = "true" AND deleted_at IS NULL THEN 1 ELSE 0 END) as totalEnabled,
+            SUM(CASE WHEN disabled = "true" AND activation = "false" AND deleted_at IS NULL THEN 1 ELSE 0 END) as totalDisabled,
+            SUM(CASE WHEN disabled = "true" AND activation = "false" AND deleted_at IS NOT NULL THEN 1 ELSE 0 END) as totalNonActiveDisabled
+        ')->first();
 
-        $perMikrotik = (clone $customerQuery)
-            ->rightJoin('mikrotiks', 'customers.mikrotik_id', '=', 'mikrotiks.id')
+        $totalActiveCustomers = (clone $customerQuery)
+            ->where('disabled', 'false')
+            ->where('activation', 'true')
+            ->whereNull('deleted_at')
+            ->count();
+
+        $perMikrotik = DB::table('mikrotiks')
+            ->leftJoin('customers', function ($join) use ($user, $userId) {
+                $join->on('customers.mikrotik_id', '=', 'mikrotiks.id')
+                    ->where('customers.disabled', 'false')
+                    ->where('customers.activation', 'true')
+                    ->whereNull('customers.deleted_at');
+
+                // Filter user jika bukan admin
+                if (!($user->can('view-billings-widget-total') || $user->can('view-billings-widget-customer-count'))) {
+                    $join->where('customers.user_id', $userId);
+                }
+            })
             ->select('mikrotiks.id', 'mikrotiks.name as mikrotik_name', DB::raw('COUNT(customers.id) as total_customers'))
             ->groupBy('mikrotiks.id', 'mikrotiks.name')
-            ->orderBy('mikrotiks.id') // Urutkan berdasarkan id Mikrotik
+            ->orderBy('mikrotiks.id')
             ->get();
 
         return [
             'totalCustomers' => (int) $total->totalCustomers,
+            'totalActiveCustomers' => (int) $totalActiveCustomers,
             'totalEnabled' => (int) $total->totalEnabled,
             'totalDisabled' => (int) $total->totalDisabled,
             'totalNonActiveDisabled' => (int) $total->totalNonActiveDisabled,

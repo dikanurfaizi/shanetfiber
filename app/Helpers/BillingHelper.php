@@ -4,6 +4,7 @@ namespace App\Helpers;
 
 use Carbon\Carbon;
 use App\Models\Billing\Billing;
+use App\Models\Customer;
 use App\Helpers\UserAuth;
 
 class BillingHelper
@@ -114,15 +115,16 @@ class BillingHelper
 
         // Jika belum lunas (status bukan LS)
         if ($billing->status !== 'LS') {
+            $customer = $billing->customer ?? Customer::find($billing->customer_id);
             // Jika customer sudah aktif
-            if ($billing->customer->activation === 'true') {
+            if ($customer && $customer->activation === 'true') {
                 return '<button type="button"
                     class="btn btn-success btn-sm mt-1 billing-submit-btn"
                     data-slug="' . $billing->slug . '">
                     <i class="fas fa-money-bill-wave text-white"></i> ' . __('billing.button.pay') . '
                 </button>';
-            } else {
-                $action = route('customers.activation', $billing->customer->slug);
+            } elseif ($customer) {
+                $action = route('customers.activation', $customer->slug);
 
                 return '<form method="POST" class="d-inline" action="' . $action . '">'
                     . csrf_field()

@@ -157,6 +157,7 @@ return [
         'activation' => 'Activation',
         'force-delete' => 'Force Delete',
         'restore' => 'Restore',
+        'suspend' => 'Suspend Customer',
     ],
 
     'info' => [
