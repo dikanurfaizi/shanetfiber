@@ -615,7 +615,7 @@ class SecretService
                 LogHelper::logWarning(
                     null,
                     ['host' => $mikrotik->host ?? 'N/A', 'username' => $username],
-                    200,
+                    404,
                     "No active secrets found to delete"
                 );
                 return;

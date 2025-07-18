@@ -12,7 +12,9 @@ class BillingHelper
     {
         $html = '';
 
-        $billingsUnpaid = Billing::where('customer_id', $billing->customer_id)
+        // tidak perlu ambil ulang billing
+        $billingsUnpaid = Billing::with('customer')
+            ->where('customer_id', $billing->customer_id)
             ->whereNotIn('status', ['LS', 'NP'])
             ->get();
 
@@ -34,8 +36,7 @@ class BillingHelper
             $html .= '<span class="badge bg-primary text-white"><i class="fas fa-info-circle"></i> '
                 . __('billing.state.tidak-ada-pemakaian') . '</span>';
         } else {
-            $activationDate = Carbon::now()->format('Y-m') . '-' . Carbon::parse($billing->customer->activation_date)->format('d') . ' ' . Carbon::now()->format('H:i:s');
-            $expired = now()->gt($activationDate);
+            $expired = now()->gt(Carbon::parse($billing->due_date));
             $color = $expired ? 'bg-danger' : 'bg-primary';
 
             $html .= '<span class="badge ' . $color . ' text-white"><i class="fas fa-ban"></i> '
@@ -43,7 +44,7 @@ class BillingHelper
         }
 
         $unpaidOther = count($billingsUnpaid) - $countBillingCustomerUnpaid;
-        if ($unpaidOther > 0) {
+        if ($unpaidOther > 0 && $billing->customer) {
             $html .= '<br><a class="text-xs fw-bold text-danger d-inline-flex align-items-center mt-1" href="'
                 . route('billings.index', ['search_status' => '!LS', 'customer' => $billing->customer->slug]) . '">' .
                 __('billing.state.belum-lunas-lainnya', ['count_bill_unpaid' => $unpaidOther]) . '</a>';
