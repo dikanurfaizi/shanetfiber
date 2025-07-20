@@ -1,17 +1,3 @@
-@php
-    $user = auth()->user();
-
-    if ($user->can('view-bill-top-bar-total')) {
-        $billingsToShow = $billings->filter(function ($billing) {
-            return !in_array($billing->status, ['LS', 'NP']);
-        });
-    } else {
-        $billingsToShow = $billings->filter(function ($billing) use ($user) {
-            return $billing->customer->user_id == $user->id && !in_array($billing->status, ['LS', 'NP']);
-        });
-    }
-@endphp
-
 <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
     <!-- Link Donasi (Pindahkan ke posisi paling kiri) -->
     <a class="nav-link" href="/cpanel/home">

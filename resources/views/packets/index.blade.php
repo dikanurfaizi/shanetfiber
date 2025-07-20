@@ -15,7 +15,7 @@
                         <th>#</th>
                         <th>{{ __('paket.table.name') }}</th>
                         <th>{{ __('paket.table.price') }}</th>
-                        {{-- <th>{{ __('paket.table.server') }}</th> --}}
+                        <th>{{ __('paket.table.profile') }}</th>
                         <th>{{ __('paket.table.status') }}</th>
                         <th>{{ __('paket.table.description') }}</th>
                         <th class="text-end">{{ __('paket.table.action') }}</th>
@@ -35,12 +35,11 @@
                                         @moneyIDR($paket->price)
                                     @endif
                                 </span></td>
-                            {{-- <td>
+                            <td>
                                 <span
-                                    class="badge @if ($paket->disabled === 'true') bg-secondary @else bg-primary @endif text-white">
-                                    <i class="fas fa-server"></i> {{ $paket->mikrotik->name ?? 'no data' }}
-                                </span>
-                            </td> --}}
+                                    class="badge @if ($paket->disabled === 'true') text-secondary @else text-primary @endif">
+                                    {{ $paket->profile }}</span>
+                            </td>
                             <td>
                                 @if ($paket->disabled === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
                                     <span class="badge text-white bg-success">
