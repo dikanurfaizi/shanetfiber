@@ -105,7 +105,7 @@ class CustomersExport implements FromCollection, WithHeadings, WithMapping, With
             $customer->internet_service,
             $customer->secret_id,
             $customer->password_ppp,
-            $customer->ppp_type->name,
+            $customer->pppType->name,
             $customer->paket->name ?? 'No Package',
             'Rp ' . number_format($price, 0, ',', '.'), // Format Rupiah manual
             $customer->discount . ' %',
