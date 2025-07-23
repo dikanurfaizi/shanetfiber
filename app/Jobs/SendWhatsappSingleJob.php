@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Billing\Billing;
+use App\Models\Customer;
 use App\Models\MessageLog;
 use App\Models\WhatsappGateway\WhatsappGateway;
 use App\Helpers\LogHelper;
@@ -20,35 +20,48 @@ class SendWhatsappSingleJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public function __construct(
-        private int $billingId,
         private string $messageType,
-        private int $gatewayId,
         private string $receiver,
-        private string $message
+        private string $message,
+        private string $customerId
     ) {}
 
     public function handle(): void
     {
-        $gateway = WhatsappGateway::findOrFail($this->gatewayId);
-        $billing = Billing::findOrFail($this->billingId);
+        $gateway = WhatsappGateway::where('disabled', false)
+            ->firstOrFail();
+        $customer = Customer::findOrFail($this->customerId);
 
         $formatter = new FormatReceiver();
-        $formattedReceiver = $formatter->formatReceiver($this->receiver, null);
+        $formattedReceiver = $formatter->formatReceiver($this->receiver, 'broadcast');
         $timestamp = now();
         $url = "{$gateway->url_callback}/send/message?api_key={$gateway->api_key}&sender={$gateway->whatsapp_number->number}";
 
         $payload = [
-            'customer_id'   => $billing->customer_id,
-            'customer_name' => $billing->customer_name,
+            'customer_id'   => $customer->id,
+            'customer_name' => $customer->name,
             'receiver'      => $formattedReceiver,
             'sender'        => $gateway->whatsapp_number->number,
         ];
 
         try {
-            $client = new Client([
-                'auth'   => [$gateway->basic_auth_username, Crypt::decryptString($gateway->basic_auth_password)],
+            // $client = new Client([
+            //     'auth'   => [$gateway->basic_auth_username, Crypt::decryptString($gateway->basic_auth_password)],
+            //     'verify' => false
+            // ]);
+
+            $options = [
                 'verify' => false
-            ]);
+            ];
+
+            if ($gateway->auth_disabled === "true") {
+                $options['auth'] = [
+                    $gateway->basic_auth_username,
+                    Crypt::decryptString($gateway->basic_auth_password)
+                ];
+            }
+
+            $client = new Client($options);
 
             $response = $client->post($url, [
                 'json' => [
@@ -65,7 +78,7 @@ class SendWhatsappSingleJob implements ShouldQueue
                 LogHelper::logInfo($url, array_merge($payload, ['message_id' => $messageId, 'message_type' => $this->messageType]), 200, "Message sent successfully at {$timestamp}");
 
                 MessageLog::create([
-                    'customer_id'  => $billing->customer_id,
+                    'customer_id'  => $customer->id,
                     'message_type' => $this->messageType,
                     'gateway_id'   => $gateway->id,
                     'content'      => $this->message,

@@ -81,5 +81,7 @@ class Kernel extends HttpKernel
         'role_or_permission' => \Spatie\Permission\Middlewares\RoleOrPermissionMiddleware::class,
 
         'customerauth' => \App\Http\Middleware\CustomerAuthenticated::class,
+        'verify.authkey' => \App\Http\Middleware\VerifyXAuthKey::class,
+        'mikrotik.auth' => \App\Http\Middleware\BasicAuthMikrotik::class,
     ];
 }
