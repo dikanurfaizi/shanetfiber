@@ -22,11 +22,11 @@ class CreatePppProfileToRouter implements ShouldQueue
     protected int $profileId;
     protected string $traceId;
 
-    public function __construct(int $routerId, int $profileId)
+    public function __construct(int $routerId, int $profileId, ?string $traceId = null)
     {
         $this->routerId  = $routerId;
         $this->profileId = $profileId;
-        $this->traceId = (string) Str::uuid();
+        $this->traceId = $traceId ?? (string) Str::uuid();
     }
 
     public function handle(SecretService $secretService): void
