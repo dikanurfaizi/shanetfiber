@@ -24,9 +24,13 @@ class BasicAuthMikrotik
             return response('Unauthorized', 401, ['WWW-Authenticate' => 'Basic']);
         }
 
-        // Decode base64("username:password")
         $encodedCredentials = substr($authHeader, 6);
-        $decoded = base64_decode($encodedCredentials);
+        $decoded = base64_decode($encodedCredentials, true);
+
+        if (!$decoded || !str_contains($decoded, ':')) {
+            return response('Unauthorized', 401, ['WWW-Authenticate' => 'Basic']);
+        }
+
         [$username, $password] = explode(':', $decoded, 2);
 
         if ($username !== $expectedUsername || $password !== $expectedPassword) {

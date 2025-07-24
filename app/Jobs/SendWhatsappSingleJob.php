@@ -23,11 +23,13 @@ class SendWhatsappSingleJob implements ShouldQueue
         private string $messageType,
         private string $receiver,
         private string $message,
-        private string $customerId
+        private string $customerId,
+        private string $traceId
     ) {}
 
     public function handle(): void
     {
+        $traceId = $this->traceId;
         $gateway = WhatsappGateway::where('disabled', false)
             ->firstOrFail();
         $customer = Customer::findOrFail($this->customerId);
@@ -75,7 +77,7 @@ class SendWhatsappSingleJob implements ShouldQueue
             $messageId = $decoded['results']['message_id'] ?? null;
 
             if ($code === 'SUCCESS' && $messageId) {
-                LogHelper::logInfo($url, array_merge($payload, ['message_id' => $messageId, 'message_type' => $this->messageType]), 200, "Message sent successfully at {$timestamp}");
+                LogHelper::logInfo($url, array_merge($payload, ['message_id' => $messageId, 'message_type' => $this->messageType]), 200, "Message sent successfully at {$timestamp}", $traceId);
 
                 MessageLog::create([
                     'customer_id'  => $customer->id,
@@ -90,7 +92,7 @@ class SendWhatsappSingleJob implements ShouldQueue
                 LogHelper::logError($url, array_merge($payload, [
                     'code'     => $code,
                     'response' => $decoded
-                ]), 401, "WhatsApp Gateway Error: {$errorMessage}");
+                ]), 401, "WhatsApp Gateway Error: {$errorMessage}", $traceId);
             }
         } catch (\GuzzleHttp\Exception\RequestException $e) {
             $body = optional($e->getResponse())->getBody()?->getContents();
@@ -99,9 +101,9 @@ class SendWhatsappSingleJob implements ShouldQueue
 
             LogHelper::logError($url, array_merge($payload, [
                 'raw_response' => $body
-            ]), $e->getCode(), "Failed to send message: $messageError");
+            ]), $e->getCode(), "Failed to send message: $messageError", $traceId);
         } catch (\Exception $e) {
-            LogHelper::logError($url, $payload, $e->getCode(), "Unexpected error: {$e->getMessage()}");
+            LogHelper::logError($url, $payload, $e->getCode(), "Unexpected error: {$e->getMessage()}", $traceId);
         }
     }
 }

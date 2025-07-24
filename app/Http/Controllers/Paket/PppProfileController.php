@@ -10,6 +10,7 @@ use App\Models\Paket\PppProfile;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Routerboard\TestConnectionService;
 use App\Helpers\LogHelper;
+use App\Helpers\UserAuth;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Bus\Batch;
@@ -276,6 +277,8 @@ class PppProfileController extends Controller
      */
     public function update(Request $request, PppProfile $pppProfile)
     {
+        $traceId = (string) Str::uuid();
+
         $data = $request->only([
             'profile_name',
             'local_address',
@@ -335,13 +338,17 @@ class PppProfileController extends Controller
             'limitAtDownload'     => $data['limit_at_download'],
         ] = $calculation;
 
+        $userId = UserAuth::getUserDetails()['userId']; // Atau auth()->id()
+
         $routers = Mikrotik::where('disabled', 'false')->get();
+
         foreach ($routers as $router) {
             UpdateRateLimitProfileSecretJob::dispatch(
-                $router,
+                $router->id,
                 $pppProfile->profile_name,
                 $rateLimitMikrotik,
-                auth()->user()
+                $userId,
+                $traceId
             );
         }
 
@@ -661,35 +668,14 @@ class PppProfileController extends Controller
                 ->with('error', 'Tidak ada perangkat Mikrotik yang tersedia untuk ekspor.');
         }
 
-        // Ambil profil (boleh aktif/tidak dulu) untuk akses namanya
-        $profile = PppProfile::find($profileId);
-        $profileName = optional($profile)->profile_name ?? 'Unknown Profile';
-
-        // Validasi profil aktif dan punya nama
-        if (!$profile || !$profile->profile_name || $profile->disabled === 'true') {
-            LogHelper::logWarning(
-                $uri,
-                [
-                    'mikrotik' => $mikrotik->map->only(['id', 'name']),
-                    'profile_id' => $profileId
-                ],
-                404,
-                'Export failed: Profile not found or not active',
-                $traceId
-            );
-
-            return redirect()->route('ppp-profiles.index')
-                ->with('error', "Profil {$profileName} tidak ditemukan atau tidak aktif.");
-        }
-
         try {
             foreach ($mikrotik as $device) {
-                dispatch(new CreatePppProfileToRouter($device, $profile));
+                dispatch(new CreatePppProfileToRouter($device->id, $profileId));
                 LogHelper::logInfo($uri, [], 200, 'Export job dispatched', $traceId);
             }
 
             return redirect()->route('ppp-profiles.index')
-                ->with('success', "Ekspor profil {$profileName} berhasil dimulai.");
+                ->with('success', "Ekspor profil dengan id {$profileId} berhasil dimulai.");
         } catch (Throwable $e) {
             LogHelper::logError(
                 $uri,
@@ -703,7 +689,7 @@ class PppProfileController extends Controller
             );
 
             return redirect()->route('ppp-profiles.index')
-                ->with('error', "Gagal mengekspor profil {$profileName}: " . $e->getMessage());
+                ->with('error', "Gagal mengekspor profil dengan id {$profileId}: " . $e->getMessage());
         }
     }
 

@@ -574,18 +574,11 @@ class SecretService
                 LogHelper::logWarning(
                     null,
                     ['host' => $mikrotik->host ?? 'N/A', 'filter' => $filterValue],
-                    200,
+                    404,
                     "No Mikrotik secrets found for $filterType"
                 );
                 return [];
             }
-
-            // LogHelper::logInfo(
-            //     null,
-            //     ['host' => $mikrotik->host ?? 'N/A', 'filter' => $filterValue, 'count' => count($result)],
-            //     200,
-            //     "Successfully fetched Mikrotik secrets by $filterType"
-            // );
 
             return $result;
         } catch (\Exception $e) {
@@ -626,13 +619,6 @@ class SecretService
                     ->where('name', $username)
                     ->equal('.id', $active['.id']);
                 $client->query($removeQuery)->read();
-
-                // LogHelper::logInfo(
-                //     null,
-                //     ['host' => $mikrotik->host ?? 'N/A', 'username' => $username, 'secret_id' => $active['.id']],
-                //     200,
-                //     "Successfully deleted active Mikrotik secret"
-                // );
             }
         } catch (\Exception $e) {
             LogHelper::logError(
@@ -664,13 +650,6 @@ class SecretService
             $query = new Query('/ppp/active/print');
             $result = $client->query($query)->read();
 
-            // LogHelper::logInfo(
-            //     null,
-            //     ['host' => $mikrotik->host ?? 'N/A', 'count' => count($result)],
-            //     200,
-            //     "Successfully fetched all active Mikrotik PPP sessions"
-            // );
-
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
@@ -682,14 +661,6 @@ class SecretService
             throw $e;
         }
     }
-
-    // public function getPppActive($mikrotik)
-    // {
-    //     $client = $this->getMikrotik($mikrotik);
-    //     $query = new Query('/ppp/active/print');
-
-    //     return $client->query($query)->read();
-    // }
 
     /**
      * @throws ClientException
@@ -709,13 +680,6 @@ class SecretService
 
             $query = (new Query('/ppp/active/print'))->where('name', $username);
             $result = $client->query($query)->read();
-
-            // LogHelper::logInfo(
-            //     null,
-            //     ['host' => $mikrotik->host ?? 'N/A', 'username' => $username, 'count' => count($result)],
-            //     200,
-            //     "Fetched active PPP secret by username"
-            // );
 
             return $result;
         } catch (\Exception $e) {
@@ -741,13 +705,6 @@ class SecretService
             $query = (new Query('/ppp/active/print'))->where('name', $name);
             $result = $client->query($query)->read();
 
-            // LogHelper::logInfo(
-            //     null,
-            //     ['host' => $mikrotik->host ?? 'N/A', 'username' => $name, 'count' => count($result)],
-            //     200,
-            //     "Fetched active PPP secret by name"
-            // );
-
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
@@ -770,13 +727,6 @@ class SecretService
 
             $query = (new Query('/ppp/active/print'))->where('address', $ipAddress);
             $result = $client->query($query)->read();
-
-            // LogHelper::logInfo(
-            //     null,
-            //     ['host' => $mikrotik->host ?? 'N/A', 'ip' => $ipAddress, 'count' => count($result)],
-            //     200,
-            //     "Fetched active PPP secret by IP"
-            // );
 
             return $result;
         } catch (\Exception $e) {
@@ -802,13 +752,6 @@ class SecretService
             $query = new Query('/ppp/profile/print');
             $result = $client->query($query)->read();
 
-            LogHelper::logInfo(
-                null,
-                ['host' => $mikrotik->host ?? 'N/A', 'count' => count($result)],
-                200,
-                "Fetched all PPP profiles"
-            );
-
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
@@ -832,18 +775,16 @@ class SecretService
             $query = (new Query('/ppp/profile/print'))->where('name', $profileName);
             $result = $client->query($query)->read();
 
-            // LogHelper::logInfo(
-            //     null,
-            //     ['host' => $mikrotik->host ?? 'N/A', 'profile' => $profileName, 'count' => count($result)],
-            //     200,
-            //     "Fetched PPP profile by name"
-            // );
-
             return $result ?: 'error';
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
-                ['host' => $mikrotik->host ?? 'N/A', 'profile' => $profileName, 'error' => $e->getMessage()],
+                [
+                    'name' => $mikrotik->name ?? 'N/A',
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'profile' => $profileName,
+                    'error' => $e->getMessage()
+                ],
                 500,
                 "Failed to fetch PPP profile by name"
             );
@@ -861,17 +802,9 @@ class SecretService
                 throw new Exception('Failed to connect to Mikrotik.');
             }
 
-            // 1. Fetch semua profile
-            $profiles = $client->query(new Query('/ppp/profile/print'))->read();
+            $targetProfile = $this->getPppProfileByName($mikrotik, $profileName);
 
-            if (empty($profiles)) {
-                throw new Exception("No profiles found in Mikrotik.");
-            }
-
-            // 2. Cari berdasarkan 'name'
-            $targetProfile = collect($profiles)->firstWhere('name', $profileName);
-
-            if (!$targetProfile) {
+            if (!is_array($targetProfile) || empty($targetProfile)) {
                 LogHelper::logWarning(
                     null,
                     ['host' => $mikrotik->host ?? 'Unknown Host', 'profile_name' => $profileName],
@@ -881,9 +814,14 @@ class SecretService
                 throw new Exception("Profile '{$profileName}' not found in Mikrotik '{$name}' with host '{$host}'");
             }
 
-            // 3. Update berdasarkan .id yang ditemukan
+            $profile = $targetProfile[0] ?? null;
+
+            if (!$profile || !isset($profile['.id'])) {
+                throw new Exception("No valid profile found or missing '.id'");
+            }
+
             $updateQuery = (new Query('/ppp/profile/set'))
-                ->equal('.id', $targetProfile['.id'])  // << pakai .id hasil dari step 2
+                ->equal('.id', $profile['.id'])
                 ->equal('rate-limit', $rateLimit);
 
             $result = $client->query($updateQuery)->read();

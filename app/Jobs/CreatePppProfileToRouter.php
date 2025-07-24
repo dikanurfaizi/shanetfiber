@@ -18,21 +18,23 @@ class CreatePppProfileToRouter implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, Batchable;
 
-    protected Mikrotik   $router;
-    protected PppProfile $profile;
+    protected int $routerId;
+    protected int $profileId;
     protected string $traceId;
 
-    public function __construct(Mikrotik $router, PppProfile $profile)
+    public function __construct(int $routerId, int $profileId)
     {
-        $this->router  = $router;
-        $this->profile = $profile;
+        $this->routerId  = $routerId;
+        $this->profileId = $profileId;
         $this->traceId = (string) Str::uuid();
     }
 
     public function handle(SecretService $secretService): void
     {
-        $router  = $this->router;
-        $profile = $this->profile;
+        $routerId  = $this->routerId;
+        $profileId = $this->profileId;
+        $router = Mikrotik::find($routerId);
+        $profile = PppProfile::find($profileId);
 
         /** ------------------------------------------------------------
          * 1)  Cek apakah profile sudah ada di Mikrotik
@@ -44,7 +46,11 @@ class CreatePppProfileToRouter implements ShouldQueue
         } catch (\Throwable $e) {
             LogHelper::logError(
                 null,
-                ['error' => $e->getMessage()],
+                [
+                    'name' => $router->name,
+                    'host' => $router->host,
+                    'error' => $e->getMessage()
+                ],
                 500,
                 'Router Offline',
                 $this->traceId
@@ -56,7 +62,11 @@ class CreatePppProfileToRouter implements ShouldQueue
             // Anggap sebagai error, tidak lanjut
             LogHelper::logError(
                 null,
-                ['error' => $exists],
+                [
+                    'name' => $router->name,
+                    'host' => $router->host,
+                    'error' => $exists
+                ],
                 500,
                 'Terjadi error',
                 $this->traceId
@@ -67,7 +77,11 @@ class CreatePppProfileToRouter implements ShouldQueue
         if (!empty($exists)) {
             LogHelper::logWarning(
                 null,
-                ['profile_name' => $profile->profile_name],
+                [
+                    'name' => $router->name,
+                    'host' => $router->host,
+                    'profile_name' => $profile->profile_name
+                ],
                 200,
                 'Profile Already Exists',
                 $this->traceId
@@ -77,7 +91,11 @@ class CreatePppProfileToRouter implements ShouldQueue
 
         LogHelper::logInfo(
             null,
-            ['profile_name' => $profile->profile_name],
+            [
+                'name' => $router->name,
+                'host' => $router->host,
+                'profile_name' => $profile->profile_name
+            ],
             200,
             'Exporting Profile',
             $this->traceId
@@ -109,7 +127,12 @@ class CreatePppProfileToRouter implements ShouldQueue
 
         LogHelper::logInfo(
             null,
-            ['profile' => $data['name'], 'response' => $response],
+            [
+                'name' => $router->name,
+                'host' => $router->host,
+                'profile' => $data['name'],
+                'response' => $response
+            ],
             200,
             'PPP Profile export response',
             $this->traceId
@@ -122,6 +145,8 @@ class CreatePppProfileToRouter implements ShouldQueue
             LogHelper::logError(
                 null,
                 [
+                    'name' => $router->name,
+                    'host' => $router->host,
                     'profile' => $data['name'],
                     'error'   => $response['after']['message'] ?? 'Unknown error'
                 ],
@@ -134,7 +159,11 @@ class CreatePppProfileToRouter implements ShouldQueue
 
         LogHelper::logInfo(
             null,
-            ['profile_name' => $profile->profile_name],
+            [
+                'name' => $router->name,
+                'host' => $router->host,
+                'profile_name' => $profile->profile_name
+            ],
             200,
             'Profile Exported Successfully',
             $this->traceId
