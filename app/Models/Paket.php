@@ -4,6 +4,8 @@ namespace App\Models;
 
 
 use App\Models\Mikrotik;
+use App\Models\Billing\BillingCycle;
+use App\Models\Paket\PackageCategory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,8 +26,13 @@ class Paket extends Model
         return $this->belongsTo(Mikrotik::class);
     }
 
-    //  public function getNamePriceAttribute()
-    //{
-    //     return $this->name . ' ' . $this->price;
-    //  }
+    public function billingCycle()
+    {
+        return $this->belongsTo(BillingCycle::class);
+    }
+
+    public function packageCategory(): BelongsTo
+    {
+        return $this->belongsTo(PackageCategory::class);
+    }
 }
