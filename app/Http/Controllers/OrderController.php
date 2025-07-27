@@ -8,14 +8,15 @@ use App\Models\Websystem;
 use App\Models\Billing\Billing;
 use App\Models\Customer;
 use App\Models\PaymentGateway;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\PaymentGateway\TripayController;
-use Illuminate\Support\Facades\Log;
 use App\Helpers\LogHelper;
 use App\Services\Midtrans\CreateSnapTokenService;
 use App\Services\WhatsappMessageService;
-use App\Models\WhatsappGateway\WhatsappGateway;
+use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class OrderController extends Controller
 {
@@ -289,6 +290,7 @@ class OrderController extends Controller
 
     public function tripayCreate(Request $request, Billing $billing)
     {
+        $traceId = (string) Str::uuid();
         if (!$billing) {
             return redirect()->back()->with('error', 'Billing not found.');
         }
@@ -380,9 +382,17 @@ class OrderController extends Controller
 
         $getOrder = $order->fresh();
 
-        if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
-            $this->messageService->create_order($billing, $getOrder, 'create_order');
-        }
+        ProcessWhatsappMessageJob::dispatch(
+            $customer->id,
+            'create_order',
+            $traceId,
+            $billing->id,
+            null,
+            null,
+            null,
+            null,
+            $getOrder->id
+        )->onQueue('default');
 
         return redirect()->route('customer.pages.order.tripays.show', $order->id)
             ->with('success', 'Order created successfully.');

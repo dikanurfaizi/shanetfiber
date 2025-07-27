@@ -2,12 +2,12 @@
 
 namespace App\Console\Commands;
 
-use App\Services\BroadcastMessage\InitialPaymentReminderService;
 use Illuminate\Console\Command;
-use App\Helpers\LogHelper;
+use Illuminate\Support\Str;
 use Illuminate\Support\Carbon;
 use App\Models\Billing\BillingPeriode;
-use Illuminate\Support\Str;
+use App\Helpers\LogHelper;
+use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
 
 class InitialPayment extends Command
 {
@@ -97,8 +97,17 @@ class InitialPayment extends Command
                 return 0;
             }
 
-            // Jalankan proses pengiriman pesan
-            app(InitialPaymentReminderService::class)->sendReminders($startDate, $endDate);
+            ProcessWhatsappMessageJob::dispatch(
+                null,
+                'create_new_bill',
+                $traceId,
+                null,
+                null,
+                null,
+                $startDate,
+                $endDate,
+                null
+            )->onQueue('default');
 
             $dispatchTime = now()->format('Y-m-d H:i:s');
             $executionTime = round(microtime(true) - $startTime, 2);

@@ -10,6 +10,7 @@ use App\Models\AutoIsolir;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Jobs\CreateBillingJob;
+use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
 use Illuminate\Support\Carbon;
 use App\Models\Billing\Billing;
 use App\Models\Billing\BillingPeriode;
@@ -30,38 +31,26 @@ use App\Models\Order;
 use App\Models\WhatsappGateway\WhatsappGateway;
 use App\Services\Routerboard\IpStaticService;
 use App\Services\Routerboard\Ppp\SecretService;
-use App\Services\Routerboard\TestConnectionService;
-// use PDF;
-use App\Services\WhatsappMessageService;
 use Barryvdh\DomPDF\Facade\PDF;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
-use App\Jobs\SendBillingToWhatsAppJob;
-use Illuminate\Support\Facades\DB;
 use App\Helpers\LogHelper;
 use Exception;
 use Illuminate\Database\QueryException;
 use App\Helpers\UserAuth;
 
-use Illuminate\Contracts\Database\Eloquent\Builder;
-//use Barryvdh\DomPDF\PDF;
-
 class BillingController extends Controller
 {
-    private WhatsappMessageService $messageService;
     private SecretService $secretService;
-    private TestConnectionService $testConnectionService;
     private IpStaticService $ipStaticService;
-    public function __construct(SecretService $secretService, TestConnectionService $testConnectionService, IpStaticService $ipStaticService)
+    public function __construct(SecretService $secretService, IpStaticService $ipStaticService)
     {
         $this->secretService = $secretService;
-        $this->testConnectionService = $testConnectionService;
         $this->ipStaticService = $ipStaticService;
         $this->middleware('permission:billing-list|billing-create|billing-edit|billing-delete', ['only' => ['index', 'show']]);
         $this->middleware('permission:billing-create', ['only' => ['create', 'store', 'create_one', 'store_one']]);
         $this->middleware('permission:billing-edit', ['only' => ['edit', 'update', 'payment', 'unpayment', 'transfer', 'paylater', 'post_paylater']]);
         $this->middleware('permission:billing-delete', ['only' => ['deletePeriode', 'destroyPeriode']]);
-        $this->messageService = app(WhatsappMessageService::class);
     }
 
     private function getUserAuthData()
@@ -214,20 +203,6 @@ class BillingController extends Controller
             ]);
             return $pdf->download("Tagihan_{$searchName}_{$searchAddress}_{$searchStatus}_{$months}_{$years}.pdf");
         }
-
-        // $sularnoBilling = $data->firstWhere('customer_name', 'Sularno');
-        // $dummyUserBilling = $data->firstWhere('customer_name', 'Dummy User');
-
-        // if ($sularnoBilling) {
-        //     $paymentMethod = optional($sularnoBilling->receipt)->payment_methode ?? 'No Payment Method';
-        //     $paymentMethod2 = optional($dummyUserBilling->receipt)->payment_methode ?? 'No Payment Method';
-        //     logHelper::logInfo(null, [
-        //         'customer1' => $sularnoBilling->customer_name,
-        //         'payment_methode1' => $paymentMethod,
-        //         'customer2' => $dummyUserBilling->customer_name,
-        //         'payment_methode2' => $paymentMethod2,
-        //     ], 200, "Found Data", $traceId);
-        // }
 
         return view('billings.index', compact(
             'data',
@@ -577,7 +552,17 @@ class BillingController extends Controller
             // Pastikan gateway tidak dalam keadaan disabled dan customer memiliki contact
             if ($gatewayStatus == false && $customer->contact) {
                 // Panggil method payment_paket
-                $this->messageService->payment_paket($billing, null, 'paylater');
+                ProcessWhatsappMessageJob::dispatch(
+                    $billing->customer_id,
+                    'paylater',
+                    $traceId,
+                    $billing->id,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+                )->onQueue('default');
             } else {
                 if ($gatewayStatus) {
                     LogHelper::logWarning(null, [], 202, "Whatsapp Gateway is disabled", $traceId);
@@ -798,9 +783,20 @@ class BillingController extends Controller
                 'status' => 'LS',
                 'receipt_id' => $getReceipt->id,
             ]);
-            if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
-                $this->messageService->payment_paket($billing, $getReceipt, $payment);
-            }
+            // if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
+            //     $this->messageService->payment_paket($billing, $getReceipt, $payment);
+            // }
+            ProcessWhatsappMessageJob::dispatch(
+                $billing->customer_id,
+                $payment,
+                $traceId,
+                $billing->id,
+                $getReceipt->id,
+                null,
+                null,
+                null,
+                null
+            )->onQueue('default');
             return redirect()->back()->with('success', 'Payment ' . $billing->customer_name . ' successfully.');
         }
     }
@@ -858,10 +854,8 @@ class BillingController extends Controller
                 }
             }
         }
-        $receipt = Receipt::where('id', $billing->receipt_id);
-
-        // Simpan receipt_id sebelum di-null
-        $originalReceipt = $receipt->first();
+        $receipt = Receipt::where('id', $billing->receipt_id)->first();
+        $originalReceipt = $receipt;
 
         $billing->update([
             'teller_name' => auth()->user()->name,
@@ -869,7 +863,9 @@ class BillingController extends Controller
             'receipt_id' => null, // Diubah jadi null
         ]);
 
-        $receipt->delete();
+        if ($receipt) {
+            $receipt->delete();
+        }
 
         // 1. Gunakan first() jika hanya butuh 1 order, atau get() untuk multiple
         $orders = Order::where('billing_id', $billing->id)->get();
@@ -892,9 +888,17 @@ class BillingController extends Controller
             // return response()->json(['error' => 'No orders found'], 404);
         }
 
-        if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
-            $this->messageService->payment_paket($billing, $originalReceipt, 'unpayment');
-        }
+        ProcessWhatsappMessageJob::dispatch(
+            $billing->customer_id,
+            'unpayment',
+            $traceId,
+            $billing->id,
+            null,
+            $originalReceipt,
+            null,
+            null,
+            null
+        )->onQueue('default');
 
         return redirect()->back()->with('success', 'Cancel payment successfully.');
     }

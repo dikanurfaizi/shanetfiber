@@ -11,41 +11,32 @@ use App\Models\MerkRouter;
 use App\Models\TypeRouter;
 use App\Models\CustomerOnt;
 use App\Models\User;
-use App\Models\DeleteCustomer;
 use App\Models\Paket\PppProfile;
 use App\Models\Billing\Billing;
 use App\Models\DeletedCustomer;
 use App\Models\Billing\BillingPeriode;
 use App\Models\Member;
-use App\Models\TelegramGateway\TelegramChatId;
-use App\Models\Receipt;
 use App\Models\Websystem;
 use App\Models\WhatsappGateway\WhatsappGateway;
+use App\Models\Receipt;
 
-use App\Jobs\DeletePppSecretJob;
 use App\Jobs\EnablePppSecretJob;
 use App\Jobs\DisablePppSecretJob;
-use App\Jobs\AddPaymentAfterDueDateJob;
 use App\Jobs\AddPaymentBeforeDueDateJob;
-use App\Jobs\AddPaymentIpStaticAfterDueDateJob;
 use App\Jobs\AddPaymentIpStaticBeforeDueDateJob;
-//use App\Jobs\ActivationCustomerJob;
 use App\Jobs\DeleteIpStaticJob;
-use App\Jobs\SendMessage;
+use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
+use App\Jobs\Telegram\ProcessTelegramMessageJob;
 
 use App\Services\Routerboard\IpStaticService;
 use App\Services\Routerboard\QueueService;
 use App\Services\Routerboard\TestConnectionService;
-use App\Services\Routerboard\SystemService;
 use App\Services\Routerboard\Ppp\SecretService;
-use App\Services\WhatsappMessageService;
-use App\Services\TelegramMessageService;
 
 use Illuminate\View\View;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\RedirectResponse;
 use RouterOS\Exceptions\QueryException;
@@ -59,20 +50,14 @@ use RouterOS\Exceptions\BadCredentialsException;
 use App\Http\Requests\CustomerRouterUpdateRequest;
 use App\Http\Requests\CustomerStoreRequest;
 use App\Http\Resources\InterfaceResource;
-use Illuminate\Pagination\Paginator;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Helpers\LogHelper;
 use App\Exports\CustomersExport;
 use Maatwebsite\Excel\Facades\Excel;
-//use ArielMejiaDev\LarapexCharts\Facades\LarapexChart;
-use ArielMejiaDev\LarapexCharts\LarapexChart;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\UserAuth;
-
-use function Laravel\Prompts\error;
 
 class CustomerController extends Controller
 {
@@ -85,28 +70,19 @@ class CustomerController extends Controller
      */
     private SecretService $secretService;
     private TestConnectionService $testConnectionService;
-    private SystemService $systemService;
     private QueueService $queueService;
     private IpStaticService $ipStaticService;
-    private WhatsappMessageService $whatsappMessageService;
-    private TelegramMessageService $telegramMessageService;
 
     public function __construct(
         SecretService $secretService,
         TestConnectionService $testConnectionService,
-        SystemService $systemService,
         QueueService $queueService,
         IpStaticService $ipStaticService,
-        WhatsappMessageService $whatsappMessageService,
-        TelegramMessageService $telegramMessageService
     ) {
         $this->secretService = $secretService;
         $this->testConnectionService = $testConnectionService;
-        $this->systemService = $systemService;
         $this->queueService = $queueService;
         $this->ipStaticService = $ipStaticService;
-        $this->whatsappMessageService = $whatsappMessageService;
-        $this->telegramMessageService = $telegramMessageService;
         $this->middleware('permission:customer-list|customer-create|customer-edit|customer-delete|secret-disable|secret-edit', ['only' => ['index', 'show']]);
         $this->middleware('permission:customer-create', ['only' => ['create', 'store', 'activation']]);
         $this->middleware('permission:customer-edit', ['only' => ['edit', 'update', 'activation', 'editRouter', 'updateRouter']]);
@@ -638,7 +614,26 @@ class CustomerController extends Controller
             'status' => 'LS',
             'receipt_id' => $getReceipt->id,
         ]);
-        SendMessage::dispatch($customer->id, 'activation_customer', $traceId)->onQueue('default');
+        $action = 'activation_customer';
+        ProcessWhatsappMessageJob::dispatch(
+            $customer->id,
+            $action,
+            $traceId,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        )->onQueue('default');
+        ProcessTelegramMessageJob::dispatch(
+            $customer->id,
+            $action,
+            $traceId,
+            null,
+            null,
+            null,
+        )->onQueue('default');
         return redirect()->back()
             ->with('success', 'Customer activated.');
     }
@@ -1424,7 +1419,26 @@ class CustomerController extends Controller
                 'activation' => 'true',
                 'disabled' => 'false',
             ]);
-            SendMessage::dispatch($customer->id, 'activation_customer', $traceId)->onQueue('default');
+            $action = 'activation_customer';
+            ProcessWhatsappMessageJob::dispatch(
+                $customer->id,
+                $action,
+                $traceId,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )->onQueue('default');
+            ProcessTelegramMessageJob::dispatch(
+                $customer->id,
+                $action,
+                $traceId,
+                null,
+                null,
+                null
+            )->onQueue('default');
         }
         return redirect()->back()
             ->with('success', 'Activated ' . count($customers) . ' customers on server ' . $server . '.');
@@ -1448,38 +1462,6 @@ class CustomerController extends Controller
                 'status' => 'error',
 
             ], 500);
-        }
-    }
-
-    private function checkServerConnection($router)
-    {
-        if ($router->disabled == false) {
-            try {
-                $this->testConnectionService->checkOnline($router);
-                LogHelper::logInfo(
-                    null,
-                    ['mikrotik_id' => $router->mikrotik_id],
-                    200,
-                    "Router Connection Successfully."
-                );
-                return false;
-            } catch (\Exception $e) {
-                LogHelper::logError(
-                    null,
-                    ['mikrotik_id' => $router->mikrotik_id, 'error' => $e->getMessage()],
-                    200,
-                    "Router Connection Failed."
-                );
-                return true;
-            }
-        } else {
-            LogHelper::logWarning(
-                null,
-                ['mikrotik_id' => $router->mikrotik_id],
-                200,
-                "Router disabled or Invalid."
-            );
-            return true;
         }
     }
 

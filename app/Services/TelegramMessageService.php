@@ -8,6 +8,7 @@ use App\Models\TelegramGateway\TelegramMessage;
 use App\Models\Customer;
 use App\Helpers\LogHelper;
 use App\Helpers\Markdown;
+use App\Jobs\Telegram\SendTelegramMessageJob;
 use Illuminate\Support\Collection;
 use GuzzleHttp\Client;
 use Telegram\Bot\Api;
@@ -31,41 +32,6 @@ class TelegramMessageService
         );
 
         $this->telegram = new Api($botToken, false, $httpClient);
-    }
-
-    public function send($chat_id, $message, $traceId)
-    {
-        $response = $this->telegram->sendMessage([
-            'chat_id' => $chat_id,
-            'text' => $message,
-            'parse_mode' => 'HTML',
-        ]);
-
-        $logResponse = [
-            'message_id' => $response['message_id'] ?? null,
-            'from' => [
-                'first_name' => $response['from']['first_name'] ?? null,
-                'username'   => $response['from']['username'] ?? null,
-            ],
-            'chat' => [
-                'first_name' => $response['chat']['first_name'] ?? null,
-                'last_name'  => $response['chat']['last_name'] ?? null,
-                'username'   => $response['chat']['username'] ?? null,
-            ],
-            'date' => isset($response['date']) ? date('Y-m-d H:i:s', $response['date']) : null,
-        ];
-
-        LogHelper::logInfo(
-            null,
-            [
-                'response' => $logResponse,
-            ],
-            200,
-            "Message successfully sent via Telegram",
-            $traceId
-        );
-
-        return response()->json($response, 200);
     }
 
     public function getUpdates(): array
@@ -103,10 +69,34 @@ class TelegramMessageService
 
     public function activation($customerId, $action, $traceId)
     {
+        $customer = Customer::find($customerId);
+        if (!$customer) {
+            LogHelper::logError(
+                null,
+                ['customer_id' => $customerId],
+                404,
+                "Customer tidak ditemukan saat action: {$action}",
+                $traceId
+            );
+            return;
+        }
         try {
-            $customer = Customer::find($customerId);
             $admin_name = $customer->user->name;
             $chat_id = TelegramChatId::where('user_id', $customer->user_id)->value('chat_id');
+
+            if (!$chat_id) {
+                LogHelper::logWarning(
+                    null,
+                    [
+                        'customer_id' => $customer->customer_id,
+                        'user_id' => $customer->user_id,
+                    ],
+                    404,
+                    "Telegram Chat ID tidak ditemukan untuk user_id: {$customer->user_id}",
+                    $traceId
+                );
+                return;
+            }
 
             $replace = [
                 '%name%' => $customer->name,
@@ -142,12 +132,12 @@ class TelegramMessageService
             // LogHelper::logInfo(null, 200, ['text' => $replaceMessage], "DEBUG final telegram message", $traceId);
             $message = Markdown::convertMarkdownToHtml($replaceMessage);
             // LogHelper::logInfo(null, 200, ['text' => $message], "DEBUG final telegram message", $traceId);
-            $this->send($chat_id, $message, $traceId);
+            SendTelegramMessageJob::dispatch($chat_id, $message, $traceId)->onQueue('default');
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
                 [
-                    'id' => $customer->id,
+                    'id' => $customer,
                     'name' => $customer->name,
                     'address' => $customer->address,
                     'email' => $customer->email ?? '-',

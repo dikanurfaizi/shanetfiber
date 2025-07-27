@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Mikrotik;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Jobs\SendWhatsappSingleJob;
+use App\Jobs\WhatsApp\SendWhatsappMessageJob;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Models\Customer;
@@ -58,7 +58,7 @@ class MikrotikMessageController extends Controller
 
         $messageType = 'mikrotik';
 
-        SendWhatsappSingleJob::dispatch(
+        SendWhatsappMessageJob::dispatch(
             $messageType,
             $formattedReceiver,
             $message,

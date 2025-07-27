@@ -5,20 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\TelegramGateway\TelegramGateway;
 use App\Models\WhatsappGateway\WhatsappGateway;
 use App\Models\User;
-use Illuminate\Http\Request;
-use App\Services\WhatsappMessageService;
-use Illuminate\Support\Facades\Log;
 use App\Helpers\LogHelper;
+use App\Jobs\WhatsApp\SendWhatsappMessageJob;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 
 class TelegramGatewayController extends Controller
 {
-    private WhatsappMessageService $messageService;
-    public function __construct()
-    {
-        $this->messageService = app(WhatsappMessageService::class);
-    }
+    public function __construct() {}
     /**
      * Display a listing of the resource.
      */
@@ -168,16 +164,13 @@ class TelegramGatewayController extends Controller
                 "Terima kasih.";
 
             // Kirim pesan
-            $this->messageService->sendWhatsappSingleJob(
-                null,
-                $name,
-                $receiveNumber,
-                $whatsappGateway,
-                $message,
+            SendWhatsappMessageJob::dispatch(
                 'bot_link',
-                $traceId,
-                'yes'
-            );
+                $receiveNumber,
+                $message,
+                null,
+                $traceId
+            )->delay(now()->addSeconds(1));
 
             LogHelper::logInfo(
                 null,

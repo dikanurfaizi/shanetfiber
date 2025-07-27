@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Services\BroadcastMessage\SendPaymentReminderService;
+use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
 use Illuminate\Console\Command;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Carbon;
@@ -90,7 +90,17 @@ class SendMessages extends Command
             }
 
             // dispatch(new SendPaymentReminderJob())->onQueue('default');
-            app(SendPaymentReminderService::class)->sendReminders();
+            ProcessWhatsappMessageJob::dispatch(
+                null,
+                'send_info_billing',
+                $traceId,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )->onQueue('default');
 
             // Log successful dispatch
             $dispatchTime = Carbon::now()->format('Y-m-d H:i:s');

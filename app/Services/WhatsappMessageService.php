@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Carbon;
 use App\Models\WhatsappGateway\WhatsappNumber;
 use App\Models\WhatsappGateway\WhatsappGateway;
 use App\Models\WhatsappGateway\WhatsappMessage;
@@ -10,14 +9,19 @@ use App\Models\User;
 use App\Models\Bank;
 use App\Models\Customer;
 use App\Models\Billing\Billing;
+use App\Models\Billing\BillingPeriode;
+use App\Models\Websystem;
 use App\Models\MessageLog;
 use App\Models\MessageLogError;
-use App\Models\Billing\BillingPeriode;
+use App\Models\Order;
 use App\Helpers\LogHelper;
-use Illuminate\Support\Facades\Crypt;
-use GuzzleHttp\Client;
 use App\Helpers\FormatReceiver;
+use App\Jobs\WhatsApp\SendWhatsappMessageJob;
+use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Str;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
 
 class WhatsappMessageService
 {
@@ -33,172 +37,36 @@ class WhatsappMessageService
         $this->formatter = new FormatReceiver();
     }
 
-    public function sendWhatsappSingleJob($customerId, $customerName, $receiver, $gateway, $message, $messageType, $traceId, $test)
-    {
-        $sender = optional($gateway->whatsapp_number)->number;
-
-        if (!$sender) {
-            LogHelper::logError(null, ['gateway_id' => $gateway->id], 400, "No WhatsApp number found for gateway", $traceId);
-            return false;
-        }
-
-        $urlWithParams = "{$gateway->url_callback}/send/message?api_key={$gateway->api_key}&sender={$sender}";
-
-        try {
-            $alreadySent = MessageLog::where('customer_id', $customerId)
-                ->where('message_type', $messageType)
-                ->whereDate('created_at', now()->toDateString())
-                ->exists();
-
-            if ($alreadySent) {
-                LogHelper::logWarning(null, [
-                    'customer_name' => $customerName,
-                    'message_type'  => $messageType,
-                ], 409, "Skipping redundant message for {$customerName} with type {$messageType}.");
-                return;
-            }
-
-            $decryptPassword = Crypt::decryptString($gateway->basic_auth_password);
-            $client = new Client([
-                'auth' => [
-                    $gateway->basic_auth_username,
-                    $decryptPassword
-                ],
-                'verify' => false
-            ]);
-
-            $formattedReceiver = $this->formatter->formatReceiver($receiver, 'broadcast');
-
-            $payload = [
-                'customer_name' => $customerName,
-                'receiver'      => $formattedReceiver,
-                'sender'        => $sender,
-            ];
-
-            $timestamp = now();
-            $response = $client->post($urlWithParams, [
-                'json' => [
-                    'phone'   => $formattedReceiver,
-                    'message' => $message,
-                ],
-            ]);
-
-            $decoded = json_decode($response->getBody()->getContents(), true);
-            $results = $decoded['results'] ?? [];
-            $messageId = is_array($results) ? ($results['message_id'] ?? null) : null;
-            $code = $decoded['code'] ?? 'ERROR';
-
-            if ($code === 'SUCCESS' && $messageId) {
-                LogHelper::logInfo($urlWithParams, array_merge($payload, ['message_id' => $messageId, 'message_type' => $messageType]), 200, "Message sent successfully at {$timestamp}", $traceId);
-
-                if (strtolower($test) !== 'yes') {
-                    MessageLog::create([
-                        'customer_id'  => $customerId,
-                        'message_type' => $messageType,
-                        'gateway_id'   => $gateway->id,
-                        'content'      => $message,
-                        'sent_at'      => $timestamp,
-                    ]);
-                }
-            } else {
-                $errorMessage = isset($decoded['message']) ? $decoded['message'] : 'Unknown error';
-
-                LogHelper::logError($urlWithParams, array_merge($payload, [
-                    'code'     => $code,
-                    'response' => $decoded
-                ]), 401, "WhatsApp Gateway Error: {$errorMessage}", $traceId);
-            }
-
-            return true;
-        } catch (\GuzzleHttp\Exception\RequestException $e) {
-            $timestamp = now();
-            $response = method_exists($e, 'getResponse') && $e->getResponse()
-                ? $e->getResponse()->getBody()->getContents()
-                : null;
-            $decoded = $response ? json_decode($response, true) : [];
-            $error_message = $decoded['message'] ?? $e->getMessage();
-
-            MessageLogError::create([
-                'customer_id'  => $customerId,
-                'message_type' => $messageType,
-                'gateway_id'   => $gateway->id,
-                'message_error' => $error_message,
-                'sent_at'      => $timestamp,
-                'content'       => $message,
-            ]);
-
-            LogHelper::logError($urlWithParams, [
-                'receiver' => $receiver,
-                'customer_name' => $customerName,
-                'sender' => $sender,
-                'response_code' => $e->getCode(),
-                'response' => $response,
-            ], $e->getCode(), "Failed to send message: $error_message", $traceId);
-
-            return false;
-        } catch (\Exception $e) {
-            LogHelper::logError($urlWithParams, [
-                'receiver'       => $receiver,
-                'customer_name'  => $customerName,
-                'sender'         => $sender,
-            ], $e->getCode(), "Unexpected error: {$e->getMessage()}", $traceId);
-
-            return false;
-        }
-    }
-
-    private function getGateway()
-    {
-        try {
-            $gateway = WhatsappGateway::where('slug', 'gateway')->first();
-
-            if (!$gateway || $gateway->disabled !== 0) {
-                LogHelper::logWarning(
-                    null,
-                    null,
-                    404,
-                    "WhatsApp Gateway is either disabled or not found."
-                );
-                return "WhatsApp Gateway is either disabled or not found.";
-            }
-
-            return $gateway;
-        } catch (\Exception $e) {
-            LogHelper::logError(
-                null,
-                null,
-                500,
-                "Error retrieving WhatsApp Gateway: " . $e->getMessage()
-            );
-            return null;
-        }
-    }
-
-    public function getMessage($incoming_message)
-    {
-        try {
-            return WhatsappMessage::where('incoming_message', $incoming_message)
-                ->where('disabled', false)
-                ->where('default', false)
-                ->first();
-        } catch (\Exception $e) {
-            LogHelper::logError(
-                null,
-                null,
-                500,
-                "Error retrieving message for incoming message: $incoming_message | " . $e->getMessage()
-            );
-            return null;
-        }
-    }
-
     public function getDefaultMessage($slug)
     {
         try {
-            return WhatsappMessage::where('slug', $slug)
+            $message = WhatsappMessage::where('slug', $slug)
                 ->where('disabled', false)
                 ->where('default', true)
                 ->value('reply_message');
+
+            // Log jika pesan ditemukan
+            if ($message) {
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'slug' => $slug,
+                        'message' => $message,
+                    ],
+                    200,
+                    'Default WhatsApp message retrieved successfully from database.'
+                );
+            } else {
+                // Log jika tidak ada data ditemukan
+                LogHelper::logWarning(
+                    null,
+                    ['slug' => $slug],
+                    404,
+                    'No default WhatsApp message found for the given slug.'
+                );
+            }
+
+            return $message ?? "Pesan default tidak tersedia.";
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
@@ -207,21 +75,6 @@ class WhatsappMessageService
                 "Error retrieving default message for slug: $slug | " . $e->getMessage()
             );
             return "Pesan default tidak tersedia.";
-        }
-    }
-
-    public function getCustomer($customer_number)
-    {
-        try {
-            return Customer::where('contact', $customer_number)->first();
-        } catch (\Exception $e) {
-            LogHelper::logError(
-                null,
-                null,
-                500,
-                "Error retrieving customer for contact: $customer_number | " . $e->getMessage()
-            );
-            return null;
         }
     }
 
@@ -368,35 +221,34 @@ class WhatsappMessageService
     /**
      * Ambil template pesan berdasarkan aksi
      */
-    public function getMessageTemplate($action, $pakets, $admin)
+    public function getMessageTemplate($action, $replace)
     {
         try {
-            $replace = ['%count-bill%' => $pakets->count()];
 
             switch ($action) {
                 case 'warning_bill':
                     return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('past_due_warning'));
+
                 case 'deadline_bill':
                     return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('deadline_bill'));
+
                 case 'reminder_bill':
                     return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('reminder_bill'));
+
                 case 'create_new_bill':
-                    $firstPaket = $pakets->first();
-                    $dueDate = $firstPaket && $firstPaket->due_date
-                        ? Carbon::parse($firstPaket->due_date)->timezone('Asia/Jakarta')->locale('id')->isoFormat('D MMMM Y')
-                        : 'Tidak ada jatuh tempo';
-
-                    $replace['%deadline%'] = $dueDate;
-                    $replace['%admin%'] = $admin;
-
                     return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('create_new_bill'));
+
                 case 'activation_customer':
                     return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('activation_customer'));
+
+                case 'create_order':
+                    return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('create_order'));
+
                 default:
                     LogHelper::logWarning(
                         null,
                         ['action' => $action],
-                        400, // Bad Request
+                        400,
                         "Invalid action provided"
                     );
                     return null;
@@ -404,9 +256,9 @@ class WhatsappMessageService
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
-                ['action' => $action],
-                500, // Bad Request
-                "Error processing message template: {$e->getMessage()}"
+                ['action' => $action, 'error' => $e->getMessage()],
+                500,
+                "Error processing message template"
             );
             return null;
         }
@@ -443,57 +295,43 @@ class WhatsappMessageService
         }
     }
 
-    /**
-     * Gantikan placeholder dalam pesan.
-     */
-    public function replaceMessagePlaceholders($message, array $replace)
-    {
-        try {
-            return str_replace(array_keys($replace), array_values($replace), $message);
-        } catch (\Exception $e) {
-            LogHelper::logError(
-                null,
-                [
-                    'message' => $message,
-                    'replace' => $replace
-                ],
-                500, // Bad Request
-                "Error replacing message placeholders: {$e->getMessage()}"
-            );
-            return $message; // Jika gagal, return pesan asli agar tidak blank
-        }
-    }
+    // ============================================
+    // =====             Activation           =====
 
     public function activation($customerId, $action, $traceId)
     {
         $admin_number = null;
-        try {
-            $gateway = $this->getGateway();
-            $customer = Customer::find($customerId);
-            $customer_contact = $customer->contact;
 
-            if (!$gateway || !$customer_contact) {
-                LogHelper::logWarning(
-                    null,
-                    [
-                        'customer_id' => $customer->id,
-                        'gateway' => $gateway ? 'Available' : 'Not Available',
-                        'customer_contact' => $customer_contact ? 'Available' : 'Not Available',
-                    ],
-                    400, // Bad Request
-                    "Gateway atau kontak pelanggan tidak tersedia untuk billing ID: {$customer->id}."
-                );
+        try {
+            LogHelper::logInfo(null, compact('customerId', 'action', 'traceId'), 200, '⏳ Mulai proses aktivasi', $traceId);
+
+            $customer = Customer::find($customerId);
+            if (!$customer) {
+                LogHelper::logWarning(null, ['customerId' => $customerId], 404, "❌ Customer ID tidak ditemukan", $traceId);
                 return;
             }
 
-            $admin = User::where('id', $customer->user_id)->first() ?? 1;
+            $customer_contact = $customer->contact;
+            if (!$customer_contact) {
+                LogHelper::logWarning(null, ['customer_id' => $customer->id], 400, "❌ Kontak customer tidak tersedia", $traceId);
+                return;
+            }
+
+            $admin = User::find($customer->user_id);
             $admin_number = '-';
 
-            if (!empty($admin->contact)) {
+            if (!empty($admin) && !empty($admin->contact)) {
                 $admin_number = $this->formatter->formatReceiver($admin->contact, null);
             }
 
-            $accountBank = $this->getBankInfo($admin->id);
+            LogHelper::logInfo(null, [
+                'admin_id' => $admin->id ?? null,
+                'admin_contact' => $admin->contact ?? null,
+                'admin_number' => $admin_number
+            ], 200, '✅ Admin info berhasil diambil dan diformat', $traceId);
+
+            $accountBank = $this->getBankInfo($admin->id ?? 1);
+            LogHelper::logInfo(null, ['account_bank' => $accountBank], 200, '✅ Info rekening admin berhasil diambil', $traceId);
 
             $replace = [
                 '%name%' => $customer->name,
@@ -501,64 +339,79 @@ class WhatsappMessageService
                 '%email%' => $customer->email ?? '-',
                 '%customer_service%' => $admin_number,
                 '%customer_id%' => $customer->customer_id,
-                '%admin%' => $admin->name,
-                '%paket%' => $customer->paket->name,
-                '%bill%' => 'Rp. ' . number_format($customer->paket->price, 2, ',', '.'),
+                '%admin%' => $admin->name ?? '-',
+                '%paket%' => $customer->paket->name ?? '-',
+                '%bill%' => 'Rp. ' . number_format($customer->paket->price ?? 0, 2, ',', '.'),
                 '%account_bank%' => $accountBank,
             ];
 
-            $message = $this->getDefaultMessage($action);
+            LogHelper::logInfo(null, ['replace_keys' => array_keys($replace)], 200, '🧩 Placeholder pengganti disiapkan', $traceId);
+
+            $message = $this->getMessageTemplate($action, $replace);
             if (!$message) {
                 LogHelper::logWarning(
                     null,
                     [
-                        'id' => $customer->id,
-                        'name' => $customer->name,
-                        'address' => $customer->address,
-                        'email' => $customers->email ?? '-',
-                        'customer_service' => $admin_number,
-                        'customer_id' => $customer->customer_id,
-                        'action' => $action,
+                        'customer_id' => $customer->id,
+                        'action' => $action
                     ],
-                    404, // Not Found
-                    "Template pesan untuk aksi '{$action}' tidak ditemukan untuk customer ID: {$customer->id}"
+                    404,
+                    "❌ Template pesan untuk action `{$action}` tidak ditemukan",
+                    $traceId
                 );
                 return;
             }
 
-            $message = $this->replaceMessagePlaceholders($message, $replace);
-            $this->sendWhatsappSingleJob($customer->id, $customer->name, $customer_contact, $gateway, $message, $action, $traceId, null);
+            LogHelper::logInfo(
+                null,
+                [
+                    'customer_id' => $customer->id,
+                    'customer_contact' => $customer_contact,
+                    'final_message' => $message,
+                    'action' => $action,
+                ],
+                200,
+                "✅ Pesan WhatsApp siap dikirim ke {$customer_contact}",
+                $traceId
+            );
+
+            SendWhatsappMessageJob::dispatch($action, $customer_contact, $message, $customer->id, $traceId)->onQueue('default');
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
                 [
-                    'id' => $customer->id,
-                    'name' => $customer->name,
-                    'address' => $customer->address,
-                    'email' => $customer->email ?? '-',
-                    'customer_service' => $admin_number,
-                    'customer_id' => $customer->customer_id,
+                    'customer_id' => $customerId,
+                    'admin_number' => $admin_number,
                     'action' => $action,
+                    'trace_id' => $traceId,
+                    'error_message' => $e->getMessage(),
+                    'error_file' => $e->getFile(),
+                    'error_line' => $e->getLine()
                 ],
-                500, // Internal Error
-                "Terjadi kesalahan dalam {$action}: " . $e->getMessage()
+                500,
+                "❌ Exception terjadi saat proses {$action}: {$e->getMessage()}",
+                $traceId
             );
         }
     }
 
-    public function create_order($billing, $order, $action)
+    // =====             Activation           =====
+    // ============================================
+    // =====            Create Order          =====
+
+    public function createOrder($billingId, $orderId, $action)
     {
         $traceId = (string) Str::uuid();
         try {
-            $gateway = $this->getGateway();
+            $billing = Billing::find($billingId);
+            $order = Order::find($orderId);
             $customer_contact = $billing->customer->contact;
 
-            if (!$gateway || !$customer_contact) {
+            if (!$customer_contact) {
                 LogHelper::logWarning(
                     null,
                     [
                         'billing_id' => $billing->id,
-                        'gateway' => $gateway ? 'Available' : 'Not Available',
                         'customer_contact' => $customer_contact ? 'Available' : 'Not Available',
                     ],
                     400, // Bad Request
@@ -617,10 +470,6 @@ class WhatsappMessageService
                 '%customer_id%' => $billing->customer->customer_id,
                 '%billing_number%' => $billing->billing_number,
                 '%paket%' => $billing->paket_name ?? 'Tidak tersedia informasi paket',
-                // '%reference%' => $order->reference,
-                // '%va_number%' => $order->va_number,
-                // '%amount%' => $order->total_amount,
-                // '%expired_at%' => date('d:m:Y H:i', $order->expired_time),
                 '%admin%' => $billing->customer->user->name,
                 '%customer_service%' => $whatsapp_number,
                 '%payment_details%' => $paymentDetails,
@@ -643,7 +492,7 @@ class WhatsappMessageService
                 return;
             }
 
-            $message = $this->getDefaultMessage($messages[$action]);
+            $message = $this->getMessageTemplate($messages[$action], $replace);
             if (!$message) {
                 LogHelper::logWarning(
                     null,
@@ -653,14 +502,12 @@ class WhatsappMessageService
                 );
                 return;
             }
-
-            $message = $this->replaceMessagePlaceholders($message, $replace);
-            $this->sendWhatsappSingleJob($billing->customer_id, $billing->customer->name, $customer_contact, $gateway, $message, $action, $traceId, null);
+            SendWhatsappMessageJob::dispatch($action, $customer_contact, $message, $billing->customer_id, $traceId)->onQueue('default');
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
                 [
-                    'billing_id' => $billing->id ?? null,
+                    'billing_id' => $billingId ?? null,
                     'action' => $action,
                 ],
                 500, // Internal Error
@@ -668,6 +515,10 @@ class WhatsappMessageService
             );
         }
     }
+
+    // =====            Create Order          =====
+    // ============================================
+    // =====          Payment Package         =====
 
     /**Payment Paket
      * Unpayment Paket
@@ -677,15 +528,13 @@ class WhatsappMessageService
     {
         $traceId = (string) Str::uuid();
         try {
-            $gateway = $this->getGateway();
             $customer_contact = $billing->customer->contact;
 
-            if (!$gateway || !$customer_contact) {
+            if (!$customer_contact) {
                 LogHelper::logWarning(
                     null,
                     [
                         'billing_id' => $billing->id,
-                        'gateway' => $gateway ? 'Available' : 'Not Available',
                         'customer_contact' => $customer_contact ? 'Available' : 'Not Available',
                     ],
                     400, // Bad Request
@@ -764,7 +613,7 @@ class WhatsappMessageService
                 return;
             }
 
-            $message = $this->getDefaultMessage($messages[$action]);
+            $message = $this->getMessageTemplate($messages[$action], $replace);
             if (!$message) {
                 LogHelper::logWarning(
                     null,
@@ -775,8 +624,7 @@ class WhatsappMessageService
                 return;
             }
 
-            $message = $this->replaceMessagePlaceholders($message, $replace);
-            $this->sendWhatsappSingleJob($billing->customer_id, $billing->customer->name, $customer_contact, $gateway, $message, $action . '_payment', $traceId, null);
+            SendWhatsappMessageJob::dispatch($action . '_payment', $customer_contact, $message, $billing->customer_id, $traceId)->onQueue('default');
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
@@ -790,9 +638,325 @@ class WhatsappMessageService
         }
     }
 
-    public function bill_info($billing, $action, $traceId)
+    // =====          Payment Package         =====
+    // ============================================
+    // ===== send Billing Open Period Message =====
+
+    public function isBillingOpenPeriod(Carbon $startDate, Carbon $endDate, $action): void
     {
-        // Cek validitas billing dan nomor kontak
+        $traceId = (string) Str::uuid();
+
+        try {
+            $periode = $this->getLastBillingPeriod($traceId);
+            if (!$periode) return;
+
+            $billings = $this->getEligibleBillings($startDate, $endDate, $periode->id);
+            if ($billings->isEmpty()) {
+                LogHelper::logWarning(null, [
+                    'periode_id' => $periode->id,
+                    'periode_name' => $periode->name,
+                ], 404, "No billing data found.", $traceId);
+                return;
+            }
+            $count = 0;
+            foreach ($billings as $billing) {
+
+                $success = $this->createNewBill($action, $billing, $traceId);
+
+                // Log detail per billing
+                LogHelper::logInfo(null, [
+                    'billing_id'    => $billing->billing_id,
+                    'customer_id'   => $billing->customer_id,
+                    'customer_name' => $billing->customer_name,
+                    'trace_id'      => $traceId,
+                    'periode_id'    => $periode->id,
+                    'status'        => $success ? 'success' : 'failed',
+                ], $success ? 200 : 500, "Send billing reminder WhatsApp message.");
+
+                $count++;
+            }
+
+            if ($count > 0) {
+                LogHelper::logInfo(null, [
+                    'periode_id'   => $periode->id,
+                    'periode_name' => $periode->name,
+                    'count'        => $count,
+                ], 200, "Successfully dispatched {$count} WhatsApp messages.", $traceId);
+            } else {
+                LogHelper::logWarning(null, [
+                    'periode_id'   => $periode->id,
+                    'periode_name' => $periode->name,
+                ], 404, "No WhatsApp messages dispatched.", $traceId);
+            }
+        } catch (RequestException $e) {
+            LogHelper::logError(null, [], 500, "HTTP Request Exception: " . $e->getMessage(), $traceId);
+        } catch (\Exception $e) {
+            LogHelper::logError(null, [], 500, "Exception occurred while creating billing: " . $e->getMessage(), $traceId);
+        }
+    }
+
+    private function getLastBillingPeriod(string $traceId): ?BillingPeriode
+    {
+        $periode = BillingPeriode::latest('created_at')->first();
+        if (!$periode) {
+            LogHelper::logWarning(null, null, 404, "No billing period found.", $traceId);
+        }
+        return $periode;
+    }
+
+    private function getEligibleBillings(Carbon $startDate, Carbon $endDate, int $billingPeriodeId): Collection
+    {
+        return Billing::query()
+            ->select([
+                'billings.id   as billing_id',
+                'billings.billing_number',
+                'billings.customer_id',
+                'customers.customer_id      as customer_unique_id',
+                'customers.name             as customer_name',
+                'customers.contact          as customer_contact',
+                'customers.address          as customer_address',
+                'billings.due_date',
+                'users.name  as admin_name',
+                'users.id    as admin_id',
+                'users.contact as admin_contact',
+                DB::raw('COUNT(*)  as total_bills'),
+                DB::raw('SUM(billings.paket_price) as total_amount'),
+            ])
+            ->join('customers', 'billings.customer_id', '=', 'customers.id')
+            ->leftJoin('users', 'customers.user_id', '=', 'users.id')
+
+            /* === batasi hanya LOG tanggal 1–3 bulan ini ====================== */
+            ->leftJoin('message_logs as ml', function ($join) use ($startDate, $endDate) {
+                $join->on('billings.customer_id', '=', 'ml.customer_id')
+                    ->where('ml.message_type', '=', 'create_new_bill')
+                    ->whereBetween('ml.created_at', [$startDate, $endDate]);
+            })
+            ->leftJoin('message_log_errors as me', function ($join) use ($startDate, $endDate) {
+                $join->on('billings.customer_id', '=', 'me.customer_id')
+                    ->where('me.message_type', '=', 'create_new_bill')
+                    ->whereBetween('me.created_at', [$startDate, $endDate]);
+            })
+            /* ================================================================= */
+
+            ->whereNull('ml.id')
+            ->whereNull('me.id')
+            ->whereNotNull('customers.contact')
+            ->where('customers.contact', '!=', '')
+            ->where('billings.billing_periode_id', $billingPeriodeId)
+            ->where(function ($q) {
+                $q->where(fn($q1) => $q1->where('billings.status', 'BL')
+                    ->whereNotNull('billings.due_date'))
+                    ->orWhere(fn($q2) => $q2->where('billings.status', 'PL')
+                        ->whereNotNull('billings.pay_later'));
+            })
+            ->groupBy([
+                'billings.id',
+                'billings.billing_number',
+                'billings.customer_id',
+                'customers.customer_id',
+                'customers.name',
+                'customers.contact',
+                'customers.address',
+                'billings.due_date',
+                'users.name',
+                'users.id',
+                'users.contact',
+            ])
+            ->orderBy('customers.name')
+            ->limit(20)
+            ->get();
+    }
+
+    public function createNewBill($action, $billing, $traceId)
+    {
+        try {
+            $websystem = Websystem::first();
+            $accountBank = $this->getBankInfo($billing->admin_id ?: 1);
+            $pakets = $this->getBillingPackages($billing->customer_id);
+            $firstPaket = is_iterable($pakets) ? $pakets->first() : null;
+            $dueDate = $firstPaket && $firstPaket->due_date
+                ? Carbon::parse($firstPaket->due_date)->timezone('Asia/Jakarta')->locale('id')->isoFormat('D MMMM Y')
+                : 'Tidak ada jatuh tempo';
+            $admin_contact = $this->formatter->formatReceiver($billing->admin_contact, null);
+
+            if (empty($pakets) || (method_exists($pakets, 'isEmpty') && $pakets->isEmpty())) {
+                LogHelper::logError(null, [
+                    'billing_number'       => $billing->billing_number,
+                    'customer_id'      => $billing->customer_id,
+                    'customer_name'    => $billing->customer_name,
+                    'contact_customer' => $billing->customer_contact,
+                    'trace_id'         => $traceId,
+                ], 404, "Package or bill not found", $traceId);
+                return false;
+            }
+
+            $paketsText = $pakets->map(fn($paket) => $this->formatPaketInfo($paket))->implode("\n---\n");
+
+            $replace = [
+                '%name%'            => $billing->customer_name,
+                '%address%'         => $billing->customer_address,
+                '%customer_id%'     => $billing->customer_unique_id,
+                '%billing_number%'  => $billing->billing_number ?? 'Nomor tidak tersedia',
+                '%account_bank%'    => $accountBank,
+                '%whatsapp_number%' => $admin_contact,
+                '%total-bill%'      => 'Rp. ' . number_format($billing->total_amount, 2),
+                '%pakets%'          => $paketsText,
+                '%company_address%' => $websystem->address . ', ' . $websystem->city . ' ' . $websystem->postal_code,
+                '%deadline%'        => $dueDate,
+                '%admin%'           => $billing->admin_name
+            ];
+
+            $message = $this->getMessageTemplate($action, $replace);
+
+            SendWhatsappMessageJob::dispatch(
+                $action,
+                $billing->customer_contact,
+                $message,
+                $billing->customer_id,
+                $traceId
+            )->onQueue('default');
+
+            LogHelper::logInfo(null, [
+                'billing_number'       => $billing->billing_number,
+                'customer_id'      => $billing->customer_id,
+                'customer_name'    => $billing->customer_name,
+                'contact_customer' => $billing->customer_contact,
+                'trace_id'         => $traceId,
+                'message_preview'  => mb_substr($message, 0, 100) . '...',
+            ], 200, "Successfully queued WhatsApp billing reminder message");
+
+            return true;
+        } catch (\Exception $e) {
+            LogHelper::logError($e, [
+                'billing_number'       => $billing->billing_number,
+                'customer_id'      => $billing->customer_id,
+                'customer_name'    => $billing->customer_name,
+                'contact_customer' => $billing->customer_contact,
+                'trace_id'         => $traceId,
+            ], 500, 'Failed to create bill or dispatch WhatsApp message');
+
+            return false;
+        }
+    }
+
+    // ===== send Billing Open Period Message =====
+    // ============================================
+    // =====  send Billing Reminder Message   =====
+
+    public function sendPaymentReminders($traceId): void
+    {
+        $today = Carbon::today();
+
+        $billings = [
+            'past_due' => $this->getBillings($today, 'past_due'),
+            'due_today' => $this->getBillings($today, 'due_today'),
+            'upcoming' => $this->getBillings($today, 'upcoming')
+        ];
+
+        foreach ($billings as $type => $billingList) {
+            $count = $billingList->count();
+            LogHelper::logInfo(null, [], 200, "Found {$count} billing(s) for type '{$type}'", $traceId);
+
+            $messageType = $this->getMessageType($type);
+            foreach ($billingList as $billing) {
+                $this->checkSendMessage($billing, $messageType, $traceId);
+            }
+        }
+    }
+
+    private function checkSendMessage($billing, $messageType, $traceId)
+    {
+        // Skip jika sudah pernah dikirim hari ini
+        $alreadySuccessfullySent = MessageLog::where('customer_id', $billing->customer_id)
+            ->where('message_type', $messageType)
+            ->whereDate('sent_at', Carbon::today())
+            ->exists();
+
+        $alreadyFailedSent = MessageLogError::where('customer_id', $billing->customer_id)
+            ->where('message_type', $messageType)
+            ->whereDate('sent_at', Carbon::today())
+            ->exists();
+
+        if ($alreadySuccessfullySent || $alreadyFailedSent) {
+            LogHelper::logWarning(null, [
+                'customer_name' => $billing->customer_name,
+                'message_type'  => $messageType,
+            ], 409, "Skipping redundant message for {$billing->customer_name} with type {$messageType}.", $traceId);
+            return;
+        }
+
+        return $this->sendBillingInfoMessage($billing, $messageType, $traceId);
+    }
+
+    private function getMessageType(string $billingType): string
+    {
+        return match ($billingType) {
+            'past_due' => 'warning_bill',
+            'due_today' => 'deadline_bill',
+            'upcoming' => 'reminder_bill',
+            default => 'reminder_bill'
+        };
+    }
+
+    private function getBillings(Carbon $today, string $type)
+    {
+        $messageType = $this->getMessageType($type);
+
+        $dateOps = match ($type) {
+            'past_due' => '<',
+            'due_today' => '=',
+            'upcoming' => '>',
+            default => null
+        };
+
+        if (!$dateOps) return collect();
+
+        $baseQuery = Billing::query()
+            ->join('customers', 'billings.customer_id', '=', 'customers.id')
+            ->leftJoin('users', 'customers.user_id', '=', 'users.id')
+            ->leftJoin('message_logs', function ($join) use ($today, $messageType) {
+                $join->on('customers.id', '=', 'message_logs.customer_id')
+                    ->whereDate('message_logs.created_at', '=', $today)
+                    ->where('message_logs.message_type', '=', $messageType);
+            })
+            ->leftJoin('message_log_errors', function ($join) use ($today, $messageType) {
+                $join->on('customers.id', '=', 'message_log_errors.customer_id')
+                    ->whereDate('message_log_errors.created_at', '=', $today)
+                    ->where('message_log_errors.message_type', '=', $messageType);
+            })
+            ->select(
+                'billings.id as billing_id',
+                'billings.customer_id',
+                'billings.billing_number',
+                'customers.customer_id as customer_unique_id',
+                'customers.name as customer_name',
+                'customers.contact as customer_contact',
+                'customers.address as customer_address',
+                'users.id as admin_id',
+                'users.name as admin_name',
+                'users.contact as admin_contact'
+            )
+            ->whereNotNull('customers.contact')
+            ->where('customers.contact', '!=', '')
+            ->whereNull('message_logs.id')
+            ->whereNull('message_log_errors.id')
+            ->where(function ($query) use ($today, $dateOps) {
+                $query->where(function ($q) use ($today, $dateOps) {
+                    $q->where('billings.status', 'BL')
+                        ->whereNotNull('billings.due_date')
+                        ->whereDate('billings.due_date', $dateOps, $today);
+                })->orWhere(function ($q) use ($today, $dateOps) {
+                    $q->where('billings.status', 'PL')
+                        ->whereNotNull('billings.pay_later')
+                        ->whereDate('billings.pay_later', $dateOps, $today);
+                });
+            });
+
+        return $baseQuery->limit(20)->get();
+    }
+
+    public function sendBillingInfoMessage($billing, $action, $traceId)
+    {
         if (!is_object($billing) || empty(trim($billing->customer_contact ?? ''))) {
             LogHelper::logError(null, [
                 'billing_id' => $billing->id ?? null,
@@ -801,11 +965,9 @@ class WhatsappMessageService
             return null;
         }
 
-        // Ambil informasi dasar
         $address = $billing->customer_address ?? 'Alamat tidak tersedia';
         $customer_unique_id = $billing->customer_unique_id ?? 'Customer ID tidak tersedia';
 
-        // Normalisasi dan validasi kontak
         $contacts = [
             'customer' => [
                 'raw' => $billing->customer_contact ?? null,
@@ -842,44 +1004,26 @@ class WhatsappMessageService
                 $admin_contact = $data['raw'];
             }
         }
-
-        // LogHelper::logInfo(
-        //     null,
-        //     [
-        //         'address' => $address,
-        //         'customer_unique_id' => $customer_unique_id,
-        //         'customer_id' => $billing->customer_id,
-        //         'admin_id' => $admin_id,
-        //         'admin_contact' => $admin_contact
-        //     ],
-        //     200,
-        //     "Just Informational",
-        //     $traceId
-        // );
-
-        // Ambil informasi rekening admin
         $accountBank = $this->getBankInfo($admin_id ?? 1);
 
-        // Ambil rincian paket dan tagihan
         $pakets = $this->getBillingPackages($billing->customer_id);
         if ($pakets->isEmpty()) {
             LogHelper::logError(null, [
                 'customer_id' => $billing->customer_id,
-                'customer_name' => $customer_name,
-                'contact_customer' => $contact,
+                'customer_name' => $customer_name ?? $billing->customer_name,
+                'contact_customer' => $customer_contact ?? $billing->customer_contact,
             ], 404, "Paket atau tagihan tidak ditemukan.", $traceId);
             return null;
         }
 
         $totalAmount = $pakets->sum('paket_price');
-        $remainingDays = Carbon::today()->diffInDays(Carbon::parse($pakets->first()->due_date), false);
+        $dueDate = $pakets->pluck('due_date')->filter()->sort()->first();
+        $remainingDays = $dueDate ? Carbon::today()->diffInDays(Carbon::parse($dueDate), false) : 0;
 
-        // Format rincian paket
         $paketsText = $pakets->map(fn($paket) => $this->formatPaketInfo($paket))->implode("\n---\n");
 
-        // Template message
         $replace = [
-            '%name%' => $customer_name,
+            '%name%' => $customer_name ?? $billing->customer_name,
             '%address%' => $address,
             '%customer_id%' => $customer_unique_id,
             '%billing_number%' => $billing->billing_number ?? 'Nomor tidak tersedia',
@@ -888,14 +1032,23 @@ class WhatsappMessageService
             '%pakets%' => $paketsText,
             '%whatsapp_number%' => $admin_contact,
             '%total-bill%' => 'Rp. ' . number_format($totalAmount, 2),
+            '%count-bill%' => $pakets->count()
         ];
 
-        $messageTemplate = $this->getMessageTemplate($action, $pakets, $admin_name);
-        return $this->replaceMessagePlaceholders($messageTemplate, $replace);
+        $message = $this->getMessageTemplate($action, $replace);
+        SendWhatsappMessageJob::dispatch($action, $billing->customer_contact, $message, $billing->customer_id, $traceId)->onQueue('default');
+        LogHelper::logInfo(null, [
+            'customer_id' => $billing->customer_id,
+            'customer_name' => $customer_name ?? $billing->customer_name,
+            'contact_customer' => $customer_contact ?? $billing->customer_contact,
+            'message_type' => $action
+        ], 200, "Send Billing Ingo Message Successfully scheduled", $traceId);
+        return true;
     }
 
-    //================================Manual send by admin=======================================
-    public function broadcast_message($message) {}
+    // =====  send Billing Reminder Message   =====
+    // ============================================
+    // =====   Test WhatsApp Message Manual   =====
 
     public function test_gateway($gateway, $receive_number, $sender_number)
     {
@@ -912,7 +1065,6 @@ class WhatsappMessageService
                 "Starting test_gateway process"
             );
 
-            // Cari instance WhatsappNumber berdasarkan nomor
             $whatsapp_number = WhatsappNumber::where('number', $sender_number)->first();
 
             if (!$whatsapp_number) {
@@ -957,8 +1109,7 @@ class WhatsappMessageService
 
             try {
                 $message = 'Congratulations!! Test message from Customer Management WA Gateway';
-                $full_name = "Dummy Customer";
-                $this->sendWhatsappSingleJob(null, $full_name, $receive_number, $gateway, $message, 'test_message', $traceId, 'yes');
+                SendWhatsappMessageJob::dispatch('test_message', $receive_number, $message, null, $traceId)->onQueue('default');
 
                 LogHelper::logInfo(
                     null,
@@ -992,4 +1143,6 @@ class WhatsappMessageService
             return redirect()->back()->with('error', 'An unexpected error occurred. Please try again.');
         }
     }
+
+    // =====   Test WhatsApp Message Manual   =====
 }

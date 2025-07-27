@@ -2,7 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\SendMessage;
+use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
+use App\Jobs\Telegram\ProcessTelegramMessageJob;
 use Illuminate\Console\Command;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Carbon;
@@ -35,23 +36,29 @@ class SendMessagesManual extends Command
         $formattedDate = $currentDateTime->format('Y-m-d H:i:s');
         $dayOfMonth = $currentDateTime->day;
 
-        // Log command initiation
-        // LogHelper::logInfo(
-        //     'SendMessagesCommand',
-        //     [
-        //         'start_time' => $formattedDate,
-        //         'day_of_month' => $dayOfMonth
-        //     ],
-        //     200,
-        //     "Starting reminder messages sending process",
-        //     $traceId
-        // );
-
-
         try {
 
             $traceId = (string) Str::uuid();
-            SendMessage::dispatch('567', 'activation_customer', $traceId)->onQueue('default');
+            ProcessWhatsappMessageJob::dispatch(
+                '336',
+                'activation_customer',
+                $traceId,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )->onQueue('default');
+            ProcessTelegramMessageJob::dispatch(
+                '336',
+                'activation_customer',
+                $traceId,
+                null,
+                null,
+                null,
+                null
+            )->onQueue('default');
 
             // Log successful dispatch
             $dispatchTime = Carbon::now()->format('Y-m-d H:i:s');

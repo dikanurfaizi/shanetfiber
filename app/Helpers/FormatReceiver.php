@@ -6,48 +6,45 @@ use App\Helpers\LogHelper;
 
 class FormatReceiver
 {
-    public function formatReceiver($contact, $action = null)
+    public function formatReceiver($contact, $action = null, $whatsappFormat = false)
     {
         try {
-            // Hapus karakter non-digit, kecuali tanda "+" di awal
-            $contact = preg_replace('/[^\d+]/', '', $contact);
+            // Bersihkan semua kecuali angka
+            $contact = preg_replace('/[^\d]/', '', $contact);
 
-            // Jika nomor diawali dengan "+62", ubah menjadi "62"
-            if (str_starts_with($contact, '+62')) {
-                $contact = substr($contact, 1);
+            // Konversi ke 62xxx
+            if (str_starts_with($contact, '08')) {
+                $contact = '62' . substr($contact, 1);
+            } elseif (str_starts_with($contact, '620')) {
+                $contact = '62' . ltrim(substr($contact, 2), '0');
+            } elseif (str_starts_with($contact, '+62')) {
+                $contact = '62' . substr($contact, 3);
             }
 
+            // WhatsApp format
+            if ($whatsappFormat) {
+                $numberOnly = substr($contact, 2); // hapus 62
+                if (strlen($numberOnly) <= 8) {
+                    $contact = '+62' . $numberOnly;
+                }
+                return preg_replace('/@s\.whatsapp\.net$/', '', $contact) . '@s.whatsapp.net';
+            }
+
+            // Format untuk broadcast: pisah dengan dash
             if ($action === 'broadcast') {
-                // Jika nomor dimulai dengan "08", ubah ke format "62"
-                if (str_starts_with($contact, '08')) {
-                    $contact = '62' . substr($contact, 1);
-                }
-
-                // Ambil digit setelah prefix 62
-                if (str_starts_with($contact, '62')) {
-                    $numberOnly = substr($contact, 2);
-
-                    // Jika 9 digit → pakai +62
-                    if (strlen($numberOnly) === 9) {
-                        $contact = '+62' . $numberOnly;
-                    } else {
-                        // Tetap pakai "62" (tanpa plus)
-                        $contact = '62' . $numberOnly;
-                    }
-                }
-            } else {
-                // Untuk tampilan biasa (non-broadcast)
-                $contact = preg_replace('/^628/', '08', $contact);
-                $contact = preg_replace('/^(\d{4})(\d{4})(\d+)$/', '$1-$2-$3', $contact);
+                // Ubah ke format lokal dulu: 08xxxxxxxxx
+                $local = '0' . substr($contact, 2);
+                return substr($local, 0, 4) . '-' . substr($local, 4, 4) . '-' . substr($local, 8);
             }
 
+            // Default: balikin 62xxxxxxxxx
             return $contact;
         } catch (\Exception $e) {
             LogHelper::logWarning(
                 null,
                 null,
                 500,
-                "Error manipulating contact bill info for contact: $contact | Action: $action | " . $e->getMessage()
+                "Error formatting contact: $contact | Action: $action | " . $e->getMessage()
             );
             return null;
         }

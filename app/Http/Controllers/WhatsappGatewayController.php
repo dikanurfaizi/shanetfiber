@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use App\Models\WhatsappGateway\WhatsappNumber;
 use App\Services\WhatsappMessageService;
 use Illuminate\Support\Facades\Log;
-use App\Jobs\SendPaymentReminderJob;
+use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Facades\Crypt;
 
@@ -173,11 +173,8 @@ class WhatsappGatewayController extends Controller
 
             $request->validate(['test_number' => 'required|numeric']);
 
-            $receive_number = $request->input('test_number');
-            if (str_starts_with($receive_number, '0')) {
-                $receive_number = preg_replace('/^0/', $whatsappgateway->country_code, $receive_number);
-            }
-
+            $formatter = new FormatReceiver();
+            $receive_number = $formatter->formatReceiver($request->input('test_number'), null, true);
             $sender_number = $whatsappgateway->whatsapp_number->number ?? 'N/A';
 
             $this->messageService->test_gateway($whatsappgateway, $receive_number, $sender_number);
@@ -212,15 +209,5 @@ class WhatsappGatewayController extends Controller
             return redirect()->route('whatsappgateway.index')
                 ->with('error', 'An error occurred while testing the gateway. Please check logs for details.');
         }
-    }
-
-    public function dispatchJob()
-    {
-        // Dispatch job
-        dispatch(new SendPaymentReminderJob(app(WhatsappMessageService::class)));
-
-        // Redirect dengan SweetAlert message
-        return redirect()->route('whatsappgateway.index')
-            ->with('success', trans('whatsapp.gateway.notify.job-dispatched'));
     }
 }
