@@ -161,37 +161,61 @@ class PacketController extends Controller
     public function update(PaketUpdateRequest $request, Paket $packet)
     {
         $traceId = (string) Str::uuid();
+
         $this->validate(
             $request,
             [
-                'name' => 'required|unique:pakets,name,' . $packet->id
+                'name' => 'required|unique:pakets,name,' . $packet->id,
+                'price_formatted' => 'nullable|string',
+                'installation_fee_formatted' => 'nullable|string'
             ],
             [
                 'name.unique' => 'Name paket ' . $request->name . ' already exists.'
             ]
         );
 
-        $data = $request->all();
+        try {
+            $data = $request->except(['price_formatted', 'installation_fee_formatted']);
 
-        if ($request->has('price_formatted')) {
-            $data['price'] = str_replace('.', '', $request->price_formatted);
+            // Handle price conversion
+            $data['price'] = $request->filled('price_formatted')
+                ? (int)str_replace('.', '', $request->price_formatted)
+                : 0;
+
+            // Handle installation fee conversion
+            $data['installation_fee'] = $request->filled('installation_fee_formatted')
+                ? (int)str_replace('.', '', $request->installation_fee_formatted)
+                : 0;
+
+            // Validasi nilai minimal 0
+            $data['price'] = max(0, $data['price']);
+            $data['installation_fee'] = max(0, $data['installation_fee']);
+
+            $packet->update($data);
+
+            LogHelper::logInfo($request, [
+                'packet_id' => $packet->id,
+                'changes' => $packet->getChanges(),
+                'updated_values' => [
+                    'price' => $data['price'],
+                    'installation_fee' => $data['installation_fee']
+                ]
+            ], 200, 'Successfully updated packet', $traceId);
+
+            return redirect()->route('packets.index')
+                ->with('success', 'Packet updated successfully');
+        } catch (\Exception $e) {
+            LogHelper::logError($request, [
+                'packet_id' => $packet->id,
+                'error_code' => $e->getCode(),
+                'error_message' => $e->getMessage(),
+                'input_data' => $request->except('_token', '_method')
+            ], 500, 'Failed to update packet', $traceId);
+
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['msg' => 'Failed to update packet. Please try again.']);
         }
-
-        if ($request->has('installation_fee_formatted')) {
-            $data['installation_fee'] = str_replace('.', '', $request->installation_fee_formatted);
-        }
-
-        unset($data['price_formatted']);
-        unset($data['installation_fee_formatted']);
-
-        $packet->update($data);
-
-        LogHelper::logInfo(null, [
-            'paket' => $data
-        ], 200, 'Successfully update paket', $traceId);
-
-        return redirect()->route('packets.index')
-            ->with('success', 'Packet updated successfully');
     }
 
     public function enable(Paket $packet)

@@ -147,14 +147,14 @@
                             <span class="input-group-text">Rp</span>
                             {!! Form::text(
                                 'installation_fee_formatted',
-                                $packet->installation_fee ? number_format($packet->installation_fee, 0, ',', '.') : null,
+                                $packet->installation_fee ? number_format($packet->installation_fee, 0, ',', '.') : '0',
                                 [
                                     'placeholder' => 'Enter installation fee',
                                     'class' => 'form-control currency-input',
                                     'id' => 'installation_fee_formatted',
                                 ],
                             ) !!}
-                            {!! Form::hidden('installation_fee', $packet->installation_fee, ['id' => 'installation_fee']) !!}
+                            {!! Form::hidden('installation_fee', $packet->installation_fee ?? 0, ['id' => 'installation_fee']) !!}
                         </div>
                         @if ($errors->has('installation_fee'))
                             <span class="text-danger">{{ $errors->first('installation_fee') }}</span>
@@ -345,6 +345,45 @@
                 function formatCurrency(number) {
                     // Format number with thousand separators
                     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                }
+            });
+        </script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const formattedInput = document.getElementById('installation_fee_formatted');
+                const hiddenInput = document.getElementById('installation_fee');
+
+                // Format input saat halaman dimuat
+                formatCurrencyInput(formattedInput, hiddenInput);
+
+                // Format input saat ada perubahan
+                formattedInput.addEventListener('input', function() {
+                    formatCurrencyInput(formattedInput, hiddenInput);
+                });
+
+                // Format input saat keluar dari field
+                formattedInput.addEventListener('blur', function() {
+                    if (!this.value) {
+                        this.value = '0';
+                        hiddenInput.value = '0';
+                    }
+                    formatCurrencyInput(formattedInput, hiddenInput);
+                });
+
+                function formatCurrencyInput(formattedElement, hiddenElement) {
+                    // Hapus semua karakter selain angka
+                    let value = formattedElement.value.replace(/[^0-9]/g, '');
+
+                    // Jika kosong, set ke 0
+                    if (!value) {
+                        value = '0';
+                    }
+
+                    // Simpan nilai numerik ke hidden input
+                    hiddenElement.value = value;
+
+                    // Format tampilan dengan separator ribuan
+                    formattedElement.value = parseInt(value).toLocaleString('id-ID');
                 }
             });
         </script>
