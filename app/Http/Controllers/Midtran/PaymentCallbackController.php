@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Midtran;
 
 use Exception;
 use App\Models\Order;
-use App\Models\Paket;
+use App\Models\Paket\Paket;
 use App\Models\PppType;
 use App\Models\Customer;
 

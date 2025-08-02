@@ -51,7 +51,7 @@ class WhatsappMessageService
                     null,
                     [
                         'slug' => $slug,
-                        'message' => $message,
+                        // 'message' => $message,
                     ],
                     200,
                     'Default WhatsApp message retrieved successfully from database.'
@@ -243,6 +243,15 @@ class WhatsappMessageService
 
                 case 'create_order':
                     return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('create_order'));
+
+                case 'payment':
+                    return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('payment'));
+
+                case 'paylater':
+                    return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('paylater'));
+
+                case 'unpayment':
+                    return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('unpayment'));
 
                 default:
                     LogHelper::logWarning(
@@ -524,9 +533,8 @@ class WhatsappMessageService
      * Unpayment Paket
      *
      */
-    public function payment_paket($billing, $receipt, $action)
+    public function payment_paket($billing, $receipt, $action, $traceId)
     {
-        $traceId = (string) Str::uuid();
         try {
             $customer_contact = $billing->customer->contact;
 
@@ -538,7 +546,8 @@ class WhatsappMessageService
                         'customer_contact' => $customer_contact ? 'Available' : 'Not Available',
                     ],
                     400, // Bad Request
-                    "Gateway atau kontak pelanggan tidak tersedia untuk billing ID: {$billing->id}."
+                    "Gateway atau kontak pelanggan tidak tersedia untuk billing ID: {$billing->id}.",
+                    $traceId
                 );
                 return;
             }
@@ -608,7 +617,8 @@ class WhatsappMessageService
                         'action' => $action
                     ],
                     400, // Bad Request
-                    "Aksi tidak valid: {$action} untuk billing ID: {$billing->id}"
+                    "Aksi tidak valid: {$action} untuk billing ID: {$billing->id}",
+                    $traceId
                 );
                 return;
             }
@@ -619,7 +629,8 @@ class WhatsappMessageService
                     null,
                     ['billing_id' => $billing->id, 'action' => $action],
                     404, // Not Found
-                    "Template pesan untuk aksi '{$action}' tidak ditemukan untuk billing ID: {$billing->id}"
+                    "Template pesan untuk aksi '{$action}' tidak ditemukan untuk billing ID: {$billing->id}",
+                    $traceId
                 );
                 return;
             }
@@ -633,7 +644,8 @@ class WhatsappMessageService
                     'action' => $action,
                 ],
                 500, // Internal Error
-                "Terjadi kesalahan dalam payment_paket: " . $e->getMessage()
+                "Terjadi kesalahan dalam payment_paket: " . $e->getMessage(),
+                $traceId
             );
         }
     }

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Mikrotik\Ppp;
 
 use Carbon\Carbon;
 
-use App\Models\Paket;
+use App\Models\Paket\Paket;
 use App\Models\PppType;
 use App\Models\Customer;
 use App\Models\Mikrotik;

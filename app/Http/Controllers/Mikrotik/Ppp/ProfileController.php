@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Mikrotik\Ppp;
 
-use App\Models\Paket;
+use App\Models\Paket\Paket;
 use App\Models\Mikrotik;
 
 use Illuminate\Http\Request;

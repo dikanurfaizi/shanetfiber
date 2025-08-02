@@ -1,12 +1,11 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Paket;
 
-
+use Illuminate\Database\Eloquent\Model;
 use App\Models\Mikrotik;
 use App\Models\Billing\BillingCycle;
-use App\Models\Paket\PackageCategory;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Paket\PaketCategory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -26,13 +25,13 @@ class Paket extends Model
         return $this->belongsTo(Mikrotik::class);
     }
 
+    public function paketCategory()
+    {
+        return $this->belongsTo(PaketCategory::class, 'paket_category_id');
+    }
+
     public function billingCycle()
     {
         return $this->belongsTo(BillingCycle::class);
-    }
-
-    public function packageCategory(): BelongsTo
-    {
-        return $this->belongsTo(PackageCategory::class);
     }
 }

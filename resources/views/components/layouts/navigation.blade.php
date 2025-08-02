@@ -62,6 +62,8 @@
                             href="{{ route('billings.create') }}">{{ __('navigation.billings.create') }}</a>
                         <a class="collapse-item @if (request()->routeIs('billings.create.one')) active @endif"
                             href="{{ route('billings.create.one') }}">{{ __('navigation.billings.add') }}</a>
+                        <a class="collapse-item @if (request()->routeIs('billingCycles.*')) active @endif"
+                            href="{{ route('billingCycles.index') }}">{{ __('navigation.billings.billing-cycles') }}</a>
                     </div>
                 @endcan
                 @canany(['billing-list', 'billing-edit', 'billing-delete'])
@@ -87,6 +89,8 @@
                     @can('packet-create')
                         <a class="collapse-item @if (request()->routeIs('packets.create')) active @endif"
                             href="{{ route('packets.create') }}">{{ __('navigation.pakets.create') }}</a>
+                        <a class="collapse-item @if (request()->routeIs('categories.*')) active @endif"
+                            href="{{ route('categories.index') }}">{{ __('navigation.pakets.package-categories') }}</a>
                     @endcan
 
                     <a class="collapse-item @if (request()->routeIs('packets.index')) active @endif"

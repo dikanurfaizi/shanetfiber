@@ -107,12 +107,12 @@ class CustomersExport implements FromCollection, WithHeadings, WithMapping, With
             $customer->password_ppp,
             $customer->pppType->name,
             $customer->paket->name ?? 'No Package',
-            'Rp ' . number_format($price, 0, ',', '.'), // Format Rupiah manual
+            $price ?? 0,
             $customer->discount . ' %',
             $customer->user->name ?? 'No Linked User',
             $customer->activation == 'false' ? 'Not Activated' : ($customer->disabled === 'true' ? 'Disabled' : 'Enabled'),
             $customer->member->type ?? '-',
-            'Rp ' . number_format($customer->member->discount ?? 0, 0, ',', '.'), // Format Rp
+            $customer->member->discount ?? 0,
             $customer->billing_period ?? '-'
         ];
     }

@@ -33,27 +33,16 @@ class SendWhatsappMessageJob implements ShouldQueue
     public function handle(): void
     {
         $traceId = $this->traceId;
+        $timestamp = now();
+
         $gateway = WhatsappGateway::where('disabled', false)->firstOrFail();
 
-        if (!$gateway) {
-            LogHelper::logError('No Active Gateway', [
-                'receiver' => $this->receiver,
-                'customer_id' => $this->customerId,
-            ], 404, "No active WhatsApp gateway found", $this->traceId);
-            return;
-        }
-
-        $customer = null;
-        $customerName = null;
-
-        if ($this->customerId) {
-            $customer = Customer::find($this->customerId);
-            $customerName = $customer?->name;
-        }
+        $customer = $this->customerId ? Customer::find($this->customerId) : null;
+        $customerName = $customer?->name;
 
         $formatter = new FormatReceiver();
         $formattedReceiver = $formatter->formatReceiver($this->receiver, null, true);
-        $timestamp = now();
+
         $url = "{$gateway->url_callback}/send/message";
 
         $payload = [
@@ -71,36 +60,7 @@ class SendWhatsappMessageJob implements ShouldQueue
         }
 
         try {
-            $options = [
-                'verify' => false
-            ];
-
-            if ($gateway->auth_disabled === "true") {
-                try {
-                    $username = $gateway->basic_auth_username;
-                    $decryptedPassword = Crypt::decryptString($gateway->basic_auth_password);
-
-                    if (!$username || !$decryptedPassword) {
-                        throw new Exception("Basic Auth credentials are missing or invalid.");
-                    }
-
-                    $options['auth'] = [$username, $decryptedPassword];
-                } catch (Exception $e) {
-                    LogHelper::logError($url, array_merge($payload, [
-                        'error' => $e->getMessage(),
-                    ]), 403, "Invalid or missing basic auth credentials", $traceId);
-                    return;
-                }
-            }
-
-            $client = new Client($options);
-
-            LogHelper::logInfo($url, [
-                'payload' => [
-                    'phone'   => $formattedReceiver,
-                    'message' => $this->message,
-                ]
-            ], 200, "Preparing to send WhatsApp message", $traceId);
+            $client = new Client($this->buildHttpOptions($gateway));
 
             $response = $client->post($url, [
                 'json' => [
@@ -110,11 +70,14 @@ class SendWhatsappMessageJob implements ShouldQueue
             ]);
 
             $decoded = json_decode($response->getBody()->getContents(), true);
-            $code = $decoded['code'] ?? 'ERROR';
+            $code = $decoded['code'] ?? null;
             $messageId = $decoded['results']['message_id'] ?? null;
 
             if ($code === 'SUCCESS' && $messageId) {
-                LogHelper::logInfo($url, array_merge($payload, ['message_id' => $messageId, 'message_type' => $this->messageType]), 200, "Message sent successfully at {$timestamp}", $traceId);
+                LogHelper::logInfo($url, array_merge($payload, [
+                    'message_id' => $messageId,
+                    'message_type' => $this->messageType,
+                ]), 200, "Message sent successfully at {$timestamp}", $traceId);
 
                 MessageLog::create([
                     'customer_id'  => $customer?->id,
@@ -124,32 +87,81 @@ class SendWhatsappMessageJob implements ShouldQueue
                     'sent_at'      => $timestamp,
                 ]);
             } else {
-                $errorMessage = isset($decoded['message']) ? $decoded['message'] : 'Unknown error';
-
-                MessageLogError::create([
-                    'customer_id'  => $customer?->id,
-                    'message_type' => $this->messageType,
-                    'message_error' => $errorMessage,
-                    'gateway_id'   => $gateway->id,
-                    'content'      => $this->message,
-                    'sent_at'      => $timestamp,
-                ]);
-
-                LogHelper::logError($url, array_merge($payload, [
-                    'code'     => $code,
-                    'response' => $decoded
-                ]), 401, "WhatsApp Gateway Error: {$errorMessage}", $traceId);
+                $this->logMessageError(
+                    $gateway,
+                    $customer,
+                    $code,
+                    $decoded['message'] ?? 'Unknown error',
+                    $decoded,
+                    $url,
+                    $payload,
+                    $traceId,
+                    $timestamp
+                );
             }
         } catch (RequestException $e) {
             $body = optional($e->getResponse())->getBody()?->getContents();
             $decoded = $body ? json_decode($body, true) : [];
             $messageError = $decoded['message'] ?? $e->getMessage();
 
-            LogHelper::logError($url, array_merge($payload, [
-                'raw_response' => $body
-            ]), $e->getCode(), "Failed to send message: $messageError", $traceId);
+            $this->logMessageError(
+                $gateway,
+                $customer,
+                $e->getCode(),
+                $messageError,
+                ['raw_response' => $body],
+                $url,
+                $payload,
+                $traceId,
+                $timestamp
+            );
         } catch (Exception $e) {
-            LogHelper::logError($url, $payload, $e->getCode(), "Unexpected error: {$e->getMessage()}", $traceId);
+            $this->logMessageError(
+                $gateway,
+                $customer,
+                $e->getCode(),
+                $e->getMessage(),
+                [
+                    'error_code' => $e->getCode(),
+                    'error_message' => $e->getMessage()
+                ],
+                $url,
+                $payload,
+                $traceId,
+                $timestamp
+            );
         }
+    }
+
+    protected function buildHttpOptions($gateway): array
+    {
+        $options = ['verify' => false];
+
+        if ($gateway->auth_disabled === "true") {
+            $username = $gateway->basic_auth_username;
+            $password = Crypt::decryptString($gateway->basic_auth_password);
+
+            if (!$username || !$password) {
+                throw new Exception("Basic Auth credentials are missing or invalid.");
+            }
+
+            $options['auth'] = [$username, $password];
+        }
+
+        return $options;
+    }
+
+    protected function logMessageError($gateway, $customer, $code, $errorMessage, $extraPayload, $url, $basePayload, $traceId, $timestamp)
+    {
+        MessageLogError::create([
+            'customer_id'   => $customer?->id,
+            'message_type'  => $this->messageType,
+            'message_error' => $errorMessage,
+            'gateway_id'    => $gateway->id,
+            'content'       => $this->message,
+            'sent_at'       => $timestamp,
+        ]);
+
+        LogHelper::logError($url, array_merge($basePayload, $extraPayload), $code, "WhatsApp Error: {$errorMessage}", $traceId);
     }
 }

@@ -1,31 +1,23 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Paket;
 
-use App\Models\Paket;
-//use App\Models\Packet;
-use App\Models\Mikrotik;
-use Illuminate\View\View;
+use App\Models\Paket\Paket;
+use App\Models\Paket\PaketCategory;
+use App\Models\Billing\BillingCycle;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use App\Http\Requests\PaketStoreRequest;
 use App\Http\Requests\PaketUpdateRequest;
-use App\Http\Resources\Pppoe\SecretResource;
-use App\Http\Resources\Pppoe\ProfileResource;
 use App\Models\Paket\PppProfile;
-use App\Services\Routerboard\Ppp\SecretService;
-use App\Services\Routerboard\TestConnectionService;
+use App\Helpers\LogHelper;
+use App\Http\Controllers\Controller;
 
 class PacketController extends Controller
 {
-    private SecretService $secretService;
-    private TestConnectionService $testConnectionService;
 
-    public function __construct(SecretService $secretService, TestConnectionService $testConnectionService)
+    public function __construct()
     {
-        $this->secretService = $secretService;
-        $this->testConnectionService = $testConnectionService;
         $this->middleware('permission:packet-list|packet-create|packet-edit|packet-delete', ['only' => ['index', 'show']]);
         $this->middleware('permission:packet-create', ['only' => ['create', 'store', 'setting', 'exportToRouter']]);
         $this->middleware('permission:packet-edit', ['only' => ['edit', 'update', 'setting', 'exportToRouter', 'enable', 'disable']]);
@@ -36,8 +28,13 @@ class PacketController extends Controller
      */
     public function index()
     {
+        $traceId = (string) Str::uuid();
         $pakets = Paket::orderBy('name', 'ASC')->paginate(20);
         $allPaketsCount = count($pakets);
+        LogHelper::logInfo(null, [
+            'pakets' => $pakets,
+            'all_paket_count' => $allPaketsCount
+        ], 200, 'Successfully get Index data', $traceId);
         return view('packets.index', [
             'pakets' =>  $pakets,
             'paketscount' => $allPaketsCount,
@@ -50,16 +47,21 @@ class PacketController extends Controller
      */
     public function create(Request $request)
     {
-        //return dd($request->mikrotik_id);
-        // $mikrotiks = Mikrotik::orderBy('name', 'ASC')->pluck('name', 'id');
+        $traceId = (string) Str::uuid();
         $pppprofiles = PppProfile::where('disabled', 'false')
             ->orderBy('profile_name')
             ->get(['id', 'profile_name']);
-
+        $category = PaketCategory::where('is_active', true)->get();
+        $billingCycle = BillingCycle::where('is_active', true)->get();
+        LogHelper::logInfo(null, [
+            'pppProfiles' => $pppprofiles,
+            'category' => $category,
+            'billing_cycle' => $billingCycle
+        ], 200, 'Successfully get data for create paket', $traceId);
         return view('packets.create', [
-            // 'mikrotiks' => $mikrotiks,
             'ppp_profiles' => $pppprofiles,
-
+            'category' => $category,
+            'billingCycle' => $billingCycle,
         ]);
     }
 
@@ -68,6 +70,7 @@ class PacketController extends Controller
      */
     public function store(PaketStoreRequest $request)
     {
+        $traceId = (string) Str::uuid();
         $this->validate(
             $request,
             [
@@ -79,8 +82,24 @@ class PacketController extends Controller
         );
 
         $request->request->add(['slug' => str($request->name . '-' . Str::random(4))->slug()]);
-        Paket::create($request->all());
+        $data = $request->all();
 
+        if ($request->has('price_formatted')) {
+            $data['price'] = str_replace('.', '', $request->price_formatted);
+        }
+
+        if ($request->has('installation_fee_formatted')) {
+            $data['installation_fee'] = str_replace('.', '', $request->installation_fee_formatted);
+        }
+
+        unset($data['price_formatted']);
+        unset($data['installation_fee_formatted']);
+
+        Paket::create($data);
+
+        LogHelper::logInfo(null, [
+            'paket' => $data
+        ], 200, 'Successfully create new paket', $traceId);
         return redirect()->route('packets.index')
             ->with('success', 'Paket created successfully.');
     }
@@ -90,6 +109,11 @@ class PacketController extends Controller
      */
     public function show(Paket $packet)
     {
+        $traceId = (string) Str::uuid();
+        $packet->load(['paketCategory', 'billingCycle']);
+        LogHelper::logInfo(null, [
+            'paket' => $packet
+        ], 200, 'Successfully show paket', $traceId);
         return view('packets.show', compact('packet'));
     }
 
@@ -98,13 +122,10 @@ class PacketController extends Controller
      */
     public function edit(Paket $packet)
     {
-        //$router = Mikrotik::where('id', $packet->mikrotik_id)->first();
+        $traceId = (string) Str::uuid();
         try {
-            //$this->testConnectionService->checkOnline($router);
-            //$profiles = $this->secretService->getPppProfile($router);
-            // $pppprofiles = ProfileResource::collection($profiles);
             $pppprofiles = PppProfile::where('disabled', 'false')
-                ->orderBy('profile_name') // optional: biar urut
+                ->orderBy('profile_name')
                 ->get()
                 ->map(function ($item) {
                     return [
@@ -112,12 +133,24 @@ class PacketController extends Controller
                         'name' => $item->profile_name,
                     ];
                 });
-            // dd($pppprofiles);
+            $category = PaketCategory::where('is_active', true)->get();
+            $billingCycle = BillingCycle::where('is_active', true)->get();
+            LogHelper::logInfo(null, [
+                'paket' => $packet,
+                'ppp_profiles' => $pppprofiles,
+                'category' => $category,
+                'billing_cycle' => $billingCycle
+            ], 200, 'Successfully show paket', $traceId);
             return view('packets.edit', [
                 'packet' => $packet,
                 'pppprofiles' => $pppprofiles,
+                'category' => $category,
+                'billingCycle' => $billingCycle,
             ]);
         } catch (\Exception $e) {
+            LogHelper::logError(null, [
+                'paket' => $packet,
+            ], 200, 'Failed to show paket', $traceId);
             return redirect()->back()->withErrors(['msg' => 'Please check again your profiles']);
         }
     }
@@ -127,6 +160,7 @@ class PacketController extends Controller
      */
     public function update(PaketUpdateRequest $request, Paket $packet)
     {
+        $traceId = (string) Str::uuid();
         $this->validate(
             $request,
             [
@@ -137,7 +171,24 @@ class PacketController extends Controller
             ]
         );
 
-        $packet->update($request->all());
+        $data = $request->all();
+
+        if ($request->has('price_formatted')) {
+            $data['price'] = str_replace('.', '', $request->price_formatted);
+        }
+
+        if ($request->has('installation_fee_formatted')) {
+            $data['installation_fee'] = str_replace('.', '', $request->installation_fee_formatted);
+        }
+
+        unset($data['price_formatted']);
+        unset($data['installation_fee_formatted']);
+
+        $packet->update($data);
+
+        LogHelper::logInfo(null, [
+            'paket' => $data
+        ], 200, 'Successfully update paket', $traceId);
 
         return redirect()->route('packets.index')
             ->with('success', 'Packet updated successfully');
@@ -145,17 +196,24 @@ class PacketController extends Controller
 
     public function enable(Paket $packet)
     {
-        // dd($packet);
+        $traceId = (string) Str::uuid();
         $packet->disabled = 'false';
         $packet->save();
+        LogHelper::logInfo(null, [
+            'paket' => $packet
+        ], 200, 'Successfully enable paket', $traceId);
 
         return redirect()->back()->with('success', 'Paket enabled successfully.');
     }
 
     public function disable(Paket $packet)
     {
+        $traceId = (string) Str::uuid();
         $packet->disabled = 'true';
         $packet->save();
+        LogHelper::logInfo(null, [
+            'paket' => $packet
+        ], 200, 'Successfully disable paket', $traceId);
 
         return redirect()->back()->with('success', 'Paket disabled successfully.');
     }
@@ -169,7 +227,11 @@ class PacketController extends Controller
     }
     public function destroy(Paket $packet)
     {
+        $traceId = (string) Str::uuid();
         $packet->forceDelete();
+        LogHelper::logInfo(null, [
+            'paket' => $packet
+        ], 200, 'Successfully destroy paket', $traceId);
         return redirect()->route('packets.index')
             ->with('success', 'Packet ' . $packet->name . ' deleted successfully.');
     }

@@ -22,6 +22,7 @@ return [
         'show-paid' => 'Paid Bill',
         'show-unpaid' => 'Unpaid Bill',
         'show-paylater' => 'Pay Later',
+        'billing-cycles' => 'Billing Cycles'
     ],
     'pakets' => [
         'nav-item' => 'Packages',
@@ -31,6 +32,7 @@ return [
             'create' => 'Create Profile',
             'index' => 'Profile',
         ],
+        'package-categories' => 'Package Categories'
     ],
     'members' => [
         'index' => 'Member List',

@@ -7,7 +7,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\IsolirController;
-use App\Http\Controllers\PacketController;
+use App\Http\Controllers\Paket\PacketController;
 use App\Http\Controllers\RouterController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\UpdateController;
@@ -42,6 +42,9 @@ use App\Http\Controllers\MemberController;
 use App\Http\Controllers\TelegramGatewayController;
 use App\Http\Controllers\TelegramMessageController;
 use App\Http\Controllers\TelegramChatIdController;
+use App\Http\Controllers\Paket\PaketCategoriesController;
+use App\Http\Controllers\Billing\BillingCycleController;
+use Illuminate\Support\Facades\Mail;
 
 /*
 |--------------------------------------------------------------------------
@@ -138,6 +141,12 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::put('/packets/{packet:slug}/disabled/true', [PacketController::class, 'disable'])->name('disable.package');
         Route::put('/packets/{packet:slug}/disabled/false', [PacketController::class, 'enable'])->name('enable.package');
         Route::get('/packets/{packet:slug}/delete', [PacketController::class, 'delete'])->name('paket.delete');
+        //=================================Package Categories============================================
+        Route::resource('package-categories', PaketCategoriesController::class)->names('categories');
+        Route::put('/package-categories/{package_category:slug}/deactivate', [PaketCategoriesController::class, 'deactivate'])->name('deactivate.package.categories');
+        Route::put('/package-categories/{package_category:slug}/activate', [PaketCategoriesController::class, 'activate'])->name('activate.package.categories');
+        //=================================Billing Cycle=============================================
+        Route::resource('billing-cycles', BillingCycleController::class)->names('billingCycles');
         //========================ROUTE Restore Customer======================
         Route::get('/customers/trashed', [CustomerController::class, 'trashed'])->name('customers.trashed');
         Route::put('/customers/{customer:slug}/restore', [CustomerController::class, 'restore'])->name('customers.restore');
@@ -279,6 +288,14 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::put('settings/telegrammessage/{telegrammessage}/disabled', [TelegramMessageController::class, 'disable_message'])->name('telegrammessage.disable');
         Route::get('settings/telegrammessage/{telegrammessage}/delete', [TelegramMessageController::class, 'delete'])->name('telegrammessage.delete');
         Route::get('settings/telegramgateway/trigger-job', [TelegramGatewayController::class, 'dispatchJob'])->name('trigger-job');
+
+        Route::get('/test-email', function () {
+            Mail::raw('Ini email test dari Laravel', function ($message) {
+                $message->to('dikanurfaizi.rn@gmail.com')
+                    ->subject('Test Email SMTP Google');
+            });
+            return 'Email terkirim!';
+        });
     });
 });
 

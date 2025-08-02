@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Paket;
+use App\Models\Paket\Paket;
 use App\Models\PppType;
 use App\Models\Customer;
 use App\Models\Mikrotik;

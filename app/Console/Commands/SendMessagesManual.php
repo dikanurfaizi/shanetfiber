@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
-use App\Jobs\Telegram\ProcessTelegramMessageJob;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Console\Command;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Carbon;
@@ -37,28 +37,56 @@ class SendMessagesManual extends Command
         $dayOfMonth = $currentDateTime->day;
 
         try {
+            $today = Carbon::today();
 
-            $traceId = (string) Str::uuid();
-            ProcessWhatsappMessageJob::dispatch(
-                '336',
-                'activation_customer',
-                $traceId,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )->onQueue('default');
-            ProcessTelegramMessageJob::dispatch(
-                '336',
-                'activation_customer',
-                $traceId,
-                null,
-                null,
-                null,
-                null
-            )->onQueue('default');
+            $results = DB::table('receipts as r')
+                ->join('billings as b', 'b.receipt_id', '=', 'r.id')
+                ->leftJoin('message_logs as ml', function ($join) {
+                    $join->on('ml.customer_id', '=', 'b.customer_id')
+                        ->where('ml.message_type', 'like', '%payment%');
+                })
+                ->leftJoin('message_log_errors as mle', function ($join) {
+                    $join->on('mle.customer_id', '=', 'b.customer_id')
+                        ->where('mle.message_type', 'like', '%payment%');
+                })
+                ->whereDate('r.payment_time', Carbon::today())
+                ->whereNull('ml.id')
+                ->whereNull('mle.id')
+                ->select([
+                    'r.id as receipt_id',
+                    'r.customer_id',
+                    'r.customer_name',
+                    'r.payment_time',
+                    'r.payment_methode',
+                    'b.id as billing_id',
+                    'ml.id as message_log_id',
+                    'mle.id as message_log_error_id',
+                ])
+                ->get();
+            foreach ($results as $result) {
+                $traceId = (string) Str::uuid();
+
+                ProcessWhatsappMessageJob::dispatch(
+                    $result->customer_id,           // customer_id
+                    $result->payment_methode,       // payment_methode
+                    $traceId,                       // trace ID (unique tiap job)
+                    $result->billing_id,            // billing_id
+                    $result->receipt_id,            // receipt_id
+                    null,                           // param 6
+                    null,                           // param 7
+                    null,                           // param 8
+                    null                            // param 9
+                )->onQueue('default');
+            }
+            // ProcessTelegramMessageJob::dispatch(
+            //     '336',
+            //     'activation_customer',
+            //     $traceId,
+            //     null,
+            //     null,
+            //     null,
+            //     null
+            // )->onQueue('default');
 
             // Log successful dispatch
             $dispatchTime = Carbon::now()->format('Y-m-d H:i:s');

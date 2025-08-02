@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Paket;
+use App\Models\Paket\Paket;
 use App\Models\Customer;
 use App\Models\Mikrotik;
 use Carbon\CarbonPeriod;
@@ -783,9 +783,22 @@ class BillingController extends Controller
                 'status' => 'LS',
                 'receipt_id' => $getReceipt->id,
             ]);
-            // if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
-            //     $this->messageService->payment_paket($billing, $getReceipt, $payment);
-            // }
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'periode' => $billing->billing_periode->name,
+                    'customer_id' => $billing->customer_id,
+                    'customer_name' => $billing->customer_name,
+                    'billing_id' => $billing->id,
+                    'payment_type' => $payment,
+                    'receipt_id' => $getReceipt->id,
+                ],
+                200,
+                'Data pembayaran berhasil disimpan dan receipt berhasil dibuat',
+                $traceId
+            );
+
             ProcessWhatsappMessageJob::dispatch(
                 $billing->customer_id,
                 $payment,
@@ -797,6 +810,22 @@ class BillingController extends Controller
                 null,
                 null
             )->onQueue('default');
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'periode' => $billing->billing_periode->name,
+                    'customer_id' => $billing->customer_id,
+                    'customer_name' => $billing->customer_name,
+                    'billing_id' => $billing->id,
+                    'receipt_id' => $getReceipt->id,
+                    'payment_type' => $payment
+                ],
+                200,
+                'Job WhatsApp berhasil dikirim ke queue',
+                $traceId
+            );
+
             return redirect()->back()->with('success', 'Payment ' . $billing->customer_name . ' successfully.');
         }
     }

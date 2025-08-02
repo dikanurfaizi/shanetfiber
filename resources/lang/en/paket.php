@@ -29,8 +29,21 @@ return [
     'label' => [
         'name' => 'Name:',
         'profile' => 'Profile:',
+        'speed_up_to' => 'Speed up to:',
+        'speed_unit' => 'Speed unit:',
+        'recommended_device_min' => 'Recommended Device Minimun:',
+        'recommended_device_max' => 'Recommended Device Maximum:',
+        'recommended_device' => 'Recommended Devices:',
+        'quota' => 'Quota:',
+        'incl_modem' => 'Include Modem:',
+        'installation_free' => 'Installation Free:',
+        'package_category' => 'Package Category:',
+        'billing_cycle' => 'Billing Cycle:',
+        'installation_fee' => 'Installation Fee:',
         'price' => 'Price:',
         'description' => 'Description:',
+        'created_at' => 'Created at:',
+        'updated_at' => 'Updated at:'
     ],
     'placeholder' => [
         'name' => 'Insert name',

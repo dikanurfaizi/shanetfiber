@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Exception;
-use App\Models\Paket;
+use App\Models\Paket\Paket;
 use App\Models\Customer;
 use App\Models\Mikrotik;
 use Illuminate\Http\Request;

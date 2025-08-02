@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\AddressListResource;
 use App\Http\Resources\InterfaceResource;
-use App\Models\Paket;
+use App\Models\Paket\Paket;
 use App\Models\Mikrotik;
 use App\Models\MerkRouter;
 use App\Models\TypeRouter;
