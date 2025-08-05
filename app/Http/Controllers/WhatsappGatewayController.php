@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\WhatsappGateway\WhatsappGateway;
 use Illuminate\Http\Request;
-// use Illuminate\Support\Facades\Validator;
 use App\Models\WhatsappGateway\WhatsappNumber;
 use App\Services\WhatsappMessageService;
 use Illuminate\Support\Facades\Log;

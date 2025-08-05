@@ -8,7 +8,8 @@
             <table id="serverTable" cellspacing="0" width="100%" class="table no-footer">
                 <tr class="table-borderless">
                     <td class="py-1" width="150px"><strong>{{ __('customer.label.id') }}</strong></td>
-                    <td class="py-1" width="380px">{{ __(':') }} {{ $customer->customer_id ?? 'No ID' }}</td>
+                    <td class="py-1" width="380px">{{ __(':') }}
+                        {{ $customer->customer_id ?? 'No ID' }}</td>
                     <td class="py-1" width="150px"><strong>{{ __('customer.label.responsibility') }}</strong></td>
                     <td class="py-1" width="380px">{{ __(':') }}
                         {{ $customer->user->name ?? 'No Linked User' }}</td>
@@ -349,11 +350,13 @@
                     <tr class="table-borderless">
                         <td class="py-1" width="150px"><strong>{{ __('customer.label.server') }}</strong>
                         </td>
-                        <td class="py-1" width="380px">{{ __(':') }} {{ $customer->mikrotik->name }}
+                        <td class="py-1" width="380px">{{ __(':') }}
+                            {{ $customer->mikrotik->name }}
                         </td>
                         <td class="py-1" width="150px"><strong>{{ __('customer.label.profile') }}</strong>
                         </td>
-                        <td class="py-1" width="380px">{{ __(':') }} {{ $customer->paket->profile }}
+                        <td class="py-1" width="380px">{{ __(':') }}
+                            {{ $customer->paket->profile }}
                         </td>
                     </tr>
                     <tr class="table-borderless">
@@ -626,4 +629,12 @@
             @endsection
         @endif
     @endif
+    @section('custom_styles')
+        <style>
+            .table-borderless td {
+                vertical-align: top;
+                padding: 0.25rem;
+            }
+        </style>
+    @endsection
 </x-layouts.cpanel.customers.app-layout>

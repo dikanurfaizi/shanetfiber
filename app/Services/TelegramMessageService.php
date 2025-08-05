@@ -39,7 +39,7 @@ class TelegramMessageService
         return $this->telegram->getUpdates();
     }
 
-    public function findNewChatIds(): Collection
+    public function findNewChatIds(string $traceId): Collection
     {
         $updates = $this->getUpdates();
 
@@ -109,7 +109,7 @@ class TelegramMessageService
                 '%admin_name%' => $admin_name,
             ];
 
-            $message = $this->getDefaultMessage($action);
+            $message = $this->getDefaultMessage($action, $traceId);
             if (!$message) {
                 LogHelper::logWarning(
                     null,
@@ -128,7 +128,7 @@ class TelegramMessageService
                 return;
             }
 
-            $replaceMessage = $this->replaceMessagePlaceholders($message, $replace);
+            $replaceMessage = $this->replaceMessagePlaceholders($message, $replace, $traceId);
             // LogHelper::logInfo(null, 200, ['text' => $replaceMessage], "DEBUG final telegram message", $traceId);
             $message = Markdown::convertMarkdownToHtml($replaceMessage);
             // LogHelper::logInfo(null, 200, ['text' => $message], "DEBUG final telegram message", $traceId);
@@ -151,7 +151,7 @@ class TelegramMessageService
         }
     }
 
-    public function getDefaultMessage($slug)
+    public function getDefaultMessage($slug, $traceId)
     {
         try {
             return TelegramMessage::where('slug', $slug)
@@ -169,7 +169,7 @@ class TelegramMessageService
         }
     }
 
-    public function replaceMessagePlaceholders($message, array $replace)
+    public function replaceMessagePlaceholders($message, array $replace, string $traceId)
     {
         try {
             return str_replace(array_keys($replace), array_values($replace), $message);

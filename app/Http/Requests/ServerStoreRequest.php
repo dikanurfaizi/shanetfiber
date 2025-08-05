@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Paket;
+use App\Models\Paket\Paket;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ServerStoreRequest extends FormRequest

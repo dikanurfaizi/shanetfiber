@@ -40,10 +40,11 @@ class SecretController extends Controller
      */
     public function index(Mikrotik $mikrotik)
     {
+        $traceId = (string) Str::uuid();
         try {
             //$router = $mikrotik;
-            $secretsActive = $this->secretService->getAllPppSecrets($mikrotik);
-            $secrets = $this->secretService->getAllPppSecrets($mikrotik);
+            $secretsActive = $this->secretService->getAllPppSecrets($mikrotik, $traceId);
+            $secrets = $this->secretService->getAllPppSecrets($mikrotik, $traceId);
             $pppsecrets = SecretResource::collection($secrets);
             $pppSecretsActive = SecretResource::collection($secretsActive);
 
@@ -59,7 +60,7 @@ class SecretController extends Controller
                 'pppSecretsActive' => $pppSecretsActive,
             ]);
         } catch (Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Error fetching secrets');
+            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Error fetching secrets', $traceId);
             return redirect()->back()->withErrors(['msg' => 'Failed to fetch secrets.']);
         }
     }
@@ -69,9 +70,10 @@ class SecretController extends Controller
      */
     public function create(Mikrotik $mikrotik)
     {
+        $traceId = (string) Str::uuid();
         try {
             //$router = $mikrotik;
-            $profiles = $this->secretService->getPppProfile($mikrotik);
+            $profiles = $this->secretService->getPppProfile($mikrotik, $traceId);
             $pppProfiles = ProfileResource::collection($profiles);
             // $pppServices = PppType::pluck('name', 'id');
             //return dd($pppServices);
@@ -87,7 +89,7 @@ class SecretController extends Controller
                 'pppservices' => PppType::All(),
             ]);
         } catch (Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to create secret');
+            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to create secret', $traceId);
             return redirect()->back()->withErrors(['msg' => $e->getMessage()]);
         }
     }
@@ -97,6 +99,7 @@ class SecretController extends Controller
      */
     public function store(Request $request, Mikrotik $mikrotik)
     {
+        $traceId = (string) Str::uuid();
         $request->validate([
             'name' => 'required',
             'password' => 'required',
@@ -120,14 +123,14 @@ class SecretController extends Controller
 
             //$router = $mikrotik;
 
-            $response = $this->secretService->createSecret($mikrotik, $username, $password, $service, $profile,  $comment);
+            $response = $this->secretService->createSecret($mikrotik, $username, $password, $service, $profile,  $comment, $traceId);
             // LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray()], 200, 'Secret created successfully');
 
             return isset($response['after']['message'])
                 ? redirect()->back()->with('error', $response['after']['message'])
                 : redirect()->route('ppp.secrets.index', ['mikrotik' => $mikrotik])->with('success', 'Secret created successfully.');
         } catch (Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to create secret');
+            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to create secret', $traceId);
             return redirect()->back()->withErrors(['msg' => $e->getMessage()]);
         }
     }
@@ -137,7 +140,7 @@ class SecretController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $traceId = (string) Str::uuid();
     }
 
     /**
@@ -145,6 +148,7 @@ class SecretController extends Controller
      */
     public function edit(Mikrotik $mikrotik)
     {
+        $traceId = (string) Str::uuid();
         try {
             //  $router = $mikrotik;
 
@@ -153,10 +157,10 @@ class SecretController extends Controller
             // $id = request()->input('id');
             $id = request('id');
 
-            $secrets = $this->secretService->getSecretById($mikrotik, $id);
+            $secrets = $this->secretService->getSecretById($mikrotik, $id, $traceId);
             $pppsecrets = SecretResource::collection($secrets);
 
-            $profiles = $this->secretService->getPppProfile($mikrotik);
+            $profiles = $this->secretService->getPppProfile($mikrotik, $traceId);
             $pppProfiles = ProfileResource::collection($profiles);
             // LogHelper::logInfo(null, [
             //     'mikrotik' => $mikrotik->toArray(),
@@ -172,7 +176,7 @@ class SecretController extends Controller
                 'pppservices' => PppType::All(),
             ]);
         } catch (Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to edit secret');
+            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to edit secret', $traceId);
             return redirect()->back()->withErrors(['msg' => $e->getMessage()]);
         }
     }
@@ -182,6 +186,7 @@ class SecretController extends Controller
      */
     public function update(Request $request, Mikrotik $mikrotik)
     {
+        $traceId = (string) Str::uuid();
         $request->validate([
             'name' => 'required',
             'password' => 'required',
@@ -201,44 +206,46 @@ class SecretController extends Controller
             $service = $request->service;
             $profile = $request->profile;
             $id = request('id');
-            $response = $this->secretService->updateSecret($mikrotik, $username, $password, $service, $profile, $id);
+            $response = $this->secretService->updateSecret($mikrotik, $username, $password, $service, $profile, $id, $traceId);
             // LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray(),], 200, 'Secret updated seccessfully');
 
             return isset($response['after']['message'])
                 ? redirect()->back()->with('error', $response['after']['message'])
                 : redirect()->route('ppp.secrets.index', ['mikrotik' => $mikrotik])->with('success', 'Secret updated successfully.');
         } catch (Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to update secret');
+            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to update secret', $traceId);
             return redirect()->back()->withErrors(['msg' => $e->getMessage()]);
         }
     }
 
     public function getCountPppSecrets(Mikrotik $mikrotik)
     {
+        $traceId = (string) Str::uuid();
         try {
-            $allPppSecrets = $this->secretService->getAllPppSecrets($mikrotik);
+            $allPppSecrets = $this->secretService->getAllPppSecrets($mikrotik, $traceId);
             $allPppSecretsCount = count($allPppSecrets);
             // LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray(), 'allPppSecretsCount' => $allPppSecretsCount], 200, 'Secret get count ppp secrets');
             return response()->json([
                 'allPppSecretsCount' => $allPppSecretsCount,
             ]);
         } catch (Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to get count ppp secret');
+            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to get count ppp secret', $traceId);
             return redirect()->back()->withErrors(['msg' => $e->getMessage()]);
         }
     }
 
     public function getCountPppSecretsActive(Mikrotik $mikrotik)
     {
+        $traceId = (string) Str::uuid();
         try {
-            $allPppActive = $this->secretService->getPppActive($mikrotik);
+            $allPppActive = $this->secretService->getPppActive($mikrotik, $traceId);
             $allPppActiveCount = count($allPppActive);
             // LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray(), 'allPppSecretsCount' => $allPppActiveCount], 200, 'Secret get count ppp secrets active');
             return response()->json([
                 'allPppActiveCount' => $allPppActiveCount,
             ]);
         } catch (Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to get count ppp secret active');
+            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to get count ppp secret active', $traceId);
             return redirect()->back()->withErrors(['msg' => $e->getMessage()]);
         }
     }
@@ -248,96 +255,52 @@ class SecretController extends Controller
      */
     public function delete(Mikrotik $mikrotik)
     {
+        $traceId = (string) Str::uuid();
         try {
             $secretId = request('id');
-            $this->secretService->deleteOneSecret($mikrotik, $secretId);
+            $this->secretService->deleteOneSecret($mikrotik, $secretId, $traceId);
             // LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray()], 200, 'Successfully delete one secret');
             return back();
         } catch (Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed delete one secret');
+            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed delete one secret', $traceId);
             return redirect()->back()->withErrors(['msg' => $e->getMessage()]);
         }
     }
 
     public function disable(Mikrotik $mikrotik)
     {
+        $traceId = (string) Str::uuid();
         try {
             $username = request()->input('username');
-            dispatch(new DisablePppSecretJob($mikrotik, $username))->onQueue('default');
+            dispatch(new DisablePppSecretJob($mikrotik, $username, $traceId))->onQueue('ppp');
             // LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray()], 200, 'Successfully disable ppp secret');
             return back();
         } catch (Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to disable ppp secret');
+            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to disable ppp secret', $traceId);
             return redirect()->back()->withErrors(['msg' => $e->getMessage()]);
         }
     }
 
     public function enable(Mikrotik $mikrotik)
     {
+        $traceId = (string) Str::uuid();
         try {
             $username = request()->input('username');
-            dispatch(new EnablePppSecretJob($mikrotik, $username))->onQueue('default');
+            dispatch(new EnablePppSecretJob($mikrotik, $username, $traceId))->onQueue('ppp');
             // LogHelper::logInfo(null, ['mikrotik' => $mikrotik->toArray()], 200, 'Successfully enable ppp secret');
             return back();
         } catch (Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to enable ppp secret');
+            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to enable ppp secret', $traceId);
             return redirect()->back()->withErrors(['msg' => $e->getMessage()]);
         }
     }
 
-    // public function clone_secret(Request $request, Mikrotik $mikrotik)
-    // {
-    //     try {
-    //         $mikrotikId = $mikrotik->id;
-    //         $allSecrets = $this->secretService->getAllPppSecrets($mikrotik);
-    //         $pppsecrets = SecretResource::collection($allSecrets);
-    //         $pppsecretsIDs = $pppsecrets->pluck(['.id'])->toArray();
-    //         $scretIDs = collect($pppsecretsIDs);
-    //         $activationDate = Carbon::now();
-    //         $customers = Customer::where('mikrotik_id', $mikrotikId)->pluck('secret_id')->toArray();
-    //         $customersSecretIDs = collect($customers);
-    //         $secretIDNonCustomers = $scretIDs->diff($customersSecretIDs);
-    //         $secretNonCustomer =  $pppsecrets->whereIn(['.id'], $secretIDNonCustomers)
-    //             ->toArray();
-    //         foreach ($secretNonCustomer as $secret) {
-    //             $pppTypeId = PppType::where('name', $secret['service'])->value('id');
-    //             if (!isset($pppTypeId)) {
-    //                 return redirect()->back()->withErrors(['msg' => 'There isnot PPP services are the same, please check ppp_types table on your database.']);
-    //             }
-    //             $paketId = Paket::where('mikrotik_id', $mikrotikId)->where('profile', $secret['profile'])->value('id');
-    //             if (!isset($paketId)) {
-    //                 return redirect()->back()->withErrors(['msg' => 'Please create one package according to your Mikrotik profile!', 'Go to on sidebar menu then select [Home] -> [Package] -> [Create New Package]', 'Or you can import profile on your mikrotik, select menu [PPP] -> [PPP Profiles] -> [Import Profiles]']);
-    //             }
-    //             $customer = Customer::create([
-    //                 'slug' => str($secret['name'] . '-' . Str::random(4))->slug(),
-    //                 'name' => $secret['name'],
-    //                 'password' => Hash::make($secret['password']),
-    //                 'mikrotik_id' => $mikrotikId,
-    //                 'paket_id' => $paketId,
-    //                 'secret_id' => $secret['.id'],
-    //                 'username' => $secret['name'],
-    //                 'password_ppp' => $secret['password'],
-    //                 'ppp_type_id' => $pppTypeId,
-    //                 'internet_service' => 'ppp',
-    //                 'disabled' => $secret['disabled'],
-    //                 'activation_date' => $activationDate,
-    //                 'activation' => 'true',
-    //             ]);
-    //             $getCustomer = $customer->fresh();
-    //             CustomerOnt::create([
-    //                 'customer_id' => $getCustomer->id,
-    //             ]);
-    //         }
-    //         return redirect()->route('customers.index')
-    //             ->with('success', 'Import customers successfully.');
-    //     } catch (Exception $e) {
-    //     }
-    // }
     public function clone_secret(Request $request, Mikrotik $mikrotik)
     {
+        $traceId = (string) Str::uuid();
         try {
             $mikrotikId = $mikrotik->id;
-            $allSecrets = $this->secretService->getAllPppSecrets($mikrotik);
+            $allSecrets = $this->secretService->getAllPppSecrets($mikrotik, $traceId);
             $pppsecrets = SecretResource::collection($allSecrets);
 
             // Ambil daftar secret ID
@@ -392,7 +355,7 @@ class SecretController extends Controller
             return redirect()->route('customers.index')->with('success', 'Import customers successfully.');
         } catch (Exception $e) {
             // Logging error
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to import customers');
+            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to import customers', $traceId);
             return redirect()->back()->withErrors(['msg' => $e->getMessage()]);
         }
     }

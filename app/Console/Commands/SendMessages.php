@@ -35,18 +35,6 @@ class SendMessages extends Command
         $formattedDate = $currentDateTime->format('Y-m-d H:i:s');
         $dayOfMonth = $currentDateTime->day;
 
-        // Log command initiation
-        // LogHelper::logInfo(
-        //     'SendMessagesCommand',
-        //     [
-        //         'start_time' => $formattedDate,
-        //         'day_of_month' => $dayOfMonth
-        //     ],
-        //     200,
-        //     "Starting reminder messages sending process",
-        //     $traceId
-        // );
-
         $this->info("Starting reminder messages job at {$formattedDate}");
 
         try {
@@ -89,7 +77,6 @@ class SendMessages extends Command
                 return 0;
             }
 
-            // dispatch(new SendPaymentReminderJob())->onQueue('default');
             ProcessWhatsappMessageJob::dispatch(
                 null,
                 'send_info_billing',
@@ -100,7 +87,7 @@ class SendMessages extends Command
                 null,
                 null,
                 null
-            )->onQueue('default');
+            )->onQueue('whatsapp_broadcast');
 
             // Log successful dispatch
             $dispatchTime = Carbon::now()->format('Y-m-d H:i:s');

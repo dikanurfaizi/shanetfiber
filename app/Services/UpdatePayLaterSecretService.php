@@ -14,7 +14,7 @@ use Exception;
 
 class UpdatePayLaterSecretService
 {
-    public function updatePayLaterSecret(): void
+    public function updatePayLaterSecret(string $traceId): void
     {
         $traceId = (string) Str::uuid();
         $today = Carbon::today();

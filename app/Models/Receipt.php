@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Receipt extends Model
 {
     use SoftDeletes, HasFactory;
+    protected $dates = ['deleted_at'];
     public $guarded = [];
     public function getRouteKeyName(): string
     {

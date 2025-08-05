@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use App\Http\Resources\Pppoe\SecretResource;
 use App\Http\Resources\Pppoe\SecretActiveResource;
 use App\Models\AutoIsolir;
-use App\Models\Billing\Billing;
+use Illuminate\Support\Str;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Routerboard\TestConnectionService;
 use Jenssegers\Agent\Agent;
@@ -27,6 +27,7 @@ class IsolirController extends Controller
     }
     public function index(Request $request)
     {
+        $traceId = (string) Str::uuid();
         $clientIP = $_SERVER['REMOTE_ADDR'];
         //return dd($clientIP);
         //  $clientIP = '10.1.12.235';
@@ -34,9 +35,9 @@ class IsolirController extends Controller
 
         foreach ($routers as $router) {
             try {
-                $getSecretActive = $this->secretService->getPppSecretActiveByIp($router, $clientIP);
+                $getSecretActive = $this->secretService->getPppSecretActiveByIp($router, $clientIP, $traceId);
                 $secretActive = SecretActiveResource::collection($getSecretActive)->first();
-                $getProfileSecret = $this->secretService->getSecretByName($router, $secretActive['name']);
+                $getProfileSecret = $this->secretService->getSecretByName($router, $secretActive['name'], $traceId);
                 $secret = SecretResource::collection($getProfileSecret)->first();
                 $profileIsolir = AutoIsolir::where('mikrotik_id', $router->id)->value('profile_id');
                 if ($getSecretActive && $secret['profile'] == $profileIsolir) {

@@ -11,7 +11,6 @@ use RouterOS\Exceptions\ConfigException;
 use RouterOS\Exceptions\ConnectException;
 use RouterOS\Exceptions\QueryException;
 use RouterOS\Query;
-use App\Http\Resources\Pppoe\SecretActiveResource;
 use App\Helpers\LogHelper;
 use RouterOS\Exceptions\StreamException;
 
@@ -25,22 +24,12 @@ class SecretService
      * @throws ConfigException
      * @throws Exception
      */
-    public function getMikrotik($mikrotik): ?Client
+    public function getMikrotik($mikrotik, string $traceId): ?Client
     {
         try {
             if (!$mikrotik) {
                 throw new Exception('Mikrotik not found.');
             }
-
-            // LogHelper::logInfo(
-            //     null,
-            //     [
-            //         'host' => $mikrotik->host ?? 'N/A',
-            //         'port' => $mikrotik->port ?? 'N/A',
-            //     ],
-            //     200, // Gateway Timeout
-            //     "Try to connect"
-            // );
 
             $config = (new Config())
                 ->set('timeout', 2)
@@ -49,19 +38,8 @@ class SecretService
                 ->set('pass', $mikrotik->password)
                 ->set('user', $mikrotik->username);
 
-            // LogHelper::logInfo(
-            //     null,
-            //     [
-            //         'host' => $mikrotik->host ?? 'N/A',
-            //         'port' => $mikrotik->port ?? 'N/A',
-            //         'config_ready' => true
-            //     ],
-            //     200,
-            //     "Mikrotik config created successfully"
-            // );
-
             return new Client($config);
-        } catch (StreamException $e) { // Jika library mendukung exception spesifik
+        } catch (StreamException $e) {
             LogHelper::logError(
                 null,
                 [
@@ -69,8 +47,9 @@ class SecretService
                     'port' => $mikrotik->port ?? 'N/A',
                     'error' => 'Stream Timeout: ' . $e->getMessage()
                 ],
-                504, // Gateway Timeout
-                "Failed to connect to Mikrotik due to stream timeout"
+                504,
+                "Failed to connect to Mikrotik due to stream timeout",
+                $traceId
             );
             throw $e;
         } catch (\Exception $e) {
@@ -81,8 +60,9 @@ class SecretService
                     'port' => $mikrotik->port ?? 'N/A',
                     'error' => $e->getMessage()
                 ],
-                503, // Service Unavailable
-                "Failed to connect to Mikrotik"
+                503,
+                "Failed to connect to Mikrotik",
+                $traceId
             );
             throw $e;
         }
@@ -97,23 +77,27 @@ class SecretService
      * @throws BadCredentialsException
      * @throws ConfigException
      */
-
-    public function createSecret($mikrotik, $username, $password, $service, $profile, $comment)
+    public function createSecret($mikrotik, $username, $password, $service, $profile, $comment, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
 
-            // Log sebelum membuat query
-            LogHelper::logInfo(null, [
-                'router' => $mikrotik->name ?? 'unknown',
-                'username' => $username,
-                'profile' => $profile,
-                'service' => $service,
-                'comment' => $comment
-            ], 200, 'Preparing to create secret');
+            LogHelper::logInfo(
+                null,
+                [
+                    'router' => $mikrotik->name ?? 'unknown',
+                    'username' => $username,
+                    'profile' => $profile,
+                    'service' => $service,
+                    'comment' => $comment
+                ],
+                200,
+                'Preparing to create secret',
+                $traceId
+            );
 
             $query = (new Query('/ppp/secret/add'))
                 ->equal('name', $username)
@@ -125,34 +109,45 @@ class SecretService
 
             $response = $client->query($query)->read();
 
-            LogHelper::logInfo(null, [
-                'router' => $mikrotik->name,
-                'username' => $username,
-                'profile' => $profile,
-                'service' => $service,
-                'comment' => $comment,
-                'response' => $response
-            ], 200, 'Secret created successfully');
+            LogHelper::logInfo(
+                null,
+                [
+                    'router' => $mikrotik->name,
+                    'username' => $username,
+                    'profile' => $profile,
+                    'service' => $service,
+                    'comment' => $comment,
+                    'response' => $response
+                ],
+                200,
+                'Secret created successfully',
+                $traceId
+            );
 
             return $response;
         } catch (\Exception $e) {
-            LogHelper::logError(null, [
-                'router' => $mikrotik->name ?? 'unknown',
-                'username' => $username,
-                'profile' => $profile,
-                'service' => $service,
-                'comment' => $comment,
-                'error' => $e->getMessage()
-            ], 500, 'Failed to create secret');
-
+            LogHelper::logError(
+                null,
+                [
+                    'router' => $mikrotik->name ?? 'unknown',
+                    'username' => $username,
+                    'profile' => $profile,
+                    'service' => $service,
+                    'comment' => $comment,
+                    'error' => $e->getMessage()
+                ],
+                500,
+                'Failed to create secret',
+                $traceId
+            );
             throw $e;
         }
     }
 
-    public function updateSecret($mikrotik, $username, $password, $service, $profile, $id)
+    public function updateSecret($mikrotik, $username, $password, $service, $profile, $id, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -176,15 +171,27 @@ class SecretService
                 return $client->query($edit)->read();
             }
         } catch (\Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to update secret');
+            LogHelper::logError(
+                null,
+                [
+                    'router' => $mikrotik->name ?? 'unknown',
+                    'username' => $username,
+                    'profile' => $profile,
+                    'service' => $service,
+                    'error' => $e->getMessage()
+                ],
+                500,
+                'Failed to update secret',
+                $traceId
+            );
             throw $e;
         }
     }
 
-    public function updateUserPasswordServiceSecret($mikrotik, $username, $password, $service, $id, $callerID)
+    public function updateUserPasswordServiceSecret($mikrotik, $username, $password, $service, $id, $callerID, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -208,15 +215,26 @@ class SecretService
                 return $client->query($edit)->read();
             }
         } catch (\Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to update user password/service secret');
+            LogHelper::logError(
+                null,
+                [
+                    'router' => $mikrotik->name ?? 'unknown',
+                    'username' => $username,
+                    'service' => $service,
+                    'error' => $e->getMessage()
+                ],
+                500,
+                'Failed to update user password/service secret',
+                $traceId
+            );
             throw $e;
         }
     }
 
-    public function updateProfileSecret($mikrotik, $profile, $id)
+    public function updateProfileSecret($mikrotik, $profile, $id, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -238,15 +256,25 @@ class SecretService
                 return $client->query($edit)->read();
             }
         } catch (\Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to update profile secret');
+            LogHelper::logError(
+                null,
+                [
+                    'router' => $mikrotik->name ?? 'unknown',
+                    'profile' => $profile,
+                    'error' => $e->getMessage()
+                ],
+                500,
+                'Failed to update profile secret',
+                $traceId
+            );
             throw $e;
         }
     }
 
-    public function addCommentSecret($mikrotik, $comment, $secretId)
+    public function addCommentSecret($mikrotik, $comment, $secretId, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -268,16 +296,26 @@ class SecretService
                 return $client->query($edit)->read();
             }
         } catch (\Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to add comment to secret');
+            LogHelper::logError(
+                null,
+                [
+                    'router' => $mikrotik->name ?? 'unknown',
+                    'secret_id' => $secretId,
+                    'error' => $e->getMessage()
+                ],
+                500,
+                'Failed to add comment to secret',
+                $traceId
+            );
             throw $e;
         }
     }
 
-    public function enableSecret($mikrotik, $username)
+    public function enableSecret($mikrotik, $username, string $traceId)
     {
         try {
             $toEnable = 'false';
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -299,16 +337,26 @@ class SecretService
             }
             return ($response = 'success');
         } catch (\Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to enable secret');
+            LogHelper::logError(
+                null,
+                [
+                    'router' => $mikrotik->name ?? 'unknown',
+                    'username' => $username,
+                    'error' => $e->getMessage()
+                ],
+                500,
+                'Failed to enable secret',
+                $traceId
+            );
             throw $e;
         }
     }
 
-    public function enableOneSecret($mikrotik, $secretId)
+    public function enableOneSecret($mikrotik, $secretId, string $traceId)
     {
         try {
             $toEnable = 'false';
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -329,16 +377,26 @@ class SecretService
                 $client->query($enable)->read();
             }
         } catch (\Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to enable one secret');
+            LogHelper::logError(
+                null,
+                [
+                    'router' => $mikrotik->name ?? 'unknown',
+                    'secret_id' => $secretId,
+                    'error' => $e->getMessage()
+                ],
+                500,
+                'Failed to enable one secret',
+                $traceId
+            );
             throw $e;
         }
     }
 
-    public function disableSecret($mikrotik, $username)
+    public function disableSecret($mikrotik, $username, string $traceId)
     {
         try {
             $toNoDisable = 'true';
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -360,16 +418,26 @@ class SecretService
             }
             return ($response = 'success');
         } catch (\Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to disable secret');
+            LogHelper::logError(
+                null,
+                [
+                    'router' => $mikrotik->name ?? 'unknown',
+                    'username' => $username,
+                    'error' => $e->getMessage()
+                ],
+                500,
+                'Failed to disable secret',
+                $traceId
+            );
             throw $e;
         }
     }
 
-    public function disableOneSecret($mikrotik, $secretId)
+    public function disableOneSecret($mikrotik, $secretId, string $traceId)
     {
         try {
             $toNoDisable = 'true';
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -390,7 +458,17 @@ class SecretService
                 $client->query($disable)->read();
             }
         } catch (\Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to disable one secret');
+            LogHelper::logError(
+                null,
+                [
+                    'router' => $mikrotik->name ?? 'unknown',
+                    'secret_id' => $secretId,
+                    'error' => $e->getMessage()
+                ],
+                500,
+                'Failed to disable one secret',
+                $traceId
+            );
             throw $e;
         }
     }
@@ -402,11 +480,10 @@ class SecretService
      * @throws BadCredentialsException
      * @throws ConfigException
      */
-
-    public function deleteSecretByName($mikrotik, $username): void
+    public function deleteSecretByName($mikrotik, $username, string $traceId): void
     {
         try {
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -423,8 +500,9 @@ class SecretService
                         'username' => $username,
                         'error' => 'Secret not found'
                     ],
-                    404, // Not Found
-                    "Failed to delete Mikrotik secret"
+                    404,
+                    "Failed to delete Mikrotik secret",
+                    $traceId
                 );
                 return;
             }
@@ -434,17 +512,6 @@ class SecretService
                     ->where('name', $username)
                     ->equal('.id', $secret['.id']);
                 $client->query($deleteQuery)->read();
-
-                // LogHelper::logInfo(
-                //     null,
-                //     [
-                //         'host' => $mikrotik->host ?? 'N/A',
-                //         'username' => $username,
-                //         'secret_id' => $secret['.id']
-                //     ],
-                //     200,
-                //     "Successfully deleted Mikrotik secret"
-                // );
             }
         } catch (\Exception $e) {
             LogHelper::logError(
@@ -454,17 +521,18 @@ class SecretService
                     'username' => $username,
                     'error' => $e->getMessage()
                 ],
-                500, // Internal Server Error
-                "Failed to delete Mikrotik secret"
+                500,
+                "Failed to delete Mikrotik secret",
+                $traceId
             );
             throw $e;
         }
     }
 
-    public function deleteOneSecret($mikrotik, $secretId): void
+    public function deleteOneSecret($mikrotik, $secretId, string $traceId): void
     {
         try {
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -472,16 +540,6 @@ class SecretService
             $deleteQuery = (new Query('/ppp/secret/remove'))
                 ->where('.id', $secretId);
             $client->query($deleteQuery)->read();
-
-            // LogHelper::logInfo(
-            //     null,
-            //     [
-            //         'host' => $mikrotik->host ?? 'N/A',
-            //         'secret_id' => $secretId
-            //     ],
-            //     200,
-            //     "Successfully deleted Mikrotik secret"
-            // );
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
@@ -490,8 +548,9 @@ class SecretService
                     'secret_id' => $secretId,
                     'error' => $e->getMessage()
                 ],
-                500, // Internal Server Error
-                "Failed to delete Mikrotik secret"
+                500,
+                "Failed to delete Mikrotik secret",
+                $traceId
             );
             throw $e;
         }
@@ -504,11 +563,10 @@ class SecretService
      * @throws BadCredentialsException
      * @throws ConfigException
      */
-
-    public function getAllPppSecrets($mikrotik)
+    public function getAllPppSecrets($mikrotik, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -516,49 +574,46 @@ class SecretService
             $query = new Query('/ppp/secret/print');
             $result = $client->query($query)->read();
 
-            // LogHelper::logInfo(
-            //     null,
-            //     ['host' => $mikrotik->host ?? 'N/A', 'count' => count($result)],
-            //     200,
-            //     "Successfully fetched all Mikrotik secrets"
-            // );
-
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
-                ['host' => $mikrotik->host ?? 'N/A', 'error' => $e->getMessage()],
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'error' => $e->getMessage()
+                ],
                 500,
-                "Failed to fetch all Mikrotik secrets"
+                "Failed to fetch all Mikrotik secrets",
+                $traceId
             );
             throw $e;
         }
     }
 
-    public function getSecretById($mikrotik, $id)
+    public function getSecretById($mikrotik, $id, string $traceId)
     {
-        return $this->getSecret($mikrotik, ['.id' => $id], 'ID', $id);
+        return $this->getSecret($mikrotik, ['.id' => $id], 'ID', $id, $traceId);
     }
 
-    public function getSecretByName($mikrotik, $username)
+    public function getSecretByName($mikrotik, $username, string $traceId)
     {
-        return $this->getSecret($mikrotik, ['name' => $username], 'Username', $username);
+        return $this->getSecret($mikrotik, ['name' => $username], 'Username', $username, $traceId);
     }
 
-    public function getSecretByProfile($mikrotik, $profile)
+    public function getSecretByProfile($mikrotik, $profile, string $traceId)
     {
-        return $this->getSecret($mikrotik, ['profile' => $profile], 'Profile', $profile);
+        return $this->getSecret($mikrotik, ['profile' => $profile], 'Profile', $profile, $traceId);
     }
 
-    public function getSecretByNameProfile($mikrotik, $name, $profile)
+    public function getSecretByNameProfile($mikrotik, $name, $profile, string $traceId)
     {
-        return $this->getSecret($mikrotik, ['name' => $name, 'profile' => $profile], 'Name and Profile', "$name | $profile");
+        return $this->getSecret($mikrotik, ['name' => $name, 'profile' => $profile], 'Name and Profile', "$name | $profile", $traceId);
     }
 
-    private function getSecret($mikrotik, $filters, $filterType, $filterValue)
+    private function getSecret($mikrotik, $filters, $filterType, $filterValue, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -573,9 +628,13 @@ class SecretService
             if (empty($result)) {
                 LogHelper::logWarning(
                     null,
-                    ['host' => $mikrotik->host ?? 'N/A', 'filter' => $filterValue],
+                    [
+                        'host' => $mikrotik->host ?? 'N/A',
+                        'filter' => $filterValue
+                    ],
                     404,
-                    "No Mikrotik secrets found for $filterType"
+                    "No Mikrotik secrets found for $filterType",
+                    $traceId
                 );
                 return [];
             }
@@ -584,18 +643,23 @@ class SecretService
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
-                ['host' => $mikrotik->host ?? 'N/A', 'filter' => $filterValue, 'error' => $e->getMessage()],
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'filter' => $filterValue,
+                    'error' => $e->getMessage()
+                ],
                 500,
-                "Failed to fetch Mikrotik secrets by $filterType"
+                "Failed to fetch Mikrotik secrets by $filterType",
+                $traceId
             );
             throw $e;
         }
     }
 
-    public function deleteActiveSecret($mikrotik, $username): void
+    public function deleteActiveSecret($mikrotik, $username, string $traceId): void
     {
         try {
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -607,9 +671,13 @@ class SecretService
             if (empty($activeSecrets)) {
                 LogHelper::logWarning(
                     null,
-                    ['host' => $mikrotik->host ?? 'N/A', 'username' => $username],
+                    [
+                        'host' => $mikrotik->host ?? 'N/A',
+                        'username' => $username
+                    ],
                     404,
-                    "No active secrets found to delete"
+                    "No active secrets found to delete",
+                    $traceId
                 );
                 return;
             }
@@ -623,9 +691,14 @@ class SecretService
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
-                ['host' => $mikrotik->host ?? 'N/A', 'username' => $username, 'error' => $e->getMessage()],
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'username' => $username,
+                    'error' => $e->getMessage()
+                ],
                 500,
-                "Failed to delete active Mikrotik secret"
+                "Failed to delete active Mikrotik secret",
+                $traceId
             );
             throw $e;
         }
@@ -638,11 +711,10 @@ class SecretService
      * @throws BadCredentialsException
      * @throws ConfigException
      */
-
-    public function getPppActive($mikrotik)
+    public function getPppActive($mikrotik, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -654,9 +726,13 @@ class SecretService
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
-                ['host' => $mikrotik->host ?? 'N/A', 'error' => $e->getMessage()],
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'error' => $e->getMessage()
+                ],
                 500,
-                "Failed to fetch active Mikrotik PPP sessions"
+                "Failed to fetch active Mikrotik PPP sessions",
+                $traceId
             );
             throw $e;
         }
@@ -669,11 +745,10 @@ class SecretService
      * @throws BadCredentialsException
      * @throws ConfigException
      */
-
-    public function getOnePppSecretActive($mikrotik, $username)
+    public function getOnePppSecretActive($mikrotik, $username, $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -685,19 +760,24 @@ class SecretService
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
-                ['host' => $mikrotik->host ?? 'N/A', 'username' => $username, 'error' => $e->getMessage()],
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'username' => $username,
+                    'error' => $e->getMessage()
+                ],
                 500,
-                "Failed to fetch active PPP secret by username"
+                "Failed to fetch active PPP secret by username",
+                $traceId
             );
             throw $e;
         }
     }
 
-    public function getPppSecretActiveByName($mikrotik)
+    public function getPppSecretActiveByName($mikrotik, string $traceId)
     {
         try {
             $name = request()->username;
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -709,18 +789,23 @@ class SecretService
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
-                ['host' => $mikrotik->host ?? 'N/A', 'username' => $name, 'error' => $e->getMessage()],
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'username' => $name,
+                    'error' => $e->getMessage()
+                ],
                 500,
-                "Failed to fetch active PPP secret by name"
+                "Failed to fetch active PPP secret by name",
+                $traceId
             );
             throw $e;
         }
     }
 
-    public function getPppSecretActiveByIp($mikrotik, $ipAddress)
+    public function getPppSecretActiveByIp($mikrotik, $ipAddress, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -732,19 +817,24 @@ class SecretService
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
-                ['host' => $mikrotik->host ?? 'N/A', 'ip' => $ipAddress, 'error' => $e->getMessage()],
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'ip' => $ipAddress,
+                    'error' => $e->getMessage()
+                ],
                 500,
-                "Failed to fetch active PPP secret by IP"
+                "Failed to fetch active PPP secret by IP",
+                $traceId
             );
             throw $e;
         }
     }
 
     // PPP Profile
-    public function getPppProfile($mikrotik)
+    public function getPppProfile($mikrotik, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -756,18 +846,22 @@ class SecretService
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
-                ['host' => $mikrotik->host ?? 'N/A', 'error' => $e->getMessage()],
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'error' => $e->getMessage()
+                ],
                 500,
-                "Failed to fetch PPP profiles"
+                "Failed to fetch PPP profiles",
+                $traceId
             );
             throw $e;
         }
     }
 
-    public function getPppProfileByName($mikrotik, $profileName)
+    public function getPppProfileByName($mikrotik, $profileName, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -786,30 +880,35 @@ class SecretService
                     'error' => $e->getMessage()
                 ],
                 500,
-                "Failed to fetch PPP profile by name"
+                "Failed to fetch PPP profile by name",
+                $traceId
             );
             return 'error';
         }
     }
 
-    public function updateRateLimitProfileSecret($mikrotik, $rateLimit, $profileName)
+    public function updateRateLimitProfileSecret($mikrotik, $rateLimit, $profileName, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             $host = $mikrotik->host ?? 'Unknown Host';
             $name = $mikrotik->name ?? 'Unknown Name';
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
 
-            $targetProfile = $this->getPppProfileByName($mikrotik, $profileName);
+            $targetProfile = $this->getPppProfileByName($mikrotik, $profileName, $traceId);
 
             if (!is_array($targetProfile) || empty($targetProfile)) {
                 LogHelper::logWarning(
                     null,
-                    ['host' => $mikrotik->host ?? 'Unknown Host', 'profile_name' => $profileName],
+                    [
+                        'host' => $mikrotik->host ?? 'Unknown Host',
+                        'profile_name' => $profileName
+                    ],
                     404,
-                    "PPP Profile not found during rate limit update"
+                    "PPP Profile not found during rate limit update",
+                    $traceId
                 );
                 throw new Exception("Profile '{$profileName}' not found in Mikrotik '{$name}' with host '{$host}'");
             }
@@ -830,18 +929,23 @@ class SecretService
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
-                ['host' => $mikrotik->host ?? 'N/A', 'profile_name' => $profileName, 'error' => $e->getMessage()],
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'profile_name' => $profileName,
+                    'error' => $e->getMessage()
+                ],
                 500,
-                "Failed to update rate limit for PPP profile"
+                "Failed to update rate limit for PPP profile",
+                $traceId
             );
             throw $e;
         }
     }
 
-    public function createPppProfile($mikrotik, array $data)
+    public function createPppProfile($mikrotik, array $data, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik);
+            $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -849,9 +953,7 @@ class SecretService
             $query = new Query('/ppp/profile/add');
 
             foreach ($data as $key => $value) {
-                // Lewati field kosong atau null, kecuali boolean false
                 if ($value === null || $value === '') continue;
-
                 $query->equal($key, $value);
             }
 
@@ -865,7 +967,8 @@ class SecretService
                     'result' => $result,
                 ],
                 200,
-                "Created new PPP profile"
+                "Created new PPP profile",
+                $traceId
             );
 
             return $result;
@@ -878,7 +981,8 @@ class SecretService
                     'error' => $e->getMessage()
                 ],
                 500,
-                "Failed to create new PPP profile"
+                "Failed to create new PPP profile",
+                $traceId
             );
             throw $e;
         }

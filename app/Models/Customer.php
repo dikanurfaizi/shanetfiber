@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Models\Billing\Billing;
-use App\Models\Paket;
+use App\Models\Paket\Paket;
 use App\Models\PppType;
 use App\Models\Mikrotik;
 use App\Models\User;

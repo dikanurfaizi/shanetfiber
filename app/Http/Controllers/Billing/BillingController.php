@@ -1,0 +1,317 @@
+<?php
+
+namespace App\Http\Controllers\Billing;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\BillingStoreRequest;
+use App\Services\Billings\BillingService;
+use App\Services\Billings\PaymentService;
+use App\Services\Billings\BillingQueryService;
+use App\Services\Billings\BillingReportService;
+use App\Services\Billings\PayLaterService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Support\Carbon;
+use Carbon\CarbonPeriod;
+use App\Helpers\LogHelper;
+use App\Models\Billing\Billing;
+use App\Models\Billing\BillingPeriode;
+use App\Models\Bank;
+use App\Models\Websystem;
+
+class BillingController extends Controller
+{
+    private BillingService $billingService;
+    private PaymentService $paymentService;
+    private BillingQueryService $billingQueryService;
+    private BillingReportService $billingReportService;
+    private PayLaterService $payLaterService;
+
+    public function __construct(
+        BillingService $billingService,
+        PaymentService $paymentService,
+        BillingQueryService $billingQueryService,
+        BillingReportService $billingReportService,
+        PayLaterService $payLaterService
+    ) {
+        $this->billingService = $billingService;
+        $this->paymentService = $paymentService;
+        $this->billingQueryService = $billingQueryService;
+        $this->billingReportService = $billingReportService;
+        $this->payLaterService = $payLaterService;
+        $this->middleware('permission:billing-list|billing-create|billing-edit|billing-delete', ['only' => ['index', 'show']]);
+        $this->middleware('permission:billing-create', ['only' => ['create', 'store', 'create_one', 'store_one']]);
+        $this->middleware('permission:billing-edit', ['only' => ['edit', 'update', 'payment', 'unpayment', 'transfer', 'paylater', 'post_paylater']]);
+        $this->middleware('permission:billing-delete', ['only' => ['deletePeriode', 'destroyPeriode']]);
+    }
+
+    // ... (method index, create, create_one tetap sama)
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request)
+    {
+        $traceId = (string) Str::uuid();
+        // $paginate = 25;
+        $paginate = $request->input('perPage', 25);
+        $print = $request->cetak_pdf;
+
+        // Build query
+        $billingsQuery = $this->billingQueryService->buildBillingQuery($request, $traceId);
+        $searchParams = $this->billingQueryService->prepareSearchParams($request);
+
+        // Handle PDF export
+        if ($print === 'true') {
+            $pdf = $this->billingReportService->generatePdf($billingsQuery, $searchParams);
+            return $pdf->download("Tagihan_{$searchParams['name']}_{$searchParams['address']}_{$searchParams['status']}_{$searchParams['month']}_{$searchParams['year']}.pdf");
+        }
+
+        // Get data for view
+        $totalPrice = $billingsQuery->sum('paket_price');
+        $data = $billingsQuery->paginate($paginate);
+        $filterData = $this->billingReportService->getFilterData();
+
+        return view('billings.index', array_merge(
+            [
+                'data' => $data,
+                'totalPrice' => $totalPrice,
+                'searchStatus' => $searchParams['status'],
+                'searchName' => $searchParams['name'],
+                'searchAddress' => $searchParams['address'],
+            ],
+            $filterData
+        ))->with('i', (request()->input('page', 1) - 1) * $paginate);
+    }
+
+    public function create()
+    {
+        $traceId = (string) Str::uuid();
+        $billingPeriodeName = BillingPeriode::latest('created_at')->value('name');
+        $periodeNow = Carbon::now()->format('F Y');
+        if ($periodeNow == $billingPeriodeName) {
+            $billingPeriodes = CarbonPeriod::create(now()->addmonth(), '1 month', now()->addMonths(12));
+        } else {
+            $billingPeriodes = CarbonPeriod::create(now(), '1 month', now()->addMonths(11));
+        }
+        $data = BillingPeriode::paginate(12);
+
+        $websystem = Websystem::first();
+        $billingAutoGenerate = $websystem?->billing_auto_generate ?? false;
+        $billingAutoDay = $websystem?->billing_auto_day;
+
+        //dd($billingPeriodes, $data);
+
+        return view('billings.create', compact('data', 'billingPeriodes', 'billingAutoGenerate', 'billingAutoDay'))
+            ->with('i', (request()->input('page', 1) - 1) * 12);
+    }
+
+    public function create_one()
+    {
+        $traceId = (string) Str::uuid();
+        $periodes = BillingPeriode::latest()->get();
+        return view('billings.create_one', compact('periodes'));
+    }
+
+    public function store(Request $request)
+    {
+        $traceId = (string) Str::uuid();
+        try {
+            $periode = $request->name ?? Carbon::now()->format('F Y');
+            $billingPeriode = $this->billingService->createBillingPeriode($periode);
+            $totalBillingCreated = $this->billingService->generateBillingsForPeriod($billingPeriode);
+
+            LogHelper::logInfo(
+                null,
+                ['total_billing_created' => $totalBillingCreated],
+                200,
+                "Billing have been successfully created.",
+                $traceId
+            );
+
+            $message = "{$totalBillingCreated} Billing for {$periode} have been successfully created.";
+            return redirect()->route('billings.index')->with('success', $message);
+        } catch (\Exception $e) {
+            LogHelper::logError(null, ['error' => $e->getMessage()], 500, "Failed to create billings", $traceId);
+            return redirect()->route('billings.index')->with('error', 'Terjadi Kesalahan, Silakan Periksa Kembali Inputan Atau Hubungi Tim IT.');
+        }
+    }
+
+    public function store_one(BillingStoreRequest $request)
+    {
+        $traceId = (string) Str::uuid();
+        try {
+            $billingPeriode = BillingPeriode::findOrFail($request->name);
+            $totalBillingCreated = $this->billingService->generateBillingsForPeriod($billingPeriode);
+
+            LogHelper::logInfo(
+                null,
+                ['total_billing_created' => $totalBillingCreated],
+                200,
+                "Billing have been successfully created.",
+                $traceId
+            );
+
+            $message = "{$totalBillingCreated} Billing for {$billingPeriode->name} have been successfully created.";
+            return redirect()->route('billings.index')->with('success', $message);
+        } catch (\Exception $e) {
+            LogHelper::logError(null, ['error' => $e->getMessage()], 500, "Failed to create billings", $traceId);
+            return redirect()->route('billings.index')->with('error', 'Terjadi Kesalahan, Silakan Periksa Kembali Inputan Atau Hubungi Tim IT.');
+        }
+    }
+
+    public function post_paylater(Request $request, Billing $billing)
+    {
+        $result = $this->payLaterService->processPayLater($request, $billing);
+
+        if ($result['success']) {
+            return redirect()->back()->with('success', $result['message']);
+        }
+
+        return redirect()->back()->with('error', $result['message']);
+    }
+
+    public function payment(Request $request, Billing $billing)
+    {
+        $traceId = (string) Str::uuid();
+        $paymentMethod = $request->payment_methode;
+
+        if ($paymentMethod == 'transfer') {
+            return redirect()->route('billings.transfer', $billing->slug);
+        } elseif ($paymentMethod == 'paylater') {
+            return redirect()->route('billings.paylater', $billing->slug);
+        } elseif ($paymentMethod == 'not-active-periode') {
+            $billing->update([
+                'teller_name' => auth()->user()->name,
+                'status' => 'NP',
+            ]);
+            return redirect()->back()->with('success', 'The billing status for ' . $billing->customer_name . ' has been marked as No Usage for this period.');
+        }
+
+        try {
+            $paymentData = $this->preparePaymentData($request);
+            $result = $this->paymentService->processPayment($billing, $paymentData, $traceId);
+
+            $this->paymentService->sendPaymentNotification(
+                $billing->customer_id,
+                $paymentData['payment_method'],
+                $result['trace_id'],
+                $billing->id,
+                $result['receipt']->id
+            );
+
+            return redirect()->back()->with('success', 'Payment ' . $billing->customer_name . ' successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Payment failed: ' . $e->getMessage());
+        }
+    }
+
+    private function preparePaymentData(Request $request): array
+    {
+        $paymentData = [
+            'payment_method' => 'cash',
+            'bank_name' => null,
+            'account_name' => null,
+            'account_number' => null,
+            'deposit_bank_name' => null,
+            'deposit_account_name' => null,
+            'deposit_account_number' => null,
+            'reference_id' => null,
+        ];
+
+        if ($request->transfer_payment) {
+            $bank = Bank::findOrFail($request->bank_transfer);
+
+            $paymentData = [
+                'payment_method' => 'transfer',
+                'bank_name' => $bank->bank,
+                'account_name' => $bank->name,
+                'account_number' => $bank->account_number,
+                'deposit_bank_name' => $request->deposit_bank_name,
+                'deposit_account_name' => $request->deposit_account_name,
+                'deposit_account_number' => $request->deposit_account_number,
+                'reference_id' => $request->reference_id,
+            ];
+        }
+
+        return $paymentData;
+    }
+
+    public function unpayment(Billing $billing)
+    {
+        $result = $this->paymentService->cancelPayment($billing);
+
+        if ($result['success']) {
+            return redirect()->back()->with('success', $result['message']);
+        }
+
+        return redirect()->back()->with('error', $result['message']);
+    }
+
+    public function show(Billing $billing)
+    {
+        $billing->loadMissing(['customer.member', 'billing_periode']);
+
+        $billings = Billing::where('customer_id', $billing->customer_id)
+            ->where('status', '!=', 'LS')
+            ->get();
+
+        $totalPrice = $billings->sum('paket_price');
+
+        $websystem = Websystem::firstWhere('slug', 'websystem');
+
+        $customer         = $billing->customer;
+        $currentPeriode   = $billing->billing_periode?->name;
+
+        $isValidMember = match (true) {
+            ! $customer                              => false,
+            $customer->billing_option === 1          => true,
+            $customer->billing_option === 2
+                && $customer->billing_period === $currentPeriode
+            => true,
+            default                                  => false,
+        };
+
+        $memberDisplay = $isValidMember
+            ? ($customer->member?->type ?? 'Non Member')
+            : 'Non Member';
+
+        $discount = $isValidMember
+            ? ($customer->member?->discount ?? 0)
+            : 0;
+
+        return view('billings.show', [
+            'billing'       => $billing,
+            'billings'      => $billings,
+            'totalPrice'    => $totalPrice,
+            'websystem'     => $websystem,
+            'memberDisplay' => $memberDisplay,
+            'discount'      => $discount,
+        ]);
+    }
+
+    public function paylater(Request $request, Billing $billing)
+    {
+        return view('billings.paylater', compact('billing'));
+    }
+
+    public function transfer(Request $request, Billing $billing)
+    {
+        $banks = Bank::orderBy('name', 'ASC')->where('disabled', 'false')->get();
+        $billingCustomerId = $billing->customer_id;
+        $billings = Billing::where('customer_id', $billingCustomerId)->where('status', 'BL')->get();
+        return view('billings.transfer', compact('billing', 'banks'), [
+            'billings' => $billings,
+        ]);
+    }
+
+    public function deletePeriode(BillingPeriode $billingperiode)
+    {
+        return view('billings.delete', compact('billingperiode'));
+    }
+
+    public function destroyPeriode(BillingPeriode $billingperiode)
+    {
+        $billingperiode->delete();
+        return redirect()->route('billings.create')->with('success', 'Periode billing deleted successfully.');
+    }
+}

@@ -5,7 +5,7 @@ namespace App\Jobs;
 use App\Models\Customer;
 use App\Models\Billing\BillingPeriode;
 use App\Models\Mikrotik;
-use App\Models\Paket;
+use App\Models\Paket\Paket;
 use App\Models\AutoIsolir;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;

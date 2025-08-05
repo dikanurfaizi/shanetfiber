@@ -76,7 +76,7 @@ class SendMessagesManual extends Command
                     null,                           // param 7
                     null,                           // param 8
                     null                            // param 9
-                )->onQueue('default');
+                )->onQueue('whatsapp_broadcast');
             }
             // ProcessTelegramMessageJob::dispatch(
             //     '336',

@@ -29,7 +29,8 @@ class ProfileController extends Controller
 
     public function index(Mikrotik $mikrotik)
     {
-        $allProfiles = $this->secretService->getPppProfile($mikrotik);
+        $traceId = (string) Str::uuid();
+        $allProfiles = $this->secretService->getPppProfile($mikrotik, $traceId);
         $Profiles = ProfileResource::collection($allProfiles);
 
         return view('mikrotiks.ppp.profiles.index', [
@@ -40,9 +41,10 @@ class ProfileController extends Controller
 
     public function clone_profile(Request $request, Mikrotik $mikrotik)
     {
+        $traceId = (string) Str::uuid();
         try {
             $mikrotikId = $mikrotik->id;
-            $allProfiles = $this->secretService->getPppProfile($mikrotik);
+            $allProfiles = $this->secretService->getPppProfile($mikrotik, $traceId);
             $Profiles = ProfileResource::collection($allProfiles);
 
             $profileName = $Profiles->pluck('name')->toArray();
@@ -57,7 +59,7 @@ class ProfileController extends Controller
             LogHelper::logInfo(null, [
                 'mikrotik_id' => $mikrotikId,
                 'profile_count' => count($profileAddPaket),
-            ], 200, 'Starting profile cloning process');
+            ], 200, 'Starting profile cloning process', $traceId);
 
             foreach ($profileAddPaket as $profile) {
                 Paket::create([
@@ -73,13 +75,13 @@ class ProfileController extends Controller
                 LogHelper::logInfo(null, [
                     'mikrotik_id' => $mikrotikId,
                     'profile' => $profile['name'],
-                ], 200, 'Successfully added profile to Paket');
+                ], 200, 'Successfully added profile to Paket', $traceId);
             }
 
             LogHelper::logInfo(null, [
                 'mikrotik_id' => $mikrotikId,
                 'total_added' => count($profileAddPaket),
-            ], 200, 'Successfully cloned profiles to Paket');
+            ], 200, 'Successfully cloned profiles to Paket', $traceId);
 
             return redirect()->route('packets.index')
                 ->with('success', 'Import profile to paket successfully.');
@@ -87,7 +89,7 @@ class ProfileController extends Controller
             LogHelper::logError(null, [
                 'mikrotik_id' => $mikrotik->id,
                 'error' => $e->getMessage(),
-            ], 500, 'Failed to clone profiles');
+            ], 500, 'Failed to clone profiles', $traceId);
 
             return redirect()->back()->withErrors(['msg' => 'Failed to clone profiles: ' . $e->getMessage()]);
         }

@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\TelegramGateway\TelegramChatId;
 use App\Services\TelegramMessageService;
 use App\Helpers\LogHelper;
+use App\Jobs\Telegram\SendTelegramMessageJob;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
@@ -137,8 +138,9 @@ class TelegramChatIdController extends Controller
 
     public function get_updates()
     {
+        $traceId = (string) Str::uuid();
         try {
-            $chatIds = $this->messageService->findNewChatIds();
+            $chatIds = $this->messageService->findNewChatIds($traceId);
 
             if ($chatIds->isEmpty()) {
                 Log::info('⚠️ Tidak ada chat ID baru.');
@@ -172,7 +174,8 @@ class TelegramChatIdController extends Controller
             $message = "Hai! Terima kasih telah berinteraksi dengan Official Telegram\n\n" .
                 "Salam,\n{$title}";
 
-            $this->messageService->send(
+
+            SendTelegramMessageJob::dispatch(
                 $chat->chat_id,
                 $message,
                 $traceId

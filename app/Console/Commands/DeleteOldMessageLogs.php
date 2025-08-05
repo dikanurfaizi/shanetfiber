@@ -23,7 +23,7 @@ class DeleteOldMessageLogs extends Command
      */
     public function handle(): void
     {
-        $thresholdDate = Carbon::now()->subDays(30);
+        $thresholdDate = Carbon::now()->subDays(15);
 
         $this->message_logs_delete($thresholdDate);
         $this->message_log_errors_delete($thresholdDate);

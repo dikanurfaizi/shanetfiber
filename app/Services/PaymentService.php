@@ -48,7 +48,7 @@ class PaymentService
         ]);
     }
 
-    public function processPaymentSuccess($order, $billing, $payment_time = null): Receipt
+    public function processPaymentSuccess($order, $billing, $payment_time = null, string $traceId): Receipt
     {
         $customer = $order->customer ?? Customer::find($order->customer_id);
         $user = auth()->user() ?? $customer->user;
@@ -71,9 +71,9 @@ class PaymentService
         if ($router && $autoIsolir && $autoIsolir->disabled === 'false' && $router->disabled === 'false') {
             $comment = $autoIsolir->activation_date === 'false'
                 ? $autoIsolir->comment_payment
-                : $this->generateCommentPayment($autoIsolir, $customerData['activation_date'], $nextMonth);
+                : $this->generateCommentPayment($autoIsolir, $customerData['activation_date'], $nextMonth, $traceId);
 
-            $this->processMikrotikPayment($customerData, $customer->paket->profile, $router, $autoIsolir, $comment);
+            $this->processMikrotikPayment($customerData, $customer->paket->profile, $router, $autoIsolir, $comment, $traceId);
         }
 
         [$discount, $priceAfterDiscount, $member] = $this->handleCustomerBilling($customer, $billing);
@@ -93,7 +93,7 @@ class PaymentService
         $order->update(['payment_time' => $now]);
 
         if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
-            $this->messageService->payment_paket($getBilling, $getReceipt, 'payment_gateway');
+            $this->messageService->payment_paket($getBilling, $getReceipt, 'payment_gateway', $traceId);
         }
 
         return $receipt;
@@ -114,17 +114,17 @@ class PaymentService
         ];
     }
 
-    protected function generateCommentPayment($autoIsolir, $activationDate, $nextMonth): string
+    protected function generateCommentPayment($autoIsolir, $activationDate, $nextMonth, string $traceId): string
     {
         $adjustedDate = min($activationDate, Carbon::now()->addMonth()->daysInMonth);
         return $autoIsolir->comment_unpayment . '_' . $adjustedDate . '_' . $nextMonth;
     }
 
-    protected function processMikrotikPayment(array $data, string $profile, $router, $autoIsolir, string $comment): void
+    protected function processMikrotikPayment(array $data, string $profile, $router, $autoIsolir, string $comment, string $traceId): void
     {
         try {
             if ($data['internet_service'] === 'ppp') {
-                $secret = $this->secretService->getSecretById($router, $data['secret_id']);
+                $secret = $this->secretService->getSecretById($router, $data['secret_id'], $traceId);
                 if ($secret === 'error') throw new \Exception("Secret not found");
 
                 $currentProfile = SecretResource::collection($secret)->value('profile');

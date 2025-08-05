@@ -11,6 +11,7 @@ use RouterOS\Exceptions\ConfigException;
 use RouterOS\Exceptions\ConnectException;
 use RouterOS\Exceptions\QueryException;
 use RouterOS\Query;
+use App\Helpers\LogHelper;
 
 class QueueService
 {
@@ -22,94 +23,227 @@ class QueueService
      * @throws ConfigException
      * @throws Exception
      */
-    public function getMikrotik($mikrotik): Client
+    public function getMikrotik($mikrotik, string $traceId): Client
     {
-        // $mikrotik = $router;
-        if (!$mikrotik) {
-            throw new Exception('Mikrotik not found.');
+        try {
+            if (!$mikrotik) {
+                throw new Exception('Mikrotik not found.');
+            }
+
+            $config = (new Config())
+                ->set('timeout', 2)
+                ->set('host', $mikrotik->host)
+                ->set('port', (int) $mikrotik->port)
+                ->set('pass', $mikrotik->password)
+                ->set('user', $mikrotik->username);
+
+            return new Client($config);
+        } catch (\Exception $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'port' => $mikrotik->port ?? 'N/A',
+                    'error' => $e->getMessage()
+                ],
+                503,
+                "Failed to connect to Mikrotik",
+                $traceId
+            );
+            throw $e;
         }
-
-        $config = (new Config())
-            ->set('timeout', 2)
-            ->set('host', $mikrotik->host)
-            ->set('port', (int) $mikrotik->port)
-            ->set('pass', $mikrotik->password)
-            ->set('user', $mikrotik->username);
-
-        return new Client($config);
     }
 
-
-    /**
-     * @throws ClientException
-     * @throws ConnectException
-     * @throws QueryException
-     * @throws BadCredentialsException
-     * @throws ConfigException
-     */
-
-
-    //public function getPppSecrests($router)
-    public function getParentSimpleQueues($mikrotik)
+    public function getParentSimpleQueues($mikrotik, string $traceId)
     {
-        $client = $this->getMikrotik($mikrotik);
-        $query = new Query('/queue/simple/print');
-        $query->where('parent', 'none')->where('disabled', 'false');
-        $parentSimpleQueue = $client->query($query)->read();
-        if ($parentSimpleQueue == []) {
-            return ($response = 'error');
-        } else {
+        try {
+            $client = $this->getMikrotik($mikrotik, $traceId);
+            $query = new Query('/queue/simple/print');
+            $query->where('parent', 'none')->where('disabled', 'false');
+            $parentSimpleQueue = $client->query($query)->read();
+
+            if (empty($parentSimpleQueue)) {
+                LogHelper::logWarning(
+                    null,
+                    [],
+                    404,
+                    "No parent simple queues found",
+                    $traceId
+                );
+                return 'error';
+            }
+
             return $parentSimpleQueue;
+        } catch (\Exception $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'error' => $e->getMessage()
+                ],
+                500,
+                "Failed to get parent simple queues",
+                $traceId
+            );
+            throw $e;
         }
     }
 
-    public function getQueueTypes($mikrotik)
+    public function getQueueTypes($mikrotik, string $traceId)
     {
-        $client = $this->getMikrotik($mikrotik);
-        $query = new Query('/queue/type/print');
-        $parentSimpleQueue = $client->query($query)->read();
-        if ($parentSimpleQueue == []) {
-            return ($response = 'error');
-        } else {
-            return $parentSimpleQueue;
+        try {
+            $client = $this->getMikrotik($mikrotik, $traceId);
+            $query = new Query('/queue/type/print');
+            $queueTypes = $client->query($query)->read();
+
+            if (empty($queueTypes)) {
+                LogHelper::logWarning(
+                    null,
+                    [],
+                    404,
+                    "No queue types found",
+                    $traceId
+                );
+                return 'error';
+            }
+
+            return $queueTypes;
+        } catch (\Exception $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'error' => $e->getMessage()
+                ],
+                500,
+                "Failed to get queue types",
+                $traceId
+            );
+            throw $e;
         }
     }
 
-    public function createSimpleQueue($mikrotik, $name, $target, $parent, $priority, $queuetype, $limitat, $maxlimit, $comment)
+    public function createSimpleQueue($mikrotik, $name, $target, $parent, $priority, $queuetype, $limitat, $maxlimit, $comment, string $traceId)
     {
-        $client = $this->getMikrotik($mikrotik);
-        $query = (new Query('/queue/simple/add'))
-            ->equal('name', $name)
-            ->equal('target', $target)
-            ->equal('parent', $parent)
-            ->equal('queue', $queuetype)
-            ->equal('priority', $priority)
-            ->equal('limit-at', $limitat)
-            ->equal('max-limit', $maxlimit)
-            ->equal('comment', $comment);
-
-        return $client->query($query)->read();
-    }
-
-
-
-    public function setLimitSimplequeById($mikrotik, $simpleque_id, $parent, $priority, $queuetype, $limitat, $maxlimit)
-    {
-        $client = $this->getMikrotik($mikrotik);
-        $simpleques = (new Query('/queue/simple/print'))
-            ->where('.id', $simpleque_id);
-        $results = $client->query($simpleques)->read();
-        // return dd($results);
-        foreach ($results as $result) {
-            $edit = (new Query('/queue/simple/set'))
-                ->where('.id', $simpleque_id)
-                ->equal('.id', $result['.id'])
+        try {
+            $client = $this->getMikrotik($mikrotik, $traceId);
+            $query = (new Query('/queue/simple/add'))
+                ->equal('name', $name)
+                ->equal('target', $target)
                 ->equal('parent', $parent)
                 ->equal('queue', $queuetype)
                 ->equal('priority', $priority)
                 ->equal('limit-at', $limitat)
-                ->equal('max-limit', $maxlimit);
-            return $client->query($edit)->read();
+                ->equal('max-limit', $maxlimit)
+                ->equal('comment', $comment);
+
+            $response = $client->query($query)->read();
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'name' => $name,
+                    'target' => $target,
+                    'parent' => $parent,
+                    'queue_type' => $queuetype,
+                    'priority' => $priority,
+                    'limit_at' => $limitat,
+                    'max_limit' => $maxlimit,
+                    'comment' => $comment,
+                    'response' => $response
+                ],
+                200,
+                "Simple queue created successfully",
+                $traceId
+            );
+
+            return $response;
+        } catch (\Exception $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'name' => $name,
+                    'target' => $target,
+                    'parent' => $parent,
+                    'queue_type' => $queuetype,
+                    'priority' => $priority,
+                    'limit_at' => $limitat,
+                    'max_limit' => $maxlimit,
+                    'comment' => $comment,
+                    'error' => $e->getMessage()
+                ],
+                500,
+                "Failed to create simple queue",
+                $traceId
+            );
+            throw $e;
+        }
+    }
+
+    public function setLimitSimplequeById($mikrotik, $simpleque_id, $parent, $priority, $queuetype, $limitat, $maxlimit, string $traceId)
+    {
+        try {
+            $client = $this->getMikrotik($mikrotik, $traceId);
+            $simpleques = (new Query('/queue/simple/print'))
+                ->where('.id', $simpleque_id);
+            $results = $client->query($simpleques)->read();
+
+            if (empty($results)) {
+                LogHelper::logWarning(
+                    null,
+                    ['simpleque_id' => $simpleque_id],
+                    404,
+                    "Simple queue not found for update",
+                    $traceId
+                );
+                return null;
+            }
+
+            foreach ($results as $result) {
+                $edit = (new Query('/queue/simple/set'))
+                    ->where('.id', $simpleque_id)
+                    ->equal('.id', $result['.id'])
+                    ->equal('parent', $parent)
+                    ->equal('queue', $queuetype)
+                    ->equal('priority', $priority)
+                    ->equal('limit-at', $limitat)
+                    ->equal('max-limit', $maxlimit);
+
+                $response = $client->query($edit)->read();
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'simpleque_id' => $simpleque_id,
+                        'parent' => $parent,
+                        'queue_type' => $queuetype,
+                        'priority' => $priority,
+                        'limit_at' => $limitat,
+                        'max_limit' => $maxlimit,
+                        'response' => $response
+                    ],
+                    200,
+                    "Simple queue limits updated successfully",
+                    $traceId
+                );
+
+                return $response;
+            }
+        } catch (\Exception $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'simpleque_id' => $simpleque_id,
+                    'parent' => $parent,
+                    'queue_type' => $queuetype,
+                    'priority' => $priority,
+                    'limit_at' => $limitat,
+                    'max_limit' => $maxlimit,
+                    'error' => $e->getMessage()
+                ],
+                500,
+                "Failed to update simple queue limits",
+                $traceId
+            );
+            throw $e;
         }
     }
 }

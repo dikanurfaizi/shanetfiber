@@ -138,7 +138,7 @@ class HomeController extends Controller
             $profileIsolir = $isolirProfiles->get($router->id);
 
             try {
-                $this->testConnectionService->checkOnline($router);
+                $this->testConnectionService->checkOnline($router, $traceId);
                 $onlineRouters->push($router);
                 $countRouterOnline++;
 
@@ -151,7 +151,7 @@ class HomeController extends Controller
                 }
 
                 $usernames = $customerQuery->pluck('username');
-                $activeSecrets = collect($this->secretService->getPppActive($router))->pluck('name');
+                $activeSecrets = collect($this->secretService->getPppActive($router, $traceId))->pluck('name');
                 $activeSecretsForUser = $activeSecrets->intersect($usernames);
 
                 $sumCustomersOnline += $activeSecretsForUser->count();
@@ -159,7 +159,7 @@ class HomeController extends Controller
 
                 $countIsolir = 0;
                 if ($profileIsolir) {
-                    $secrets = $this->secretService->getSecretByProfile($router, $profileIsolir);
+                    $secrets = $this->secretService->getSecretByProfile($router, $profileIsolir, $traceId);
                     if ($secrets !== 'error') {
                         $countIsolir = collect($secrets)
                             ->filter(fn($secret) => $usernames->contains($secret['name']) && $secret['disabled'] === 'false')
@@ -173,7 +173,7 @@ class HomeController extends Controller
                 LogHelper::logError(null, [
                     'mikrotik_id' => $router->id,
                     'error_message' => $e->getMessage(),
-                ], 500, 'Router connection failed');
+                ], 500, 'Router connection failed', $traceId);
             }
         }
 

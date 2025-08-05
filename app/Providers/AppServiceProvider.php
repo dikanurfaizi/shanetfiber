@@ -6,10 +6,11 @@ use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
-
+use App\Services\Billings\PaymentCancellationService;
+use App\Services\Billings\PaymentProcessingService;
+use App\Services\Billings\PaymentService;
+use App\Services\Routerboard\Ppp\SecretService;
+use App\Services\Routerboard\IpStaticService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,7 +21,23 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        $this->app->bind(PaymentCancellationService::class, function ($app) {
+            return new PaymentCancellationService();
+        });
+
+        $this->app->bind(PaymentProcessingService::class, function ($app) {
+            return new PaymentProcessingService(
+                $app->make(SecretService::class),
+                $app->make(IpStaticService::class)
+            );
+        });
+
+        $this->app->bind(PaymentService::class, function ($app) {
+            return new PaymentService(
+                $app->make(PaymentProcessingService::class),
+                $app->make(PaymentCancellationService::class)
+            );
+        });
     }
 
     /**

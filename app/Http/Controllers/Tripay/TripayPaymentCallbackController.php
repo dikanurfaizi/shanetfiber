@@ -22,6 +22,7 @@ use App\Services\Midtrans\CallbackService;
 use App\Http\Resources\Pppoe\SecretResource;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Routerboard\TestConnectionService;
+use Illuminate\Support\Str;
 
 class PaymentCallbackController extends Controller
 {
@@ -35,6 +36,7 @@ class PaymentCallbackController extends Controller
 
     public function receive()
     {
+        $traceId = (string) Str::uuid();
         $callback = new CallbackService;
 
         if ($callback->isSignatureKeyVerified()) {
@@ -91,7 +93,7 @@ class PaymentCallbackController extends Controller
                     if ($router->disabled == 'false') {
                         try {
                             //dispatch(new TestConnectionJob($router))->onQueue('default');
-                            $this->testConnectionService->checkOnline($router);
+                            $this->testConnectionService->checkOnline($router, $traceId);
                             $serverOnline = 'true';
                         } catch (\Exception $e) {
                             // anywhere
@@ -99,7 +101,7 @@ class PaymentCallbackController extends Controller
                         }
                         if ($serverOnline == 'true') {
                             if ($day <= $dueDate) {
-                                $customerSecret = $this->secretService->getSecretById($router, $customerSecretId);
+                                $customerSecret = $this->secretService->getSecretById($router, $customerSecretId, $traceId);
                                 $secretProfiles = SecretResource::collection($customerSecret)->value('profile');
                                 if ($secretProfiles == $customerProfile) {
                                     dispatch(new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerSecretId))->onQueue('default');

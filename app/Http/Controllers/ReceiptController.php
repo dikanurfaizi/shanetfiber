@@ -5,12 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Billing\BillingPeriode;
 use App\Models\Receipt;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Thermal;
 use Illuminate\Http\Request;
-use Illuminate\Contracts\Database\Eloquent\Builder;
-use App\Models\Customer;
 use App\Models\Websystem;
-use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\ReceiptsExport;
+use Illuminate\Support\Str;
 
 //use Barryvdh\DomPDF\PDF;
 
@@ -104,7 +103,7 @@ class ReceiptController extends Controller
         ]);
         return $pdf->download($receipt->number . str($receipt->customer_name)->slug() . '_' . str($receipt->customer_address)->slug() . '_' . str($receipt->month)->slug() . '_' . $receipt->year . '.pdf');
     }
-    
+
     public function thermalPrint(Receipt $receipt)
     {
         $websystem = Websystem::where('slug', 'websystem')->first();
@@ -117,5 +116,14 @@ class ReceiptController extends Controller
 
         //return $pdf->download($receipt->number . '_thermal_' . str($receipt->customer_name)->slug() . '_' . str($receipt->customer_address)->slug() . '_' . str($receipt->month)->slug() . '_' . $receipt->year . '.pdf');
         return $pdf->stream($receipt->number . '_thermal_' . str($receipt->customer_name)->slug() . '_' . str($receipt->customer_address)->slug() . '_' . str($receipt->month)->slug() . '_' . $receipt->year . '.pdf');
+    }
+
+    public function export()
+    {
+        $traceId = (string) Str::uuid();
+        $timestamp = now()->format('Ymd_His');
+        $fileName = "Receipts_{$timestamp}.xlsx";
+
+        return Excel::download(new ReceiptsExport, $fileName);
     }
 }

@@ -2,10 +2,7 @@
 
 namespace App\Services\Routerboard;
 
-use App\Http\Resources\TrafficInterfaceResource;
-use App\Models\Mikrotik;
 use Exception;
-use Illuminate\Http\JsonResponse;
 use RouterOS\Client;
 use RouterOS\Config;
 use RouterOS\Exceptions\BadCredentialsException;
@@ -14,6 +11,7 @@ use RouterOS\Exceptions\ConfigException;
 use RouterOS\Exceptions\ConnectException;
 use RouterOS\Exceptions\QueryException;
 use RouterOS\Query;
+use App\Helpers\LogHelper;
 
 class ScheduleService
 {
@@ -25,146 +23,349 @@ class ScheduleService
      * @throws ConfigException
      * @throws Exception
      */
-    public function getMikrotik($routerboard): Client
+    public function getMikrotik($routerboard, string $traceId): Client
     {
-        $mikrotik = $routerboard;
-        if (!$mikrotik) {
-            throw new Exception('Mikrotik not found.');
-        }
+        try {
+            $mikrotik = $routerboard;
+            if (!$mikrotik) {
+                throw new Exception('Mikrotik not found.');
+            }
 
-        $config = (new Config())
-            ->set('host', $mikrotik->host)
-            ->set('port', (int) $mikrotik->port)
-            ->set('pass', $mikrotik->password)
-            ->set('user', $mikrotik->username);
+            $config = (new Config())
+                ->set('host', $mikrotik->host)
+                ->set('port', (int) $mikrotik->port)
+                ->set('pass', $mikrotik->password)
+                ->set('user', $mikrotik->username);
 
-        return new Client($config);
-    }
-
-    /**
-     * @throws ClientException
-     * @throws ConnectException
-     * @throws QueryException
-     * @throws BadCredentialsException
-     * @throws ConfigException
-     */
-    public function getAllSchedule($routerboard)
-    {
-        $client = $this->getMikrotik($routerboard);
-        $query = new Query('/system/schedule/print');
-
-        return $client->query($query)->read();
-
-        //return value
-        /*
- 0 => array:10 [▼
-    ".id" => "*0"
-    "name" => "schedule1"
-    "start-date" => "2023-09-16"
-    "start-time" => "11:06:58"
-    "interval" => "0s"
-    "on-event" => ""
-    "owner" => "admin"
-    "policy" => "ftp,reboot,read,write,policy,test,password,sniff,sensitive,romon"
-    "run-count" => "0"
-    "disabled" => "false"
-  ]
-
-        */
-    }
-
-    public function getScheduleByName($routerboard, $scheduleName)
-    {
-
-        $client = $this->getMikrotik($routerboard);
-        $query = (new Query('/system/schedule/print'))
-            ->where('name', $scheduleName);
-
-        return $client->query($query)->read();
-    }
-
-    public function getScheduleById($routerboard, $scheduleId)
-    {
-
-        $client = $this->getMikrotik($routerboard);
-        $query = (new Query('/system/schedule/print'))
-            ->where('.id', $scheduleId);
-
-        return $client->query($query)->read();
-    }
-
-    /**
-     * @throws ClientException
-     * @throws ConnectException
-     * @throws QueryException
-     * @throws BadCredentialsException
-     * @throws ConfigException
-     */
-    public function addScheduleEveryDay($routerboard, $nameSchedule, $nameScript)
-    {
-        $onEventSchedule = '/system script run ' . $nameScript . '';
-        $client = $this->getMikrotik($routerboard);
-
-        $query =
-            (new Query('/system/schedule/add'))
-            ->equal('name', $nameSchedule)
-            ->equal('start-time', '01:00:00')
-            ->equal('interval', '1d')
-            ->equal('on-event', $onEventSchedule)
-            ->equal('comment', 'create_by_customer_management');
-
-        return $client->query($query)->read();
-    }
-
-    public function disabledSchedule($routerboard, $scheduleName, $disabledStatus)
-    {
-        $client = $this->getMikrotik($routerboard);
-        $schedules = new Query('/system/schedule/print');
-        $schedules->where('name', $scheduleName);
-        $resultSchedules = $client->query($schedules)->read();
-        foreach ($resultSchedules as $resultSchedule) {
-            $client = $this->getMikrotik($routerboard);
-            $query = (new Query('/system/schedule/set'))
-                ->where('name', $scheduleName)
-                ->equal('.id', $resultSchedule['.id'])
-                ->equal('disabled', $disabledStatus);
-
-            return $client->query($query)->read();
+            return new Client($config);
+        } catch (\Exception $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'port' => $mikrotik->port ?? 'N/A',
+                    'error' => $e->getMessage()
+                ],
+                503,
+                "Failed to connect to Mikrotik",
+                $traceId
+            );
+            throw $e;
         }
     }
 
-    public function disabledScheduleById($routerboard, $scheduleId, $disabledStatus)
+    public function getAllSchedule($routerboard, string $traceId)
     {
-        $client = $this->getMikrotik($routerboard);
-        $schedules = new Query('/system/schedule/print');
-        $schedules->where('.id', $scheduleId);
-        $resultSchedules = $client->query($schedules)->read();
-        foreach ($resultSchedules as $schedule) {
-            $client = $this->getMikrotik($routerboard);
-            $query = (new Query('/system/schedule/set'))
-                ->where('.id', $scheduleId)
-                ->equal('.id', $schedule['.id'])
-                ->equal('disabled', $disabledStatus);
+        try {
+            $client = $this->getMikrotik($routerboard, $traceId);
+            $query = new Query('/system/schedule/print');
+            $schedules = $client->query($query)->read();
 
-            return $client->query($query)->read();
+            if (empty($schedules)) {
+                LogHelper::logWarning(
+                    null,
+                    [],
+                    404,
+                    "No schedules found",
+                    $traceId
+                );
+                return [];
+            }
+
+            return $schedules;
+        } catch (\Exception $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'error' => $e->getMessage()
+                ],
+                500,
+                "Failed to get all schedules",
+                $traceId
+            );
+            throw $e;
         }
     }
 
-    public function removeSchedule($routerboard, $scheduleId)
+    public function getScheduleByName($routerboard, $scheduleName, string $traceId)
     {
+        try {
+            $client = $this->getMikrotik($routerboard, $traceId);
+            $query = (new Query('/system/schedule/print'))
+                ->where('name', $scheduleName);
+            $schedule = $client->query($query)->read();
 
-        $client = $this->getMikrotik($routerboard);
-        $schedules = new Query('/system/schedule/print');
-        $schedules->where('.id', $scheduleId);
-        $resultSchedules = $client->query($schedules)->read();
+            if (empty($schedule)) {
+                LogHelper::logWarning(
+                    null,
+                    ['schedule_name' => $scheduleName],
+                    404,
+                    "Schedule not found by name",
+                    $traceId
+                );
+                return [];
+            }
 
-        foreach ($resultSchedules as $schedule) {
-            $client = $this->getMikrotik($routerboard);
-            $query = (new Query('/system/schedule/remove'))
-                ->where('.id', $scheduleId)
-                ->equal('.id', $schedule['.id']);
+            return $schedule;
+        } catch (\Exception $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'schedule_name' => $scheduleName,
+                    'error' => $e->getMessage()
+                ],
+                500,
+                "Failed to get schedule by name",
+                $traceId
+            );
+            throw $e;
+        }
+    }
 
-            return $client->query($query)->read();
+    public function getScheduleById($routerboard, $scheduleId, string $traceId)
+    {
+        try {
+            $client = $this->getMikrotik($routerboard, $traceId);
+            $query = (new Query('/system/schedule/print'))
+                ->where('.id', $scheduleId);
+            $schedule = $client->query($query)->read();
+
+            if (empty($schedule)) {
+                LogHelper::logWarning(
+                    null,
+                    ['schedule_id' => $scheduleId],
+                    404,
+                    "Schedule not found by ID",
+                    $traceId
+                );
+                return [];
+            }
+
+            return $schedule;
+        } catch (\Exception $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'schedule_id' => $scheduleId,
+                    'error' => $e->getMessage()
+                ],
+                500,
+                "Failed to get schedule by ID",
+                $traceId
+            );
+            throw $e;
+        }
+    }
+
+    public function addScheduleEveryDay($routerboard, $nameSchedule, $nameScript, string $traceId)
+    {
+        try {
+            $onEventSchedule = '/system script run ' . $nameScript . '';
+            $client = $this->getMikrotik($routerboard, $traceId);
+
+            $query = (new Query('/system/schedule/add'))
+                ->equal('name', $nameSchedule)
+                ->equal('start-time', '01:00:00')
+                ->equal('interval', '1d')
+                ->equal('on-event', $onEventSchedule)
+                ->equal('comment', 'create_by_customer_management');
+
+            $response = $client->query($query)->read();
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'name_schedule' => $nameSchedule,
+                    'name_script' => $nameScript,
+                    'response' => $response
+                ],
+                200,
+                "Daily schedule added successfully",
+                $traceId
+            );
+
+            return $response;
+        } catch (\Exception $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'name_schedule' => $nameSchedule,
+                    'name_script' => $nameScript,
+                    'error' => $e->getMessage()
+                ],
+                500,
+                "Failed to add daily schedule",
+                $traceId
+            );
+            throw $e;
+        }
+    }
+
+    public function disabledSchedule($routerboard, $scheduleName, $disabledStatus, string $traceId)
+    {
+        try {
+            $client = $this->getMikrotik($routerboard, $traceId);
+            $schedules = new Query('/system/schedule/print');
+            $schedules->where('name', $scheduleName);
+            $resultSchedules = $client->query($schedules)->read();
+
+            if (empty($resultSchedules)) {
+                LogHelper::logWarning(
+                    null,
+                    ['schedule_name' => $scheduleName],
+                    404,
+                    "Schedule not found for disable/enable",
+                    $traceId
+                );
+                return null;
+            }
+
+            foreach ($resultSchedules as $resultSchedule) {
+                $query = (new Query('/system/schedule/set'))
+                    ->where('name', $scheduleName)
+                    ->equal('.id', $resultSchedule['.id'])
+                    ->equal('disabled', $disabledStatus);
+
+                $response = $client->query($query)->read();
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'schedule_name' => $scheduleName,
+                        'disabled_status' => $disabledStatus,
+                        'response' => $response
+                    ],
+                    200,
+                    "Schedule status updated successfully",
+                    $traceId
+                );
+
+                return $response;
+            }
+        } catch (\Exception $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'schedule_name' => $scheduleName,
+                    'disabled_status' => $disabledStatus,
+                    'error' => $e->getMessage()
+                ],
+                500,
+                "Failed to update schedule status",
+                $traceId
+            );
+            throw $e;
+        }
+    }
+
+    public function disabledScheduleById($routerboard, $scheduleId, $disabledStatus, string $traceId)
+    {
+        try {
+            $client = $this->getMikrotik($routerboard, $traceId);
+            $schedules = new Query('/system/schedule/print');
+            $schedules->where('.id', $scheduleId);
+            $resultSchedules = $client->query($schedules)->read();
+
+            if (empty($resultSchedules)) {
+                LogHelper::logWarning(
+                    null,
+                    ['schedule_id' => $scheduleId],
+                    404,
+                    "Schedule not found for disable/enable by ID",
+                    $traceId
+                );
+                return null;
+            }
+
+            foreach ($resultSchedules as $schedule) {
+                $query = (new Query('/system/schedule/set'))
+                    ->where('.id', $scheduleId)
+                    ->equal('.id', $schedule['.id'])
+                    ->equal('disabled', $disabledStatus);
+
+                $response = $client->query($query)->read();
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'schedule_id' => $scheduleId,
+                        'disabled_status' => $disabledStatus,
+                        'response' => $response
+                    ],
+                    200,
+                    "Schedule status updated successfully by ID",
+                    $traceId
+                );
+
+                return $response;
+            }
+        } catch (\Exception $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'schedule_id' => $scheduleId,
+                    'disabled_status' => $disabledStatus,
+                    'error' => $e->getMessage()
+                ],
+                500,
+                "Failed to update schedule status by ID",
+                $traceId
+            );
+            throw $e;
+        }
+    }
+
+    public function removeSchedule($routerboard, $scheduleId, string $traceId)
+    {
+        try {
+            $client = $this->getMikrotik($routerboard, $traceId);
+            $schedules = new Query('/system/schedule/print');
+            $schedules->where('.id', $scheduleId);
+            $resultSchedules = $client->query($schedules)->read();
+
+            if (empty($resultSchedules)) {
+                LogHelper::logWarning(
+                    null,
+                    ['schedule_id' => $scheduleId],
+                    404,
+                    "Schedule not found for removal",
+                    $traceId
+                );
+                return null;
+            }
+
+            foreach ($resultSchedules as $schedule) {
+                $query = (new Query('/system/schedule/remove'))
+                    ->where('.id', $scheduleId)
+                    ->equal('.id', $schedule['.id']);
+
+                $response = $client->query($query)->read();
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'schedule_id' => $scheduleId,
+                        'response' => $response
+                    ],
+                    200,
+                    "Schedule removed successfully",
+                    $traceId
+                );
+
+                return $response;
+            }
+        } catch (\Exception $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'schedule_id' => $scheduleId,
+                    'error' => $e->getMessage()
+                ],
+                500,
+                "Failed to remove schedule",
+                $traceId
+            );
+            throw $e;
         }
     }
 }

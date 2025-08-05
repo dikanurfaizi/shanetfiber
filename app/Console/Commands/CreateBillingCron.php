@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Services\CreateBillingService;
+use App\Jobs\Billing\CreateBillingJob;
 use App\Models\Websystem;
 use App\Models\Billing\BillingPeriode;
 use App\Helpers\LogHelper;
@@ -14,9 +14,8 @@ class CreateBillingCron extends Command
     protected $signature   = 'create_billing:cron';
     protected $description = 'Automatically create billing if conditions are met';
 
-    public function __construct(
-        protected CreateBillingService $billingService   // ← DI service
-    ) {
+    public function __construct()
+    {
         parent::__construct();
     }
 
@@ -66,7 +65,7 @@ class CreateBillingCron extends Command
             }
 
             // ========= CALL SERVICE =========
-            $this->billingService->store($periodeNow);
+            CreateBillingJob::dispatch($periodeNow)->onQueue('billing');
 
             $this->info("✅ Billing {$periodeNow} selesai diproses.");
         } catch (\Throwable $e) {

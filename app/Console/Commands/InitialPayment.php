@@ -36,11 +36,6 @@ class InitialPayment extends Command
         $formattedDate = $now->format('Y-m-d H:i:s');
         $dayOfMonth = $now->day;
 
-        // LogHelper::logInfo('InitialPaymentCommand', [
-        //     'start_time' => $formattedDate,
-        //     'day_of_month' => $dayOfMonth
-        // ], 200, "Starting initial payment messages sending process", $traceId);
-
         $this->info("Starting initial payment messages job at {$formattedDate}");
 
         try {
@@ -107,7 +102,7 @@ class InitialPayment extends Command
                 $startDate,
                 $endDate,
                 null
-            )->onQueue('default');
+            )->onQueue('whatsapp_broadcast');
 
             $dispatchTime = now()->format('Y-m-d H:i:s');
             $executionTime = round(microtime(true) - $startTime, 2);

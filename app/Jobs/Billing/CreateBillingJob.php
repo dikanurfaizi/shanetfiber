@@ -1,36 +1,43 @@
 <?php
 
-namespace App\Services;
+namespace App\Jobs\Billing;
 
 use App\Helpers\LogHelper;
 use App\Jobs\CreateBillingIpStaticJob;
-use App\Jobs\CreateBillingJob;
 use App\Models\AutoIsolir;
 use App\Models\Billing\Billing;
 use App\Models\Billing\BillingPeriode;
 use App\Models\Customer;
 use App\Models\Mikrotik;
 use App\Models\Websystem;
+use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Auth\Factory as Auth;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Throwable;
 
-class CreateBillingService
+class CreateBillingJob implements ShouldQueue
 {
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
     public function __construct(
-        protected Auth $auth          // supaya bisa ambil user jika ada
+        protected ?string $periodeName = null,
+        protected Auth $auth
     ) {}
 
     /**
-     * Buat periode + semua billing.
+     * Execute the job.
      */
-    public function store(string $periodeName = null): void
+    public function handle(): void
     {
         $traceId = (string) Str::uuid();
-        $periode = $periodeName ?: now()->format('F Y');
+        $periode = $this->periodeName ?: now()->format('F Y');
 
         DB::beginTransaction();
         try {
@@ -106,10 +113,10 @@ class CreateBillingService
                 null,
                 ['error' => $e->getMessage()],
                 500,
-                'CreateBillingService gagal, DB rollback.',
+                'CreateBillingJob gagal, DB rollback.',
                 $traceId
             );
-            throw $e; // biar command tahu error
+            throw $e;
         }
     }
 
@@ -195,12 +202,12 @@ class CreateBillingService
                     $router,
                     $comment,
                     $customer->secret_id
-                )->onQueue('default')->afterResponse(),
+                )->onQueue('default'),
                 'ip_static' => CreateBillingIpStaticJob::dispatch(
                     $router,
                     $customer->simpleque_id,
                     $comment
-                )->onQueue('default')->afterResponse(),
+                )->onQueue('default'),
                 default     => null,
             };
         } catch (Throwable $e) {

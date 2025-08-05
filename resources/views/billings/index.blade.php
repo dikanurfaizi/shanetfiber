@@ -74,8 +74,32 @@
         </span>
     </div>
 
+
+
     <div class="card-body">
-        {{ $data->withQueryString()->links('vendor.pagination.simple-numeric') }}
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-3">
+            <div>
+                {{ $data->appends(['perPage' => request('perPage')])->links('vendor.pagination.simple-numeric') }}
+            </div>
+
+            <form method="GET" id="paginationForm" class="d-flex align-items-center" style="margin: 5px;">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="font-weight-bold text-primary">Show</span>
+                    <select name="perPage" id="perPage" class="form-control"
+                        onchange="document.getElementById('paginationForm').submit();"
+                        style="width: auto; min-width: 70px; height: 35px; padding: 2px 8px; text-align: center; margin: 0 10px;">
+                        <option value="25" {{ request('perPage') == 25 ? 'selected' : '' }}>25</option>
+                        <option value="50" {{ request('perPage') == 50 ? 'selected' : '' }}>50</option>
+                        <option value="100" {{ request('perPage') == 100 ? 'selected' : '' }}>100</option>
+                    </select>
+                </div>
+
+                <a href="{{ route('receipts.export', request()->query()) }}"
+                    class="btn btn-success btn-sm d-flex align-items-center" style="height: 35px;">
+                    <i class="fas fa-file-excel me-1 mr-2"></i>Export Receipts
+                </a>
+            </form>
+        </div>
         @if ($totalPrice > 0)
             <div class="alert alert-success mt-2">
                 <strong> Total Bill: @moneyIDR($totalPrice) </strong>
@@ -188,6 +212,7 @@
                 No billing found!
             </div>
         @endif
+
         {{ $data->withQueryString()->links('vendor.pagination.simple-numeric') }}
     </div>
     @section('custom_styles')

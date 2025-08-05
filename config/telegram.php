@@ -191,7 +191,8 @@ return [
                 'status', // Shared Command Name.
                 'Acme\Project\Commands\BotCommand' // Full Path to Command Class.
            ],
-        */],
+        */
+    ],
 
     /*
     |--------------------------------------------------------------------------

@@ -394,7 +394,7 @@ class PppProfileController extends Controller
         try {
             $sourceRouter = Mikrotik::findOrFail($sourceMikrotikId);
 
-            $mikrotikProfiles = $this->secretService->getPppProfile($sourceRouter);
+            $mikrotikProfiles = $this->secretService->getPppProfile($sourceRouter, $traceId);
             if (empty($mikrotikProfiles)) {
                 return response()->json(['error' => 'No profiles found from Mikrotik'], 404);
             }

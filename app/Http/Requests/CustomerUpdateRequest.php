@@ -19,6 +19,12 @@ class CustomerUpdateRequest extends FormRequest
             'email' => ['nullable', 'email', 'string', 'max:255', Rule::unique('customers')->ignore($customer->slug, 'slug')],
             'paket_id' => 'required',
             'contact' => 'digits_between:10,15|nullable',
+            'address' => ['nullable', 'string'],
+            'member_id' => ['nullable', 'exists:members,id'],
+            'user_id' => ['required', 'exists:users,id'],
+            'billing_option' => ['nullable', 'in:1,2'],
+            'periode_billing' => ['nullable', 'string'],
+            'activation_date' => ['nullable', 'date'],
         ];
     }
 

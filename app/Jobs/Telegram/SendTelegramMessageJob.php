@@ -28,6 +28,11 @@ class SendTelegramMessageJob implements ShouldQueue
         $this->traceId = $traceId;
     }
 
+    public function viaQueue()
+    {
+        return 'telegram';
+    }
+
     public function handle()
     {
         try {

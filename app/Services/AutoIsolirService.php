@@ -33,9 +33,9 @@ class AutoIsolirService
         $this->proxyService = $proxyService;
     }
 
-    public function checkConnection($router): bool
+    public function checkConnection($router, string $traceId): bool
     {
-        $result = $this->testConnectionService->checkOnline($router);
+        $result = $this->testConnectionService->checkOnline($router, $traceId);
 
         if (empty($result) || !is_array($result)) {
             throw new \Exception('Mikrotik ' . $router  . ' offline, please check your router.');
@@ -43,13 +43,13 @@ class AutoIsolirService
         return true;
     }
 
-    public function createAutoIsolir($request)
+    public function createAutoIsolir($request, string $traceId)
     {
         $mikrotikId = $request->mikrotik_id;
         $router = Mikrotik::findOrFail($mikrotikId);
 
         // Cek koneksi router
-        $this->checkConnection($router);
+        $this->checkConnection($router, $traceId);
 
         $profile = PppProfile::where('id', $request->profile_id)->value('profile_name');
         $nameScript = $nameSchedule = $request->name;
@@ -66,7 +66,8 @@ class AutoIsolirService
                 $nameScript,
                 $request->comment_unpayment,
                 $profile,
-                $addressList
+                $addressList,
+                $traceId
             );
         } else {
             $script = $this->scriptService->addAutoisolirDueDate(
@@ -76,7 +77,8 @@ class AutoIsolirService
                 $dueDate,
                 $request->comment_unpayment,
                 $profile,
-                $addressList
+                $addressList,
+                $traceId
             );
         }
 
@@ -91,10 +93,10 @@ class AutoIsolirService
         $scriptId = $script['after']['ret'];
 
         // Tambahkan jadwal
-        $schedule = $this->scheduleService->addScheduleEveryDay($router, $nameSchedule, $nameScript);
+        $schedule = $this->scheduleService->addScheduleEveryDay($router, $nameSchedule, $nameScript, $traceId);
 
         if (isset($schedule['after']['message'])) {
-            $this->scriptService->removeScript($router, $scriptId);
+            $this->scriptService->removeScript($router, $scriptId, $traceId);
             throw new \Exception(
                 $schedule['after']['message'] == 'failure: item with this name already exists'
                     ? 'Schedule with such name already exists'
@@ -122,10 +124,10 @@ class AutoIsolirService
         ]);
     }
 
-    public function updateAutoIsolir(array $data, AutoIsolir $autoisolir)
+    public function updateAutoIsolir(array $data, AutoIsolir $autoisolir, string $traceId)
     {
         $router = $autoisolir->mikrotik;
-        $this->checkConnection($router);
+        $this->checkConnection($router, $traceId);
         $profileName = PppProfile::find($data['profile_id'])?->profile_name;
         $rosVersion = $router->ros_version_id;
         $scriptId = $autoisolir->script_id;
@@ -160,7 +162,7 @@ class AutoIsolirService
 
     // =========================== UPDATE NAT PROXY ===========================
 
-    public function updateNatProxy(AutoIsolir $autoisolir, array $data): void
+    public function updateNatProxy(AutoIsolir $autoisolir, array $data, string $traceId): void
     {
         $router = $autoisolir->mikrotik;
 
@@ -176,7 +178,7 @@ class AutoIsolirService
         $rosVersion = $router->ros_version_id;
 
         if ($autoisolir->nat_id == 0) {
-            $create = $this->firewallService->createNatService($router, $nat_dst_address, $nat_src_address_list, $nat_dst_address_list);
+            $create = $this->firewallService->createNatService($router, $nat_dst_address, $nat_src_address_list, $nat_dst_address_list, $traceId);
             if (isset($create['after']['message'])) {
                 $natId = 0;
             } else {
@@ -184,13 +186,13 @@ class AutoIsolirService
                 $autoisolir->update(['nat_id' => $natId]);
             }
         } else {
-            $this->firewallService->updateNatService($router, $nat_dst_address, $nat_src_address_list, $nat_dst_address_list, $autoisolir->nat_id);
+            $this->firewallService->updateNatService($router, $nat_dst_address, $nat_src_address_list, $nat_dst_address_list, $autoisolir->nat_id, $traceId);
         }
 
         if ($autoisolir->proxy_access_id == 0) {
             $create = $rosVersion === '1'
-                ? $this->proxyService->createAccessServiceV6_49($router, $proxy_access_src_address, $nat_dst_address, $action)
-                : $this->proxyService->createAccessServiceV7_10($router, $proxy_access_src_address, $nat_dst_address, $action);
+                ? $this->proxyService->createAccessServiceV6_49($router, $proxy_access_src_address, $nat_dst_address, $action, $traceId)
+                : $this->proxyService->createAccessServiceV7_10($router, $proxy_access_src_address, $nat_dst_address, $action, $traceId);
 
             if (isset($create['after']['message'])) {
                 throw new \Exception($create['after']['message']);
@@ -199,13 +201,13 @@ class AutoIsolirService
             $autoisolir->update(['proxy_access_id' => $create['after']['ret']]);
         } else {
             if ($rosVersion === '1') {
-                $this->proxyService->updateAccessServiceV6_49($router, $proxy_access_src_address, $nat_dst_address, $autoisolir->proxy_access_id, $action);
+                $this->proxyService->updateAccessServiceV6_49($router, $proxy_access_src_address, $nat_dst_address, $autoisolir->proxy_access_id, $action, $traceId);
             } else {
-                $this->proxyService->updateAccessServiceV7_10($router, $proxy_access_src_address, $nat_dst_address, $autoisolir->proxy_access_id, $action);
+                $this->proxyService->updateAccessServiceV7_10($router, $proxy_access_src_address, $nat_dst_address, $autoisolir->proxy_access_id, $action, $traceId);
             }
         }
 
-        $this->proxyService->enableProxyService($router);
+        $this->proxyService->enableProxyService($router, $traceId);
 
         $autoisolir->update([
             'nat_dst_address' => $nat_dst_address,

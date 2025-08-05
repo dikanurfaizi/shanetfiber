@@ -206,7 +206,8 @@
             <a class="btn btn-sm btn-primary" href="{{ route('receipts.show', $billing->receipt->slug) }}"><i
                     class="fa fa-eye"></i> View Receipt</a>
         @endif
-        <a class="btn btn-sm btn-secondary" href="{{ URL::previous() }}"><i class="fa fa-arrow-left"></i> Back</a>
+        <a class="btn btn-sm btn-secondary" href="{{ route('billings.index') }}"><i class="fa fa-arrow-left"></i>
+            Back</a>
     </div>
 
 

@@ -6,6 +6,7 @@ use App\Models\Mikrotik;
 use App\Services\Routerboard\TestConnectionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class TestConnectionController extends Controller
 {
@@ -18,6 +19,7 @@ class TestConnectionController extends Controller
 
     public function testConn(Request $request)
     {
+        $traceId = (string) Str::uuid();
         $validator = Validator::make($request->all(), [
             'host' => 'required',
             'password' => 'required',
@@ -46,7 +48,7 @@ class TestConnectionController extends Controller
             'port' => (int) $request->input('port'),
         ];
         try {
-            $response = $this->testConnectionService->testConnection($router);
+            $response = $this->testConnectionService->testConnection($router, $traceId);
 
             return response()->json([
                 'status' => 'success',
@@ -65,9 +67,10 @@ class TestConnectionController extends Controller
 
     public function checkOnline(Request $request)
     {
+        $traceId = (string) Str::uuid();
         $router = Mikrotik::findOrFail($request->id);
         try {
-            $response = $this->testConnectionService->checkOnline($router);
+            $response = $this->testConnectionService->checkOnline($router, $traceId);
 
             return response()->json([
                 'status' => 'success',

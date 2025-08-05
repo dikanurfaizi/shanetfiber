@@ -223,8 +223,9 @@
                     </div>
                     <div class="col-md-6">
                         @if ($serverDisconnect === 'false')
-                            <input type="datetime-local" class="form-control" name="activation_date"
-                                value="{{ $customer->activation_date ? Carbon\Carbon::parse($customer->activation_date)->format('Y-m-d\TH:i') : '' }}">
+                            <input type="text" class="form-control" name="activation_date"
+                                value="{{ $customer->activation_date ? \Carbon\Carbon::parse($customer->activation_date)->format('d F Y') : '' }}"
+                                id="activation_date">
                             @if ($errors->has('activation_date'))
                                 <span class="text-danger">{{ $errors->first('activation_date') }}</span>
                             @endif
@@ -270,12 +271,10 @@
     @section('custom_scripts')
         <script src="{{ asset('js/flatpickr') }}"></script>
         <script>
-            config = {
-                enableTime: false,
-                dateFormat: 'd F Y',
-                //format:'DD/MM/YYYY HH:mm:ss'
-            }
-            flatpickr("input[type=datetime-local]", config);
+            flatpickr("#activation_date", {
+                enableTime: true,
+                dateFormat: "d F Y",
+            });
         </script>
         <script>
             function formatRupiah(input) {

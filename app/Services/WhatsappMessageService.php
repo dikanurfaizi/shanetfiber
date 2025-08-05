@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\WhatsappGateway\WhatsappNumber;
-use App\Models\WhatsappGateway\WhatsappGateway;
 use App\Models\WhatsappGateway\WhatsappMessage;
 use App\Models\User;
 use App\Models\Bank;
@@ -580,7 +579,7 @@ class WhatsappMessageService
                 '%name%' => $billing->customer->name,
                 '%address%' => $billing->customer->address,
                 '%customer_id%' => $billing->customer->customer_id,
-                '%billing_number%' => $billing->billing_number,
+                '%billing_number%' => $receipt->number,
                 '%paket%' => $receipt->paket_name ?? $billing->paket_name,
                 '%periode%' => $billing->billing_periode->name,
                 '%bill%' => 'Rp. ' . number_format($receipt->paket_price ?? $billing->paket_price, 2),

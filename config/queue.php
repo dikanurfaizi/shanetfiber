@@ -71,6 +71,38 @@ return [
             'after_commit' => false,
         ],
 
+        'ppp' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'ppp',
+            'retry_after' => 120,
+            'after_commit' => false,
+        ],
+
+        'whatsapp_single' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'whatsapp_single',
+            'retry_after' => 60,
+            'after_commit' => false,
+        ],
+
+        'whatsapp_broadcast' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'whatsapp_broadcast',
+            'retry_after' => 300,
+            'after_commit' => false,
+        ],
+
+        'telegram' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'telegram',
+            'retry_after' => 300,
+            'after_commit' => false,
+        ],
+
     ],
 
     /*

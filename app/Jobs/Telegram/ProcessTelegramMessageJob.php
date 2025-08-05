@@ -2,6 +2,7 @@
 
 namespace App\Jobs\Telegram;
 
+use App\DataTransferObjects\TelegramJobDtoJobDto;
 use App\Helpers\LogHelper;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -10,33 +11,24 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use App\Services\TelegramMessageService;
 use Throwable;
+use App\DataTransferObjects\TelegramJobDto;
 
 class ProcessTelegramMessageJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected int $customerId;
-    protected string $action;
-    protected string $traceId;
-    protected ?int $billingId;
-    protected ?int $receiptId;
-    protected ?array $receiptData = null;
+    public function __construct(private TelegramJobDto $jobData) {}
 
-    public function __construct(int $customerId, string $action, string $traceId, ?int $billingId = null, ?int $receiptId = null, $receiptData = null)
+    public function viaQueue()
     {
-        $this->customerId = $customerId;
-        $this->action = $action;
-        $this->traceId = $traceId;
-        $this->billingId = $billingId;
-        $this->receiptId = $receiptId;
-        $this->receiptData = $receiptData;
+        return 'telegram';
     }
 
     public function handle()
     {
-        $action = $this->action;
-        $traceId = $this->traceId;
-        $customerId = $this->customerId;
+        $action = $this->jobData->action;
+        $traceId = $this->jobData->traceId;
+        $customerId = $this->jobData->customerId;
 
         try {
             $telegramService = new TelegramMessageService();

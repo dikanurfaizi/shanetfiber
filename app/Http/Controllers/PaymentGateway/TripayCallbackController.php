@@ -10,21 +10,23 @@ use App\Models\Order;
 use App\Traits\TripayHelper;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Carbon;
-use App\Services\PaymentService;
+use App\Services\Tripay\CallbackPaymentService;
+use Illuminate\Support\Str;
 
 class TripayCallbackController extends Controller
 {
     use TripayHelper;
 
-    private PaymentService $paymentService;
+    private CallbackPaymentService $callbackPaymentService;
 
-    public function __construct(PaymentService $paymentService)
+    public function __construct(CallbackPaymentService $callbackPaymentService)
     {
-        $this->paymentService = $paymentService;
+        $this->callbackPaymentService = $callbackPaymentService;
     }
 
     public function handle(Request $request)
     {
+        $traceId = (string) Str::uuid();
         $tripay = $this->getTripayData();
 
         if (!$tripay) {
@@ -118,22 +120,22 @@ class TripayCallbackController extends Controller
             switch ($status) {
                 case 'UNPAID':
                     $order->update(['payment_status' => Order::STATUS_UNPAID]);
-                    $this->paymentService->processPaymentUnpaid($order, $order->billing);
+                    $this->callbackPaymentService->processPaymentUnpaid($order, $order->billing, $traceId);
                     break;
 
                 case 'PAID':
                     $order->update(['payment_status' => Order::STATUS_PAID]);
-                    $this->paymentService->processPaymentSuccess($order, $order->billing, $paid_at);
+                    $this->callbackPaymentService->processPaymentSuccess($order, $order->billing, $paid_at, $traceId);
                     break;
 
                 case 'EXPIRED':
                     $order->update(['payment_status' => Order::STATUS_EXPIRED]);
-                    $this->paymentService->processUpdatePaymentStatus($order, Order::STATUS_EXPIRED);
+                    $this->callbackPaymentService->processUpdatePaymentStatus($order, Order::STATUS_EXPIRED, $traceId);
                     break;
 
                 case 'FAILED':
                     $order->update(['payment_status' => Order::STATUS_CANCELED]);
-                    $this->paymentService->processUpdatePaymentStatus($order, Order::STATUS_CANCELED);
+                    $this->callbackPaymentService->processUpdatePaymentStatus($order, Order::STATUS_CANCELED, $traceId);
                     break;
 
                 default:

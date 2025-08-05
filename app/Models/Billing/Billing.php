@@ -29,7 +29,6 @@ class Billing extends Model
         return $this->belongsTo(Receipt::class);
     }
 
-
     public function billing_periode(): BelongsTo
     {
         return $this->belongsTo(BillingPeriode::class);
