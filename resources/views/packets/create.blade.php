@@ -141,12 +141,13 @@
                         <label for="installation_fee"><strong>{{ __('paket.label.installation_fee') }}</strong></label>
                         <div class="input-group">
                             <span class="input-group-text">Rp</span>
-                            {!! Form::text('installation_fee_formatted', null, [
+                            {!! Form::text('installation_fee_formatted', old('installation_fee_formatted', 0), [
                                 'placeholder' => 'Enter installation fee',
                                 'class' => 'form-control currency-input',
                                 'id' => 'installation_fee_formatted',
                             ]) !!}
-                            {!! Form::hidden('installation_fee', null, ['id' => 'installation_fee']) !!}
+                            {!! Form::hidden('installation_fee', old('installation_fee', 0), ['id' => 'installation_fee']) !!}
+
                         </div>
                         @if ($errors->has('installation_fee'))
                             <span class="text-danger">{{ $errors->first('installation_fee') }}</span>

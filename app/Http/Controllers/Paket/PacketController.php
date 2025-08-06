@@ -89,7 +89,13 @@ class PacketController extends Controller
         }
 
         if ($request->has('installation_fee_formatted')) {
-            $data['installation_fee'] = str_replace('.', '', $request->installation_fee_formatted);
+            $installation_fee = $request->installation_fee_formatted;
+
+            if (empty($installation_fee)) {
+                $installation_fee = 0;
+            }
+
+            $data['installation_fee'] = str_replace('.', '', $installation_fee);
         }
 
         unset($data['price_formatted']);
