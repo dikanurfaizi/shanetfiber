@@ -11,7 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use App\Enums\WhatsappAction;
+use App\Enums\WhatsAppAction;
 use App\Services\WhatsappMessageService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -29,15 +29,15 @@ class ProcessWhatsappMessageJob implements ShouldQueue
         $this->logJobStart();
 
         match ($this->jobData->action) {
-            WhatsappAction::ACTIVATION->value => $this->handleActivation($whatsappService),
-            WhatsappAction::PAYLATER->value => $this->handlePayment($whatsappService),
-            WhatsappAction::TRANSFER->value => $this->handlePayment($whatsappService),
-            WhatsappAction::CASH->value => $this->handlePayment($whatsappService),
-            WhatsappAction::PAYMENT_GATEWAY->value => $this->handlePayment($whatsappService),
-            WhatsappAction::UNPAYMENT->value => $this->handleUnpayment($whatsappService),
-            WhatsappAction::CREATE_NEW_BILL->value => $this->handleCreateNewBill($whatsappService),
-            WhatsappAction::SEND_INFO_BILLING->value => $this->handleSendInfoBilling($whatsappService),
-            WhatsappAction::CREATE_ORDER->value => $this->handleCreateOrder($whatsappService),
+            WhatsAppAction::ACTIVATION->value => $this->handleActivation($whatsappService),
+            WhatsAppAction::PAYLATER->value => $this->handlePayment($whatsappService),
+            WhatsAppAction::TRANSFER->value => $this->handlePayment($whatsappService),
+            WhatsAppAction::CASH->value => $this->handlePayment($whatsappService),
+            WhatsAppAction::PAYMENT_GATEWAY->value => $this->handlePayment($whatsappService),
+            WhatsAppAction::UNPAYMENT->value => $this->handleUnpayment($whatsappService),
+            WhatsAppAction::CREATE_NEW_BILL->value => $this->handleCreateNewBill($whatsappService),
+            WhatsAppAction::SEND_INFO_BILLING->value => $this->handleSendInfoBilling($whatsappService),
+            WhatsAppAction::CREATE_ORDER->value => $this->handleCreateOrder($whatsappService),
             default => $this->handleUnknownAction()
         };
     }

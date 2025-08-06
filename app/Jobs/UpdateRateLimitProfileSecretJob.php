@@ -41,7 +41,7 @@ class UpdateRateLimitProfileSecretJob implements ShouldQueue
         $router = Mikrotik::find($this->routerId);
 
         try {
-            $secretService->updateRateLimitProfileSecret($router, $this->rateLimit, $this->profileName);
+            $secretService->updateRateLimitProfileSecret($router, $this->rateLimit, $this->profileName, $this->traceId);
         } catch (Throwable $e) {
             LogHelper::logWarning(null, [
                 'profile'       => $this->profileName,

@@ -20,16 +20,18 @@ class CancelPaymentIpStaticBeforeDueDateJob implements ShouldQueue
     private string $comment;
     private string $simpleque_id;
     private IpStaticService $IpStaticService;
+    private string $traceId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Mikrotik $mikrotik, string $simpleque_id, string $comment)
+    public function __construct(Mikrotik $mikrotik, string $simpleque_id, string $comment, string $traceId)
     {
         $this->mikrotik = $mikrotik;
         $this->simpleque_id = $simpleque_id;
         $this->comment = $comment;
         $this->IpStaticService = app(IpStaticService::class);
+        $this->traceId = $traceId;
     }
 
     /**
@@ -37,6 +39,6 @@ class CancelPaymentIpStaticBeforeDueDateJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $this->IpStaticService->setCommentSimpleque($this->mikrotik, $this->simpleque_id, $this->comment);
+        $this->IpStaticService->setCommentSimpleque($this->mikrotik, $this->simpleque_id, $this->comment, $this->traceId);
     }
 }

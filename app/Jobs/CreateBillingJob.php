@@ -19,16 +19,18 @@ class CreateBillingJob implements ShouldQueue
     private string $comment;
     private string $secretId;
     private SecretService $SecretService;
+    private string $traceId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Mikrotik $mikrotik, string $comment, string $secretId)
+    public function __construct(Mikrotik $mikrotik, string $comment, string $secretId, string $traceId)
     {
         $this->mikrotik = $mikrotik;
         $this->comment = $comment;
         $this->secretId = $secretId;
         $this->SecretService = app(SecretService::class);
+        $this->traceId = $traceId;
     }
 
     /**
@@ -36,7 +38,7 @@ class CreateBillingJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $this->SecretService->addCommentSecret($this->mikrotik, $this->comment, $this->secretId);
+        $this->SecretService->addCommentSecret($this->mikrotik, $this->comment, $this->secretId, $this->traceId);
         //  $this->SecretService->deleteActiveSecret($this->mikrotik, $this->username);
     }
 }

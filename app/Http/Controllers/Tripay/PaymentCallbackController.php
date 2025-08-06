@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Midtran;
+namespace App\Http\Controllers\Tripay;
 
 use Exception;
 use App\Models\Order;
@@ -104,12 +104,12 @@ class PaymentCallbackController extends Controller
                                 $customerSecret = $this->secretService->getSecretById($router, $customerSecretId, $traceId);
                                 $secretProfiles = SecretResource::collection($customerSecret)->value('profile');
                                 if ($secretProfiles == $customerProfile) {
-                                    dispatch(new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerSecretId))->onQueue('default');
+                                    dispatch(new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerSecretId, $traceId))->onQueue('default');
                                 } else {
-                                    dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername))->onQueue('default');
+                                    dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername, $traceId))->onQueue('default');
                                 }
                             } else {
-                                dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername))->onQueue('default');
+                                dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername, $traceId))->onQueue('default');
                             }
                         }
                     }

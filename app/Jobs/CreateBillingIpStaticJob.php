@@ -19,16 +19,18 @@ class CreateBillingIpStaticJob implements ShouldQueue
     private string $comment;
     private string $simplequeId;
     private IpStaticService $IpStaticService;
+    private string $traceId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Mikrotik $mikrotik, string $comment, string $simplequeId)
+    public function __construct(Mikrotik $mikrotik, string $comment, string $simplequeId, string $traceId)
     {
         $this->mikrotik = $mikrotik;
         $this->comment = $comment;
         $this->simplequeId = $simplequeId;
         $this->IpStaticService = app(IpStaticService::class);
+        $this->traceId = $traceId;
     }
 
     /**
@@ -36,7 +38,7 @@ class CreateBillingIpStaticJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $this->IpStaticService->setCommentSimpleque($this->mikrotik, $this->comment, $this->simplequeId);
+        $this->IpStaticService->setCommentSimpleque($this->mikrotik, $this->comment, $this->simplequeId, $this->traceId);
         //  $this->SecretService->deleteActiveSecret($this->mikrotik, $this->username);
     }
 }

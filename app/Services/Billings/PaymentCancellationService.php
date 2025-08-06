@@ -18,7 +18,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Str;
 use App\Helpers\LogHelper;
 use App\DataTransferObjects\WhatsappJobDto;
-use App\Enums\WhatsappAction;
+use App\Enums\WhatsAppAction;
 
 class PaymentCancellationService
 {
@@ -217,7 +217,7 @@ class PaymentCancellationService
     ) {
         $jobData = new WhatsappJobDto(
             customerId: (int)$billing->customer_id,
-            action: WhatsappAction::UNPAYMENT->value,
+            action: WhatsAppAction::UNPAYMENT->value,
             traceId: (string)$traceId,
             billingId: (int)$billing->id,
             receiptId: null,

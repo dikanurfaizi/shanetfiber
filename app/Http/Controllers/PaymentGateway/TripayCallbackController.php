@@ -10,7 +10,7 @@ use App\Models\Order;
 use App\Traits\TripayHelper;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Carbon;
-use App\Services\Tripay\CallbackPaymentService;
+use App\Services\Tripays\CallbackPaymentService;
 use Illuminate\Support\Str;
 
 class TripayCallbackController extends Controller

@@ -568,19 +568,22 @@ class WhatsappMessageService
                 }
 
                 $price_after_discount -= $discount;
+                $billing_number = $billing->billing_number;
+                $paket_name = $billing->paket_name;
             } else {
                 $discount = $receipt?->discount ?? 0;
                 $price_after_discount = $receipt?->price_after_discount ?? $billing->paket_price;
                 $member = $receipt?->member_type ?? 'Non Member / Tidak Ada';
+                $billing_number = $receipt->number;
+                $paket_name = $receipt->paket_name;
             }
-
 
             $replace = [
                 '%name%' => $billing->customer->name,
                 '%address%' => $billing->customer->address,
                 '%customer_id%' => $billing->customer->customer_id,
-                '%billing_number%' => $receipt->number,
-                '%paket%' => $receipt->paket_name ?? $billing->paket_name,
+                '%billing_number%' => $billing_number,
+                '%paket%' => $paket_name,
                 '%periode%' => $billing->billing_periode->name,
                 '%bill%' => 'Rp. ' . number_format($receipt->paket_price ?? $billing->paket_price, 2),
                 '%discount%' => 'Rp. ' . number_format($discount, 2),

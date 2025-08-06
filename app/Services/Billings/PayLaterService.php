@@ -18,7 +18,7 @@ use App\Helpers\LogHelper;
 use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
 use Illuminate\Http\Request;
 use App\DataTransferObjects\WhatsappJobDto;
-use App\Enums\WhatsappAction;
+use App\Enums\WhatsAppAction;
 
 class PayLaterService
 {
@@ -99,7 +99,7 @@ class PayLaterService
     private function processPppPayment(Mikrotik $router, Customer $customer, string $commentPayment, $traceId): void
     {
         try {
-            $userSecretId = $this->secretService->getSecretById($router, $customer->secret_id);
+            $userSecretId = $this->secretService->getSecretById($router, $customer->secret_id, $traceId);
 
             if ($userSecretId == 'error') {
                 throw new \Exception($customer->secret_id . '! Cannot find user "' . $customer->username . '" on server ' . $router->name . '.');
@@ -109,7 +109,7 @@ class PayLaterService
             $customerProfile = $customer->paket->profile;
 
             if ($secretProfiles == $customerProfile) {
-                dispatch(new AddPaymentBeforeDueDateJob($router, $commentPayment, $customer->secret_id))
+                dispatch(new AddPaymentBeforeDueDateJob($router, $commentPayment, $customer->secret_id, $traceId))
                     ->onQueue('default');
             } else {
                 dispatch(new AddPaymentAfterDueDateJob(
@@ -117,7 +117,8 @@ class PayLaterService
                     $customerProfile,
                     $commentPayment,
                     $customer->secret_id,
-                    $customer->username
+                    $customer->username,
+                    $traceId
                 ))->onQueue('default');
             }
         } catch (\Exception $e) {
@@ -127,7 +128,7 @@ class PayLaterService
                     'routerId' => $router->id,
                     'customerId' => $customer->id,
                     'commentPayment' => $commentPayment,
-                    'action' => WhatsappAction::PAYLATER->value,
+                    'action' => WhatsAppAction::PAYLATER->value,
                     'errorCode' => $e->getCode(),
                     'errorMessage' => $e->getMessage()
                 ],
@@ -152,7 +153,7 @@ class PayLaterService
             $addressListIsolir = $autoIsolir->address_list_isolir;
             $comment = $customer->username . '_' . $commentPayment;
 
-            $addressListCustomer = $this->ipStaticService->getAddressListByIpAddress($router, $ipAddress);
+            $addressListCustomer = $this->ipStaticService->getAddressListByIpAddress($router, $ipAddress, $traceId);
 
             if (isset($addressListCustomer[0]['list']) && $addressListCustomer[0]['list'] == $addressListIsolir) {
                 dispatch(new AddPaymentIpStaticAfterDueDateJob(
@@ -161,10 +162,11 @@ class PayLaterService
                     $simplequeId,
                     $addressListIsolir,
                     $commentPayment,
-                    $comment
+                    $comment,
+                    $traceId
                 ))->onQueue('default');
             } else {
-                dispatch(new AddPaymentBeforeDueDateJob($router, $simplequeId, $commentPayment))
+                dispatch(new AddPaymentBeforeDueDateJob($router, $simplequeId, $commentPayment, $traceId))
                     ->onQueue('default');
             }
         } catch (\Exception $e) {
@@ -175,7 +177,7 @@ class PayLaterService
                     'customerId' => $customer->id,
                     'autoIsolir' => $autoIsolir->id,
                     'commentPayment' => $commentPayment,
-                    'action' => WhatsappAction::PAYLATER->value,
+                    'action' => WhatsAppAction::PAYLATER->value,
                     'errorCode' => $e->getCode(),
                     'errorMessage' => $e->getMessage()
                 ],
@@ -193,7 +195,7 @@ class PayLaterService
             if ($customer->contact) {
                 $jobData = new WhatsappJobDto(
                     customerId: (int)$billing->customer_id,
-                    action: WhatsappAction::PAYLATER->value,
+                    action: WhatsAppAction::PAYLATER->value,
                     traceId: (string)$traceId,
                     billingId: (int)$billing->id,
                     receiptId: null,
@@ -209,7 +211,7 @@ class PayLaterService
                     [
                         'customerId' => $billing->customer_id,
                         'billingId' => $billing->id,
-                        'action' => WhatsappAction::PAYLATER->value
+                        'action' => WhatsAppAction::PAYLATER->value
                     ],
                     200,
                     'The delivery of the paylater payment information message has been successfully scheduled.',
@@ -221,7 +223,7 @@ class PayLaterService
                     [
                         'customerId' => $billing->customer_id,
                         'billingId' => $billing->id,
-                        'action' => WhatsappAction::PAYLATER->value
+                        'action' => WhatsAppAction::PAYLATER->value
                     ],
                     200,
                     "Customer contact not found",
@@ -234,7 +236,7 @@ class PayLaterService
                 [
                     'customerId' => $billing->customer_id,
                     'billingId' => $billing->id,
-                    'action' => WhatsappAction::PAYLATER->value,
+                    'action' => WhatsAppAction::PAYLATER->value,
                     'errorCode' => $e->getCode(),
                     'errorMessage' => $e->getMessage()
                 ],

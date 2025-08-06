@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum WhatsappAction: string
+enum WhatsAppAction: string
 {
     case ACTIVATION = 'activation_customer';
     case TRANSFER = 'transfer';

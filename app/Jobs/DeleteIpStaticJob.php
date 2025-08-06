@@ -21,11 +21,12 @@ class DeleteIpStaticJob implements ShouldQueue
     private string $ip_address;
     private string $address_list_name;
     private IpStaticService $IpStaticService;
+    private string $traceId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Mikrotik $mikrotik, string $simpleque_id, string $arp_id, string $ip_address, string $address_list_name)
+    public function __construct(Mikrotik $mikrotik, string $simpleque_id, string $arp_id, string $ip_address, string $address_list_name, string $traceId)
     {
         $this->mikrotik = $mikrotik;
         $this->simpleque_id = $simpleque_id;
@@ -33,6 +34,7 @@ class DeleteIpStaticJob implements ShouldQueue
         $this->ip_address = $ip_address;
         $this->address_list_name = $address_list_name;
         $this->IpStaticService = app(IpStaticService::class);
+        $this->traceId = $traceId;
     }
 
     /**
@@ -40,12 +42,12 @@ class DeleteIpStaticJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $this->IpStaticService->deleteIpFromSimpleQueue($this->mikrotik, $this->simpleque_id);
-        $this->IpStaticService->deleteIpFromArp($this->mikrotik, $this->arp_id);
+        $this->IpStaticService->deleteIpFromSimpleQueue($this->mikrotik, $this->simpleque_id, $this->traceId);
+        $this->IpStaticService->deleteIpFromArp($this->mikrotik, $this->arp_id, $this->traceId);
         if ($this->address_list_name != 'none') {
-            $address_list = $this->IpStaticService->getDataByIpAddressWithAddressListName($this->mikrotik, $this->ip_address, $this->address_list_name);
+            $address_list = $this->IpStaticService->getDataByIpAddressWithAddressListName($this->mikrotik, $this->ip_address, $this->address_list_name, $this->traceId);
             if ($address_list != 'false') {
-                $this->IpStaticService->deleteIpFromAddressList($this->mikrotik, $this->ip_address, $this->address_list_name);
+                $this->IpStaticService->deleteIpFromAddressList($this->mikrotik, $this->ip_address, $this->address_list_name, $this->traceId);
             }
         }
     }

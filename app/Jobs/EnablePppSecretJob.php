@@ -17,21 +17,24 @@ class EnablePppSecretJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     private SecretService $secretService;
+    private string $traceId;
 
     public function __construct(
         private Mikrotik $mikrotik,
         private string $username,
-        private int $customerId
+        private int $customerId,
+        string $traceId
 
     ) {
         $this->secretService = app(SecretService::class);
+        $this->traceId = $traceId;
     }
 
     public function handle(): void
     {
         try {
             // 1. Enable the PPP secret
-            $this->secretService->enableSecret($this->mikrotik, $this->username);
+            $this->secretService->enableSecret($this->mikrotik, $this->username, $this->traceId);
 
             // 2. Update customer status in database
             Customer::where('id', $this->customerId)->update(['disabled' => 'false']);

@@ -22,7 +22,13 @@ class CheckBillingAndUpdateProfileSecretJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct() {}
+
+    private string $traceId;
+
+    public function __construct(string $traceId)
+    {
+        $this->traceId = $traceId;
+    }
 
     /**
      * Execute the job.
@@ -50,7 +56,8 @@ class CheckBillingAndUpdateProfileSecretJob implements ShouldQueue
                     $customerProfile,
                     $comment_payment,
                     $customer->secret_id,
-                    $customer->username
+                    $customer->username,
+                    $this->traceId
                 ))->onQueue('default');
 
                 Log::info('Job AddPaymentAfterDueDateJob dispatched for customer: ' . $customer->username);
@@ -88,7 +95,8 @@ class CheckBillingAndUpdateProfileSecretJob implements ShouldQueue
                         $comment_unpayment,
                         $profileIsolir,
                         $customer->secret_id,
-                        $customer->username
+                        $customer->username,
+                        $this->traceId
                     ))->onQueue('default');
 
                     Log::info('Job CancelPaymentAfterDueDateJob dispatched for customer: ' . $customer->username);

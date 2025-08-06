@@ -18,15 +18,17 @@ class DeletePppSecretJob implements ShouldQueue
     private Mikrotik $mikrotik;
     private string $username;
     private SecretService $SecretService;
+    private string $traceId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Mikrotik $mikrotik, string $username)
+    public function __construct(Mikrotik $mikrotik, string $username, string $traceId)
     {
         $this->mikrotik = $mikrotik;
         $this->username = $username;
         $this->SecretService = app(SecretService::class);
+        $this->traceId = $traceId;
     }
 
     /**
@@ -34,7 +36,7 @@ class DeletePppSecretJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $this->SecretService->deleteSecretByName($this->mikrotik, $this->username);
-        $this->SecretService->deleteActiveSecret($this->mikrotik, $this->username);
+        $this->SecretService->deleteSecretByName($this->mikrotik, $this->username, $this->traceId);
+        $this->SecretService->deleteActiveSecret($this->mikrotik, $this->username, $this->traceId);
     }
 }

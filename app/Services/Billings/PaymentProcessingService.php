@@ -75,7 +75,7 @@ class PaymentProcessingService
             $customerProfile = $customer->paket->profile;
 
             if ($secretProfiles == $customerProfile) {
-                dispatch(new AddPaymentBeforeDueDateJob($router, $commentPayment, $customer->secret_id))
+                dispatch(new AddPaymentBeforeDueDateJob($router, $commentPayment, $customer->secret_id, $traceId))
                     ->onQueue('default');
             } else {
                 dispatch(new AddPaymentAfterDueDateJob(
@@ -83,7 +83,8 @@ class PaymentProcessingService
                     $customerProfile,
                     $commentPayment,
                     $customer->secret_id,
-                    $customer->username
+                    $customer->username,
+                    $traceId
                 ))->onQueue('default');
             }
         } catch (Exception $e) {
@@ -116,7 +117,7 @@ class PaymentProcessingService
                     $comment
                 ))->onQueue('default');
             } else {
-                dispatch(new AddPaymentBeforeDueDateJob($router, $simplequeId, $commentPayment))
+                dispatch(new AddPaymentBeforeDueDateJob($router, $simplequeId, $commentPayment, $traceId))
                     ->onQueue('default');
             }
         } catch (Exception $e) {

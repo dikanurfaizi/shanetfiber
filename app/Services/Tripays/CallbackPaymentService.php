@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Tripay;
+namespace App\Services\Tripays;
 
 use App\Models\{Customer, Receipt, Order, Mikrotik, AutoIsolir};
 use App\Jobs\{AddPaymentBeforeDueDateJob, AddPaymentAfterDueDateJob, AddPaymentIpStaticAfterDueDateJob, WhatsApp\ProcessWhatsappMessageJob};
@@ -143,8 +143,8 @@ class CallbackPaymentService
                 $currentProfile = SecretResource::collection($secret)->value('profile');
 
                 $job = $currentProfile === $profile
-                    ? new AddPaymentBeforeDueDateJob($router, $comment, $data['secret_id'])
-                    : new AddPaymentAfterDueDateJob($router, $profile, $comment, $data['secret_id'], $data['username']);
+                    ? new AddPaymentBeforeDueDateJob($router, $comment, $data['secret_id'], $traceId)
+                    : new AddPaymentAfterDueDateJob($router, $profile, $comment, $data['secret_id'], $data['username'], $traceId);
 
                 dispatch($job);
             } elseif ($data['internet_service'] === 'ip_static') {
@@ -152,7 +152,7 @@ class CallbackPaymentService
                 $address = $this->ipStaticService->getAddressListByIpAddress($router, $data['ip_static'], $traceId);
 
                 if (isset($address[0]['list']) && $address[0]['list'] !== $autoIsolir->address_list_isolir) {
-                    dispatch(new AddPaymentBeforeDueDateJob($router, $data['simpleque_id'], $comment));
+                    dispatch(new AddPaymentBeforeDueDateJob($router, $data['simpleque_id'], $comment, $traceId));
                 } else {
                     dispatch(new AddPaymentIpStaticAfterDueDateJob(
                         $router,

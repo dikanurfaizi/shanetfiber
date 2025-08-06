@@ -19,16 +19,18 @@ class DisabledScheduleJob implements ShouldQueue
     private string $scheduleId;
     private string $disabledStatus;
     private ScheduleService $ScheduleService;
+    private string $traceId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Mikrotik $mikrotik, string $scheduleId, string $disabledStatus)
+    public function __construct(Mikrotik $mikrotik, string $scheduleId, string $disabledStatus, string $traceId)
     {
         $this->mikrotik = $mikrotik;
         $this->scheduleId = $scheduleId;
         $this->disabledStatus = $disabledStatus;
         $this->ScheduleService = app(ScheduleService::class);
+        $this->traceId = $traceId;
     }
 
     /**
@@ -36,6 +38,6 @@ class DisabledScheduleJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $this->ScheduleService->disabledScheduleById($this->mikrotik, $this->scheduleId, $this->disabledStatus);
+        $this->ScheduleService->disabledScheduleById($this->mikrotik, $this->scheduleId, $this->disabledStatus, $this->traceId);
     }
 }

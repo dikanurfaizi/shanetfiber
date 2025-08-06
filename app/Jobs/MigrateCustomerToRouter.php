@@ -19,14 +19,16 @@ class MigrateCustomerToRouter implements ShouldQueue
 
     protected Mikrotik $source;
     protected Mikrotik $target;
+    private string $traceId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Mikrotik $source, Mikrotik $target)
+    public function __construct(Mikrotik $source, Mikrotik $target, string $traceId)
     {
         $this->source = $source;
         $this->target = $target;
+        $this->traceId = $traceId;
     }
 
     /**
@@ -70,7 +72,8 @@ class MigrateCustomerToRouter implements ShouldQueue
                 $customer->password_ppp,
                 $service,
                 $profile,
-                $comment
+                $comment,
+                $this->traceId
             );
 
             if (!isset($response['after']['message'])) {

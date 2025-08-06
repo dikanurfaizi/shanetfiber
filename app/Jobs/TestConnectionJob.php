@@ -21,14 +21,16 @@ class TestConnectionJob implements ShouldQueue
     private string $secretId;
     private string $username;
     private TestConnectionService $testConnectionService;
+    private string $traceId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Mikrotik $mikrotik)
+    public function __construct(Mikrotik $mikrotik, string $traceId)
     {
         $this->mikrotik = $mikrotik;
         $this->testConnectionService = app(TestConnectionService::class);
+        $this->traceId = $traceId;
     }
 
     /**
@@ -36,6 +38,6 @@ class TestConnectionJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $this->testConnectionService->checkOnline($this->mikrotik);
+        $this->testConnectionService->checkOnline($this->mikrotik, $this->traceId);
     }
 }

@@ -21,11 +21,12 @@ class CancelPaymentAfterDueDateJob implements ShouldQueue
     private string $secretId;
     private string $username;
     private SecretService $SecretService;
+    private string $traceId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Mikrotik $mikrotik, string $comment, string $profile, string $secretId, string $username)
+    public function __construct(Mikrotik $mikrotik, string $comment, string $profile, string $secretId, string $username, string $traceId)
     {
         $this->mikrotik = $mikrotik;
         $this->comment = $comment;
@@ -33,6 +34,7 @@ class CancelPaymentAfterDueDateJob implements ShouldQueue
         $this->secretId = $secretId;
         $this->username = $username;
         $this->SecretService = app(SecretService::class);
+        $this->traceId = $traceId;
     }
 
     /**
@@ -40,8 +42,8 @@ class CancelPaymentAfterDueDateJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $this->SecretService->deleteActiveSecret($this->mikrotik, $this->username);
-        $this->SecretService->updateProfileSecret($this->mikrotik, $this->profile, $this->secretId);
-        $this->SecretService->addCommentSecret($this->mikrotik, $this->comment, $this->secretId);
+        $this->SecretService->deleteActiveSecret($this->mikrotik, $this->username, $this->traceId);
+        $this->SecretService->updateProfileSecret($this->mikrotik, $this->profile, $this->secretId, $this->traceId);
+        $this->SecretService->addCommentSecret($this->mikrotik, $this->comment, $this->secretId, $this->traceId);
     }
 }

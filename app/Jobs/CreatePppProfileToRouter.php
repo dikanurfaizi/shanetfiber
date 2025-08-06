@@ -42,7 +42,7 @@ class CreatePppProfileToRouter implements ShouldQueue
          * ----------------------------------------------------------- */
         try {
             $exists = $secretService
-                ->getPppProfileByName($router, $profile->profile_name);
+                ->getPppProfileByName($router, $profile->profile_name, $this->traceId);
         } catch (\Throwable $e) {
             LogHelper::logError(
                 null,
@@ -123,7 +123,7 @@ class CreatePppProfileToRouter implements ShouldQueue
             'comment'           => $profile->comment,
         ];
 
-        $response = $secretService->createPppProfile($router, $data);
+        $response = $secretService->createPppProfile($router, $data, $this->traceId);
 
         LogHelper::logInfo(
             null,

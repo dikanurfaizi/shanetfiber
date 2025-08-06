@@ -22,11 +22,12 @@ class CancelPaymentIpStaticAfterDueDateJob implements ShouldQueue
     private string $comment;
     private string $simpleque_id;
     private IpStaticService $IpStaticService;
+    private string $traceId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Mikrotik $mikrotik, string $address_list_isolir, string $ip_address, string $simpleque_id, string $comment)
+    public function __construct(Mikrotik $mikrotik, string $address_list_isolir, string $ip_address, string $simpleque_id, string $comment, string $traceId)
     {
         $this->mikrotik = $mikrotik;
         $this->address_list_isolir = $address_list_isolir;
@@ -34,6 +35,7 @@ class CancelPaymentIpStaticAfterDueDateJob implements ShouldQueue
         $this->simpleque_id = $simpleque_id;
         $this->comment = $comment;
         $this->IpStaticService = app(IpStaticService::class);
+        $this->traceId = $traceId;
     }
 
     /**
@@ -42,7 +44,7 @@ class CancelPaymentIpStaticAfterDueDateJob implements ShouldQueue
     public function handle(): void
     {
         //  $this->IpStaticService->deleteIpFromAddressList($this->mikrotik, $this->ip_address, $this->address_list_isolir);
-        $this->IpStaticService->addIpToAddressList($this->mikrotik, $this->ip_address, $this->address_list_isolir, $this->comment);
-        $this->IpStaticService->setCommentSimpleque($this->mikrotik, $this->simpleque_id, $this->comment);
+        $this->IpStaticService->addIpToAddressList($this->mikrotik, $this->ip_address, $this->address_list_isolir, $this->comment, $this->traceId);
+        $this->IpStaticService->setCommentSimpleque($this->mikrotik, $this->simpleque_id, $this->comment, $this->traceId);
     }
 }

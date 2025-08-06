@@ -9,7 +9,7 @@ use Carbon\Carbon;
 use App\DataTransferObjects\WhatsappJobDto;
 use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
 use App\Helpers\LogHelper;
-use App\Enums\WhatsappAction;
+use App\Enums\WhatsAppAction;
 use App\Services\Billings\PaymentProcessingService;
 use App\Services\Billings\PaymentCancellationService;
 
@@ -183,9 +183,11 @@ class PaymentService
         ?int $receiptId = null
     ): void {
         if ($paymentType === 'transfer') {
-            $action = WhatsappAction::TRANSFER->value;
+            $action = WhatsAppAction::TRANSFER->value;
+        } elseif ($paymentType === 'cash') {
+            $action = WhatsAppAction::CASH->value;
         } else {
-            $action = WhatsappAction::CASH->value;
+            $action = $paymentType;
         }
 
         $jobData = new WhatsappJobDto(
