@@ -863,13 +863,31 @@ class SecretService
         try {
             $client = $this->getMikrotik($mikrotik, $traceId);
             if (!$client) {
-                throw new Exception('Failed to connect to Mikrotik.');
+                throw new \RuntimeException("Failed to connect to Mikrotik: {$mikrotik->host}");
             }
 
             $query = (new Query('/ppp/profile/print'))->where('name', $profileName);
             $result = $client->query($query)->read();
 
-            return $result ?: 'error';
+            if (empty($result)) {
+                throw new \RuntimeException("PPP profile '{$profileName}' not found on Mikrotik '{$mikrotik->host}'.");
+            }
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'name' => $mikrotik->name ?? 'N/A',
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'profile' => $profileName,
+                    'result' => $result
+                ],
+                200,
+                "Return Result getPppProfileByName",
+                $traceId
+            );
+
+
+            return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
@@ -883,7 +901,11 @@ class SecretService
                 "Failed to fetch PPP profile by name",
                 $traceId
             );
-            return 'error';
+
+            return [
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ];
         }
     }
 

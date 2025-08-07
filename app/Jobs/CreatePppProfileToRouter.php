@@ -31,6 +31,18 @@ class CreatePppProfileToRouter implements ShouldQueue
 
     public function handle(SecretService $secretService): void
     {
+        LogHelper::logInfo(
+            null,
+            [
+                'routerId' => $this->routerId,
+                'profileId' => $this->profileId,
+                'traceId' => $this->traceId
+            ],
+            200,
+            '[CreatePppProfileToRouter] Job started',
+            $this->traceId
+        );
+
         $routerId  = $this->routerId;
         $profileId = $this->profileId;
         $router = Mikrotik::find($routerId);
@@ -43,6 +55,18 @@ class CreatePppProfileToRouter implements ShouldQueue
         try {
             $exists = $secretService
                 ->getPppProfileByName($router, $profile->profile_name, $this->traceId);
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'name' => $router->name,
+                    'host' => $router->host,
+                    'exists' => $exists
+                ],
+                200,
+                'Successfully get Ppp Profile By Name',
+                $this->traceId
+            );
         } catch (\Throwable $e) {
             LogHelper::logError(
                 null,
@@ -58,8 +82,8 @@ class CreatePppProfileToRouter implements ShouldQueue
             return;
         }
 
+        // Jika return adalah string "error"
         if (is_string($exists) && trim(strtolower($exists)) === 'error') {
-            // Anggap sebagai error, tidak lanjut
             LogHelper::logError(
                 null,
                 [
@@ -68,13 +92,14 @@ class CreatePppProfileToRouter implements ShouldQueue
                     'error' => $exists
                 ],
                 500,
-                'Terjadi error',
+                'Terjadi error saat komunikasi dengan Mikrotik',
                 $this->traceId
             );
             return;
         }
 
-        if (!empty($exists)) {
+        // Jika status = success ➜ berarti profile ADA
+        if (is_array($exists) && ($exists['status'] ?? null) === 'success') {
             LogHelper::logWarning(
                 null,
                 [

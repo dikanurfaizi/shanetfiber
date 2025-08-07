@@ -541,7 +541,10 @@ class PppProfileController extends Controller
             }
 
             // Batch the jobs
-            $profileJobs = $profilesToExport->map(fn($profile) => new CreatePppProfileToRouter($mikrotik, $profile));
+            $profileJobs = $profilesToExport->map(
+                fn($profile) =>
+                new CreatePppProfileToRouter($mikrotik->id, $profile->id, $traceId)
+            );
 
             $batch = Bus::batch($profileJobs)
                 ->then(function (Batch $batch) use ($uri, $logBase) {
@@ -670,7 +673,7 @@ class PppProfileController extends Controller
 
         try {
             foreach ($mikrotik as $device) {
-                dispatch(new CreatePppProfileToRouter($device->id, $profileId));
+                CreatePppProfileToRouter::dispatch($device->id, $profileId, $traceId)->onQueue('default');
                 LogHelper::logInfo($uri, [], 200, 'Export job dispatched', $traceId);
             }
 

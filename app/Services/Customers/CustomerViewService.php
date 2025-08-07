@@ -50,6 +50,7 @@ class CustomerViewService
                     'customer' => $customer,
                     'customer_contact' => $formatter->formatReceiver($customer->contact, null, false),
                     'ont' => CustomerOnt::where('customer_id', $customer->id)->first(),
+                    'mikrotik' => $router
                 ],
                 $this->customerDataService->getCustomerDetails($customer, $traceId)
             );
@@ -62,7 +63,7 @@ class CustomerViewService
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
-                $e,
+                null,
                 [
                     'customer_id' => $customer->id,
                     'router_id' => $customer->mikrotik_id ?? null,
@@ -148,6 +149,7 @@ class CustomerViewService
             'customer' => $customer,
             'customer_contact' => $formatter->formatReceiver($customer->contact, null, false),
             'ont' => CustomerOnt::where('customer_id', $customer->id)->first(),
+            'mikrotik' => $router,
             ...$this->customerDataService->getCustomerDetails($customer, $traceId)
         ];
 
