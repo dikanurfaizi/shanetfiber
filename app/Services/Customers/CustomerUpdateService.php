@@ -74,8 +74,30 @@ class CustomerUpdateService
     private function handlePackageChange(Customer $customer, array $data, string $traceId): void
     {
         if (!isset($data['paket_id'])) {
+            LogHelper::logInfo(
+                null,
+                [
+                    'customer_id' => $customer->id,
+                    'message' => 'Data paket_id tidak dikirim dari form'
+                ],
+                200,
+                'Package ID not present in request data',
+                $traceId
+            );
             return;
         }
+
+        LogHelper::logInfo(
+            null,
+            [
+                'customer_id' => $customer->id,
+                'paket_id_from_request' => $data['paket_id'],
+                'paket_id_from_customer' => $customer->paket_id
+            ],
+            200,
+            'Checking for package change',
+            $traceId
+        );
 
         if ($data['paket_id'] == $customer->paket_id) {
             LogHelper::logInfo(
@@ -91,24 +113,66 @@ class CustomerUpdateService
             return;
         }
 
+        // Router
         $router = Mikrotik::find($customer->mikrotik_id);
-        $autoIsolir = AutoIsolir::where('mikrotik_id', $customer->mikrotik_id)->first();
-        $profile = Paket::find($data['paket_id'])->value('profile');
+        if (!$router) {
+            LogHelper::logWarning(null, [
+                'customer_id' => $customer->id,
+                'mikrotik_id' => $customer->mikrotik_id,
+            ], 404, 'Router tidak ditemukan', $traceId);
+            return;
+        }
 
-        if (!$router || $router->disabled == 'true') {
+        LogHelper::logInfo(null, [
+            'customer_id' => $customer->id,
+            'mikrotik_id' => $customer->mikrotik_id,
+            'router_name' => $router->name ?? null,
+        ], 200, 'Router ditemukan', $traceId);
+
+        // Auto Isolir
+        $autoIsolir = AutoIsolir::where('mikrotik_id', $customer->mikrotik_id)->first();
+        if (!$autoIsolir) {
+            LogHelper::logWarning(null, [
+                'mikrotik_id' => $customer->mikrotik_id,
+            ], 404, 'AutoIsolir tidak ditemukan', $traceId);
+        } else {
+            LogHelper::logInfo(null, [
+                'mikrotik_id' => $customer->mikrotik_id,
+                'autoIsolir' => $autoIsolir,
+            ], 200, 'AutoIsolir ditemukan', $traceId);
+        }
+
+        // Ambil Paket dan Profile
+        $paket = Paket::find($data['paket_id']);
+        $profile = $paket ? $paket->profile : null;
+
+        if (!$paket || !$profile) {
+            LogHelper::logWarning(null, [
+                'paket_id' => $data['paket_id'],
+            ], 404, 'Profile atau Paket tidak ditemukan', $traceId);
+            return;
+        }
+
+        LogHelper::logInfo(null, [
+            'paket_id' => $data['paket_id'],
+            'profile' => $profile,
+        ], 200, 'Profile ditemukan dari paket', $traceId);
+
+        if ($router->disabled == 'true') {
             LogHelper::logWarning(
                 null,
                 [
                     'customer_id' => $customer->id,
-                    'router_status' => $router ? 'disabled' : 'not_found'
+                    'router_status' => 'disabled'
                 ],
                 400,
-                'Router not available for package change',
+                'Router tidak tersedia (disabled)',
                 $traceId
             );
             return;
         }
 
+        // Cek koneksi router
         try {
             $this->testConnectionService->checkOnline($router, $traceId);
         } catch (\Exception $e) {
@@ -131,11 +195,30 @@ class CustomerUpdateService
             return;
         }
 
+        // Update Mikrotik profile
         if ($customer->internet_service === 'ppp') {
             $this->updatePppPackage($customer, $router, $autoIsolir, $profile, $traceId);
+            LogHelper::logInfo(null, [
+                'paket_id' => $data['paket_id'],
+                'profile' => $profile,
+            ], 200, 'Send update Ppp Package', $traceId);
         } elseif ($customer->internet_service === 'ip_static') {
             $this->updateIpStaticPackage($customer, $router, $profile, $traceId);
+            LogHelper::logInfo(null, [
+                'paket_id' => $data['paket_id'],
+                'profile' => $profile,
+            ], 200, 'Send update IP Static Package', $traceId);
         }
+
+        // Update data paket_id di DB
+        $customer->update([
+            'paket_id' => $paket->id
+        ]);
+
+        LogHelper::logInfo(null, [
+            'customer_id' => $customer->id,
+            'new_paket_id' => $paket->id
+        ], 200, 'Customer paket_id berhasil diperbarui', $traceId);
     }
 
     private function updatePppPackage(Customer $customer, Mikrotik $router, ?AutoIsolir $autoIsolir, string $profile, string $traceId): void
@@ -500,12 +583,6 @@ class CustomerUpdateService
                 $updateData['member_id'] = $data['member_id'];
                 $updateData['billing_option'] = $data['billing_option'] ?? null;
                 $updateData['billing_period'] = $data['billing_option'] !== '0' ? $data['periode_billing'] : null;
-            }
-
-            if (!empty($data['paket_id'])) {
-                $profile = PppProfile::find($data['paket_id']);
-                $paket = Paket::where('profile', $profile->profile_name)->first();
-                $updateData['paket_id'] = $paket->id;
             }
 
             $customer->update($updateData);

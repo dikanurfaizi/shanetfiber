@@ -20,8 +20,8 @@
                         @endif
                     </div>
                 </div>
-                <div class="row align-items-center">
-                    <div class="col-md-12 mb-3">
+                <div class="row align-items-end mb-3">
+                    <div class="col-md-9">
                         <label for="paket"><strong>{{ __('customer.label.package') }}</strong></label>
                         @if ($serverDisconnect === 'false')
                             <select name="paket_id" class="form-control dynamic" data-dependent="details"
@@ -44,6 +44,14 @@
                             <span class="text-danger">{{ __('Server ') }} {{ $customer->mikrotik->name }}
                                 {{ __('Offline or Disable!') }}</span>
                         @endif
+                    </div>
+
+                    <div class="col-md-3 text-end">
+                        <label class="d-block">&nbsp;</label> {{-- Spasi untuk sejajarkan tombol --}}
+                        <button type="submit" name="action" value="change_package"
+                            class="btn btn-sm btn-success w-100">
+                            <i class="fas fa-user-check"></i>&nbsp;{{ __('customer.button.submit') }}
+                        </button>
                     </div>
                 </div>
                 <div class="row align-items-center">
@@ -243,10 +251,6 @@
             </div>
 
             <div class="card-footer">
-                <button type="submit" name="action" value="change_package" class="btn btn-sm btn-success">
-                    <i class="fas fa-user-check"></i>&nbsp{{ __('customer.button.submit') }}
-                </button>
-
                 <button type="submit" name="action" value="update_data" class="btn btn-sm btn-success">
                     <i class="fas fa-user-check"></i>&nbsp{{ __('customer.button.update') }}
                 </button>
