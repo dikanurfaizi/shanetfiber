@@ -243,8 +243,13 @@
             </div>
 
             <div class="card-footer">
-                <button type="submit" class="btn btn-sm btn-success"><i
-                        class="fas fa-user-check"></i>&nbsp{{ __('customer.button.update') }}</button>
+                <button type="submit" name="action" value="change_package" class="btn btn-sm btn-success">
+                    <i class="fas fa-user-check"></i>&nbsp{{ __('customer.button.submit') }}
+                </button>
+
+                <button type="submit" name="action" value="update_data" class="btn btn-sm btn-success">
+                    <i class="fas fa-user-check"></i>&nbsp{{ __('customer.button.update') }}
+                </button>
                 <a class="btn btn-sm btn-primary" href="{{ route('customers.edit.router', $customer->slug) }}"><i
                         class="fas fa-user-edit"></i>&nbsp{{ __('customer.button.edit-router') }}</a>
                 @if ($customer->internet_service == 'ppp')

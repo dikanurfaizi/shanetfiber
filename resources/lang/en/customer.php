@@ -147,7 +147,7 @@ return [
         'edit-router' => 'Edit Router',
         'activation-all' => 'Activation Now',
         'search' => 'Search',
-
+        'submit' => 'Submit',
     ],
 
     'action' => [

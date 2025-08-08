@@ -30,10 +30,12 @@ class CustomerUpdateService
         private TestConnectionService $testConnectionService
     ) {}
 
-    public function updateCustomer(Customer $customer, array $validatedData, string $traceId): void
+    public function updateCustomer(Customer $customer, array $validatedData, string $traceId, string $action): void
     {
         try {
-            $this->handlePackageChange($customer, $validatedData, $traceId);
+            if ($action === 'change_package') {
+                $this->handlePackageChange($customer, $validatedData, $traceId);
+            }
             $this->handleActivationDateChange($customer, $validatedData, $traceId);
             $this->updateCustomerData($customer, $validatedData, $traceId);
             $this->handleMemberChange($customer, $traceId);
@@ -72,6 +74,20 @@ class CustomerUpdateService
     private function handlePackageChange(Customer $customer, array $data, string $traceId): void
     {
         if (!isset($data['paket_id'])) {
+            return;
+        }
+
+        if ($data['paket_id'] == $customer->paket_id) {
+            LogHelper::logInfo(
+                null,
+                [
+                    'customer_id' => $customer->id,
+                    'paket_id' => $data['paket_id']
+                ],
+                200,
+                'No package change detected',
+                $traceId
+            );
             return;
         }
 
@@ -240,6 +256,32 @@ class CustomerUpdateService
             return;
         }
 
+        try {
+            $inputActivationDate = Carbon::parse($data['activation_date'])->startOfDay();
+        } catch (\Exception $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'exception' => [
+                        'message' => $e->getMessage(),
+                        'code' => $e->getCode(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine()
+                    ],
+                    'data' => $data,
+                ],
+                500,
+                'Failed to parse activation date',
+                $traceId
+            );
+            return;
+        }
+        $currentActivationDate = Carbon::parse($customer->activation_date)->startOfDay();
+
+        if ($inputActivationDate->equalTo($currentActivationDate)) {
+            return;
+        }
+
         $router = Mikrotik::find($customer->mikrotik_id);
         $autoIsolir = AutoIsolir::where('mikrotik_id', $customer->mikrotik_id)->first();
 
@@ -320,7 +362,7 @@ class CustomerUpdateService
     private function handlePppMikrotikUpdate($router, $comment, $secretId, string $traceId): bool
     {
         try {
-            dispatch(new AddPaymentBeforeDueDateJob($router, $comment, $secretId));
+            dispatch(new AddPaymentBeforeDueDateJob($router, $comment, $secretId, $traceId));
             return true;
         } catch (\Throwable $e) {
             LogHelper::logError(

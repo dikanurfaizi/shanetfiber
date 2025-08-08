@@ -308,7 +308,13 @@ class CustomerController extends Controller
     {
         $traceId = (string) Str::uuid();
         try {
-            $this->customerUpdateService->updateCustomer($customer, $request->validated(), $traceId);
+            $action = $request->input('action', 'update_data');
+            $this->customerUpdateService->updateCustomer(
+                $customer,
+                $request->validated(),
+                $traceId,
+                $action
+            );
 
             LogHelper::logInfo(null, [
                 'request' => $request->only([
