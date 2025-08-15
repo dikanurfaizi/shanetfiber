@@ -32,8 +32,22 @@ class SendWhatsappMessageJob implements ShouldQueue
 
     public function handle(): void
     {
+        $startTime = microtime(true);
         $traceId = $this->traceId;
         $timestamp = now();
+
+        LogHelper::logInfo(
+            'SendWhatsappMessageJob',
+            [
+                'message_type' => $this->messageType,
+                'receiver'     => $this->receiver,
+                'customer_id'  => $this->customerId,
+                'trace_id'     => $traceId,
+            ],
+            200,
+            "Job started at {$timestamp}",
+            $traceId
+        );
 
         $gateway = WhatsappGateway::where('disabled', false)->firstOrFail();
 
@@ -131,6 +145,20 @@ class SendWhatsappMessageJob implements ShouldQueue
                 $timestamp
             );
         }
+
+        $executionTime = round(microtime(true) - $startTime, 2);
+        LogHelper::logInfo(
+            'SendWhatsappMessageJob',
+            [
+                'message_type'    => $this->messageType,
+                'receiver'        => $this->receiver,
+                'execution_time_s' => $executionTime,
+                'trace_id'        => $traceId,
+            ],
+            200,
+            "Job finished in {$executionTime} seconds",
+            $traceId
+        );
     }
 
     protected function buildHttpOptions($gateway): array

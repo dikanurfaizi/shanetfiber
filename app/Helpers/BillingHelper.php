@@ -138,7 +138,7 @@ class BillingHelper
         }
 
         // Jika sudah lunas (LS) dan ada harga paket
-        if ($billing->status === 'LS' && $billing->paket_price > 0) {
+        if ($billing->status === 'LS' && $billing->total_amount > 0) {
             $action = route('billings.unpayment', $billing->slug);
 
             $html = '<form method="POST" class="d-inline" action="' . $action . '">'

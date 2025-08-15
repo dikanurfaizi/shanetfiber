@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Billing\BillingPeriode;
 use Illuminate\Support\Str;
 use App\Helpers\LogHelper;
+use Illuminate\Support\Carbon;
 
 class CustomerBillingService
 {
@@ -18,15 +19,20 @@ class CustomerBillingService
             $discount = $customer->member->discount ?? 0;
             $totalPrice = max(0, $basePrice - $discount);
 
-            $billing = $customer->billings()->create([
+            $billing = $customer->billing()->create([
                 'billing_periode_id' => $periode->id,
                 'slug' => Str::slug($customer->id . '-' . Str::random(4)),
                 'billing_number' => $this->generateBillingNumber($customer, $periode, $traceId),
+                'customer_id' => $customer->id,
                 'customer_name' => $customer->name,
                 'paket_name' => $customer->paket->name,
                 'paket_price' => $totalPrice,
-                'created_name' => auth()->user()->name,
-                'status' => 'BL'
+                // 'created_name' => auth()->user()->name ?? 'Ridwan Mansyur',
+                // 'teller_name' => auth()->user()->name ?? 'Ridwan Mansyur',
+                'created_name' => auth()->user()->name ?? $customer->user->name,
+                'teller_name' => auth()->user()->name ?? $customer->user->name,
+                'status' => 'BL',
+                'due_date' => Carbon::now()->startOfMonth()->addDays(14)
             ]);
 
             LogHelper::logInfo(

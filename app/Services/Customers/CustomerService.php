@@ -357,6 +357,9 @@ class CustomerService
     public function createCustomer(array $data, string $traceId): Customer
     {
         try {
+            if (empty($data['password']) || trim($data['password']) === '' || $data['password'] == null) {
+                $data['password'] = '12345678';
+            }
             $customerData = $this->prepareCustomerData($data, $traceId);
             $customer = Customer::create($customerData);
 
@@ -471,6 +474,11 @@ class CustomerService
             );
             throw $e;
         }
+    }
+
+    public function initialBilling(Customer $customer, string $traceId): void
+    {
+        $this->createInitialBilling($customer, $traceId);
     }
 
     private function createInitialBilling(Customer $customer, string $traceId): void
@@ -954,7 +962,7 @@ class CustomerService
             $arp_id = $customer->arp_id;
             $address_list_name = $autoisolir->address_list_isolir ?? 'none';
 
-            dispatch(new DeleteIpStaticJob($router, $simpleque_id, $arp_id, $ip_address, $address_list_name))->onQueue('default');
+            dispatch(new DeleteIpStaticJob($router, $simpleque_id, $arp_id, $ip_address, $address_list_name, $traceId))->onQueue('default');
             LogHelper::logInfo(
                 null,
                 ['customer_id' => $customer->id],

@@ -7,6 +7,7 @@ use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 use Illuminate\Support\Facades\Log;
 use App\Console\Commands\BillingCheckAndUpdateProfile;
 use App\Console\Commands\SendMessages;
+use App\Console\commands\CreateInitialBilling;
 
 class Kernel extends ConsoleKernel
 {
@@ -19,6 +20,7 @@ class Kernel extends ConsoleKernel
         //      CreateBillingCron::class,
         BillingCheckAndUpdateProfile::class,
         SendMessages::class,
+        CreateInitialBilling::class,
     ];
     /**
      * Define the application's command schedule.

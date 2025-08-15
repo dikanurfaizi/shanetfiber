@@ -12,6 +12,8 @@
         $priceAfterDiscount = $price - $discountPrice;
         $taxPrice = ceil($priceAfterDiscount * ($websystem->tax_rate / 100));
         $totalPrice = $priceAfterDiscount + $taxPrice;
+
+        $lastBilling = $billings->isNotEmpty() ? $billings->last() : null;
     @endphp
     <div class="card-body col-lg-12">
         <div style="overflow-x: auto;">
@@ -36,7 +38,7 @@
                 </tr>
                 <tr class="table-borderless">
                     <td width="100px"><strong>{{ __('customer.label.discount-type') }}</strong></td>
-                    <td width="380px">{{ __(':') }} {{ optional($customer->member)->type ?? 'No Discount' }}
+                    <td width="380px">{{ __(':') }} {{ optional($customer->member)->type ?? '-' }}
                     </td>
                 </tr>
                 @if ($websystem->enable_tax === 'true')
@@ -56,18 +58,14 @@
                 <tr class="table-borderless">
                     <td><strong>{{ __('customer.page.label.due-date') }}</strong></td>
                     <td>{{ __(':') }}
-                        @if ($billings->isEmpty())
-                            @if ($customer->activation_date)
-                                {{ \Carbon\Carbon::parse($customer->activation_date)->addDays(30)->translatedFormat('d F Y, h:i A') }}
-                            @else
-                                {{ __('No Due Date') }}
-                            @endif
+                        @if ($lastBilling && $lastBilling->due_date)
+                            {{-- Ambil due_date dari billing terakhir --}}
+                            {{ \Carbon\Carbon::parse($lastBilling->due_date)->translatedFormat('d F Y, H:i') }} WIB
+                            {{-- @elseif ($customer->activation_date) Kalau tidak ada billing, pakai activation_date + 30 hari
+                            {{ \Carbon\Carbon::parse($customer->activation_date)->addDays(30)->translatedFormat('d F Y, h:i A') }} --}}
                         @else
-                            @if ($customer->activation_date)
-                                {{ \Carbon\Carbon::parse($customer->activation_date)->translatedFormat('d F Y, h:i A') }}
-                            @else
-                                {{ __('No Due Date') }}
-                            @endif
+                            {{ \Carbon\Carbon::now()->startOfMonth()->addDays(14)->translatedFormat('d F Y, H:i') }}
+                            WIB
                         @endif
                     </td>
                 </tr>
@@ -101,7 +99,7 @@
                     @foreach ($billings as $billing)
                         <tr>
                             <td>{{ $loop->iteration }}</td>
-                            <td>{{ $billing->billing_periode->name }}</td>
+                            <td>{{ $billing->billingSubscription->billing_periode }}</td>
                             <td>{{ $billing->paket_name }}</td>
                             @if ($websystem->enable_tax === 'true')
                                 <td>

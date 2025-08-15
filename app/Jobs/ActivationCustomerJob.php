@@ -47,10 +47,6 @@ class ActivationCustomerJob implements ShouldQueue
      */
     public function handle(): void
     {
-        // $this->SecretService->deleteActiveSecret($this->mikrotik, $this->username);
-        // $this->SecretService->updateProfileSecret($this->mikrotik, $this->profile, $this->secretId);
-        // $this->SecretService->addCommentSecret($this->mikrotik, $this->comment, $this->secretId);
-        // $this->SecretService->enableSecret($this->mikrotik, $this->username);
         $createSecret = $this->SecretService->createSecret($this->mikrotik, $this->username, $this->password, $this->serviceName, $this->profile, $this->comment, $this->traceId);
     }
 }

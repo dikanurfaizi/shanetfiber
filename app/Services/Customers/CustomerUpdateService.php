@@ -8,9 +8,12 @@ use App\Models\AutoIsolir;
 use App\Models\Paket\Paket;
 use App\Models\Billing\Billing;
 use App\Models\Billing\BillingPeriode;
-use App\Models\Paket\PppProfile;
+use App\Models\CustomerSubscription;
+use App\Models\Billing\BillingSubscriptionPeriode;
+use App\Models\SubscriptionDuration;
 use App\Jobs\AddPaymentBeforeDueDateJob;
 use App\Jobs\AddPaymentIpStaticBeforeDueDateJob;
+use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
 use App\Services\Routerboard\Ppp\SecretService;
@@ -20,6 +23,9 @@ use App\Services\Routerboard\TestConnectionService;
 use App\Http\Resources\Pppoe\SecretResource;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
+use App\DataTransferObjects\WhatsappJobDto;
+use App\Enums\WhatsAppAction;
+use Illuminate\Support\Facades\DB;
 
 class CustomerUpdateService
 {
@@ -30,15 +36,25 @@ class CustomerUpdateService
         private TestConnectionService $testConnectionService
     ) {}
 
-    public function updateCustomer(Customer $customer, array $validatedData, string $traceId, string $action): void
+    public function updateCustomer(Customer $customer, array $validatedData, string $traceId, string $action): array
     {
         try {
             if ($action === 'change_package') {
-                $this->handlePackageChange($customer, $validatedData, $traceId);
+                $result = $this->validatePackageChange($customer, $traceId);
+                if (!$result['success']) {
+                    return $result;
+                }
+                $changesResult = $this->handlePackageChange($customer, $validatedData, $traceId);
+                if (!$changesResult['success']) {
+                    return $changesResult;
+                }
+                $message = $changesResult['message'];
+            } else {
+                $this->handleActivationDateChange($customer, $validatedData, $traceId);
+                $this->updateCustomerData($customer, $validatedData, $traceId);
+                $this->handleMemberChange($customer, $traceId);
+                $message = 'Customer update successfully';
             }
-            $this->handleActivationDateChange($customer, $validatedData, $traceId);
-            $this->updateCustomerData($customer, $validatedData, $traceId);
-            $this->handleMemberChange($customer, $traceId);
 
             LogHelper::logInfo(
                 null,
@@ -47,9 +63,15 @@ class CustomerUpdateService
                     'changes' => array_keys($validatedData)
                 ],
                 200,
-                'Customer updated successfully',
+                $message,
                 $traceId
             );
+
+            return [
+                'success' => true,
+                'message' => $message,
+                'traceId' => $traceId
+            ];
         } catch (\Throwable $e) {
             LogHelper::logError(
                 null,
@@ -67,158 +89,322 @@ class CustomerUpdateService
                 'Failed to update customer',
                 $traceId
             );
-            throw $e;
+            return [
+                'success' => false,
+                'message' => "Failed to update customer. Please call the IT Helpdesk",
+                'traceId' => $traceId
+            ];
         }
     }
 
-    private function handlePackageChange(Customer $customer, array $data, string $traceId): void
+    private function validatePackageChange(Customer $customer, string $traceId): array
     {
-        if (!isset($data['paket_id'])) {
-            LogHelper::logInfo(
-                null,
-                [
-                    'customer_id' => $customer->id,
-                    'message' => 'Data paket_id tidak dikirim dari form'
-                ],
-                200,
-                'Package ID not present in request data',
-                $traceId
-            );
-            return;
-        }
+        $startTime = microtime(true);
 
-        LogHelper::logInfo(
-            null,
-            [
+        $log = function (string $level, int $status, string $message, array $context = []) use ($traceId, $customer, $startTime) {
+            $executionTime = round((microtime(true) - $startTime) * 1000, 2) . ' ms';
+            $context = array_merge([
                 'customer_id' => $customer->id,
+                'execution_time' => $executionTime
+            ], $context);
+
+            match ($level) {
+                'info' => LogHelper::logInfo(null, $context, $status, $message, $traceId),
+                'warning' => LogHelper::logWarning(null, $context, $status, $message, $traceId),
+                'error' => LogHelper::logError(null, $context, $status, $message, $traceId),
+            };
+        };
+        try {
+            // 🔹 Step 1: Ambil periode terakhir
+            $lastPeriode = DB::table('billing_subscription_periodes as bsp')
+                ->whereIn('bsp.customer_subscription_id', function ($q) use ($customer) {
+                    $q->select('id')
+                        ->from('customer_subscriptions')
+                        ->where('customer_id', $customer->id);
+                })
+                ->orderByDesc('bsp.created_at')
+                ->first();
+
+            if (!$lastPeriode) {
+                $log('warning', 404, 'Tidak ada data billing periode', [
+                    'customer_id' => $customer->id,
+                    'customer_name' => $customer->name
+                ]);
+                return [
+                    'success' => false,
+                    'message' => 'Package change failed, there is no billing periode',
+                    'traceId' => $traceId
+                ];
+            }
+
+            // Cek apakah periode terakhir sudah dibayar
+            if (!$lastPeriode->is_paid) {
+                $log('warning', 400, 'Periode terakhir belum dibayar', [
+                    'customer_id' => $customer->id,
+                    'customer_name' => $customer->name,
+                    'last_periode' => $lastPeriode
+                ]);
+                return [
+                    'success' => false,
+                    'message' => 'Package change failed, last period package has not been paid',
+                    'traceId' => $traceId
+                ];
+            }
+
+            // Hitung jumlah periode yang sudah dibayar
+            $paidCount = DB::table('billing_subscription_periodes as bsp')
+                ->whereIn('bsp.customer_subscription_id', function ($q) use ($customer) {
+                    $q->select('id')
+                        ->from('customer_subscriptions')
+                        ->where('customer_id', $customer->id);
+                })
+                ->where('bsp.is_paid', true)
+                ->count();
+
+            if ($paidCount < 3) {
+                $log('warning', 400, 'Belum berlangganan minimal 3 periode', [
+                    'customer_id' => $customer->id,
+                    'customer_name' => $customer->name,
+                    'paid_count' => $paidCount
+                ]);
+                return [
+                    'success' => false,
+                    'message' => 'Package change failed, have not subscribed for at least 3 periods',
+                    'traceId' => $traceId
+                ];
+            }
+
+            $log('info', 200, 'Validasi billing terpenuhi, lanjut proses ganti paket', [
+                'paid_count' => $paidCount
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Billing validation is fulfilled, continue the package change process',
+                'traceId' => $traceId
+            ];
+        } catch (\Throwable $e) {
+            $log('error', 500, 'Unexpected error during validatePackageChange', [
+                'exception' => [
+                    'message' => $e->getMessage(),
+                    'code' => $e->getCode(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            ]);
+            return [
+                'success' => false,
+                'message' => 'Unexpected error during change paket',
+                'traceId' => $traceId
+            ];
+        }
+    }
+
+    private function handlePackageChange(Customer $customer, array $data, string $traceId): array
+    {
+        $startTime = microtime(true);
+
+        $log = function (string $level, int $status, string $message, array $context = []) use ($traceId, $customer, $startTime) {
+            $executionTime = round((microtime(true) - $startTime) * 1000, 2) . ' ms';
+            $context = array_merge([
+                'customer_id' => $customer->id,
+                'execution_time' => $executionTime
+            ], $context);
+
+            match ($level) {
+                'info' => LogHelper::logInfo(null, $context, $status, $message, $traceId),
+                'warning' => LogHelper::logWarning(null, $context, $status, $message, $traceId),
+                'error' => LogHelper::logError(null, $context, $status, $message, $traceId),
+            };
+        };
+
+        try {
+            if (!isset($data['paket_id'])) {
+                $message = 'Package ID not present in request data';
+                $log('info', 200, $message, [
+                    'message' => 'Data paket_id tidak dikirim dari form'
+                ]);
+                return [
+                    'success' => false,
+                    'message' => $message,
+                    'traceId' => $traceId
+                ];
+            }
+
+            $log('info', 200, 'Checking for package change', [
                 'paket_id_from_request' => $data['paket_id'],
                 'paket_id_from_customer' => $customer->paket_id
-            ],
-            200,
-            'Checking for package change',
-            $traceId
-        );
+            ]);
 
-        if ($data['paket_id'] == $customer->paket_id) {
-            LogHelper::logInfo(
-                null,
-                [
-                    'customer_id' => $customer->id,
+            if ($data['paket_id'] == $customer->paket_id) {
+                $message = 'No package change detected';
+                $log('info', 200, $message, [
                     'paket_id' => $data['paket_id']
-                ],
-                200,
-                'No package change detected',
-                $traceId
-            );
-            return;
-        }
+                ]);
+                return [
+                    'success' => false,
+                    'message' => $message,
+                    'traceId' => $traceId
+                ];
+            }
 
-        // Router
-        $router = Mikrotik::find($customer->mikrotik_id);
-        if (!$router) {
-            LogHelper::logWarning(null, [
-                'customer_id' => $customer->id,
+            // Load router & auto isolir
+            $customer->loadMissing(['mikrotik', 'autoIsolir', 'paket']);
+
+            if (!$customer->mikrotik) {
+                $message = 'Router not found';
+                $log('warning', 404, $message, [
+                    'mikrotik_id' => $customer->mikrotik_id
+                ]);
+                return [
+                    'success' => false,
+                    'message' => $message,
+                    'traceId' => $traceId
+                ];
+            }
+
+            $log('info', 200, 'Router ditemukan', [
                 'mikrotik_id' => $customer->mikrotik_id,
-            ], 404, 'Router tidak ditemukan', $traceId);
-            return;
-        }
+                'router_name' => $customer->mikrotik->name ?? null,
+            ]);
 
-        LogHelper::logInfo(null, [
-            'customer_id' => $customer->id,
-            'mikrotik_id' => $customer->mikrotik_id,
-            'router_name' => $router->name ?? null,
-        ], 200, 'Router ditemukan', $traceId);
+            if (!$customer->autoIsolir) {
+                $log('warning', 404, 'AutoIsolir tidak ditemukan', [
+                    'mikrotik_id' => $customer->mikrotik_id
+                ]);
+            } else {
+                $log('info', 200, 'AutoIsolir ditemukan', [
+                    'mikrotik_id' => $customer->mikrotik_id,
+                    'autoIsolir' => $customer->autoIsolir
+                ]);
+            }
 
-        // Auto Isolir
-        $autoIsolir = AutoIsolir::where('mikrotik_id', $customer->mikrotik_id)->first();
-        if (!$autoIsolir) {
-            LogHelper::logWarning(null, [
-                'mikrotik_id' => $customer->mikrotik_id,
-            ], 404, 'AutoIsolir tidak ditemukan', $traceId);
-        } else {
-            LogHelper::logInfo(null, [
-                'mikrotik_id' => $customer->mikrotik_id,
-                'autoIsolir' => $autoIsolir,
-            ], 200, 'AutoIsolir ditemukan', $traceId);
-        }
+            // Ambil Paket dan Profile
+            $paket = Paket::find($data['paket_id']);
+            $profile = $paket?->profile;
 
-        // Ambil Paket dan Profile
-        $paket = Paket::find($data['paket_id']);
-        $profile = $paket ? $paket->profile : null;
+            if (!$paket || !$profile) {
+                $message = 'Profile or Package not found';
+                $log('warning', 404, $message, [
+                    'paket_id' => $data['paket_id']
+                ]);
+                return [
+                    'success' => false,
+                    'message' => $message,
+                    'traceId' => $traceId
+                ];
+            }
 
-        if (!$paket || !$profile) {
-            LogHelper::logWarning(null, [
+            $log('info', 200, 'Profile ditemukan dari paket', [
                 'paket_id' => $data['paket_id'],
-            ], 404, 'Profile atau Paket tidak ditemukan', $traceId);
-            return;
-        }
+                'profile' => $profile
+            ]);
 
-        LogHelper::logInfo(null, [
-            'paket_id' => $data['paket_id'],
-            'profile' => $profile,
-        ], 200, 'Profile ditemukan dari paket', $traceId);
-
-        if ($router->disabled == 'true') {
-            LogHelper::logWarning(
-                null,
-                [
-                    'customer_id' => $customer->id,
+            if ($customer->mikrotik && $customer->mikrotik->disabled == 'true') {
+                $message = 'Router disabled';
+                $log('warning', 400, $message, [
                     'router_status' => 'disabled'
-                ],
-                400,
-                'Router tidak tersedia (disabled)',
-                $traceId
-            );
-            return;
-        }
+                ]);
+                return [
+                    'success' => false,
+                    'message' => $message,
+                    'traceId' => $traceId
+                ];
+            }
 
-        // Cek koneksi router
-        try {
-            $this->testConnectionService->checkOnline($router, $traceId);
-        } catch (\Exception $e) {
-            LogHelper::logError(
-                null,
-                [
+            try {
+                $this->testConnectionService->checkOnline($customer->mikrotik, $traceId);
+            } catch (\Exception $e) {
+                $message = 'Router offline during package change';
+                $log('error', 503, 'Router offline during package change', [
                     'exception' => [
                         'message' => $e->getMessage(),
                         'code' => $e->getCode(),
                         'file' => $e->getFile(),
                         'line' => $e->getLine()
                     ],
-                    'customer_id' => $customer->id,
-                    'router_id' => $router->id
-                ],
-                503,
-                'Router offline during package change',
-                $traceId
-            );
-            return;
+                    'router_id' => $customer->mikrotik->id
+                ]);
+                return [
+                    'success' => false,
+                    'message' => $message,
+                    'traceId' => $traceId
+                ];
+            }
+
+            // Update Mikrotik profile
+            if ($customer->internet_service === 'ppp') {
+                //$this->updatePppPackage($customer, $customer->mikrotik, $customer->autoIsolir, $profile, $traceId);
+                $log('info', 200, 'Send update Ppp Package', [
+                    'paket_id' => $data['paket_id'],
+                    'profile' => $profile
+                ]);
+            } elseif ($customer->internet_service === 'ip_static') {
+                //$this->updateIpStaticPackage($customer, $customer->mikrotik, $profile, $traceId);
+                $log('info', 200, 'Send update IP Static Package', [
+                    'paket_id' => $data['paket_id'],
+                    'profile' => $profile
+                ]);
+            }
+
+            $oldPaket = $customer->paket;
+
+            $switchResult = $this->switchCustomerSubscription($customer, $paket->id, $traceId);
+            if ($switchResult['success']) {
+                $customer->update([
+                    'paket_id' => $paket->id
+                ]);
+
+                $log('info', 200, 'Customer paket_id berhasil diperbarui', [
+                    'new_paket_id' => $paket->id
+                ]);
+
+                $whatsappJobData = new WhatsappJobDto(
+                    customerId: $customer->id,
+                    action: WhatsappAction::CHANGES_PACKAGE->value,
+                    traceId: $traceId,
+                    billingId: null,
+                    receiptId: null,
+                    receiptData: null,
+                    startDate: null,
+                    endDate: null,
+                    orderId: null,
+                    oldPaketName: $oldPaket->name,
+                    oldPaketPrice: $oldPaket->price
+                );
+
+                ProcessWhatsappMessageJob::dispatch($whatsappJobData)->onQueue('whatsapp_single');
+
+                $successMessage = $switchResult['message'];
+                return [
+                    'success' => true,
+                    'message' => 'Change and ' . $successMessage,
+                    'traceId' => $traceId
+                ];
+            } else {
+                $errorMessage = $switchResult['message'];
+                return [
+                    'success' => false,
+                    'message' => 'Change and ' . $errorMessage,
+                    'traceId' => $traceId
+                ];
+            }
+        } catch (\Throwable $e) {
+            $message = 'Unexpected error during paket changes';
+            $log('error', 500, 'Unexpected error during handlePackageChange', [
+                'exception' => [
+                    'message' => $e->getMessage(),
+                    'code' => $e->getCode(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            ]);
+            return [
+                'success' => false,
+                'message' => $message,
+                'traceId' => $traceId
+            ];
         }
-
-        // Update Mikrotik profile
-        if ($customer->internet_service === 'ppp') {
-            $this->updatePppPackage($customer, $router, $autoIsolir, $profile, $traceId);
-            LogHelper::logInfo(null, [
-                'paket_id' => $data['paket_id'],
-                'profile' => $profile,
-            ], 200, 'Send update Ppp Package', $traceId);
-        } elseif ($customer->internet_service === 'ip_static') {
-            $this->updateIpStaticPackage($customer, $router, $profile, $traceId);
-            LogHelper::logInfo(null, [
-                'paket_id' => $data['paket_id'],
-                'profile' => $profile,
-            ], 200, 'Send update IP Static Package', $traceId);
-        }
-
-        // Update data paket_id di DB
-        $customer->update([
-            'paket_id' => $paket->id
-        ]);
-
-        LogHelper::logInfo(null, [
-            'customer_id' => $customer->id,
-            'new_paket_id' => $paket->id
-        ], 200, 'Customer paket_id berhasil diperbarui', $traceId);
     }
 
     private function updatePppPackage(Customer $customer, Mikrotik $router, ?AutoIsolir $autoIsolir, string $profile, string $traceId): void
@@ -675,5 +861,133 @@ class CustomerUpdateService
     {
         return ($customer->billing_option == 1) ||
             ($customer->billing_option == 2 && $customer->billing_period == $periode->name);
+    }
+
+    private function switchCustomerSubscription(Customer $customer, int $newPaketId, string $traceId): array
+    {
+        DB::beginTransaction();
+        $startTime = microtime(true);
+
+        $log = function (string $level, int $status, string $message, array $context = []) use ($traceId, $customer, $startTime) {
+            $executionTime = round((microtime(true) - $startTime) * 1000, 2) . ' ms';
+            $context = array_merge([
+                'customer_id' => $customer->id,
+                'execution_time' => $executionTime
+            ], $context);
+
+            match ($level) {
+                'info' => LogHelper::logInfo(null, $context, $status, $message, $traceId),
+                'warning' => LogHelper::logWarning(null, $context, $status, $message, $traceId),
+                'error' => LogHelper::logError(null, $context, $status, $message, $traceId),
+            };
+        };
+
+        try {
+            // Ambil customer subscription aktif
+            $activeSubscription = CustomerSubscription::where('customer_id', $customer->id)
+                ->where('status', 'active')
+                ->lockForUpdate()
+                ->first();
+
+            if (!$activeSubscription) {
+                $log('warning', 404, 'Active customer subscription not found');
+                DB::rollBack();
+                return [
+                    'success' => false,
+                    'message' => 'Active subscription not found',
+                    'traceId' => $traceId
+                ];
+            }
+
+            if ($activeSubscription->paket_id == $newPaketId) {
+                $log('warning', 400, 'New package is the same as the old package');
+                DB::rollBack();
+                return [
+                    'success' => false,
+                    'message' => 'New package is the same as the old package',
+                    'traceId' => $traceId
+                ];
+            }
+
+            // Terminate subscription lama
+            $activeSubscription->update([
+                'status' => 'terminated',
+                'terminated_at' => now(),
+            ]);
+
+            $log('info', 200, 'Old subscription terminated', [
+                'old_subscription_id' => $activeSubscription->id,
+            ]);
+
+            // Update billing_subscription_periodes lama -> is_expired = true, status = 'expired'
+            BillingSubscriptionPeriode::where('customer_subscription_id', $activeSubscription->id)
+                ->update([
+                    'is_expired' => true,
+                    'status' => 'expired',
+                ]);
+
+            $log('info', 200, 'Old billing subscription periods marked expired', [
+                'old_subscription_id' => $activeSubscription->id,
+            ]);
+
+            $paket = Paket::find($newPaketId);
+            if (!$paket) {
+                $log('warning', 404, 'Paket not found');
+                DB::rollBack();
+                return [
+                    'success' => false,
+                    'message' => 'Paket not found',
+                    'traceId' => $traceId
+                ];
+            }
+
+            $priceFinal = $paket->is_instalation_free ? $paket->price : $paket->price + $paket->installation_fee;
+
+            $subscriptionDuration = SubscriptionDuration::where('paket_id', $newPaketId)->first();
+
+            // Buat customer_subscriptions baru
+            $newSubscription = CustomerSubscription::create([
+                'customer_id' => $customer->id,
+                'paket_id' => $newPaketId,
+                'subscription_duration_id' => $subscriptionDuration->id,
+                'start_date' => now(),
+                'end_date' => now()->addMonth()->day(15)->startOfDay(),
+                'price_final' => $priceFinal,
+                'discount_type' => 'none',
+                'discount_value_final' => 0,
+                'status' => 'active',
+            ]);
+
+            $log('info', 201, 'New subscription created', [
+                'new_subscription_id' => $newSubscription->id,
+                'new_paket_id' => $newPaketId,
+            ]);
+
+            DB::commit();
+
+            return [
+                'success' => true,
+                'message' => 'switch paket done',
+                'new_subscription_id' => $newSubscription->id,
+                'traceId' => $traceId
+            ];
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            $log('error', 500, 'Failed to switch subscription', [
+                'exception' => [
+                    'message' => $e->getMessage(),
+                    'code' => $e->getCode(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ],
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'switch paket failed',
+                'traceId' => $traceId
+            ];
+        }
     }
 }

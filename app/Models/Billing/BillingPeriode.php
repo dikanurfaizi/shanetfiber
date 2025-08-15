@@ -4,15 +4,15 @@ namespace App\Models\Billing;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Billing\BillingSubscriptionPeriode;
 
 class BillingPeriode extends Model
 {
     use HasFactory;
     public $guarded = [];
 
-    function billing(): HasMany
+    public function billingSubscriptionPeriodes()
     {
-        return $this->hasMany(Billing::class);
+        return $this->hasMany(BillingSubscriptionPeriode::class, 'billing_periode_id');
     }
 }

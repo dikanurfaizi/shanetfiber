@@ -250,6 +250,7 @@ class CustomerController extends Controller
 
     public function editPpp(Customer $customer)
     {
+        $callerID = request('caller_id');
         $traceId = (string) Str::uuid();
         try {
             LogHelper::logInfo(null, [
@@ -258,7 +259,7 @@ class CustomerController extends Controller
             return view(
                 'customers.editppp',
                 array_merge(
-                    ['customer' => $customer],
+                    ['customer' => $customer, 'callerID' => $callerID],
                     $this->customerPppService->getPppEditData($customer, $traceId)
                 )
             );
@@ -307,81 +308,21 @@ class CustomerController extends Controller
     public function update(CustomerUpdateRequest $request, Customer $customer)
     {
         $traceId = (string) Str::uuid();
+
         try {
             $action = $request->input('action', 'update_data');
-            $this->customerUpdateService->updateCustomer(
+
+            $result = $this->customerUpdateService->updateCustomer(
                 $customer,
                 $request->validated(),
                 $traceId,
                 $action
             );
 
-            LogHelper::logInfo(null, [
-                'request' => $request->only([
-                    'name',
-                    'email',
-                    'discount',
-                    'paket_id',
-                    'contact',
-                    'address',
-                    'member_id',
-                    'user_id',
-                    'billing_option',
-                    'periode_billing',
-                    'activation_date'
-                ]),
-                'customer' => $customer
-            ], 200, 'Successfuly Update Customer Data', $traceId);
-
-            return redirect()->back()
-                ->with('success', 'Customer ' . $customer->name . ' updated!');
-        } catch (\RuntimeException $e) {
-
-            LogHelper::logError(null, [
-                'request' => $request->only([
-                    'name',
-                    'email',
-                    'discount',
-                    'paket_id',
-                    'contact',
-                    'address',
-                    'member_id',
-                    'user_id',
-                    'billing_option',
-                    'periode_billing',
-                    'activation_date'
-                ]),
-                'customer' => $customer,
-                'code' => $e->getCode(),
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ], 500, 'Customer update failed', $traceId);
-
             return redirect()->back()
                 ->withInput()
-                ->with('error', $e->getMessage());
+                ->with($result['success'] ? 'success' : 'error', $result['message']);
         } catch (\Exception $e) {
-
-            LogHelper::logError(null, [
-                'request' => $request->only([
-                    'name',
-                    'email',
-                    'discount',
-                    'paket_id',
-                    'contact',
-                    'address',
-                    'member_id',
-                    'user_id',
-                    'billing_option',
-                    'periode_billing',
-                    'activation_date'
-                ]),
-                'customer' => $customer,
-                'code' => $e->getCode(),
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ], 500, 'Customer update failed', $traceId);
-
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Failed to update customer. Please try again.');

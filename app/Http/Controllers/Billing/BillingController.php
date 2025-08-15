@@ -66,10 +66,13 @@ class BillingController extends Controller
             return $pdf->download("Tagihan_{$searchParams['name']}_{$searchParams['address']}_{$searchParams['status']}_{$searchParams['month']}_{$searchParams['year']}.pdf");
         }
 
+        // dd($billingsQuery->toSql(), $billingsQuery->getBindings());
         // Get data for view
-        $totalPrice = $billingsQuery->sum('paket_price');
+        $totalPrice = $billingsQuery->sum('total_amount');
         $data = $billingsQuery->paginate($paginate);
-        $filterData = $this->billingReportService->getFilterData();
+        $filterData = $this->billingReportService->getFilterData($traceId);
+
+        // dd($data);
 
         return view('billings.index', array_merge(
             [
@@ -99,8 +102,6 @@ class BillingController extends Controller
         $billingAutoGenerate = $websystem?->billing_auto_generate ?? false;
         $billingAutoDay = $websystem?->billing_auto_day;
 
-        //dd($billingPeriodes, $data);
-
         return view('billings.create', compact('data', 'billingPeriodes', 'billingAutoGenerate', 'billingAutoDay'))
             ->with('i', (request()->input('page', 1) - 1) * 12);
     }
@@ -117,31 +118,31 @@ class BillingController extends Controller
         $traceId = (string) Str::uuid();
         try {
             $periode = $request->name ?? Carbon::now()->format('F Y');
-            $billingPeriode = $this->billingService->createBillingPeriode($periode);
-            $totalBillingCreated = $this->billingService->generateBillingsForPeriod($billingPeriode);
+            $billingPeriode = $this->billingService->createBillingPeriode($periode, $traceId);
+            // $totalBillingCreated = $this->billingService->generateBillingsForPeriod($billingPeriode, $traceId);
 
             LogHelper::logInfo(
                 null,
-                ['total_billing_created' => $totalBillingCreated],
+                ['periode_created' => $billingPeriode->name],
                 200,
                 "Billing have been successfully created.",
                 $traceId
             );
 
-            $message = "{$totalBillingCreated} Billing for {$periode} have been successfully created.";
-            return redirect()->route('billings.index')->with('success', $message);
+            $message = "Periode {$billingPeriode->name} have been successfully created.";
+            return redirect()->route('billings.create.one')->with('success', $message);
         } catch (\Exception $e) {
             LogHelper::logError(null, ['error' => $e->getMessage()], 500, "Failed to create billings", $traceId);
-            return redirect()->route('billings.index')->with('error', 'Terjadi Kesalahan, Silakan Periksa Kembali Inputan Atau Hubungi Tim IT.');
+            return redirect()->route('billings.create')->with('error', 'Terjadi Kesalahan, Silakan Periksa Kembali Inputan Atau Hubungi Tim IT.');
         }
     }
 
-    public function store_one(BillingStoreRequest $request)
+    public function store_one(Request $request)
     {
         $traceId = (string) Str::uuid();
         try {
-            $billingPeriode = BillingPeriode::findOrFail($request->name);
-            $totalBillingCreated = $this->billingService->generateBillingsForPeriod($billingPeriode);
+            // dd($request);
+            $totalBillingCreated = $this->billingService->generateBillingsForPeriod($request->id, $traceId);
 
             LogHelper::logInfo(
                 null,
@@ -151,7 +152,7 @@ class BillingController extends Controller
                 $traceId
             );
 
-            $message = "{$totalBillingCreated} Billing for {$billingPeriode->name} have been successfully created.";
+            $message = "{$totalBillingCreated} Billing for {$request->name} have been successfully created.";
             return redirect()->route('billings.index')->with('success', $message);
         } catch (\Exception $e) {
             LogHelper::logError(null, ['error' => $e->getMessage()], 500, "Failed to create billings", $traceId);
@@ -161,7 +162,8 @@ class BillingController extends Controller
 
     public function post_paylater(Request $request, Billing $billing)
     {
-        $result = $this->payLaterService->processPayLater($request, $billing);
+        $traceId = (string) Str::uuid();
+        $result = $this->payLaterService->processPayLater($request, $billing, $traceId);
 
         if ($result['success']) {
             return redirect()->back()->with('success', $result['message']);
@@ -249,18 +251,18 @@ class BillingController extends Controller
 
     public function show(Billing $billing)
     {
-        $billing->loadMissing(['customer.member', 'billing_periode']);
+        $billing->loadMissing(['customer.member', 'billingSubscription']);
 
         $billings = Billing::where('customer_id', $billing->customer_id)
             ->where('status', '!=', 'LS')
             ->get();
 
-        $totalPrice = $billings->sum('paket_price');
+        $totalPrice = $billings->sum('total_amount');
 
         $websystem = Websystem::firstWhere('slug', 'websystem');
 
         $customer         = $billing->customer;
-        $currentPeriode   = $billing->billing_periode?->name;
+        $currentPeriode   = $billing->billingSubscription?->billing_periode;
 
         $isValidMember = match (true) {
             ! $customer                              => false,
@@ -313,5 +315,24 @@ class BillingController extends Controller
     {
         $billingperiode->delete();
         return redirect()->route('billings.create')->with('success', 'Periode billing deleted successfully.');
+    }
+
+    public function billing_auto_generate(Request $request)
+    {
+        $request->validate([
+            'billing_auto_day' => 'nullable|integer|min:1|max:28',
+            'billing_auto_generate' => 'nullable|boolean',
+        ]);
+
+        $websystem = Websystem::first();
+
+        // Jika input tidak ada, dianggap 0 (false)
+        $billingAutoGenerate = $request->input('billing_auto_generate', 0);
+
+        $websystem->billing_auto_generate = (bool) $billingAutoGenerate;
+        $websystem->billing_auto_day = $request->input('billing_auto_day');
+        $websystem->save();
+
+        return redirect()->back()->with('success', 'Automatic billing configuration has been set');
     }
 }

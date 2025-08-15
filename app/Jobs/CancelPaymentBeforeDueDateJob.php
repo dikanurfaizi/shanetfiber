@@ -38,8 +38,6 @@ class CancelPaymentBeforeDueDateJob implements ShouldQueue
      */
     public function handle(): void
     {
-        //$this->SecretService->deleteActiveSecret($this->mikrotik, $this->username);
-        // $this->SecretService->updateProfileSecret($this->mikrotik, $this->profile, $this->secretId);
         $this->SecretService->addCommentSecret($this->mikrotik, $this->comment, $this->secretId, $this->traceId);
     }
 }

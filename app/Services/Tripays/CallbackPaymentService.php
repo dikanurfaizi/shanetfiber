@@ -104,7 +104,9 @@ class CallbackPaymentService
             receiptData: null,
             startDate: null,
             endDate: null,
-            orderId: null
+            orderId: null,
+            oldPaketName: null,
+            oldPaketPrice: null
         );
 
         ProcessWhatsappMessageJob::dispatch($whatsappJobData)->onQueue('whatsapp_single');
@@ -160,7 +162,8 @@ class CallbackPaymentService
                         $data['simpleque_id'],
                         $autoIsolir->address_list_isolir,
                         $comment,
-                        $comment_full
+                        $comment_full,
+                        $traceId
                     ));
                 }
             }

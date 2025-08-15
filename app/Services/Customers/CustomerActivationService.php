@@ -10,7 +10,7 @@ use App\Models\AutoIsolir;
 use App\Models\Billing\Billing;
 use App\Models\Receipt;
 use App\Models\PppType;
-use App\Jobs\Whatsapp\ProcessWhatsappMessageJob;
+use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
 use App\Jobs\Telegram\ProcessTelegramMessageJob;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
@@ -420,7 +420,9 @@ class CustomerActivationService
                 receiptData: null,
                 startDate: null,
                 endDate: null,
-                orderId: null
+                orderId: null,
+                oldPaketName: null,
+                oldPaketPrice: null
             );
 
             $telegramJobData = new TelegramJobDto(

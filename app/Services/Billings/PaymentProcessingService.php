@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Mikrotik;
 use App\Models\AutoIsolir;
 use App\Models\Billing\BillingPeriode;
+use App\Models\Billing\Billing;
 use App\Jobs\AddPaymentBeforeDueDateJob;
 use App\Jobs\AddPaymentAfterDueDateJob;
 use App\Jobs\AddPaymentIpStaticAfterDueDateJob;
@@ -14,6 +15,7 @@ use App\Services\Routerboard\Ppp\SecretService;
 use App\Http\Resources\Pppoe\SecretResource;
 use Carbon\Carbon;
 use Exception;
+use App\Helpers\LogHelper;
 
 class PaymentProcessingService
 {
@@ -26,68 +28,123 @@ class PaymentProcessingService
         $this->ipStaticService = $ipStaticService;
     }
 
-    public function processPaymentActions(Customer $customer, string $traceId)
+    public function processPaymentActions(Billing $billing, string $traceId)
     {
-        $router = Mikrotik::find($customer->mikrotik_id);
-        $autoIsolir = AutoIsolir::where('mikrotik_id', $customer->mikrotik_id)->first();
+        try {
+            $billing->loadMissing(['customer']);
+            $customer = $billing->customer;
 
-        if (!$router || $router->disabled == 'true' || !$autoIsolir || $autoIsolir->disabled == 'true') {
-            return;
-        }
+            if (!$customer) {
+                LogHelper::logError(null, ['billing_id' => $billing->id], "Customer not found for billing", $traceId);
+                return;
+            }
 
-        $commentPayment = $this->getCommentPayment($autoIsolir, $customer);
+            $router = Mikrotik::find($customer->mikrotik_id);
+            $autoIsolir = AutoIsolir::where('mikrotik_id', $customer->mikrotik_id)->first();
 
-        if ($customer->internet_service == 'ppp') {
-            $this->processPppPayment($router, $customer, $commentPayment, $traceId);
-        } elseif ($customer->internet_service == 'ip_static') {
-            $this->processIpStaticPayment($router, $customer, $autoIsolir, $commentPayment, $traceId);
+            if (!$router || $router->disabled === 'true') {
+                LogHelper::logError(null, ['router_id' => $customer->mikrotik_id], "Router not found or disabled", $traceId);
+                return;
+            }
+            if (!$autoIsolir || $autoIsolir->disabled === 'true') {
+                LogHelper::logError(null, ['mikrotik_id' => $customer->mikrotik_id], "AutoIsolir not found or disabled", $traceId);
+                return;
+            }
+
+            $commentPayment = $this->getCommentPayment($autoIsolir, $billing, $traceId);
+
+            if ($customer->internet_service == 'ppp') {
+                $this->processPppPayment($router, $customer, $commentPayment, $traceId);
+            } elseif ($customer->internet_service == 'ip_static') {
+                $this->processIpStaticPayment($router, $customer, $autoIsolir, $commentPayment, $traceId);
+            } else {
+                LogHelper::logWarning(null, ['customer_id' => $customer->id, 'internet_service' => $customer->internet_service], "Unknown internet service type", $traceId);
+            }
+        } catch (\Exception $e) {
+            LogHelper::logError(null, ['billing_id' => $billing->id, 'trace' => $e->getTraceAsString()], "processPaymentActions exception: " . $e->getMessage(), $traceId);
+            throw $e;
         }
     }
 
-    private function getCommentPayment(AutoIsolir $autoIsolir, Customer $customer): string
+    private function getCommentPayment(AutoIsolir $autoIsolir, Billing $billing, string $traceId): string
     {
-        if ($autoIsolir->activation_date == 'false') {
-            return $autoIsolir->comment_payment;
+        try {
+            if ($autoIsolir->activation_date === 'false') {
+                return $autoIsolir->comment_payment;
+            }
+
+            $billing->loadMissing('billingSubscriptionPeriode.billingPeriode'); // asumsi relasi sudah dibuat di model
+
+            $activationDate = Carbon::parse($billing->customer->activation_date)->format('d');
+
+            $billingSubPeriode = $billing->billingSubscriptionPeriode;
+            $billingPeriode = $billingSubPeriode ? $billingSubPeriode->billingPeriode : null;
+
+            if (!$billingSubPeriode || !$billingPeriode) {
+                LogHelper::logWarning(null, ['billing_id' => $billing->id], "Billing subscription periode or periode not found", $traceId);
+                return $autoIsolir->comment_payment; // fallback
+            }
+
+            $nextMonth = Carbon::parse($billingPeriode->name)->addMonth()->format('m_Y');
+            $totalDaysInMonth = Carbon::parse($billingPeriode->name)->copy()->addMonth()->daysInMonth;
+
+            if ((int)$activationDate > $totalDaysInMonth) {
+                $activationDate = $totalDaysInMonth;
+            }
+
+            return $autoIsolir->comment_unpayment . '_' . $activationDate . '_' . $nextMonth;
+        } catch (\Exception $e) {
+            LogHelper::logError(null, ['billing_id' => $billing->id], "getCommentPayment exception: " . $e->getMessage(), $traceId);
+            return $autoIsolir->comment_payment; // fallback on error
         }
-
-        $activationDate = Carbon::parse($customer->activation_date)->format('d');
-        $periodeName = BillingPeriode::latest('created_at')->value('name');
-        $nextMonth = Carbon::parse($periodeName)->addMonth()->format('m_Y');
-        $totalDaysInMonth = Carbon::now()->addMonth()->daysInMonth;
-
-        if ($activationDate > $totalDaysInMonth) {
-            $activationDate = $totalDaysInMonth;
-        }
-
-        return $autoIsolir->comment_unpayment . '_' . $activationDate . '_' . $nextMonth;
     }
 
     private function processPppPayment(Mikrotik $router, Customer $customer, string $commentPayment, string $traceId)
     {
         try {
-            $userSecretId = $this->secretService->getSecretById($router, $customer->secret_id, $traceId);
+            // $userSecretId = $this->secretService->getSecretById($router, $customer->secret_id, $traceId);
 
-            if ($userSecretId == 'error') {
-                throw new Exception($customer->secret_id . '! Cannot find user "' . $customer->username . '" on server ' . $router->name . '.');
-            }
+            // if ($userSecretId === 'error') {
+            //     throw new Exception($customer->secret_id . '! Cannot find user "' . $customer->username . '" on server ' . $router->name . '.');
+            // }
 
-            $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
-            $customerProfile = $customer->paket->profile;
+            // $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
+            $customerProfile = $customer->paket->profile ?? null;
 
-            if ($secretProfiles == $customerProfile) {
-                dispatch(new AddPaymentBeforeDueDateJob($router, $commentPayment, $customer->secret_id, $traceId))
-                    ->onQueue('default');
-            } else {
-                dispatch(new AddPaymentAfterDueDateJob(
-                    $router,
-                    $customerProfile,
-                    $commentPayment,
-                    $customer->secret_id,
-                    $customer->username,
-                    $traceId
-                ))->onQueue('default');
-            }
+            // if ($secretProfiles === $customerProfile) {
+            //     dispatch(new AddPaymentBeforeDueDateJob($router, $commentPayment, $customer->secret_id, $traceId))
+            //         ->onQueue('default');
+
+            LogHelper::logInfo(null, [
+                'customer_id' => $customer->name,
+                'customer_profile' => $customerProfile,
+                'internet_service' => $customer->internet_service,
+                'comment_payment' => $commentPayment
+            ], 200, "Successfully dispatch add payment before due date job", $traceId);
+            // } else {
+            //     dispatch(new AddPaymentAfterDueDateJob(
+            //         $router,
+            //         $customerProfile,
+            //         $commentPayment,
+            //         $customer->secret_id,
+            //         $customer->username,
+            //         $traceId
+            //     ))->onQueue('default');
+            //     LogHelper::logInfo(null, [
+            //         'customer_id' => $customer->name,
+            //         'customer_profile' => $customerProfile,
+            //         'internet_service' => $customer->internet_service,
+            //         'comment_payment' => $commentPayment
+            //     ], 200, "Successfully dispatch add payment after due date job", $traceId);
+            // }
+            LogHelper::logInfo(null, [
+                'customer_id' => $customer->name,
+                'customer_profile' => $customerProfile,
+                'internet_service' => $customer->internet_service,
+                'comment_payment' => $commentPayment
+            ], 200, "Process PPP payment pathed successfully", $traceId);
         } catch (Exception $e) {
+            LogHelper::logError(null, ['router' => $router->name, 'customer_id' => $customer->id], "processPppPayment exception: " . $e->getMessage(), $traceId);
             throw new Exception('Server ' . $router->name . ' offline, please check your server. ' . $e->getMessage());
         }
     }
@@ -114,13 +171,35 @@ class PaymentProcessingService
                     $simplequeId,
                     $addressListIsolir,
                     $commentPayment,
-                    $comment
+                    $comment,
+                    $traceId
                 ))->onQueue('default');
+                LogHelper::logInfo(null, [
+                    'customer_id' => $customer->id,
+                    'customer_name' => $customer->name,
+                    'ip_address' => $ipAddress,
+                    'simple_queue_id' => $simplequeId,
+                    'address_list_isolir' => $addressListIsolir,
+                    'address_list_customer' => $addressListCustomer,
+                    'internet_service' => $customer->internet_service,
+                    'comment_payment' => $comment
+                ], 200, "Successfully dispatch add ip static after due date job", $traceId);
             } else {
                 dispatch(new AddPaymentBeforeDueDateJob($router, $simplequeId, $commentPayment, $traceId))
                     ->onQueue('default');
+                LogHelper::logInfo(null, [
+                    'customer_id' => $customer->id,
+                    'customer_name' => $customer->name,
+                    'ip_address' => $ipAddress,
+                    'simple_queue_id' => $simplequeId,
+                    'address_list_isolir' => $addressListIsolir,
+                    'address_list_customer' => $addressListCustomer,
+                    'internet_service' => $customer->internet_service,
+                    'comment_payment' => $comment
+                ], 200, "Successfully dispatch add ip static before due date job", $traceId);
             }
         } catch (Exception $e) {
+            LogHelper::logError(null, ['router' => $router->name, 'customer_id' => $customer->id], "processIpStaticPayment exception: " . $e->getMessage(), $traceId);
             throw new Exception('Cannot connect to Server ' . $router->name . '. ' . $e->getMessage());
         }
     }

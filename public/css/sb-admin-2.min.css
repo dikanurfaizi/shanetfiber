@@ -9168,10 +9168,15 @@ a:focus {
     background-image: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
     background-size: cover;
 } */
+.bg-gradient-primary-customer {
+    /* background: url("/images/bg-primary.jpg") no-repeat center center; */
+    background-size: cover;
+    background-attachment: fixed;
+}
 .bg-gradient-primary {
-    background: url("/images/bg-primary.jpg") no-repeat center center; /* Gambar sebagai latar */
-    background-size: cover; /* Latar memenuhi seluruh area */
-    background-attachment: fixed; /* Tetap saat menggulir */
+    background: url("/images/bg-primary.jpg") no-repeat center center;
+    background-size: cover;
+    background-attachment: fixed;
 }
 .bg-gradient-secondary {
     background-color: #858796;
@@ -10437,4 +10442,3 @@ body.sidebar-toggled footer.sticky-footer {
     color: #495057; /* sedikit lebih gelap */
     transform: translateY(-2px);
 }
-

@@ -7,6 +7,8 @@ use Illuminate\Console\Command;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use App\DataTransferObjects\WhatsappJobDto;
+use App\Enums\WhatsAppAction;
 
 class SendMessages extends Command
 {
@@ -77,17 +79,22 @@ class SendMessages extends Command
                 return 0;
             }
 
-            ProcessWhatsappMessageJob::dispatch(
-                null,
-                'send_info_billing',
-                $traceId,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )->onQueue('whatsapp_broadcast');
+            $whatsappJobData = new WhatsappJobDto(
+                customerId: null,
+                action: WhatsappAction::SEND_INFO_BILLING->value,
+                traceId: $traceId,
+                billingId: null,
+                receiptId: null,
+                receiptData: null,
+                startDate: null,
+                endDate: null,
+                orderId: null,
+                oldPaketName: null,
+                oldPaketPrice: null
+            );
+
+
+            ProcessWhatsappMessageJob::dispatch($whatsappJobData)->onQueue('whatsapp_broadcast');
 
             // Log successful dispatch
             $dispatchTime = Carbon::now()->format('Y-m-d H:i:s');

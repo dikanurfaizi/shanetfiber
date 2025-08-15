@@ -41,13 +41,13 @@
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>Periode:</strong>
-                {{ $billing->billing_periode->name ?? 'no data' }}
+                {{ $billing->billingSubscription->billing_periode ?? 'no data' }}
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>Paket:</strong>
-                {{ $billing->paket_name ?? 'no data' }}
+                {{ $billing->customer->paket->name ?? 'no data' }}
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
@@ -75,10 +75,10 @@
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>Total Price:</strong>
-                @if ($billing->paket_price === 0)
+                @if ($billing->total_amount === 0)
                     {{ __('Free') }}
                 @else
-                    @moneyIDR($billing->paket_price)
+                    @moneyIDR($billing->total_amount)
                 @endif
             </div>
         </div>
@@ -116,7 +116,7 @@
                     </span>
                     {{ __('on ') }}
                     <span class="badge bg-success text-white">
-                        {{ Carbon\Carbon::parse($billing->payment_time)->translatedFormat('l, d F Y H:i:s') }}
+                        {{ Carbon\Carbon::parse($billing->payment_time)->translatedFormat('l, d F Y H:i') }} WIB
                     </span>
                 @elseif ($billing->status === 'PL')
                     <span class="badge bg-warning text-white">
@@ -166,7 +166,7 @@
                 </div>
             </div>
         @endif
-        @if ($billing->paket_price > 0 && $billing->status === 'LS' && $billing->receipt->payment_methode === 'transfer')
+        @if ($billing->total_amount > 0 && $billing->status === 'LS' && $billing->receipt->payment_methode === 'transfer')
             <div class="col-xs-12 col-sm-12 col-md-12">
                 <div class="form-group">
                     <strong>Reference Id:</strong>
@@ -192,7 +192,7 @@
                 {{ __('billing.button.pay') }}
             </a>
             {!! Form::close() !!}
-        @elseif ($billing->status === 'LS' && $billing->paket_price > 0)
+        @elseif ($billing->status === 'LS' && $billing->total_amount > 0)
             {!! Form::model($billing, [
                 'method' => 'PATCH',
                 'route' => ['billings.unpayment', $billing->slug],
@@ -236,18 +236,18 @@
 
                             <td><a href="{{ route('billings.show', $billing->slug) }}" data-bs-toggle="tooltip"
                                     data-bs-placement="top"
-                                    title="Show Billing">{{ $billing->billing_periode->name }}</a></td>
+                                    title="Show Billing">{{ $billing->billingSubscription->billing_periode }}</a></td>
                             <td>
                                 <span class="badge text-success">
-                                    <i class="fas fa-chalkboard"></i> {{ $billing->paket_name }}
+                                    <i class="fas fa-chalkboard"></i> {{ $billing->customer->paket->name }}
                                 </span>
                             </td>
                             <td>
                                 <span class="badge bg-blue-soft text-primary">
-                                    @if ($billing->paket_price === 0)
+                                    @if ($billing->base_price === 0)
                                         {{ __('Free') }}
                                     @else
-                                        @moneyIDR($billing->paket_price + $billing->tax)
+                                        @moneyIDR($billing->base_price + $billing->tax)
                                     @endif
 
                                 </span>

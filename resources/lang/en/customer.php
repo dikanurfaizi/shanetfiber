@@ -77,7 +77,7 @@ return [
         'change-activation-date' => 'Change to',
         'comment' => 'Comment',
         'last-payment' => 'Last Payment',
-        'next-payment' => 'Next payment',
+        'next-payment' => 'Due Date Payment',
         'not-yet-paid' => 'Not Yet Paid',
         'discount' => 'Discount Price',
         'last_logout' => 'Last Logout',

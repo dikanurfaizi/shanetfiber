@@ -12,10 +12,11 @@
     @vite('resources/sass/app.scss')
     <!-- Custom fonts for this template-->
     <link href="{{ asset('css/fontawsome-free-all.min.css') }}" rel="stylesheet" type="text/css">
-    <link href="{{asset('assets/sweet-alert/sweet-alert.min.css')}}" rel="stylesheet">
+    <link href="{{ asset('assets/sweet-alert/sweet-alert.min.css') }}" rel="stylesheet">
     <!-- Custom styles for this template-->
     <link href="{{ asset('css/sb-admin-2.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
+    <link href="{{ asset('assets/swiper/swiper-bundle.min.css') }}" rel="stylesheet">
 
 </head>
 
@@ -33,24 +34,24 @@
     <script src="{{ asset('js/jquery.easing-1.4.1.min.js') }}"></script>
     <!-- Custom scripts for all pages-->
     <script src="{{ asset('js/sb-admin-2.min.js') }}"></script>
-    <script src="{{asset('assets/sweet-alert/sweet-alert.min.js')}}"></script>
+    <script src="{{ asset('js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ asset('assets/swiper/swiper-bundle.min.js') }}"></script>
     @if ($message = Session::get('error'))
-    <script>
-        Swal.fire({
-            icon: 'error',
-            text: '{{ $message }}',
-        })
-    </script>
+        <script>
+            Swal.fire({
+                icon: 'error',
+                text: '{{ $message }}',
+            })
+        </script>
     @endif
 
     @if ($message = Session::get('success'))
-
-    <script>
-        Swal.fire({
-            icon: 'success',
-            text: '{{ $message }}',
-        })
-    </script>
+        <script>
+            Swal.fire({
+                icon: 'success',
+                text: '{{ $message }}',
+            })
+        </script>
     @endif
 </body>
 

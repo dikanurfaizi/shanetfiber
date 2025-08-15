@@ -73,8 +73,9 @@
                             ]) !!}
                             @if ($customer->caller_id != $callerID)
                                 <div class="form-switch">
+                                    <input type="hidden" name="save_with_last_caller_id" value="false">
                                     <input class="form-check-input" value="true" type="checkbox"
-                                        name="save_with_last_caller_id">
+                                        name="save_with_last_caller_id" id="saveLastCallerId">
                                     <label class="form-check-label" for="saveLastCallerId">
                                         {{ __('customer.label.update-with-last-caller-id') }}
                                     </label>
@@ -98,9 +99,10 @@
                     <div class="row align-items-center">
                         <div class="col-md-12 mb-3">
                             <div class="form-switch">
+                                <input type="hidden" name="dont_disconnect_client_button" value="false">
                                 <input class="form-check-input" value="true" type="checkbox"
-                                    name="dont_disconnect_client_button">
-                                <label class="form-check-label" for="disconnect_client_button">
+                                    name="dont_disconnect_client_button" id="disconnectClientButton">
+                                <label class="form-check-label" for="disconnectClientButton">
                                     {{ __('customer.label.disconnect-client-button') }}
                                 </label>
                             </div>

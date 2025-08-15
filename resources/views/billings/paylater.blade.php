@@ -24,19 +24,19 @@
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>Periode:</strong>
-                {{ $billing->billing_periode->name }}
+                {{ $billing->billingSubscription->billingPeriode->name }}
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>Paket:</strong>
-                {{ $billing->paket_name ?? 'no data' }}
+                {{ $billing->customer->paket->name ?? 'no data' }}
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>Price:</strong>
-                @moneyIDR($billing->paket_price ?? '0')
+                @moneyIDR($billing->base_price ?? '0')
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">

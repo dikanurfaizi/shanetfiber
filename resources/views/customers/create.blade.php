@@ -153,7 +153,25 @@
                         @endif
                     </div>
                 </div>
-
+                <div class="row align-items-center">
+                    <div class="col-md-12 mb-3">
+                        <label for="contact"><strong>{{ __('customer.label.contact') }}</strong></label>
+                        <div class="input-group">
+                            {!! Form::text('contact', null, [
+                                'placeholder' => __('customer.placeholder.contact'),
+                                'class' => 'form-control',
+                            ]) !!}
+                            <div class="input-group-append">
+                                <div class="input-group-text">
+                                    <span class="far fa-address-book"></span>
+                                </div>
+                            </div>
+                        </div>
+                        @if ($errors->has('contact'))
+                            <span class="text-danger">{{ $errors->first('contact') }}</span>
+                        @endif
+                    </div>
+                </div>
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="email"><strong>{{ __('customer.label.email') }}</strong><span
@@ -231,26 +249,6 @@
                         @endif
                     </div>
                 </div>
-                <div class="row align-items-center">
-                    <div class="col-md-12 mb-3">
-                        <label for="contact"><strong>{{ __('customer.label.contact') }}</strong></label>
-                        <div class="input-group">
-                            {!! Form::text('contact', null, [
-                                'placeholder' => __('customer.placeholder.contact'),
-                                'class' => 'form-control',
-                            ]) !!}
-                            <div class="input-group-append">
-                                <div class="input-group-text">
-                                    <span class="far fa-address-book"></span>
-                                </div>
-                            </div>
-                        </div>
-                        @if ($errors->has('contact'))
-                            <span class="text-danger">{{ $errors->first('contact') }}</span>
-                        @endif
-                    </div>
-                </div>
-
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="member"><strong>{{ __('customer.label.member') }}</strong></label>

@@ -226,11 +226,11 @@
                                     <h6 class="text-muted mb-3">Details Per Admin</h6>
                                     <div class="row g-3">
                                         @foreach ($adminBillingSummary as $adminData)
-                                            <div class="col-md-6 col-lg-3">
+                                            <div class="col-md-6 col-lg-3 mt-2">
                                                 <div class="card border-0 shadow-sm h-100">
                                                     <div class="card-body">
-                                                        <h6 class="mb-1">{{ $adminData['admin_name'] }}</h6>
-                                                        <h5 class="mb-3 text-primary text-end">@moneyIDR($adminData['total_billing'])</h5>
+                                                        <h6 class="mb-1">{{ $adminData->admin_name }}</h6>
+                                                        <h5 class="mb-3 text-primary text-end">@moneyIDR($adminData->total_billing)</h5>
 
                                                         <div class="border-top pt-2">
                                                             <div
@@ -238,12 +238,12 @@
                                                                 <span>Total Customers:</span>
                                                                 <strong class="text-end">
                                                                     <a href="{{ route('billings.index', [
-                                                                        'admin_name' => $adminData['admin_name'],
+                                                                        'admin_name' => $adminData->admin_name,
                                                                         'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
                                                                         'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
                                                                     ]) }}"
                                                                         class="text-decoration-none">
-                                                                        {{ number_format($adminData['total_customers'], 0, ',', '.') }}
+                                                                        {{ number_format($adminData->total_customers, 0, ',', '.') }}
                                                                     </a>
                                                                 </strong>
                                                             </div>
@@ -258,20 +258,20 @@
                                                                     <div>
                                                                         <strong class="text-success">
                                                                             <a href="{{ route('billings.index', [
-                                                                                'admin_name' => $adminData['admin_name'],
+                                                                                'admin_name' => $adminData->admin_name,
                                                                                 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
                                                                                 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
                                                                                 'search_status' => 'LS',
                                                                             ]) }}"
                                                                                 class="text-decoration-none text-success">
-                                                                                {{ number_format($adminData['total_paid_customers'], 0, ',', '.') }}
+                                                                                {{ number_format($adminData->total_paid_customers, 0, ',', '.') }}
                                                                             </a>
                                                                         </strong>
                                                                     </div>
                                                                     <div class="text-muted"
                                                                         style="font-size: 0.85rem;">
                                                                         Rp.
-                                                                        {{ number_format($adminData['total_paid'], 0, ',', '.') }},00
+                                                                        {{ number_format($adminData->total_paid, 0, ',', '.') }},00
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -286,20 +286,20 @@
                                                                     <div>
                                                                         <strong class="text-warning">
                                                                             <a href="{{ route('billings.index', [
-                                                                                'admin_name' => $adminData['admin_name'],
+                                                                                'admin_name' => $adminData->admin_name,
                                                                                 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
                                                                                 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
                                                                                 'search_status' => 'PL',
                                                                             ]) }}"
                                                                                 class="text-decoration-none text-warning">
-                                                                                {{ number_format($adminData['total_paylater_customers'], 0, ',', '.') }}
+                                                                                {{ number_format($adminData->total_paylater_customers, 0, ',', '.') }}
                                                                             </a>
                                                                         </strong>
                                                                     </div>
                                                                     <div class="text-muted"
                                                                         style="font-size: 0.85rem;">
                                                                         Rp.
-                                                                        {{ number_format($adminData['total_paylater'], 0, ',', '.') }},00
+                                                                        {{ number_format($adminData->total_paylater, 0, ',', '.') }},00
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -314,20 +314,20 @@
                                                                     <div>
                                                                         <strong class="text-danger">
                                                                             <a href="{{ route('billings.index', [
-                                                                                'admin_name' => $adminData['admin_name'],
+                                                                                'admin_name' => $adminData->admin_name,
                                                                                 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
                                                                                 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
                                                                                 'search_status' => 'BL',
                                                                             ]) }}"
                                                                                 class="text-decoration-none text-danger">
-                                                                                {{ number_format($adminData['total_unpaid_customers'], 0, ',', '.') }}
+                                                                                {{ number_format($adminData->total_unpaid_customers, 0, ',', '.') }}
                                                                             </a>
                                                                         </strong>
                                                                     </div>
                                                                     <div class="text-muted"
                                                                         style="font-size: 0.85rem;">
                                                                         Rp.
-                                                                        {{ number_format($adminData['total_unpaid'], 0, ',', '.') }},00
+                                                                        {{ number_format($adminData->total_unpaid, 0, ',', '.') }},00
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -839,156 +839,162 @@
             setInterval(fetchMonthlySummary, 300000);
         </script>
 
-        <script>
-            $.ajaxSetup({
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                }
-            });
-
-            $(document).on('click', '#check-online', function(e) {
-                e.preventDefault();
-                const selectedRouterId = $(this).data('id');
-                const url = "{{ route('check-online', ':id') }}".replace(':id', selectedRouterId);
-
-                $.ajax({
-                    url: url,
-                    method: "POST",
-                    cache: false,
-                    data: {
-                        'id': selectedRouterId
-                    },
-                    success: function(response) {
-                        new Notify({
-                            status: response.status,
-                            title: response.title,
-                            text: response.message,
-                            effect: 'slide',
-                            speed: 500,
-                            showCloseButton: true,
-                            autotimeout: 5000,
-                            autoclose: true
-                        });
-                    },
-                    error: function(data) {
-                        new Notify({
-                            status: 'error',
-                            title: 'Connection failed!',
-                            text: data.responseJSON?.message || 'An error occurred',
-                            effect: 'slide',
-                            speed: 500,
-                            showCloseButton: true,
-                            autotimeout: 5000,
-                            autoclose: true
-                        });
+        @if (env('NEED_MIKROTIK_CONNECTION', true) && env('APP_ENV') !== 'local')
+            <script>
+                $.ajaxSetup({
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                     }
                 });
-            });
 
-            @if ($onlineRouters)
-                @foreach ($onlineRouters as $onlineRouter)
-                    $(document).ready(function() {
-                        $("#loading_ppp_secret-{{ $onlineRouter->slug }}").removeClass("d-none");
-                        $("#loading_ppp_non_active-{{ $onlineRouter->slug }}").removeClass("d-none");
-                        $("#loading_ppp_active-{{ $onlineRouter->slug }}").removeClass("d-none");
+                $(document).on('click', '#check-online', function(e) {
+                    e.preventDefault();
+                    const selectedRouterId = $(this).data('id');
+                    const url = "{{ route('check-online', ':id') }}".replace(':id', selectedRouterId);
 
-                        var allPppSecretsCount = '';
-                        var allPppActiveCount = '';
-
-                        function updateCountPppSecret() {
-                            $.ajax({
-                                url: "{{ route('get.ppp.secrets', ['mikrotik' => $onlineRouter]) }}",
-                                method: "GET",
-                                success: function(response) {
-                                    allPppSecretsCount = response.allPppSecretsCount;
-                                    $("#ppp-secrets-count-{{ $onlineRouter->slug }}").text(
-                                        allPppSecretsCount);
-                                },
-                                error: console.error
+                    $.ajax({
+                        url: url,
+                        method: "POST",
+                        cache: false,
+                        data: {
+                            'id': selectedRouterId
+                        },
+                        success: function(response) {
+                            new Notify({
+                                status: response.status,
+                                title: response.title,
+                                text: response.message,
+                                effect: 'slide',
+                                speed: 500,
+                                showCloseButton: true,
+                                autotimeout: 5000,
+                                autoclose: true
+                            });
+                        },
+                        error: function(data) {
+                            new Notify({
+                                status: 'error',
+                                title: 'Connection failed!',
+                                text: data.responseJSON?.message || 'An error occurred',
+                                effect: 'slide',
+                                speed: 500,
+                                showCloseButton: true,
+                                autotimeout: 5000,
+                                autoclose: true
                             });
                         }
-
-                        function updateCountPppActive() {
-                            $.ajax({
-                                url: "{{ route('get.ppp.active', ['mikrotik' => $onlineRouter]) }}",
-                                method: "GET",
-                                success: function(response) {
-                                    allPppActiveCount = response.allPppActiveCount;
-                                    $("#ppp-secrets-active-count-{{ $onlineRouter->slug }}").text(
-                                        allPppActiveCount);
-                                },
-                                error: console.error
-                            });
-                        }
-
-                        function updateCountPppNonActive() {
-                            const total = allPppSecretsCount - allPppActiveCount;
-                            $("#ppp-secrets-non-active-count-{{ $onlineRouter->slug }}").text(total);
-                        }
-
-                        function updateSystemResources() {
-                            $.ajax({
-                                url: "{{ route('mikrotik.resources', ['mikrotik' => $onlineRouter]) }}",
-                                method: "GET",
-                                success: function(response) {
-                                    if (response.resources?.length > 0) {
-                                        const resource = response.resources[0];
-                                        const memoryUse = resource.totalMemory - resource.freeMemory;
-                                        const memoryPercentUse = Math.round(memoryUse / resource
-                                            .totalMemory * 100);
-                                        const hddUse = resource.totalHdd - resource.freeHdd;
-                                        const hddPercentUse = Math.round(hddUse / resource.totalHdd * 100);
-
-                                        $('#cpu-bar-{{ $onlineRouter->slug }}').css('width', resource
-                                            .cpuLoad + '%');
-                                        $('#cpu-{{ $onlineRouter->slug }}').text(resource.cpuLoad + '%');
-
-                                        $('#ram-bar-{{ $onlineRouter->slug }}').css('width',
-                                            memoryPercentUse + '%');
-                                        $('#memory-{{ $onlineRouter->slug }}').text(resource.memoryUsage +
-                                            '/' + resource.totalMemorySpace);
-
-                                        $('#hdd-bar-{{ $onlineRouter->slug }}').css('width',
-                                            hddPercentUse + '%');
-                                        $('#hdd-{{ $onlineRouter->slug }}').text(resource.hddUsage + '/' +
-                                            resource.totalHddSpace);
-
-                                        $('#boardname-{{ $onlineRouter->slug }}').text(resource.boardName);
-                                        $('#uptime-{{ $onlineRouter->slug }}').text(resource.uptime);
-                                        $("#status-{{ $onlineRouter->slug }}").removeClass("text-danger")
-                                            .addClass("text-success");
-                                    }
-                                },
-                                error: console.error
-                            });
-                        }
-
-                        async function updateData() {
-                            await updateCountPppActive();
-                            await updateCountPppSecret();
-                            await updateCountPppNonActive();
-                            await updateSystemResources();
-                        }
-
-                        updateData()
-                            .catch(console.error);
-
-                        setInterval(updateSystemResources, 10000);
-                        setInterval(updateCountPppNonActive, 5000);
-                        setInterval(function() {
-                            updateCountPppSecret();
-                            updateCountPppActive();
-                        }, 10000);
-
-                        $(document).ajaxStop(function() {
-                            $("#loading_ppp_secret-{{ $onlineRouter->slug }}").addClass("d-none");
-                            $("#loading_ppp_non_active-{{ $onlineRouter->slug }}").addClass("d-none");
-                            $("#loading_ppp_active-{{ $onlineRouter->slug }}").addClass("d-none");
-                        });
                     });
-                @endforeach
-            @endif
-        </script>
+                });
+
+                @if ($onlineRouters)
+                    @foreach ($onlineRouters as $onlineRouter)
+                        $(document).ready(function() {
+                            $("#loading_ppp_secret-{{ $onlineRouter->slug }}").removeClass("d-none");
+                            $("#loading_ppp_non_active-{{ $onlineRouter->slug }}").removeClass("d-none");
+                            $("#loading_ppp_active-{{ $onlineRouter->slug }}").removeClass("d-none");
+
+                            var allPppSecretsCount = '';
+                            var allPppActiveCount = '';
+
+                            function updateCountPppSecret() {
+                                $.ajax({
+                                    url: "{{ route('get.ppp.secrets', ['mikrotik' => $onlineRouter]) }}",
+                                    method: "GET",
+                                    success: function(response) {
+                                        allPppSecretsCount = response.allPppSecretsCount;
+                                        $("#ppp-secrets-count-{{ $onlineRouter->slug }}").text(
+                                            allPppSecretsCount);
+                                    },
+                                    error: console.error
+                                });
+                            }
+
+                            function updateCountPppActive() {
+                                $.ajax({
+                                    url: "{{ route('get.ppp.active', ['mikrotik' => $onlineRouter]) }}",
+                                    method: "GET",
+                                    success: function(response) {
+                                        allPppActiveCount = response.allPppActiveCount;
+                                        $("#ppp-secrets-active-count-{{ $onlineRouter->slug }}").text(
+                                            allPppActiveCount);
+                                    },
+                                    error: console.error
+                                });
+                            }
+
+                            function updateCountPppNonActive() {
+                                const total = allPppSecretsCount - allPppActiveCount;
+                                $("#ppp-secrets-non-active-count-{{ $onlineRouter->slug }}").text(total);
+                            }
+
+                            function updateSystemResources() {
+                                $.ajax({
+                                    url: "{{ route('mikrotik.resources', ['mikrotik' => $onlineRouter]) }}",
+                                    method: "GET",
+                                    success: function(response) {
+                                        if (response.resources?.length > 0) {
+                                            const resource = response.resources[0];
+                                            const memoryUse = resource.totalMemory - resource.freeMemory;
+                                            const memoryPercentUse = Math.round(memoryUse / resource
+                                                .totalMemory * 100);
+                                            const hddUse = resource.totalHdd - resource.freeHdd;
+                                            const hddPercentUse = Math.round(hddUse / resource.totalHdd * 100);
+
+                                            $('#cpu-bar-{{ $onlineRouter->slug }}').css('width', resource
+                                                .cpuLoad + '%');
+                                            $('#cpu-{{ $onlineRouter->slug }}').text(resource.cpuLoad + '%');
+
+                                            $('#ram-bar-{{ $onlineRouter->slug }}').css('width',
+                                                memoryPercentUse + '%');
+                                            $('#memory-{{ $onlineRouter->slug }}').text(resource.memoryUsage +
+                                                '/' + resource.totalMemorySpace);
+
+                                            $('#hdd-bar-{{ $onlineRouter->slug }}').css('width',
+                                                hddPercentUse + '%');
+                                            $('#hdd-{{ $onlineRouter->slug }}').text(resource.hddUsage + '/' +
+                                                resource.totalHddSpace);
+
+                                            $('#boardname-{{ $onlineRouter->slug }}').text(resource.boardName);
+                                            $('#uptime-{{ $onlineRouter->slug }}').text(resource.uptime);
+                                            $("#status-{{ $onlineRouter->slug }}").removeClass("text-danger")
+                                                .addClass("text-success");
+                                        }
+                                    },
+                                    error: console.error
+                                });
+                            }
+
+                            async function updateData() {
+                                await updateCountPppActive();
+                                await updateCountPppSecret();
+                                await updateCountPppNonActive();
+                                await updateSystemResources();
+                            }
+
+                            updateData()
+                                .catch(console.error);
+
+                            setInterval(updateSystemResources, 10000);
+                            setInterval(updateCountPppNonActive, 5000);
+                            setInterval(function() {
+                                updateCountPppSecret();
+                                updateCountPppActive();
+                            }, 10000);
+
+                            $(document).ajaxStop(function() {
+                                $("#loading_ppp_secret-{{ $onlineRouter->slug }}").addClass("d-none");
+                                $("#loading_ppp_non_active-{{ $onlineRouter->slug }}").addClass("d-none");
+                                $("#loading_ppp_active-{{ $onlineRouter->slug }}").addClass("d-none");
+                            });
+                        });
+                    @endforeach
+                @endif
+            </script>
+        @else
+            <script>
+                console.log("Running in local environment, MikroTik scripts disabled");
+            </script>
+        @endif
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 fetchCustomerRegistrationChurnData();

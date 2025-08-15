@@ -14,5 +14,8 @@
         "popper.js": "^1.14.3",
         "sass": "^1.56.1",
         "vite": "^5.0.0"
+    },
+    "dependencies": {
+        "swiper": "^11.2.10"
     }
 }

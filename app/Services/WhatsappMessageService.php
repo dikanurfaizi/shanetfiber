@@ -252,6 +252,9 @@ class WhatsappMessageService
                 case 'unpayment':
                     return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('unpayment'));
 
+                case 'changes_paket':
+                    return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('changes_paket'));
+
                 default:
                     LogHelper::logWarning(
                         null,
@@ -555,7 +558,7 @@ class WhatsappMessageService
             $whatsapp_number = $this->formatter->formatReceiver($this->getWhatsAppNumber($userId), null);
 
             $discount = 0;
-            $price_after_discount = $billing->customer->paket->price;
+            $price_after_discount = $billing->total_amount;
             $member = 'Non Member / Tidak Ada';
 
             if ($action === 'paylater') {
@@ -563,29 +566,29 @@ class WhatsappMessageService
                 $billingPeriodMatch = $billing->customer->billing_period === $billing->billing_periode->name;
 
                 if ($billingOption == 1 || ($billingOption == 2 && $billingPeriodMatch)) {
-                    $discount = optional($billing->customer->member)->discount ?? 0;
+                    $discount = $billing->discount_amount ?? 0;
                     $member = optional($billing->customer->member)->type ?? 'Non Member / Tidak Ada';
                 }
 
-                $price_after_discount -= $discount;
+                $price_after_discount = $billing->total_amount;
                 $billing_number = $billing->billing_number;
-                $paket_name = $billing->paket_name;
+                $paket_name = $billing->customer->paket->name;
             } else {
                 $discount = $receipt?->discount ?? 0;
-                $price_after_discount = $receipt?->price_after_discount ?? $billing->paket_price;
+                $price_after_discount = $receipt?->price_after_discount ?? $billing->total_amount;
                 $member = $receipt?->member_type ?? 'Non Member / Tidak Ada';
                 $billing_number = $receipt->number;
                 $paket_name = $receipt->paket_name;
             }
 
             $replace = [
-                '%name%' => $billing->customer->name,
-                '%address%' => $billing->customer->address,
+                '%name%' => $billing->customer_name,
+                '%address%' => $billing->customer_address,
                 '%customer_id%' => $billing->customer->customer_id,
                 '%billing_number%' => $billing_number,
                 '%paket%' => $paket_name,
-                '%periode%' => $billing->billing_periode->name,
-                '%bill%' => 'Rp. ' . number_format($receipt->paket_price ?? $billing->paket_price, 2),
+                '%periode%' => $billing->billingSubscription->billing_periode,
+                '%bill%' => 'Rp. ' . number_format($receipt->paket_price ?? $billing->base_price, 2),
                 '%discount%' => 'Rp. ' . number_format($discount, 2),
                 '%total%' => 'Rp. ' . number_format($price_after_discount, 2),
                 '%member%' => $member,
@@ -1050,17 +1053,103 @@ class WhatsappMessageService
         ];
 
         $message = $this->getMessageTemplate($action, $replace);
-        SendWhatsappMessageJob::dispatch($action, $billing->customer_contact, $message, $billing->customer_id, $traceId)->onQueue('default');
+        SendWhatsappMessageJob::dispatch($action, $billing->customer_contact, $message, $billing->customer_id, $traceId)->onQueue('whatsapp_broadcast');
         LogHelper::logInfo(null, [
             'customer_id' => $billing->customer_id,
             'customer_name' => $customer_name ?? $billing->customer_name,
             'contact_customer' => $customer_contact ?? $billing->customer_contact,
             'message_type' => $action
-        ], 200, "Send Billing Ingo Message Successfully scheduled", $traceId);
+        ], 200, "Send Billing Info Message Successfully scheduled", $traceId);
         return true;
     }
 
     // =====  send Billing Reminder Message   =====
+    // ============================================
+    // =====            Changes paket         =====
+    public function changesPackage(int $customerId, ?string $oldPaketName, ?int $oldPaketPrice, string $traceId): void
+    {
+        $action = 'changes_paket';
+        $admin_number = '-';
+
+        try {
+            LogHelper::logInfo(null, compact('customerId', 'action', 'traceId'), 200, '⏳ Mulai proses changes package', $traceId);
+
+            $customer = Customer::find($customerId);
+            if (!$customer) {
+                LogHelper::logWarning(null, ['customerId' => $customerId], 404, "❌ Customer ID tidak ditemukan", $traceId);
+                return;
+            }
+
+            if (empty($customer->contact)) {
+                LogHelper::logWarning(null, ['customer_id' => $customer->id], 400, "❌ Nomor kontak pelanggan kosong, tidak bisa mengirim pesan", $traceId);
+                return;
+            }
+
+            $customer_contact = $this->formatter->formatReceiver($customer->contact);
+
+            $admin = User::find($customer->user_id) ?? User::find(1);
+            $admin_number = !empty($admin->contact)
+                ? $this->formatter->formatReceiver($admin->contact, null, false)
+                : '-';
+
+            LogHelper::logInfo(null, [
+                'admin_id' => $admin->id ?? null,
+                'admin_contact' => $admin->contact ?? null,
+                'admin_number' => $admin_number
+            ], 200, '✅ Admin info berhasil diambil dan diformat', $traceId);
+
+            $accountBank = $this->getBankInfo($admin->id ?? 1);
+
+            LogHelper::logInfo(null, ['account_bank' => $accountBank], 200, '✅ Info rekening admin berhasil diambil', $traceId);
+
+            $replace = [
+                '%name%'              => $customer->name,
+                '%address%'           => $customer->address,
+                '%email%'             => $customer->email ?? '-',
+                '%customer_service%'  => $admin_number,
+                '%customer_id%'       => $customer->customer_id,
+                '%admin%'             => $admin->name ?? '-',
+                '%old_paket%'         => $oldPaketName ?? '-',
+                '%old_bill%'          => 'Rp. ' . number_format($oldPaketPrice ?? 0, 2, ',', '.'),
+                '%new_paket%'         => $customer->paket->name ?? '-',
+                '%new_bill%'          => 'Rp. ' . number_format($customer->paket->price ?? 0, 2, ',', '.'),
+                '%account_bank%'      => $accountBank,
+            ];
+
+            LogHelper::logInfo(null, ['replace_keys' => array_keys($replace)], 200, '🧩 Placeholder pengganti disiapkan', $traceId);
+
+            $message = $this->getMessageTemplate($action, $replace);
+            if (!$message) {
+                LogHelper::logWarning(null, [
+                    'customer_id' => $customer->id,
+                    'action'      => $action
+                ], 404, "❌ Template pesan untuk action `{$action}` tidak ditemukan", $traceId);
+                return;
+            }
+
+            LogHelper::logInfo(null, [
+                'customer_id'       => $customer->id,
+                'customer_contact'  => $customer->contact,
+                'final_message'     => $message,
+                'action'            => $action,
+            ], 200, "✅ Pesan WhatsApp siap dikirim ke {$customer->contact}", $traceId);
+
+            SendWhatsappMessageJob::dispatch($action, $customer_contact, $message, $customer->id, $traceId)
+                ->onQueue('default');
+        } catch (\Exception $e) {
+            LogHelper::logError(null, [
+                'customer_id'    => $customerId,
+                'admin_number'   => $admin_number,
+                'action'         => $action,
+                'trace_id'       => $traceId,
+                'error_message'  => $e->getMessage(),
+                'error_file'     => $e->getFile(),
+                'error_line'     => $e->getLine()
+            ], 500, "❌ Exception terjadi saat proses {$action}: {$e->getMessage()}", $traceId);
+        }
+    }
+
+    // =====            Changes paket         =====
     // ============================================
     // =====   Test WhatsApp Message Manual   =====
 

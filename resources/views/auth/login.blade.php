@@ -1,4 +1,4 @@
-@extends('layouts.guest')
+@extends('layouts.adm-guest')
 
 @section('content')
     <!-- Outer Row -->

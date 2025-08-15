@@ -9,96 +9,53 @@
 
 <!-- Nav Item - Tables -->
 
-@canany(['billing-list', 'billing-create', 'billing-edit', 'billing-delete'])
+@canany(['billing-edit', 'billing-delete'])
     <li class="nav-item @if (request()->routeIs('billings*') || request()->routeIs('receipts*')) active @endif">
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBilling" aria-expanded="true"
             aria-controls="collapseBilling" style="padding-top: inherit;">
-            <i class="fas fa-money-check-alt"></i>
+            <i class="fas fa-file-invoice-dollar"></i>
             <span>{{ __('navigation.billings.nav-item') }}</span>
         </a>
-        <div id="collapseBilling" class="collapse collapse @if (request()->routeIs('billings*') || request()->routeIs('receipts*'))  @endif"
+        <div id="collapseBilling" class="collapse @if (request()->routeIs('billings*') || request()->routeIs('billingHistory*')) show @endif"
             aria-labelledby="headingBilling" data-parent="#accordionSidebar">
-            @canany(['billing-list'])
-                <div class="bg-white py-2 collapse-inner rounded">
-                    <a class="collapse-item @if (request()->routeIs('billings*')) active @endif"
-                        href="{{ route('billings.index') }}">{{ __('Last Billing') }}</a>
-                    <a class="collapse-item @if (request()->routeIs('receipts*')) active @endif"
-                        href="{{ route('receipts.index') }}">{{ __('Receipts') }}</a>
-                </div>
-            @endcanany
             @can('billing-create')
-                <div class="collapse collapse @if (request()->routeIs('billings*'))  @endif bg-white py-2 collapse-inner rounded">
+                <div class="bg-white py-2 collapse-inner rounded">
                     <a class="collapse-item @if (request()->routeIs('billings.create')) active @endif"
                         href="{{ route('billings.create') }}">{{ __('navigation.billings.create') }}</a>
                     <a class="collapse-item @if (request()->routeIs('billings.create.one')) active @endif"
                         href="{{ route('billings.create.one') }}">{{ __('navigation.billings.add') }}</a>
                 </div>
-            @endcan
-
+            @endcanany
+            @canany(['billing-list'])
+                <div class="bg-white py-2 collapse-inner rounded">
+                    <a class="collapse-item @if (request()->routeIs('billings.index')) active @endif"
+                        href="{{ route('billings.index') }}">
+                        {{ __('navigation.billings.active_billing') }}</a>
+                    <a class="collapse-item @if (request()->routeIs('billingHistory.index')) active @endif"
+                        href="{{ route('billingHistory.index') }}">
+                        {{ __('navigation.billings.history') }}</a>
+                </div>
+            @endcanany
         </div>
     </li>
 @endcanany
 
-
-
-<!-- Divider -->
-{{-- <hr class="sidebar-divider">
-@if (request()->routeIs('billings.index'))
-<li class="nav-item active">
-    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSearchCustomer" aria-expanded="true" aria-controls="collapseSearchCustomer" style="padding-top: inherit;" style="padding-top: inherit;">
-        <i class="fas fa-search"></i>
-        <span>{{ __('billing.header.search') }}</span>
-    </a>
-    <div class="collapse  @if (request()->routeIs('billings.index')) show @endif" id="collapseSearchCustomer">
-        <div class="card-header py-3 rounded">
-            <form>
-                <div class="row align-items-center mb-1">
-                    {!! Form::text('search_name', null, array('placeholder' => __('billing.placeholder.search-customer-name'),'class' => 'form-control')) !!}
-                </div>
-                <div class="row align-items-center mb-1">
-                    <select name="search_address" class="form-control">
-                        <option value="">{{ __('billing.placeholder.search-address') }}</option>
-                        <option value="no-address">{{ __('billing.placeholder.search-without-address') }}</option>
-                        @foreach ($address as $addrr)
-                        <option value="{{ $addrr }}">{{ $addrr }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="row align-items-center mb-1">
-                    {!! Form::select('search_month', $months, NULL, array('placeholder' => __('billing.placeholder.search-month'),'class' => 'form-control', 'id' => 'select-month-dropdown')) !!}
-                </div>
-                <div class="row align-items-center mb-1">
-                    {!! Form::select('search_year', $years, null, array('placeholder' => __('billing.placeholder.search-year'),'class' => 'form-control')) !!}
-                </div>
-                <div class="row align-items-center mb-1">
-                    <select name="search_status" class="form-control" id="search-status-dropdown">
-                        <option value="">{{ __('billing.placeholder.select.status') }}</option>
-                        <option value="!LS">{{ __('billing.placeholder.select.unpaid') }}</option>
-                        <option value="PL">{{ __('billing.placeholder.select.paylater') }}</option>
-                        <option value="LS">{{ __('billing.placeholder.select.paid') }}</option>
-                    </select>
-                </div>
-                <div class="row align-items-center mb-1">
-                    <input id="select-date" type="datetime-local" class="form-control d-none" name="duedate" placeholder="Due Date">
-                </div>
-                <div class="row align-items-center mb-1">
-                    <div class="form-switch">
-                        <input class="form-check-input" value="true" type="checkbox" name="cetak_pdf">
-                        <label class="form-check-label">
-                            {{ __('Cetak PDF?') }}
-                        </label>
-                    </div>
-                </div>
-                <div class="row align-items-center mt-3">
-                    <span>
-                        <button class="btn btn-success btn-sm" type="submit"><i class="fas fa-search"></i> {{ __('customer.button.search') }}</button>
-                    </span>
-                </div>
-            </form>
+@canany(['billing-list'])
+    <li class="nav-item @if (request()->routeIs('receipts*') || request()->routeIs('receipts*')) active @endif">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseReceipt"
+            aria-expanded="true" aria-controls="collapseReceipt" style="padding-top: inherit;">
+            <i class="fas fa-receipt"></i>
+            <span>{{ __('navigation.receipts.nav-item') }}</span>
+        </a>
+        <div id="collapseReceipt" class="collapse @if (request()->routeIs('receipts*')) ) show @endif"
+            aria-labelledby="headingReceipt" data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                <a class="collapse-item @if (request()->routeIs('receipts*')) active @endif"
+                    href="{{ route('receipts.index') }}">{{ __('Receipts') }}</a>
+            </div>
         </div>
-    </div>
-</li>
-@endif --}}
+    </li>
+@endcanany
 
 @if (request()->routeIs('receipts.index'))
     <li class="nav-item active">
@@ -188,20 +145,6 @@
     </script>
     <script type="text/javascript">
         $(document).ready(function() {
-            // var optionDate = "true";
-            // $('#select-month-dropdown').on('change', function() {
-            //     var selectMonthValue = this.value;
-            //     if (isset(selectMonthValue)) {
-            //         $('#select-date').addClass('d-none');
-            //        optionDate = "false";
-            //    } else {
-            //        optionDate = "true";
-            //         $('#select-date').removeClass('d-none');
-            //     }
-
-            //  });
-
-            //   if (optionDate == "true") {
             $('#search-status-dropdown').on('change', function() {
                 var searchStatusValue = this.value;
                 $("#select-date").html('');

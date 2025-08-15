@@ -4,8 +4,8 @@ namespace App\Models\Paket;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Mikrotik;
-use App\Models\Billing\BillingCycle;
-use App\Models\Paket\PaketCategory;
+use App\Models\SubscriptionDuration;
+use App\Models\CustomerSubscription;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -25,13 +25,18 @@ class Paket extends Model
         return $this->belongsTo(Mikrotik::class);
     }
 
-    public function paketCategory()
+    public function subscriptionDurations()
     {
-        return $this->belongsTo(PaketCategory::class, 'paket_category_id');
+        return $this->hasMany(SubscriptionDuration::class);
     }
 
-    public function billingCycle()
+    public function customerSubscriptions()
     {
-        return $this->belongsTo(BillingCycle::class);
+        return $this->hasMany(CustomerSubscription::class, 'paket_id');
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(PaketCategory::class, 'paket_category_id');
     }
 }

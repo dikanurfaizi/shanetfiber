@@ -5,16 +5,18 @@ namespace App\Services\Billings;
 use App\Models\Billing\Billing;
 use App\Models\Billing\BillingPeriode;
 use App\Models\User;
+use App\Models\Customer;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Helpers\UserAuth;
 use App\Helpers\LogHelper;
+use Illuminate\Support\Facades\DB;
 
 class BillingQueryService
 {
     public function buildBillingQuery(Request $request, string $traceId)
     {
-        $query = Billing::with(['receipt', 'billing_periode', 'customer']);
+        $query = Billing::with(['customer', 'receipt', 'billingSubscription']);
 
         $this->applySearchFilters($query, $request, $traceId);
         $this->applyOrdering($query);
@@ -26,38 +28,61 @@ class BillingQueryService
     {
         $searchParams = $this->prepareSearchParams($request);
 
-        // Apply name filter
+        // Filter berdasarkan kolom di tabel billings
         if ($searchParams['name']) {
+            // Karena customer_name ada di tabel billings, bisa pakai langsung
             $query->where('customer_name', 'like', "%{$searchParams['name']}%");
         }
 
-        // Apply customer slug filter
+        // Filter berdasarkan relasi customer slug
         if ($searchParams['customer_slug']) {
-            $query->whereHas('customer', fn($q) => $q->where('slug', $searchParams['customer_slug']));
-        }
-
-        // Apply address filter
-        if ($searchParams['address']) {
-            $query->whereHas('customer', function ($q) use ($searchParams) {
-                $searchParams['address'] === 'no-address'
-                    ? $q->whereNull('address')
-                    : $q->where('address', $searchParams['address']);
+            $slug = $searchParams['customer_slug'];
+            $query->whereHas('customer', function ($q) use ($slug) {
+                if ($slug === null) {
+                    $q->whereNull('slug');
+                } else {
+                    $q->where('slug', $slug);
+                }
             });
         }
 
-        // Apply periode filter
-        if ($searchParams['periode']) {
-            $query->whereHas('billing_periode', fn($q) => $q->where('name', 'like', "%{$searchParams['periode']}%"));
+        // Filter berdasarkan relasi customer address
+        if ($searchParams['address']) {
+            $address = $searchParams['address'];
+            $query->whereHas('customer', function ($q) use ($address) {
+                if ($address === 'no-address') {
+                    $q->whereNull('address');
+                } else {
+                    $q->where('address', $address);
+                }
+            });
         }
 
-        // Apply status filter
+        // Filter berdasarkan periode, melalui relasi billingSubscription → billingPeriode
+        if ($searchParams['periode']) {
+            $periode = $searchParams['periode'];
+            $query->whereHas('billingSubscription.billingPeriode', function ($q) use ($periode) {
+                $q->where('name', 'like', "%{$periode}%");
+            });
+        }
+
+        // Filter status dan due date di tabel billings
         if (!is_null($searchParams['status'])) {
             $this->applyStatusFilter($query, $searchParams['status'], $searchParams['duedate'], $traceId);
         }
 
-        // Apply user filter
+        // Filter user_id melalui relasi customer.user_id
         if ($searchParams['user_id']) {
-            $this->applyUserFilter($query, $searchParams['user_id']);
+            $userId = $searchParams['user_id'];
+            $query->whereHas('customer', function ($q) use ($userId) {
+                if ($userId === 'Not Linked User' || $userId === 0) {
+                    $q->whereNull('user_id');
+                } else {
+                    $q->where('user_id', function ($subQuery) use ($userId) {
+                        $subQuery->select('id')->from('users')->where('name', $userId)->limit(1);
+                    });
+                }
+            });
         }
     }
 
@@ -115,13 +140,13 @@ class BillingQueryService
 
         if (count($excludes) > 0) {
             $excludeValues = array_map(fn($s) => ltrim($s, '!'), $excludes);
-            $query->whereNotIn('status', $excludeValues);
+            $query->whereNotIn('billings.status', $excludeValues);
 
             if ($duedate) {
-                $query->where('due_date', 'like', "%{$duedate}%");
+                $query->where('billings.due_date', 'like', "%{$duedate}%");
             }
         } elseif (count($statuses) === 1) {
-            $query->where('status', $statuses[0]);
+            $query->where('billings.status', $statuses[0]);
 
             if ($duedate) {
                 $field = $statuses[0] === 'LS' ? 'payment_time' : 'pay_later';
@@ -150,12 +175,19 @@ class BillingQueryService
 
     private function applyOrdering($query)
     {
-        $query->orderBy(
-            BillingPeriode::select('created_at')
-                ->whereColumn('billing_periodes.id', 'billings.billing_periode_id'),
-            'DESC'
-        )->orderBy('customer_name', 'ASC');
+        $query->orderByDesc(
+            BillingPeriode::select('billing_periodes.created_at')
+                ->join('billing_subscription_periodes as bsp', 'billing_periodes.id', '=', 'bsp.billing_periode_id')
+                ->orderBy('billing_periodes.created_at', 'desc')
+                ->limit(1)
+        )->orderBy(
+            Customer::select('name')
+                ->whereColumn('customers.id', 'billings.customer_id')
+                ->limit(1),
+            'asc'
+        );
     }
+
 
     private function getUserAuthData()
     {

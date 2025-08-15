@@ -43,7 +43,9 @@ use App\Http\Controllers\TelegramGatewayController;
 use App\Http\Controllers\TelegramMessageController;
 use App\Http\Controllers\TelegramChatIdController;
 use App\Http\Controllers\Paket\PaketCategoriesController;
-use App\Http\Controllers\Billing\BillingCycleController;
+use App\Http\Controllers\Subscription\SubscriptionDurationController;
+use App\Http\Controllers\Subscription\CustomerSubscriptionController;
+use App\Http\Controllers\Billing\BillingHistoryController;
 use Illuminate\Support\Facades\Mail;
 
 /*
@@ -145,8 +147,10 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::resource('package-categories', PaketCategoriesController::class)->names('categories');
         Route::put('/package-categories/{package_category:slug}/deactivate', [PaketCategoriesController::class, 'deactivate'])->name('deactivate.package.categories');
         Route::put('/package-categories/{package_category:slug}/activate', [PaketCategoriesController::class, 'activate'])->name('activate.package.categories');
-        //=================================Billing Cycle=============================================
-        Route::resource('billing-cycles', BillingCycleController::class)->names('billingCycles');
+        //=================================CustomerSubscription=============================================
+        Route::resource('customer-subscriptions', CustomerSubscriptionController::class)->names('customerSubscriptions');
+        //=================================SubscriptionDuration=============================================
+        Route::resource('subscription-durations', SubscriptionDurationController::class)->names('subscriptionDurations');
         //========================ROUTE Restore Customer======================
         Route::get('/customers/trashed', [CustomerController::class, 'trashed'])->name('customers.trashed');
         Route::put('/customers/{customer:slug}/restore', [CustomerController::class, 'restore'])->name('customers.restore');
@@ -214,6 +218,9 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('settings/routers/{router:id}/delete', [RouterController::class, 'delete'])->name('router.delete');
         Route::resource('settings/router/brand', BrandController::class);
         Route::get('settings/router/brand/{brand:id}/delete', [BrandController::class, 'delete'])->name('brand.delete');
+
+        //=================================Billing History=============================================
+        Route::resource('billing-history', BillingHistoryController::class)->names('billingHistory');
 
         //Payment Gateway
         Route::get('settings/payment-gateway', [PaymentGatewayController::class, 'index'])->name('paymentgateway.index');

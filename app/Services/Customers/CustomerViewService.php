@@ -9,7 +9,6 @@ use App\Services\Routerboard\Ppp\SecretService;
 use App\Http\Resources\Pppoe\SecretResource;
 use App\Helpers\LogHelper;
 use App\Helpers\FormatReceiver;
-use Illuminate\Support\Str;
 
 class CustomerViewService
 {
@@ -48,7 +47,7 @@ class CustomerViewService
                 $secretData,
                 [
                     'customer' => $customer,
-                    'customer_contact' => $formatter->formatReceiver($customer->contact, null, false),
+                    'customer_contact' => $formatter->formatReceiver($customer->contact, 'display', false),
                     'ont' => CustomerOnt::where('customer_id', $customer->id)->first(),
                     'mikrotik' => $router
                 ],
@@ -147,7 +146,7 @@ class CustomerViewService
             'serverDisconnect' => 'true',
             'info_msg' => $infoMsg,
             'customer' => $customer,
-            'customer_contact' => $formatter->formatReceiver($customer->contact, null, false),
+            'customer_contact' => $formatter->formatReceiver($customer->contact, 'display', false),
             'ont' => CustomerOnt::where('customer_id', $customer->id)->first(),
             'mikrotik' => $router,
             ...$this->customerDataService->getCustomerDetails($customer, $traceId)

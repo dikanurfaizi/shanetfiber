@@ -126,8 +126,9 @@
                         @foreach ($data as $key => $billing)
                             @php
                                 $i++;
-                                $periodeText = Carbon\Carbon::parse($billing->billing_periode->name)->format('M Y');
-                                $billAmount = $billing->paket_price === 0 ? 0 : $billing->paket_price + $billing->tax;
+                                $periodeName = $billing->billingSubscription->billingPeriode->name;
+                                $periodeText = \Carbon\Carbon::parse($periodeName)->format('M Y');
+                                $billAmount = $billing->total_amount === 0 ? 0 : $billing->total_amount + $billing->tax;
                                 $badgeClass = 'badge bg-blue-soft ';
                                 if ($billing->status === 'LS') {
                                     $badgeClass .= 'text-success';
@@ -148,10 +149,9 @@
                                             class="badge text-primary">{{ $billing->customer_name ?? 'no name' }}</span></a>
                                 </td>
                                 <td><span
-                                        class="badge text-primary">{{ $billing->customer->address ?? 'no address' }}</span>
+                                        class="badge text-primary">{{ $billing->customer_address ?? 'no address' }}</span>
                                 </td>
-                                <td><span
-                                        class="badge text-primary">{{ Carbon\Carbon::parse($billing->billing_periode->name)->format('M Y') ?? 'no periode' }}</span>
+                                <td><span class="badge text-primary">{{ $periodeText ?? 'no periode' }}</span>
                                 </td>
                                 <td><span class="{{ $badgeClass }}">
                                         @if ($billAmount > 0)

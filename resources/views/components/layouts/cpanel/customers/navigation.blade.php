@@ -37,14 +37,15 @@
     </li>
 @endcanany
 
-@canany(['billing-list', 'billing-create', 'billing-edit', 'billing-delete'])
-    <li class="nav-item @if (request()->routeIs('billings*')) active @endif">
+@canany(['billing-edit', 'billing-delete'])
+    <li class="nav-item @if (request()->routeIs('billings*') || request()->routeIs('receipts*')) active @endif">
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBilling"
-            aria-expanded="false" aria-controls="collapseBilling" style="padding-top: inherit;">
-            <i class="fas fa-money-check-alt"></i>
+            aria-expanded="true" aria-controls="collapseBilling" style="padding-top: inherit;">
+            <i class="fas fa-file-invoice-dollar"></i>
             <span>{{ __('navigation.billings.nav-item') }}</span>
         </a>
-        <div id="collapseBilling" class="collapse" aria-labelledby="headingBilling" data-parent="#accordionSidebar">
+        <div id="collapseBilling" class="collapse @if (request()->routeIs('billings*') || request()->routeIs('billingHistory*')) show @endif"
+            aria-labelledby="headingBilling" data-parent="#accordionSidebar">
             @can('billing-create')
                 <div class="bg-white py-2 collapse-inner rounded">
                     <a class="collapse-item @if (request()->routeIs('billings.create')) active @endif"
@@ -52,11 +53,15 @@
                     <a class="collapse-item @if (request()->routeIs('billings.create.one')) active @endif"
                         href="{{ route('billings.create.one') }}">{{ __('navigation.billings.add') }}</a>
                 </div>
-            @endcan
-            @canany(['billing-list', 'billing-edit', 'billing-delete'])
+            @endcanany
+            @canany(['billing-list'])
                 <div class="bg-white py-2 collapse-inner rounded">
                     <a class="collapse-item @if (request()->routeIs('billings.index')) active @endif"
-                        href="{{ route('billings.index') }}">{{ __('navigation.billings.last') }}</a>
+                        href="{{ route('billings.index') }}">
+                        {{ __('navigation.billings.active_billing') }}</a>
+                    <a class="collapse-item @if (request()->routeIs('billingHistory.index')) active @endif"
+                        href="{{ route('billingHistory.index') }}">
+                        {{ __('navigation.billings.history') }}</a>
                 </div>
             @endcanany
         </div>

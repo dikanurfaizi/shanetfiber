@@ -43,7 +43,6 @@ class CancelPaymentIpStaticAfterDueDateJob implements ShouldQueue
      */
     public function handle(): void
     {
-        //  $this->IpStaticService->deleteIpFromAddressList($this->mikrotik, $this->ip_address, $this->address_list_isolir);
         $this->IpStaticService->addIpToAddressList($this->mikrotik, $this->ip_address, $this->address_list_isolir, $this->comment, $this->traceId);
         $this->IpStaticService->setCommentSimpleque($this->mikrotik, $this->simpleque_id, $this->comment, $this->traceId);
     }

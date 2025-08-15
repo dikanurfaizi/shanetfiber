@@ -14,7 +14,8 @@ return [
 
     'billings' => [
         'nav-item' => 'Billings',
-        'index' => 'Show All Bills',
+        'active_billing' => 'Show Active Bills',
+        'history' => 'Historical Bills',
         'create' => 'Create New Bill',
         'add' => 'Add New Bill',
         'show' => 'All Bill',
@@ -23,6 +24,9 @@ return [
         'show-unpaid' => 'Unpaid Bill',
         'show-paylater' => 'Pay Later',
         'billing-cycles' => 'Billing Cycles'
+    ],
+    'receipts' => [
+        'nav-item' => 'Receipts'
     ],
     'pakets' => [
         'nav-item' => 'Packages',
@@ -36,6 +40,16 @@ return [
     ],
     'members' => [
         'index' => 'Member List',
+    ],
+    'subscriptions' => [
+        'nav-item' => 'Subscriptions',
+        'customer_subscriptions' => [
+            'index' => 'Customer Subscriptions'
+        ],
+        'subscription_durations' => [
+            'index' => 'Subscription Durations'
+        ]
+
     ],
 
 ];

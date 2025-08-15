@@ -18,10 +18,10 @@ class WebsystemController extends Controller
     }
     public function update_general(Request $request, WebSystem $webSystem)
     {
-        // return dd($webSystem->slug);
+        // dd($webSystem, $request);
 
         if ($request->tax_button == 'true') {
-            $statusTax = 'true';
+            $statusTax = true;
             $this->validate(
                 $request,
                 [
@@ -32,11 +32,11 @@ class WebsystemController extends Controller
                 ],
                 [
                     'tax_rate.required' => 'Tax rate required.',
-                    //  'postal_code.digits' 
+                    //  'postal_code.digits'
                 ]
             );
         } else {
-            $statusTax = 'false';
+            $statusTax = false;
         }
         $webSystem->update([
             'title' => $request->title,
@@ -59,6 +59,7 @@ class WebsystemController extends Controller
         $websystem = Websystem::where('slug', 'websystem')->first();
         return view('websystems.customer', compact('websystem'));
     }
+
     public function update_customer(Request $request, WebSystem $webSystem)
     {
         // return dd($webSystem->slug);

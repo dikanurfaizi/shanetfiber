@@ -203,11 +203,11 @@ class CustomerDataService
                 ->first();
 
             $data = Billing::where('billings.customer_id', $customer->id)
-                ->join('billing_periodes as bp', 'billings.billing_periode_id', '=', 'bp.id')
+                ->join('billing_subscription_periodes as bp', 'billings.billing_subscription_id', '=', 'bp.id')
                 ->join('customers as c', 'billings.customer_id', '=', 'c.id')
                 ->leftJoin('members as m', 'c.member_id', '=', 'm.id')
                 ->orderBy('bp.created_at', 'DESC')
-                ->select('c.billing_period as billing_period_name', 'm.discount')
+                ->select('bp.billing_periode as billing_period_name', 'billings.discount_amount as discount', 'billings.total_amount as total_amount', 'billings.due_date as due_date')
                 ->first();
 
             $unpaid = Billing::where('customer_id', $customer->id)
@@ -219,8 +219,10 @@ class CustomerDataService
                 'billingPeriodeActive' => $billingPeriodeActive,
                 'billingLastPayment' => $billingLastPayment,
                 'billingPeriods' => $data->billing_period_name ?? null,
+                'totalAmount' => $data->total_amount ?? null,
                 'discount' => $data->discount ?? null,
-                'notYetPaid' => $unpaid->sum('paket_price'),
+                'dueDate' => $data->due_date ?? null,
+                'notYetPaid' => $unpaid->sum('total_amount'),
             ];
 
             LogHelper::logInfo(

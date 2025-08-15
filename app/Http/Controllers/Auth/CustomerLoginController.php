@@ -12,6 +12,8 @@ use Illuminate\Foundation\Auth\AuthenticatesUsers;
 // use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use App\Helpers\LogHelper;
+use App\Models\Paket\Paket;
+use App\Models\Websystem;
 
 class CustomerLoginController extends Controller
 {
@@ -47,8 +49,37 @@ class CustomerLoginController extends Controller
 
     public function login()
     {
+        $pakets = Paket::select([
+            'pakets.*',
+            'pc.name as category_name',
+            'sd.name_en as duration_name'
+        ])
+            ->leftJoin('subscription_durations as sd', 'pakets.id', '=', 'sd.paket_id')
+            ->join('paket_categories as pc', 'pakets.paket_category_id', '=', 'pc.id')
+            ->where('pakets.display_to_customer', true)
+            ->where('pakets.price', '>', 0)
+            ->with(['category', 'subscriptionDurations']) // Eager loading untuk kebutuhan lain
+            ->get()
+            ->map(function ($paket) {
+                return (object)[
+                    'category' => $paket->category_name ?? $paket->category->name ?? 'Uncategorized',
+                    'package_name' => $paket->name,
+                    'speed_up_to' => $paket->speed_up_to,
+                    'speed_unit' => $paket->speed_unit,
+                    'price' => $paket->price,
+                    'name_en' => $paket->duration_name ?? $paket->subscriptionDurations->first()->name_en ?? 'Monthly',
+                    'recommended_device_min' => $paket->recommended_device_min,
+                    'recommended_device_max' => $paket->recommended_device_max,
+                    'quota' => $paket->quota,
+                    'include_modem' => $paket->include_modem,
+                    'installation_fee' => $paket->installation_fee,
+                    'is_installation_free' => $paket->is_installation_free
+                ];
+            });
 
-        return view('customers.auth.login');
+        $websystem = Websystem::where('slug', 'websystem')->first();
+
+        return view('customers.auth.login', compact('pakets', 'websystem'));
     }
 
     public function postLogin(Request $request)

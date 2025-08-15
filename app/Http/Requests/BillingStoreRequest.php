@@ -22,8 +22,7 @@ class BillingStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // 'name' => 'required|unique:billing_periodes',
-            'name' => 'unique:billing_periodes',
+            'id' => 'unique:billing_periodes',
 
         ];
     }
@@ -31,8 +30,8 @@ class BillingStoreRequest extends FormRequest
     public function messages()
     {
         return [
-            'name.unique' => 'Periode billing is already created',
-            'name.required' => 'Plese select periode first.',
+            'id.unique' => 'Periode billing is already created',
+            'id.required' => 'Plese select periode first.',
         ];
     }
 }

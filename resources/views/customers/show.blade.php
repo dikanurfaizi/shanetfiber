@@ -34,8 +34,8 @@
                 <tr class="table-borderless">
                     <td class="py-1"><strong>{{ __('customer.label.package') }}</strong></td>
                     <td class="py-1">{{ __(':') }} {{ $customer->paket->name ?? 'No Data' }} -
-                        @if (!empty($customer->paket->price))
-                            @moneyIDR($customer->paket->price)
+                        @if (!empty($totalAmount))
+                            @moneyIDR($totalAmount)
                         @else
                             @moneyIDR(0)
                         @endif
@@ -44,7 +44,7 @@
                     <td class="py-1"><strong>{{ __('customer.label.activation-date') }}</strong></td>
                     <td class="py-1">{{ __(':') }}
                         @if ($customer->activation == 'true')
-                            {{ Carbon\Carbon::parse($customer->activation_date)->translatedFormat('l, d F Y') ?? 'No Data' }}
+                            {{ $customer->activation_date ? \Carbon\Carbon::parse($customer->activation_date)->format('l, d F Y') : 'No Data' }}
                         @else
                             <i class="text-danger">{{ __('Not Activated') }}</i>
                         @endif
@@ -105,16 +105,6 @@
                     </td>
                 </tr>
                 @if ($billingLastPayment)
-                    @php
-                        $activationDate = Carbon\Carbon::parse($customer->activation_date)->format('d');
-                        $totalDaysInMonth = Carbon\Carbon::parse(
-                            $billingLastPayment->payment_time ?? '1970-01-01',
-                        )->addMonth()->daysInMonth;
-                        if ($activationDate > $totalDaysInMonth) {
-                            $activationDate = $totalDaysInMonth;
-                        }
-                    @endphp
-
                     <tr class="table-borderless">
                         <td class="py-1"><strong>{{ __('customer.label.last-payment') }}</strong></td>
                         <td class="py-1">{{ __(':') }}
@@ -122,7 +112,7 @@
                         </td>
                         <td class="py-1"><strong>{{ __('customer.label.next-payment') }}</strong></td>
                         <td class="py-1">{{ __(':') }}
-                            {{ $activationDate .' ' .Carbon\Carbon::parse($billingLastPayment->payment_time ?? '1970-01-01')->addMonth()->format('F Y') }}
+                            {{ Carbon\Carbon::parse($dueDate ?? '1970-01-01')->format('d F Y') ?? 'No Payment' }}
                         </td>
                     </tr>
                 @endif

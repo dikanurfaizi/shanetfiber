@@ -22,6 +22,6 @@ class PaketCategory extends Model
 
     public function pakets()
     {
-        return $this->hasMany(Paket::class, 'paket_category_id');
+        return $this->hasMany(Paket::class);
     }
 }

@@ -16,8 +16,12 @@ class CustomerPppUpdateRequest extends FormRequest
         if ($customer->internet_service == 'ppp') {
             return [
                 'username' => ['required', 'string', 'max:45', Rule::unique('customers')->ignore($customer->slug, 'slug')],
-                'password' => ['nullable', 'string', 'confirmed', 'min:8'],
-                'ppp_type_id' => 'required'
+                'password_ppp' => ['nullable', 'string', 'min:8'],
+                'ppp_type_id' => 'required',
+                'caller_id' => ['nullable', 'string'],
+                'save_with_last_caller_id' => ['nullable', 'string'],
+                'last_caller_id' => ['nullable', 'string'],
+                'dont_disconnect_client_button' => ['nullable', 'string']
             ];
         } else if ($customer->internet_service == 'ip_static') {
             return [
@@ -42,7 +46,7 @@ class CustomerPppUpdateRequest extends FormRequest
     public function messages()
     {
         return [
-            'password.required' => 'Password PPP is required',
+            'password_ppp.required' => 'Password PPP is required',
             'paket_id.required' => 'Paket is required',
 
         ];

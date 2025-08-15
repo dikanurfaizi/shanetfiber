@@ -13,4 +13,5 @@ enum WhatsAppAction: string
     case CREATE_NEW_BILL = 'create_new_bill';
     case SEND_INFO_BILLING = 'send_info_billing';
     case CREATE_ORDER = 'create_order';
+    case CHANGES_PACKAGE = 'changes_paket';
 }

@@ -31,14 +31,19 @@ class PaymentCancellationService
             // 1. Proses pembatalan di Mikrotik
             $this->processMikrotikCancellation($customer, $traceId);
 
-            // 2. Update status billing
-            $this->updateBillingStatus($billing);
-
-            // 3. Hapus receipt jika ada
+            // 2. Hapus receipt jika ada
             $originalReceipt = $this->handleReceipt($billing);
+
+            LogHelper::logInfo(null, ['original_receipt' => $originalReceipt], 200, 'Original Receipt', $traceId);
+
+            // 3. Update status billing
+            $this->updateBillingStatus($billing, $traceId);
 
             // 4. Update order terkait
             $this->updateRelatedOrders($billing, $traceId);
+
+            // 5. Update billing subscriptions periode
+            $this->updateBillingSubscriptionPeriodes($billing);
 
             // 5. Kirim notifikasi WhatsApp
             $this->sendCancellationNotification($billing, $originalReceipt, $traceId);
@@ -75,37 +80,96 @@ class PaymentCancellationService
         }
 
         $day = Carbon::now()->format('d');
-        $dueDate = $this->getDueDate($autoIsolir, $customer);
-        $commentUnpayment = $this->getCommentUnpayment($autoIsolir, $customer);
+        $dueDate = $this->getDueDate($autoIsolir, $customer, $traceId);
+        $commentUnpayment = $this->getCommentUnpayment($autoIsolir, $customer, $traceId);
 
         if ($customer->internet_service == 'ppp') {
-            $this->cancelPppPayment($router, $customer, $day, $dueDate, $commentUnpayment, $autoIsolir);
+            $this->cancelPppPayment($router, $customer, $day, $dueDate, $commentUnpayment, $autoIsolir, $traceId);
         } elseif ($customer->internet_service == 'ip_static') {
-            $this->cancelIpStaticPayment($router, $customer, $day, $dueDate, $commentUnpayment, $autoIsolir);
+            $this->cancelIpStaticPayment($router, $customer, $day, $dueDate, $commentUnpayment, $autoIsolir, $traceId);
         }
     }
 
-    private function getDueDate(AutoIsolir $autoIsolir, Customer $customer): string
+    private function getDueDate(AutoIsolir $autoIsolir, Customer $customer, string $traceId): ?string
     {
-        if ($autoIsolir->activation_date == 'false') {
-            return $autoIsolir->due_date;
-        }
+        $startTime = microtime(true);
+        try {
+            LogHelper::logInfo('GetDueDate', [
+                'trace_id' => $traceId,
+                'auto_isolir_id' => $autoIsolir->id ?? null,
+                'customer_id' => $customer->id ?? null,
+                'activation_date_flag' => $autoIsolir->activation_date
+            ], 200, 'Starting getDueDate process', $traceId);
 
-        return Carbon::parse($customer->activation_date)->format('d');
+            if ($autoIsolir->activation_date == 'false') {
+                $dueDate = $autoIsolir->due_date;
+            } else {
+                $dueDate = Carbon::parse($customer->activation_date)->format('d');
+            }
+
+            $executionTime = round(microtime(true) - $startTime, 3);
+            LogHelper::logInfo('GetDueDate', [
+                'trace_id' => $traceId,
+                'due_date' => $dueDate,
+                'execution_seconds' => $executionTime
+            ], 200, 'Successfully retrieved due date', $traceId);
+
+            return $dueDate;
+        } catch (\Throwable $e) {
+            LogHelper::logError('GetDueDate', [
+                'trace_id' => $traceId,
+                'exception' => get_class($e),
+                'error_message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500, 'Failed to get due date', $traceId);
+            return null;
+        }
     }
 
-    private function getCommentUnpayment(AutoIsolir $autoIsolir, Customer $customer): string
+    private function getCommentUnpayment(AutoIsolir $autoIsolir, Customer $customer, string $traceId): ?string
     {
-        if ($autoIsolir->activation_date == 'false') {
-            return $autoIsolir->comment_unpayment;
+        $startTime = microtime(true);
+        try {
+            LogHelper::logInfo('GetCommentUnpayment', [
+                'trace_id' => $traceId,
+                'auto_isolir_id' => $autoIsolir->id ?? null,
+                'customer_id' => $customer->id ?? null,
+                'activation_date_flag' => $autoIsolir->activation_date
+            ], 200, 'Starting getCommentUnpayment process', $traceId);
+
+            if ($autoIsolir->activation_date == 'false') {
+                $comment = $autoIsolir->comment_unpayment;
+            } else {
+                $date = Carbon::parse($customer->activation_date)->format('d');
+                $periodeName = BillingPeriode::latest('created_at')->value('name');
+
+                if (!$periodeName) {
+                    throw new \RuntimeException('Billing periode name not found.');
+                }
+
+                $month = Carbon::parse($periodeName)->format('m');
+                $year = Carbon::parse($periodeName)->format('Y');
+
+                $comment = $autoIsolir->comment_unpayment . '_' . $date . '_' . $month . '_' . $year;
+            }
+
+            $executionTime = round(microtime(true) - $startTime, 3);
+            LogHelper::logInfo('GetCommentUnpayment', [
+                'trace_id' => $traceId,
+                'comment_unpayment' => $comment,
+                'execution_seconds' => $executionTime
+            ], 200, 'Successfully retrieved comment unpayment', $traceId);
+
+            return $comment;
+        } catch (\Throwable $e) {
+            LogHelper::logError('GetCommentUnpayment', [
+                'trace_id' => $traceId,
+                'exception' => get_class($e),
+                'error_message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500, 'Failed to get comment unpayment', $traceId);
+            return null;
         }
-
-        $date = Carbon::parse($customer->activation_date)->format('d');
-        $periodeName = BillingPeriode::latest('created_at')->value('name');
-        $month = Carbon::parse($periodeName)->format('m');
-        $year = Carbon::parse($periodeName)->format('Y');
-
-        return $autoIsolir->comment_unpayment . '_' . $date . '_' . $month . '_' . $year;
     }
 
     private function cancelPppPayment(
@@ -114,22 +178,53 @@ class PaymentCancellationService
         string $day,
         string $dueDate,
         string $commentUnpayment,
-        AutoIsolir $autoIsolir
+        AutoIsolir $autoIsolir,
+        string $traceId
     ) {
-        if ($day <= $dueDate) {
-            dispatch(new CancelPaymentBeforeDueDateJob(
-                $router,
-                $commentUnpayment,
-                $customer->secret_id
-            ))->onQueue('default');
-        } else {
-            dispatch(new CancelPaymentAfterDueDateJob(
-                $router,
-                $commentUnpayment,
-                $autoIsolir->profile_id,
-                $customer->secret_id,
-                $customer->username
-            ))->onQueue('default');
+        $startTime = microtime(true);
+        try {
+            LogHelper::logInfo('CancelPppPayment', [
+                'trace_id' => $traceId,
+                'customer_id' => $customer->id ?? null,
+                'router_id' => $router->id ?? null,
+                'day' => $day,
+                'due_date' => $dueDate
+            ], 200, 'Starting cancel PPP payment process', $traceId);
+
+            if ($day <= $dueDate) {
+                dispatch(new CancelPaymentBeforeDueDateJob(
+                    $router,
+                    $commentUnpayment,
+                    $customer->secret_id,
+                    $traceId
+                ))->onQueue('default');
+
+                $message = "Successfully dispatched cancel PPP payment before due date job";
+            } else {
+                dispatch(new CancelPaymentAfterDueDateJob(
+                    $router,
+                    $commentUnpayment,
+                    $autoIsolir->profile_id,
+                    $customer->secret_id,
+                    $customer->username,
+                    $traceId
+                ))->onQueue('default');
+
+                $message = "Successfully dispatched cancel PPP payment after due date job";
+            }
+
+            $executionTime = round(microtime(true) - $startTime, 3);
+            LogHelper::logInfo('CancelPppPayment', [
+                'trace_id' => $traceId,
+                'execution_seconds' => $executionTime
+            ], 200, $message, $traceId);
+        } catch (\Throwable $e) {
+            LogHelper::logError('CancelPppPayment', [
+                'trace_id' => $traceId,
+                'exception' => get_class($e),
+                'error_message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500, 'Failed to cancel PPP payment', $traceId);
         }
     }
 
@@ -139,46 +234,118 @@ class PaymentCancellationService
         string $day,
         string $dueDate,
         string $commentUnpayment,
-        AutoIsolir $autoIsolir
+        AutoIsolir $autoIsolir,
+        string $traceId
     ) {
-        $comment = $customer->username . '_' . $commentUnpayment;
+        $startTime = microtime(true);
+        try {
+            LogHelper::logInfo('CancelIpStaticPayment', [
+                'trace_id' => $traceId,
+                'customer_id' => $customer->id ?? null,
+                'router_id' => $router->id ?? null,
+                'day' => $day,
+                'due_date' => $dueDate
+            ], 200, 'Starting cancel IP Static payment process', $traceId);
 
-        if ($day <= $dueDate) {
-            dispatch(new CancelPaymentIpStaticBeforeDueDateJob(
-                $router,
-                $customer->simpleque_id,
-                $commentUnpayment
-            ))->onQueue('default');
-        } else {
-            dispatch(new CancelPaymentIpStaticAfterDueDateJob(
-                $router,
-                $autoIsolir->address_list_isolir,
-                $customer->ip_static,
-                $customer->simpleque_id,
-                $comment
-            ))->onQueue('default');
+            $comment = $customer->username . '_' . $commentUnpayment;
+
+            if ($day <= $dueDate) {
+                dispatch(new CancelPaymentIpStaticBeforeDueDateJob(
+                    $router,
+                    $customer->simpleque_id,
+                    $commentUnpayment,
+                    $traceId
+                ))->onQueue('default');
+
+                $message = "Successfully dispatched cancel IP static payment before due date job";
+            } else {
+                dispatch(new CancelPaymentIpStaticAfterDueDateJob(
+                    $router,
+                    $autoIsolir->address_list_isolir,
+                    $customer->ip_static,
+                    $customer->simpleque_id,
+                    $comment,
+                    $traceId
+                ))->onQueue('default');
+
+                $message = "Successfully dispatched cancel IP static payment after due date job";
+            }
+
+            $executionTime = round(microtime(true) - $startTime, 3);
+            LogHelper::logInfo('CancelIpStaticPayment', [
+                'trace_id' => $traceId,
+                'execution_seconds' => $executionTime
+            ], 200, $message, $traceId);
+        } catch (\Throwable $e) {
+            LogHelper::logError('CancelIpStaticPayment', [
+                'trace_id' => $traceId,
+                'exception' => get_class($e),
+                'error_message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500, 'Failed to cancel IP Static payment', $traceId);
         }
     }
 
-    private function updateBillingStatus(Billing $billing)
+    private function updateBillingStatus(Billing $billing, string $traceId)
     {
-        $billing->update([
-            'teller_name' => auth()->user()->name,
-            'status' => 'BL',
-            'receipt_id' => null,
-        ]);
+        $startTime = microtime(true);
+        try {
+            LogHelper::logInfo('UpdateBillingStatus', [
+                'trace_id' => $traceId,
+                'billing_id' => $billing->id ?? null
+            ], 200, 'Starting update billing status', $traceId);
+
+            $billing->update([
+                'teller_name' => auth()->user()->name,
+                'status' => 'BL',
+                'receipt_id' => null,
+            ]);
+
+            $executionTime = round(microtime(true) - $startTime, 3);
+            LogHelper::logInfo('UpdateBillingStatus', [
+                'trace_id' => $traceId,
+                'execution_seconds' => $executionTime
+            ], 200, 'Successfully updated billing status', $traceId);
+        } catch (\Throwable $e) {
+            LogHelper::logError('UpdateBillingStatus', [
+                'trace_id' => $traceId,
+                'exception' => get_class($e),
+                'error_message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500, 'Failed to update billing status', $traceId);
+        }
     }
 
-    private function handleReceipt(Billing $billing): ?Receipt
+    protected function handleReceipt(Billing $billing): ?array
     {
-        $receipt = Receipt::where('id', $billing->receipt_id)->first();
-        $originalReceipt = $receipt?->replicate();
+        $billing->loadMissing('receipt');
+        $originalReceipt = $billing->receipt;
 
-        if ($receipt) {
-            $receipt->delete();
+        if ($originalReceipt) {
+            $receiptData = $originalReceipt->toArray();
+
+            try {
+                // Soft delete
+                $originalReceipt->delete();
+
+                // Optional: update billing agar tidak merujuk ke receipt yang sudah di soft delete
+                $billing->update(['receipt_id' => null]);
+            } catch (\Exception $e) {
+                LogHelper::logError(null, [
+                    'billing_id' => $billing->id,
+                    'receipt_id' => $originalReceipt->id,
+                    'error' => $e->getMessage(),
+                ], 500, 'Failed to soft delete original receipt');
+                // Return data receipt tetap agar proses lanjut
+                return $receiptData;
+            }
+
+            LogHelper::logInfo(null, ['receipt_data' => $receiptData], 200, 'Suceesfully get receipt data');
+
+            return $receiptData;
         }
 
-        return $originalReceipt;
+        return null;
     }
 
     private function updateRelatedOrders(Billing $billing, string $traceId)
@@ -210,23 +377,69 @@ class PaymentCancellationService
         }
     }
 
+    private function updateBillingSubscriptionPeriodes($billing): void
+    {
+        try {
+            $billing->loadMissing(['billingSubscription']);
+
+            if (!$billing->billingSubscription) {
+                throw new \Exception('Billing subscription not found for billing ID: ' . $billing->id);
+            }
+
+            $billing->billingSubscription->update([
+                'is_paid' => false,
+                'paid_at' => null
+            ]);
+
+            LogHelper::logInfo(null, [
+                'billing_id' => $billing->id,
+                'billing_subscription_id' => $billing->billingSubscription->id ?? null,
+                'is_paid' => false,
+                'paid_at' => null
+            ], 200, 'Billing subscription periodes updated successfully');
+        } catch (\Throwable $e) {
+            LogHelper::logError($e, [
+                'billing_id' => $billing->id ?? null
+            ], 500, 'Failed to update billing subscription periodes');
+        }
+    }
+
     private function sendCancellationNotification(
         Billing $billing,
-        ?Receipt $originalReceipt,
+        ?array $originalReceipt,
         string $traceId
-    ) {
-        $jobData = new WhatsappJobDto(
-            customerId: (int)$billing->customer_id,
-            action: WhatsAppAction::UNPAYMENT->value,
-            traceId: (string)$traceId,
-            billingId: (int)$billing->id,
-            receiptId: null,
-            receiptData: $originalReceipt,
-            startDate: null,
-            endDate: null,
-            orderId: null
-        );
+    ): void {
+        try {
+            LogHelper::logInfo(null, ['original_receipt' => $originalReceipt], 200, 'Original Receipt', $traceId);
+            $jobData = new WhatsappJobDto(
+                customerId: (int) $billing->customer_id,
+                action: WhatsAppAction::UNPAYMENT->value,
+                traceId: (string) $traceId,
+                billingId: (int) $billing->id,
+                receiptId: null,
+                receiptData: $originalReceipt,
+                startDate: null,
+                endDate: null,
+                orderId: null,
+                oldPaketName: null,
+                oldPaketPrice: null
+            );
 
-        ProcessWhatsappMessageJob::dispatch($jobData)->onQueue('default');
+            ProcessWhatsappMessageJob::dispatch($jobData)->onQueue('whatsapp_single');
+
+            LogHelper::logInfo(null, [
+                'billing_id' => $billing->id,
+                'customer_id' => $billing->customer_id,
+                'trace_id' => $traceId,
+                'receipt_data' => $originalReceipt,
+            ], 200, 'Cancellation notification sent', $traceId);
+        } catch (\Throwable $e) {
+            LogHelper::logError($e, [
+                'billing_id' => $billing->id ?? null,
+                'customer_id' => $billing->customer_id ?? null,
+                'trace_id' => $traceId,
+                'receipt_data' => $originalReceipt,
+            ], 500, 'Failed to send cancellation notification', $traceId);
+        }
     }
 }

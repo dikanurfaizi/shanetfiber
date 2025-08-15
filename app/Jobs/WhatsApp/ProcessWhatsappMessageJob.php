@@ -14,7 +14,6 @@ use Illuminate\Queue\SerializesModels;
 use App\Enums\WhatsAppAction;
 use App\Services\WhatsappMessageService;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Log;
 
 class ProcessWhatsappMessageJob implements ShouldQueue
 {
@@ -38,13 +37,14 @@ class ProcessWhatsappMessageJob implements ShouldQueue
             WhatsAppAction::CREATE_NEW_BILL->value => $this->handleCreateNewBill($whatsappService),
             WhatsAppAction::SEND_INFO_BILLING->value => $this->handleSendInfoBilling($whatsappService),
             WhatsAppAction::CREATE_ORDER->value => $this->handleCreateOrder($whatsappService),
+            WhatsAppAction::CHANGES_PACKAGE->value => $this->handleChangesPackage($whatsappService),
             default => $this->handleUnknownAction()
         };
     }
 
     private function handleActivation(WhatsappMessageService $whatsappService): void
     {
-        $whatsappService->activation($this->jobData->customerId, $$this->jobData->action, $this->jobData->traceId);
+        $whatsappService->activation($this->jobData->customerId, $this->jobData->action, $this->jobData->traceId);
         $this->logSuccess(
             ['customer_id' => $this->jobData->customerId, 'action' => $this->jobData->action],
             "The activation message has entered the delivery queue"
@@ -253,6 +253,12 @@ class ProcessWhatsappMessageJob implements ShouldQueue
         $this->logError([], "There is unknown action, please check your code again");
     }
 
+    private function handleChangesPackage(WhatsappMessageService $whatsappService)
+    {
+        $whatsappService->changesPackage($this->jobData->customerId, $this->jobData->oldPaketName, $this->jobData->oldPaketPrice, $this->jobData->traceId);
+        $this->logSuccess([], 'Send changes package information successfully proceed and delivery');
+    }
+
     private function logJobStart(): void
     {
         LogHelper::logInfo(null, [
@@ -260,7 +266,7 @@ class ProcessWhatsappMessageJob implements ShouldQueue
             'trace_id' => $this->jobData->traceId,
             'billing_id' => $this->jobData->billingId,
             'receipt_id' => $this->jobData->receiptId
-        ], 200, "Whatsapp Message Job started processing");
+        ], 200, "Whatsapp Message Job started processing", $this->jobData->traceId);
     }
 
     private function logSuccess(array $context, string $message): void
