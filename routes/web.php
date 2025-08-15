@@ -150,7 +150,8 @@ Route::group(['prefix' => 'cpanel'], function () {
         //=================================CustomerSubscription=============================================
         Route::resource('customer-subscriptions', CustomerSubscriptionController::class)->names('customerSubscriptions');
         //=================================SubscriptionDuration=============================================
-        Route::resource('subscription-durations', SubscriptionDurationController::class)->names('subscriptionDurations');
+        Route::get('subscription/durations/manage/{packet:slug}', [SubscriptionDurationController::class, 'manage'])->name('subscriptionDurations.manage');
+        Route::resource('subscription/durations', SubscriptionDurationController::class)->names('subscriptionDurations');
         //========================ROUTE Restore Customer======================
         Route::get('/customers/trashed', [CustomerController::class, 'trashed'])->name('customers.trashed');
         Route::put('/customers/{customer:slug}/restore', [CustomerController::class, 'restore'])->name('customers.restore');

@@ -58,6 +58,7 @@ return [
         'delete' => 'Delete Paket',
         'back' => ' Back',
         'cancel' => ' Cancel',
+        'duration' => ' Manage Subscription Duration'
     ],
 
     'action' => [

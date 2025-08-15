@@ -181,7 +181,7 @@
                 </div>
 
                 <div class="row align-items-center">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-12 mb-3">
                         <label
                             for="package_category_id"><strong>{{ __('paket.label.package_category') }}</strong></label>
                         <select name="paket_category_id" class="form-control">
@@ -194,18 +194,19 @@
                             <span class="text-danger">{{ $errors->first('package_category_id') }}</span>
                         @endif
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="billing_cycle_id"><strong>{{ __('paket.label.billing_cycle') }}</strong></label>
-                        <select name="billing_cycle_id" class="form-control">
-                            @foreach ($billingCycle as $cycle)
-                                <option value="{{ $cycle->id }}" @selected($cycle->id == $packet->billing_cycle_id)>{{ $cycle->code }}
+                    {{-- <div class="col-md-6 mb-3">
+                        <label for="duration_months"><strong>{{ __('paket.label.billing_cycle') }}</strong></label>
+                        <select name="duration_months" class="form-control">
+                            @foreach (\App\Enums\SubscriptionDuration::cases() as $cycle)
+                                <option value="{{ $cycle->months() }}" @selected($cycle->months() == $packet->subscriptionDurations->duration_months)>
+                                    {{ $cycle->labelEn() }}
                                 </option>
                             @endforeach
                         </select>
-                        @if ($errors->has('billing_cycle_id'))
-                            <span class="text-danger">{{ $errors->first('billing_cycle_id') }}</span>
+                        @if ($errors->has('duration_months'))
+                            <span class="text-danger">{{ $errors->first('duration_months') }}</span>
                         @endif
-                    </div>
+                    </div> --}}
                 </div>
 
                 <div class="row align-items-center">
@@ -222,11 +223,20 @@
                 </div>
             </div>
             <div class="card-footer">
-                <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> &nbsp
-                    {{ __('paket.button.update') }}</button>
-                <a class="btn btn-secondary" href="{{ route('packets.index') }}"><i class="fa fa-arrow-left"></i> &nbsp
-                    {{ __('paket.button.cancel') }}</a>
+                <button type="submit" class="btn btn-success">
+                    <i class="fa fa-save"></i> &nbsp; {{ __('paket.button.update') }}
+                </button>
+
+                <a class="btn btn-primary" href="{{ route('subscriptionDurations.manage', $packet->slug) }}">
+                    <i class="fa fa-clock"></i> &nbsp; {{ __('paket.button.duration') }}
+                </a>
+
+
+                <a class="btn btn-secondary" href="{{ route('packets.index') }}">
+                    <i class="fa fa-arrow-left"></i> &nbsp; {{ __('paket.button.cancel') }}
+                </a>
             </div>
+
             {!! Form::close() !!}
         </div>
     </div>

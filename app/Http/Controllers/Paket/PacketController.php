@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Paket;
 
 use App\Models\Paket\Paket;
 use App\Models\Paket\PaketCategory;
-use App\Models\Billing\BillingCycle;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Http\Requests\PaketStoreRequest;
@@ -52,16 +51,13 @@ class PacketController extends Controller
             ->orderBy('profile_name')
             ->get(['id', 'profile_name']);
         $category = PaketCategory::where('is_active', true)->get();
-        $billingCycle = BillingCycle::where('is_active', true)->get();
         LogHelper::logInfo(null, [
             'pppProfiles' => $pppprofiles,
-            'category' => $category,
-            'billing_cycle' => $billingCycle
+            'category' => $category
         ], 200, 'Successfully get data for create paket', $traceId);
         return view('packets.create', [
             'ppp_profiles' => $pppprofiles,
-            'category' => $category,
-            'billingCycle' => $billingCycle,
+            'category' => $category
         ]);
     }
 
@@ -132,18 +128,16 @@ class PacketController extends Controller
                     ];
                 });
             $category = PaketCategory::where('is_active', true)->get();
-            $billingCycle = BillingCycle::where('is_active', true)->get();
+            $packet = Paket::with('subscriptionDurations')->where('id', $packet->id)->firstOrFail();
             LogHelper::logInfo(null, [
                 'paket' => $packet,
                 'ppp_profiles' => $pppprofiles,
-                'category' => $category,
-                'billing_cycle' => $billingCycle
+                'category' => $category
             ], 200, 'Successfully show paket', $traceId);
             return view('packets.edit', [
                 'packet' => $packet,
                 'pppprofiles' => $pppprofiles,
-                'category' => $category,
-                'billingCycle' => $billingCycle,
+                'category' => $category
             ]);
         } catch (\Exception $e) {
             LogHelper::logError(null, [
@@ -158,6 +152,7 @@ class PacketController extends Controller
      */
     public function update(PaketUpdateRequest $request, Paket $packet)
     {
+        // dd($request, $packet);
         $traceId = (string) Str::uuid();
 
         $this->validate(

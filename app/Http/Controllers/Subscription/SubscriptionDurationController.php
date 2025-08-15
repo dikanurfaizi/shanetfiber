@@ -46,8 +46,8 @@ class SubscriptionDurationController extends Controller
 
     public function edit(SubscriptionDuration $subscriptionDuration)
     {
-        $pakets = Paket::all();
-        return view('subscriptionDurations.edit', compact('subscriptionDuration', 'pakets'));
+        $packet = Paket::all();
+        return view('subscriptionDurations.edit', compact('subscriptionDuration', 'packet'));
     }
 
     public function update(Request $request, SubscriptionDuration $subscriptionDuration)
@@ -74,5 +74,31 @@ class SubscriptionDurationController extends Controller
 
         return redirect()->route('subscriptionDurations.index')
             ->with('success', 'Subscription duration deleted successfully.');
+    }
+
+    public function manage(Paket $packet)
+    {
+        $subscriptionDurations = $packet->subscriptionDurations()->get()->map(function ($duration) use ($packet) {
+
+            $basePrice = $packet->price;
+            $finalPrice = $basePrice; // default kalau tidak ada diskon
+
+            if ($duration->discount_type === 'percent') {
+                $finalPrice = $basePrice - ($basePrice * ($duration->discount_value / 100));
+            } elseif ($duration->discount_type === 'amount') {
+                $finalPrice = $basePrice - $duration->discount_value;
+            }
+            // discount_type === 'none' → finalPrice tetap basePrice
+
+            // Tambahkan kolom baru untuk view
+            $duration->final_price = max($finalPrice, 0); // jaga-jaga kalau negatif
+
+            return $duration;
+        });
+
+        return view('subscriptionDurations.manage', [
+            'packet' => $packet,
+            'subscriptionDurations' => $subscriptionDurations
+        ])->with('i', (request()->input('page', 1) - 1) * 20);;
     }
 }

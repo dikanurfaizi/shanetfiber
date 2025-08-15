@@ -189,8 +189,10 @@
                     <div class="col-md-6 mb-3">
                         <label for="billing_cycle_id"><strong>{{ __('paket.label.billing_cycle') }}</strong></label>
                         <select name="billing_cycle_id" class="form-control">
-                            @foreach ($billingCycle as $cycle)
-                                <option value="{{ $cycle->id }}">{{ $cycle->code }}</option>
+                            @foreach (\App\Enums\SubscriptionDuration::cases() as $cycle)
+                                <option value="{{ $cycle->months() }}">
+                                    {{ $cycle->labelEn() }}
+                                </option>
                             @endforeach
                         </select>
                         @if ($errors->has('billing_cycle_id'))
