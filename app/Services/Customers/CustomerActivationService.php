@@ -344,15 +344,28 @@ class CustomerActivationService
 
     private function createReceiptAndUpdateBilling(Customer $customer, string $traceId, Carbon $activationDate): void
     {
+        LogHelper::logInfo(null, [
+            'customer_id' => $customer->id,
+            'activation_date' => $activationDate
+        ], 200, 'Start createReceiptAndUpdateBilling', $traceId);
+
         try {
             $billing = Billing::where('customer_id', $customer->id)->firstOrFail();
+            LogHelper::logInfo(null, [
+                'billing_id' => $billing->id
+            ], 200, 'Billing fetched successfully', $traceId);
 
             $numberReceipt = $this->generateReceiptNumber();
+            LogHelper::logInfo(null, [
+                'number_receipt' => $numberReceipt
+            ], 200, 'Generated receipt number', $traceId);
 
             $receipt = Receipt::create([
                 'slug' => str('inv-' . $customer->id . '-' . Str::random(4))->slug(),
                 'periode' => $billing->billingSubscription->billing_periode,
-                'number' => str(sprintf("%05d", $numberReceipt) . '-KWT-' . Carbon::now()->format('F') . '-' . Carbon::now()->format('Y')),
+                'number' => str(
+                    sprintf("%05d", $numberReceipt) . '-KWT-' . Carbon::now()->format('F') . '-' . Carbon::now()->format('Y')
+                ),
                 'billing_number' => $billing->billing_number,
                 'customer_id' => $customer->id,
                 'customer_name' => $customer->name,
@@ -364,6 +377,9 @@ class CustomerActivationService
                 'teller_name' => auth()->user()->name,
                 'payment_time' => $activationDate,
             ]);
+            LogHelper::logInfo(null, [
+                'receipt_id' => $receipt->id
+            ], 200, 'Receipt created successfully', $traceId);
 
             $billing->update([
                 'payment_time' => $activationDate,
@@ -371,11 +387,25 @@ class CustomerActivationService
                 'status' => 'LS',
                 'receipt_id' => $receipt->id,
             ]);
+            LogHelper::logInfo(null, [
+                'billing_id' => $billing->id,
+                'receipt_id' => $receipt->id
+            ], 200, 'Billing updated successfully', $traceId);
+
+            $billing->billingSubscription->update([
+                'is_paid' => true,
+                'status' => 'paid',
+                'paid_at' => Carbon::today()
+            ]);
+            LogHelper::logInfo(null, [
+                'billing_subscription_id' => $billing->billingSubscription->id
+            ], 200, 'Billing subscription updated successfully', $traceId);
 
             LogHelper::logInfo(null, [
                 'receipt_id' => $receipt->id,
-                'billing_id' => $billing->id
-            ], 200, 'Receipt created and billing updated', $traceId);
+                'billing_id' => $billing->id,
+                'billing_subscription_id' => $billing->billingSubscription->id
+            ], 200, 'Finished createReceiptAndUpdateBilling', $traceId);
         } catch (\Throwable $e) {
             LogHelper::logError(null, [
                 'exception' => [

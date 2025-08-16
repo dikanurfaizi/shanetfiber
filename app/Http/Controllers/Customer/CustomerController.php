@@ -590,21 +590,12 @@ class CustomerController extends Controller
     public function restore($slug)
     {
         $traceId = (string) Str::uuid();
-        $customer = Customer::onlyTrashed()->where('slug', $slug)->firstOrFail();
 
-        $customer->restore();
+        $this->customerService->restoreCustomer($slug, $traceId);
 
-        $this->customerService->initialBilling($customer, $traceId);
-
-        LogHelper::logInfo(
-            null,
-            ['customer_id' => $customer->id],
-            200,
-            "Customer restored.",
-            $traceId
-        );
-
-        return redirect()->route('customers.index')->with('success', 'Customer restored successfully.');
+        return redirect()
+            ->route('customers.index')
+            ->with('success', 'Customer restored successfully.');
     }
 
     public function forceDelete($slug)

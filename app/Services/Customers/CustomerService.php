@@ -476,10 +476,10 @@ class CustomerService
         }
     }
 
-    public function initialBilling(Customer $customer, string $traceId): void
-    {
-        $this->createInitialBilling($customer, $traceId);
-    }
+    // public function initialBilling(Customer $customer, string $traceId): void
+    // {
+    //     $this->createInitialBilling($customer, $traceId);
+    // }
 
     private function createInitialBilling(Customer $customer, string $traceId): void
     {
@@ -989,5 +989,22 @@ class CustomerService
             );
             throw $e;
         }
+    }
+
+    public function restoreCustomer(string $slug, string $traceId): void
+    {
+        $customer = Customer::onlyTrashed()->where('slug', $slug)->firstOrFail();
+
+        $customer->restore();
+
+        $this->createInitialBilling($customer, $traceId);
+
+        LogHelper::logInfo(
+            null,
+            ['customer_id' => $customer->id],
+            200,
+            "Customer restored.",
+            $traceId
+        );
     }
 }
