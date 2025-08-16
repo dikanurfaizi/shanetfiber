@@ -10,11 +10,11 @@
         </tr>
         <tr>
             <td>Periode</td>
-            <td><b>{{ $billing->billing_periode->name }}</b></td>
+            <td><b>{{ $billing->billingSubscription->billing_periode }}</b></td>
         </tr>
         <tr>
             <td>Paket</td>
-            <td><b>{{ $billing->paket_name }}</b></td>
+            <td><b>{{ $billing->customer->paket->name }}</b></td>
         </tr>
 
         @if ($websystem->enable_tax === 'true')

@@ -19,6 +19,10 @@ return [
         'id' => 'Customer ID',
         'contact' => 'Contact',
         'responsibility' => 'Admin',
+        'billing-id' => 'Billing ID',
+        'billing-period' => 'Periode Tagihan',
+        'total-payment' => 'Total Pembayaran',
+        'payment-status' => 'Status Pembayaran',
     ],
     'title' => [
         'index' => 'Manage Customers',
@@ -99,6 +103,8 @@ return [
         'monthly' => 'Monthly',
         '1-time-bill' => '1 Time Bill',
         'billing-options' => 'Billing Options',
+        'state-lunas' => 'Paid Off',
+        'state-belum-lunas' => 'Unpaid'
     ],
     'placeholder' => [
         'name' => 'Insert customer name',

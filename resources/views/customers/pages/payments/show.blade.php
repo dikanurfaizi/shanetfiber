@@ -22,7 +22,7 @@
                 </tr>
                 <tr>
                     <td>Periode</td>
-                    <td><b>{{ $billing->billing_periode->name }}</b></td>
+                    <td><b>{{ $billing->billingSubscription->billing_periode }}</b></td>
                 </tr>
                 <tr>
                     <td>Paket</td>
