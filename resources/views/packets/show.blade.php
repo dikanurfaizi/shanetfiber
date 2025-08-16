@@ -63,12 +63,7 @@
 
                 <div class="mb-3">
                     <strong>{{ __('paket.label.package_category') }}</strong><br>
-                    {{ $packet->paketCategory->name ?? 'no data' }}
-                </div>
-
-                <div class="mb-3">
-                    <strong>{{ __('paket.label.billing_cycle') }}</strong><br>
-                    {{ $packet->billingCycle->code ?? 'no data' }}
+                    {{ $packet->category->name ?? 'no data' }}
                 </div>
 
                 <div class="mb-3">

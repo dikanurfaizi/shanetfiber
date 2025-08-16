@@ -104,7 +104,7 @@ class PacketController extends Controller
     public function show(Paket $packet)
     {
         $traceId = (string) Str::uuid();
-        $packet->load(['paketCategory', 'billingCycle']);
+        $packet->load(['category']);
         LogHelper::logInfo(null, [
             'paket' => $packet
         ], 200, 'Successfully show paket', $traceId);

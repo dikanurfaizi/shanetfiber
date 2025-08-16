@@ -38,7 +38,7 @@ return [
         'incl_modem' => 'Include Modem:',
         'installation_free' => 'Installation Free:',
         'package_category' => 'Package Category:',
-        'billing_cycle' => 'Billing Cycle:',
+        'subscription' => 'Subscription Duration:',
         'installation_fee' => 'Installation Fee:',
         'price' => 'Price:',
         'description' => 'Description:',
