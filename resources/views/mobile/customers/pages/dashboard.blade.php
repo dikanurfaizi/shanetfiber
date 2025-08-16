@@ -74,7 +74,7 @@
             @foreach ($billings as $billing)
                 <tr>
                     <th>{{ __('billing.table.periode') }}</th>
-                    <td>{{ __(':') }} {{ $billing->billing_periode->name }}</td>
+                    <td>{{ __(':') }} {{ $billing->billingSubscription->billing_periode }}</td>
                 </tr>
                 <tr>
                     <th>{{ __('billing.table.paket-name') }}</th>
