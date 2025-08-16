@@ -102,47 +102,47 @@ class PaymentProcessingService
     private function processPppPayment(Mikrotik $router, Customer $customer, string $commentPayment, string $traceId)
     {
         try {
-            // $userSecretId = $this->secretService->getSecretById($router, $customer->secret_id, $traceId);
+            $userSecretId = $this->secretService->getSecretById($router, $customer->secret_id, $traceId);
 
-            // if ($userSecretId === 'error') {
-            //     throw new Exception($customer->secret_id . '! Cannot find user "' . $customer->username . '" on server ' . $router->name . '.');
-            // }
+            if ($userSecretId === 'error') {
+                throw new Exception($customer->secret_id . '! Cannot find user "' . $customer->username . '" on server ' . $router->name . '.');
+            }
 
-            // $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
+            $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
             $customerProfile = $customer->paket->profile ?? null;
 
-            // if ($secretProfiles === $customerProfile) {
-            //     dispatch(new AddPaymentBeforeDueDateJob($router, $commentPayment, $customer->secret_id, $traceId))
-            //         ->onQueue('default');
+            if ($secretProfiles === $customerProfile) {
+                dispatch(new AddPaymentBeforeDueDateJob($router, $commentPayment, $customer->secret_id, $traceId))
+                    ->onQueue('default');
 
+                LogHelper::logInfo(null, [
+                    'customer_id' => $customer->name,
+                    'customer_profile' => $customerProfile,
+                    'internet_service' => $customer->internet_service,
+                    'comment_payment' => $commentPayment
+                ], 200, "Successfully dispatch add payment before due date job", $traceId);
+            } else {
+                dispatch(new AddPaymentAfterDueDateJob(
+                    $router,
+                    $customerProfile,
+                    $commentPayment,
+                    $customer->secret_id,
+                    $customer->username,
+                    $traceId
+                ))->onQueue('default');
+                LogHelper::logInfo(null, [
+                    'customer_id' => $customer->name,
+                    'customer_profile' => $customerProfile,
+                    'internet_service' => $customer->internet_service,
+                    'comment_payment' => $commentPayment
+                ], 200, "Successfully dispatch add payment after due date job", $traceId);
+            }
             LogHelper::logInfo(null, [
                 'customer_id' => $customer->name,
                 'customer_profile' => $customerProfile,
                 'internet_service' => $customer->internet_service,
                 'comment_payment' => $commentPayment
-            ], 200, "Successfully dispatch add payment before due date job", $traceId);
-            // } else {
-            //     dispatch(new AddPaymentAfterDueDateJob(
-            //         $router,
-            //         $customerProfile,
-            //         $commentPayment,
-            //         $customer->secret_id,
-            //         $customer->username,
-            //         $traceId
-            //     ))->onQueue('default');
-            //     LogHelper::logInfo(null, [
-            //         'customer_id' => $customer->name,
-            //         'customer_profile' => $customerProfile,
-            //         'internet_service' => $customer->internet_service,
-            //         'comment_payment' => $commentPayment
-            //     ], 200, "Successfully dispatch add payment after due date job", $traceId);
-            // }
-            LogHelper::logInfo(null, [
-                'customer_id' => $customer->name,
-                'customer_profile' => $customerProfile,
-                'internet_service' => $customer->internet_service,
-                'comment_payment' => $commentPayment
-            ], 200, "Process PPP payment pathed successfully", $traceId);
+            ], 200, "Process PPP payment patched successfully", $traceId);
         } catch (Exception $e) {
             LogHelper::logError(null, ['router' => $router->name, 'customer_id' => $customer->id], "processPppPayment exception: " . $e->getMessage(), $traceId);
             throw new Exception('Server ' . $router->name . ' offline, please check your server. ' . $e->getMessage());

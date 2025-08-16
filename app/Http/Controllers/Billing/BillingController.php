@@ -240,7 +240,8 @@ class BillingController extends Controller
 
     public function unpayment(Billing $billing)
     {
-        $result = $this->paymentService->cancelPayment($billing);
+        $traceId = (string) Str::uuid();
+        $result = $this->paymentService->cancelPayment($billing, $traceId);
 
         if ($result['success']) {
             return redirect()->back()->with('success', $result['message']);

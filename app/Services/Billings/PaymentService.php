@@ -53,12 +53,14 @@ class PaymentService
 
             $billing->billingSubscription->update([
                 'is_paid' => true,
-                'paid_at' => $payment_time
+                'paid_at' => $payment_time,
+                'status' => 'paid'
             ]);
             LogHelper::logInfo(null, [
                 'billing_id' => $billing->id,
                 'billing_subscription_is_paid' => true,
-                'billing_subscripiton_paid_at' => $payment_time
+                'billing_subscripiton_paid_at' => $payment_time,
+                'billing_subscription_status' => 'paid'
             ], 200, 'Billing subscription periode updated with payment info', $traceId);
 
             $receipt = $this->createReceipt($billing, $paymentData, $traceId);
@@ -284,9 +286,9 @@ class PaymentService
         ], 200, 'Customer membership updated', $traceId);
     }
 
-    public function cancelPayment(Billing $billing): array
+    public function cancelPayment(Billing $billing, string $traceId): array
     {
-        return $this->paymentCancellationService->cancelPayment($billing);
+        return $this->paymentCancellationService->cancelPayment($billing, $traceId);
     }
 
     public function sendPaymentNotification(

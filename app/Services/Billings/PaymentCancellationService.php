@@ -22,9 +22,8 @@ use App\Enums\WhatsAppAction;
 
 class PaymentCancellationService
 {
-    public function cancelPayment(Billing $billing): array
+    public function cancelPayment(Billing $billing, string $traceId): array
     {
-        $traceId = (string) Str::uuid();
         $customer = $billing->customer;
 
         try {
