@@ -1,22 +1,5 @@
 @extends('layouts.cust-guest')
 
-@php
-    $formatter = new \App\Helpers\FormatReceiver();
-    $formatPackage = new \App\Helpers\FormatPackage();
-    // Get unique categories dynamically from packages
-    $categories = $pakets->pluck('category')->unique()->toArray();
-
-    // Ambil semua digit saja
-    $phoneNumber = preg_replace('/\D/', '', $websystem->phone);
-
-    // Ganti 0 di depan jadi 62
-    if (substr($phoneNumber, 0, 1) === '0') {
-        $phoneNumber = '62' . substr($phoneNumber, 1);
-    }
-
-    $generalMessage = urlencode('Halo, saya tertarik dengan paket internet yang tersedia. Bisa dibantu informasinya?');
-@endphp
-
 @section('content')
     <!-- Navigation Bar (no longer fixed) -->
     <nav class="navbar navbar-expand-lg navbar-light navbar-transparent shadow-sm">
@@ -33,7 +16,7 @@
                         <i class="fas fa-phone-alt text-primary me-2"></i>
                         <a href="https://wa.me/{{ $phoneNumber }}?text={{ $generalMessage }}" class="text-dark"
                             target="_blank" rel="noopener noreferrer">
-                            {{ $formatter->formatReceiver($websystem->phone, 'homepage') }}
+                            {{ $whatsappCall }}
                         </a>
                     </div>
 
@@ -144,12 +127,6 @@
                         <div class="paket-slider swiper">
                             <div class="swiper-wrapper pb-4">
                                 @foreach ($pakets->where('category', $category) as $package)
-                                    @php
-                                        $packageName = $formatPackage->formatPackageName($package->package_name);
-                                        $waMessage = urlencode(
-                                            "Halo, saya tertarik dengan paket {$packageName}. Bisa dibantu informasinya?",
-                                        );
-                                    @endphp
                                     <div class="swiper-slide">
                                         <div class="paket-internet">
                                             <!-- Header with dynamic class -->
@@ -158,14 +135,12 @@
                                                     @if ($category == 'Internet Only') internet-only
                                                     @elseif($category == 'Internet Stream') internet-stream
                                                     @else internet-tv @endif">
-                                                <h3 class="paket-title">
-                                                    {{ $formatPackage->formatPackageName($package->package_name) }}</h3>
+                                                <h3 class="paket-title">{{ $package->formatted_name }}</h3>
                                             </div>
 
                                             <div class="paket-price">
                                                 <div class="paket-price-value">
-                                                    <p>Rp
-                                                        {{ number_format($package->price, 0, ',', '.') }}/{{ $package->name_en }}
+                                                    <p>{{ $package->formatted_price }}
                                                     </p>
                                                 </div>
                                                 <p class="paket-price-note">Harga Sudah Termasuk PPN</p>
@@ -227,7 +202,7 @@
                                                     @if ($category == 'Internet Only') internet-only
                                                     @elseif($category == 'Internet Stream') internet-stream
                                                     @else internet-tv @endif">
-                                                <a href="https://wa.me/{{ $phoneNumber }}?text={{ $waMessage }}"
+                                                <a href="https://wa.me/{{ $phoneNumber }}?text={{ $package->wa_message }}"
                                                     target="_blank" rel="noopener noreferrer" class="btn-subscribe">
                                                     Berlangganan
                                                 </a>
@@ -276,17 +251,17 @@
                     <h5 class="mb-3 fw-semibold">Contact</h5>
                     <ul class="list-unstyled text-dark small">
                         <li class="mb-2"><i class="fas fa-phone-alt me-2"></i>
-                            <a href="https://wa.me/{{ $phoneNumber }}?text={{ $waMessage }}" class="text-dark"
+                            <a href="https://wa.me/{{ $phoneNumber }}?text={{ $generalMessage }}" class="text-dark"
                                 target="_blank" rel="noopener noreferrer">
-                                {{ $formatter->formatReceiver($websystem->phone, 'homepage') }}
+                                {{ $whatsappCall }}
                             </a>
                         </li>
                         <li class="mb-2"><i class="fas fa-envelope me-2"></i> <a
-                                href="mailto:{{ $websystem->email }}?subject={{ urlencode('Info Paket Internet Shanetfiber') }}&body={{ urlencode($waMessage) }}"
+                                href="mailto:{{ $websystem->email }}?subject={{ urlencode('Info Paket Internet Shanetfiber') }}&body={{ urlencode($generalMessage) }}"
                                 class="text-dark d-none d-md-inline" title="Kirim via aplikasi email">
                                 {{ $websystem->email }}
                             </a>
-                            <a href="https://mail.google.com/mail/?view=cm&fs=1&to={{ urlencode($websystem->email) }}&su={{ urlencode('Info Paket Internet Shanetfiber') }}&body={{ urlencode($waMessage) }}"
+                            <a href="https://mail.google.com/mail/?view=cm&fs=1&to={{ urlencode($websystem->email) }}&su={{ urlencode('Info Paket Internet Shanetfiber') }}&body={{ urlencode($generalMessage) }}"
                                 class="text-dark d-inline d-md-none" target="_blank" rel="noopener noreferrer"
                                 title="Kirim via Gmail">
                                 {{ $websystem->email }}
