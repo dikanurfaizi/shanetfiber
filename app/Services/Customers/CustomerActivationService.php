@@ -351,7 +351,7 @@ class CustomerActivationService
 
             $receipt = Receipt::create([
                 'slug' => str('inv-' . $customer->id . '-' . Str::random(4))->slug(),
-                'periode' => $billing->billing_periode->name,
+                'periode' => $billing->billingSubscription->billing_periode,
                 'number' => str(sprintf("%05d", $numberReceipt) . '-KWT-' . Carbon::now()->format('F') . '-' . Carbon::now()->format('Y')),
                 'billing_number' => $billing->billing_number,
                 'customer_id' => $customer->id,

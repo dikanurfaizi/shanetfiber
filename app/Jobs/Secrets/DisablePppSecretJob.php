@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Jobs;
+namespace App\Jobs\Secrets;
 
 use App\Models\Mikrotik;
 use App\Models\Customer;

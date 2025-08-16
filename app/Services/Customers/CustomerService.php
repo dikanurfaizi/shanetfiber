@@ -24,7 +24,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Services\Customers\CustomerBillingService;
 use App\Services\Routerboard\TestConnectionService;
 use App\Services\Routerboard\Ppp\SecretService;
-use App\Jobs\DeleteIpStaticJob;
+use App\Jobs\Secrets\DeleteIpStaticJob;
 
 class CustomerService
 {

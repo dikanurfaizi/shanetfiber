@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Jobs;
+namespace App\Jobs\Secrets;
 
 use App\Models\Mikrotik;
 use Illuminate\Bus\Queueable;
@@ -8,7 +8,6 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use App\Services\Routerboard\Ppp\SecretService;
 
 class DeletePppSecretJob implements ShouldQueue
@@ -17,7 +16,6 @@ class DeletePppSecretJob implements ShouldQueue
 
     private Mikrotik $mikrotik;
     private string $username;
-    private SecretService $SecretService;
     private string $traceId;
 
     /**
@@ -27,16 +25,15 @@ class DeletePppSecretJob implements ShouldQueue
     {
         $this->mikrotik = $mikrotik;
         $this->username = $username;
-        $this->SecretService = app(SecretService::class);
         $this->traceId = $traceId;
     }
 
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(SecretService $secretService): void
     {
-        $this->SecretService->deleteSecretByName($this->mikrotik, $this->username, $this->traceId);
-        $this->SecretService->deleteActiveSecret($this->mikrotik, $this->username, $this->traceId);
+        $secretService->deleteSecretByName($this->mikrotik, $this->username, $this->traceId);
+        $secretService->deleteActiveSecret($this->mikrotik, $this->username, $this->traceId);
     }
 }

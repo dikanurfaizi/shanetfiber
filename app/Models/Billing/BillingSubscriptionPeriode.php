@@ -3,12 +3,15 @@
 namespace App\Models\Billing;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\CustomerSubscription;
 use App\Models\Billing\BillingPeriode;
 
 class BillingSubscriptionPeriode extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'billing_subscription_periodes';
 
     protected $fillable = [

@@ -15,6 +15,7 @@ use App\Services\Customers\CustomerRouterService;
 use App\Services\Customers\CustomerViewService;
 use App\Services\Customers\CustomerUpdateService;
 use App\Services\Customers\CustomerActivationService;
+use App\Services\Customers\CustomerDeletionService;
 
 use Illuminate\Http\Request;
 use App\Http\Requests\CustomerStoreRequest;
@@ -43,6 +44,7 @@ class CustomerController extends Controller
     private CustomerViewService $customerViewService;
     private CustomerUpdateService $customerUpdateService;
     private CustomerActivationService $customerActivationService;
+    private CustomerDeletionService $customerDeletionService;
 
     public function __construct(
         SecretService $secretService,
@@ -54,7 +56,8 @@ class CustomerController extends Controller
         CustomerRouterService $customerRouterService,
         CustomerViewService $customerViewService,
         CustomerUpdateService $customerUpdateService,
-        CustomerActivationService $customerActivationService
+        CustomerActivationService $customerActivationService,
+        CustomerDeletionService $customerDeletionService
     ) {
         $this->secretService = $secretService;
         $this->customerService = $customerService;
@@ -66,6 +69,7 @@ class CustomerController extends Controller
         $this->customerViewService = $customerViewService;
         $this->customerUpdateService = $customerUpdateService;
         $this->customerActivationService = $customerActivationService;
+        $this->customerDeletionService = $customerDeletionService;
 
         $this->middleware('permission:customer-list|customer-create|customer-edit|customer-delete|secret-disable|secret-edit', ['only' => ['index', 'show']]);
         $this->middleware('permission:customer-create', ['only' => ['create', 'store', 'activation']]);
@@ -590,11 +594,14 @@ class CustomerController extends Controller
 
         $customer->restore();
 
+        $this->customerService->initialBilling($customer, $traceId);
+
         LogHelper::logInfo(
             null,
             ['customer_id' => $customer->id],
             200,
-            "Customer restored."
+            "Customer restored.",
+            $traceId
         );
 
         return redirect()->route('customers.index')->with('success', 'Customer restored successfully.');
@@ -647,6 +654,18 @@ class CustomerController extends Controller
                 'status' => 'error',
 
             ], 500);
+        }
+    }
+
+    public function destroy(Customer $customer)
+    {
+        $traceId = (string) Str::uuid();
+        try {
+            $this->customerDeletionService->deleteCustomer($customer, $traceId);
+            return redirect()->route('customers.index')
+                ->with('success', 'Customer deleted successfully');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['msg' => $e->getMessage()]);
         }
     }
 }
