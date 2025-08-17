@@ -25,20 +25,20 @@ class ReceiptsExport implements FromCollection, WithHeadings, WithMapping, WithC
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
 
+        $query = Receipt::withTrashed()
+            ->with([
+                'customer' => function ($query) {
+                    $query->withTrashed()
+                        ->with('user:id,name'); // ambil relasi user dengan id dan name
+                }
+            ]);
+
+        // Jika user punya permission tertentu, filter by user_id
         if ($user && $user->can('view-customers-widget-related')) {
-            return Receipt::withTrashed()
-                ->with(['customer' => function ($query) {
-                    $query->withTrashed();
-                }])
-                ->whereRelation('customer', 'user_id', $user->id)
-                ->get();
+            $query->whereRelation('customer', 'user_id', $user->id);
         }
 
-        return Receipt::withTrashed() // jika pakai SoftDeletes
-            ->with(['customer' => function ($query) {
-                $query->withTrashed(); // jika customers juga pakai SoftDeletes
-            }])
-            ->get();
+        return $query->get();
     }
 
     public function headings(): array
@@ -52,15 +52,16 @@ class ReceiptsExport implements FromCollection, WithHeadings, WithMapping, WithC
             'Customer Name',
             'Paket Name',
             'Paket Price',
-            'Tax',
             'Discount',
-            'Price After Discount',
+            'Tax',
+            'Total Bill',
             'Payment Method',
             'Bank Name',
             'Account Name',
             'Account Number',
             'Payment Time',
             'Created By',
+            'Admin Name'
         ];
     }
 
@@ -79,8 +80,8 @@ class ReceiptsExport implements FromCollection, WithHeadings, WithMapping, WithC
             $receipt->customer_name,
             $receipt->paket_name,
             $receipt->paket_price,
-            is_null($receipt->tax) ? 0 : $receipt->tax,
             is_null($receipt->discount) ? 0 : $receipt->discount,
+            is_null($receipt->tax) ? 0 : $receipt->tax,
             is_null($receipt->price_after_discount) ? 0 : $receipt->price_after_discount,
             match (strtolower($receipt->payment_methode)) {
                 'cash' => 'Cash',
@@ -93,6 +94,7 @@ class ReceiptsExport implements FromCollection, WithHeadings, WithMapping, WithC
             $isTransfer ? ("'" . ($receipt->account_number ?? '-')) : '-',     // Account Number
             $receipt->payment_time ? Carbon::parse($receipt->payment_time)->format('d-m-Y H:i:s') : '-',
             $receipt->created_name,
+            $receipt->customer?->user?->name ?? '-'
         ];
     }
 
@@ -109,7 +111,7 @@ class ReceiptsExport implements FromCollection, WithHeadings, WithMapping, WithC
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('A1:Q1')->applyFromArray([
+        $sheet->getStyle('A1:R1')->applyFromArray([
             'font' => ['bold' => true],
             'alignment' => ['horizontal' => 'center'],
             'borders' => [
