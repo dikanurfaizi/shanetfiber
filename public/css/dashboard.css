@@ -1,0 +1,92 @@
+/* resources/css/dashboard.css */
+
+/* Styles untuk Dashboard */
+#customerRegistrationChurnChart {
+    min-height: 400px;
+    position: relative;
+}
+
+/* Untuk label miring */
+.apexcharts-xaxis-label {
+    transform: translateY(5px);
+    white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+    #customerRegistrationChurnChart {
+        min-height: 300px;
+    }
+
+    .apexcharts-xaxis-label {
+        font-size: 8px !important;
+    }
+}
+
+/* Table styling */
+#customerMovementTable th {
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa;
+}
+
+#customerMovementTable .text-success {
+    color: #28a745 !important;
+}
+
+#customerMovementTable .text-danger {
+    color: #dc3545 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #customerMovementTable th,
+    #customerMovementTable td {
+        padding: 0.5rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* Custom styling for the table */
+.table-responsive {
+    scrollbar-width: thin;
+    scrollbar-color: #dee2e6 #f8f9fa;
+}
+
+.table-responsive::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background-color: #dee2e6;
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background-color: #f8f9fa;
+}
+
+/* Progress bar in table cells */
+.progress {
+    background-color: #e9ecef;
+    border-radius: 4px;
+}
+
+/* Sticky header and footer */
+.sticky-top {
+    top: 0;
+    position: sticky;
+    z-index: 10;
+}
+
+.sticky-bottom {
+    bottom: 0;
+    position: sticky;
+    z-index: 10;
+}
+
+/* Hover effects */
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}

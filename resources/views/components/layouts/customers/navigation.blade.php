@@ -16,7 +16,7 @@
     <li class="nav-item @if (request()->routeIs('customer.dashboard')) active @endif">
         <a class="nav-link" href="{{ route('customer.dashboard') }}">
             <i class="fas fa-home"></i>
-            <span>{{ __('Home') }}</span>
+            <span>{{ __('navigation.individual.home') }}</span>
         </a>
     </li>
 
@@ -25,21 +25,29 @@
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePayment"
             aria-expanded="true" aria-controls="collapsePayment" style="padding-top: inherit;">
             <i class="fas fa-stream"></i>
-            <span>{{ __('Payments') }}</span>
+            <span>{{ __('navigation.individual.details') }}</span>
         </a>
         <div id="collapsePayment" class="collapse {{ Request::is('customer/billings*') ?: '' }}"
             aria-labelledby="headingPayment" data-parent="#accordionSidebar">
 
             <div class="bg-white py-2 collapse-inner rounded">
                 <a class="collapse-item @if (Request::is('customer/billings/payments*')) active @endif "
-                    href="{{ route('customer.payment.index') }}">Billing</a>
+                    href="{{ route('customer.payment.index') }}">{{ __('navigation.individual.bill') }}</a>
                 @if ($paymentGateway == 'enable')
                     <a class="collapse-item @if (Request::is('customer/billings/orders*')) active @endif "
-                        href="{{ route('customer.order.index') }}">Orders</a>
+                        href="{{ route('customer.order.index') }}">{{ __('navigation.individual.payment') }}</a>
                 @endif
             </div>
 
         </div>
+    </li>
+
+    <!-- Nav Item - Device Information -->
+    <li class="nav-item @if (request()->routeIs('customer.device*')) active @endif">
+        <a class="nav-link" href="{{ route('customer.device.index') }}">
+            <i class="fas fa-desktop"></i>
+            <span>{{ __('navigation.individual.device-info') }}</span>
+        </a>
     </li>
 </ul>
 <!-- End of Sidebar -->

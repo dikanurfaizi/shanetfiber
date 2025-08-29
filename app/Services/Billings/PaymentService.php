@@ -128,7 +128,7 @@ class PaymentService
                 'paket_name' => $customer->paket->name,
                 'paket_price' => $customer->paket->price,
                 'discount' => $billing->discount_amount,
-                'price_after_discount' => $billing->subtotal,
+                'price_after_discount' => $billing->total_amount,
                 'member_type' => $discountData['member_type'],
                 'created_name' => auth()->user()->name,
                 'teller_name' => auth()->user()->name,
@@ -177,15 +177,15 @@ class PaymentService
                 'last_receipt_number' => $lastReceipt
             ], 200, 'Generating new receipt number', $traceId);
 
-            if (!$lastReceipt) {
-                $number = 1;
-            } else {
+            if ($lastReceipt && str_starts_with($lastReceipt, 'KWT-')) {
                 $parts = explode('-', $lastReceipt);
                 $number = (int)$parts[1] + 1;
+            } else {
+                $number = 1;
             }
 
-            $newNumber = str('KWT-' . sprintf("%05d", $number) . '-' .
-                Carbon::now()->format('F') . '-' . Carbon::now()->format('Y'));
+            $newNumber = 'KWT-' . sprintf("%05d", $number) . '-' .
+                Carbon::now()->format('F') . '-' . Carbon::now()->format('Y');
 
             LogHelper::logInfo('GenerateReceiptNumber', [
                 'trace_id' => $traceId,

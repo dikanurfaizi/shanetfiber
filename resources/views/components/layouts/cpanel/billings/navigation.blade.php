@@ -11,13 +11,12 @@
 
 @canany(['billing-edit', 'billing-delete'])
     <li class="nav-item @if (request()->routeIs('billings*') || request()->routeIs('receipts*')) active @endif">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBilling" aria-expanded="true"
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBilling" aria-expanded="false"
             aria-controls="collapseBilling" style="padding-top: inherit;">
             <i class="fas fa-file-invoice-dollar"></i>
             <span>{{ __('navigation.billings.nav-item') }}</span>
         </a>
-        <div id="collapseBilling" class="collapse @if (request()->routeIs('billings*') || request()->routeIs('billingHistory*')) show @endif"
-            aria-labelledby="headingBilling" data-parent="#accordionSidebar">
+        <div id="collapseBilling" class="collapse" aria-labelledby="headingBilling" data-parent="#accordionSidebar">
             @can('billing-create')
                 <div class="bg-white py-2 collapse-inner rounded">
                     <a class="collapse-item @if (request()->routeIs('billings.create')) active @endif"
@@ -43,12 +42,11 @@
 @canany(['billing-list'])
     <li class="nav-item @if (request()->routeIs('receipts*') || request()->routeIs('receipts*')) active @endif">
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseReceipt"
-            aria-expanded="true" aria-controls="collapseReceipt" style="padding-top: inherit;">
+            aria-expanded="false" aria-controls="collapseReceipt" style="padding-top: inherit;">
             <i class="fas fa-receipt"></i>
             <span>{{ __('navigation.receipts.nav-item') }}</span>
         </a>
-        <div id="collapseReceipt" class="collapse @if (request()->routeIs('receipts*')) ) show @endif"
-            aria-labelledby="headingReceipt" data-parent="#accordionSidebar">
+        <div id="collapseReceipt" class="collapse" aria-labelledby="headingReceipt" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 <a class="collapse-item @if (request()->routeIs('receipts*')) active @endif"
                     href="{{ route('receipts.index') }}">{{ __('Receipts') }}</a>
@@ -60,7 +58,7 @@
 @if (request()->routeIs('receipts.index'))
     <li class="nav-item active">
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSearchCustomer"
-            aria-expanded="true" aria-controls="collapseSearchCustomer" style="padding-top: inherit;"
+            aria-expanded="false" aria-controls="collapseSearchCustomer" style="padding-top: inherit;"
             style="padding-top: inherit;">
             <i class="fas fa-search"></i>
             <span>{{ __('billing.header.search') }}</span>

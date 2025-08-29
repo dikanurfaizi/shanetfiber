@@ -29,12 +29,12 @@ class CustomersExport implements FromCollection, WithHeadings, WithMapping, With
         $user = $auth['user'];
 
         if ($user && $user->can('view-customers-widget-related')) {
-            return Customer::query()
+            return Customer::withTrashed()
                 ->where('user_id', $user->id)
                 ->get();
         }
 
-        return Customer::all();
+        return Customer::withTrashed()->get();
     }
 
     /**
@@ -89,7 +89,7 @@ class CustomersExport implements FromCollection, WithHeadings, WithMapping, With
             : optional($customer->paket)->price;
 
         $activationDate = $customer->activation_date
-            ? Carbon::parse($customer->activation_date)->format('d-m-Y')
+            ? Carbon::parse($customer->activation_date)->format('d/m/Y')
             : 'No Data';
 
         return [

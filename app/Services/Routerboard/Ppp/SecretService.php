@@ -629,8 +629,11 @@ class SecretService
                 LogHelper::logWarning(
                     null,
                     [
+                        'mikrotik_id' => $mikrotik->id ?? 'N/A',
+                        'mikrotik_name' => $mikrotik->name ?? 'N/A',
                         'host' => $mikrotik->host ?? 'N/A',
-                        'filter' => $filterValue
+                        'filter' => $filters,
+                        'filterValue' => $filterValue
                     ],
                     404,
                     "No Mikrotik secrets found for $filterType",

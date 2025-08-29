@@ -46,6 +46,9 @@ use App\Http\Controllers\Paket\PaketCategoriesController;
 use App\Http\Controllers\Subscription\SubscriptionDurationController;
 use App\Http\Controllers\Subscription\CustomerSubscriptionController;
 use App\Http\Controllers\Billing\BillingHistoryController;
+use App\Http\Controllers\Customer\DeviceController;
+use App\Http\Controllers\Customer\ForgotPasswordController;
+use App\Http\Controllers\Customer\ResetPasswordController;
 use Illuminate\Support\Facades\Mail;
 
 /*
@@ -78,11 +81,34 @@ Route::group(['prefix' => 'customer', 'namespace' => 'Customer'], function () {
     Route::group(['middleware' => 'guest'], function () {
         Route::get('/login', [CustomerLoginController::class, 'login'])->name('customerLogin');
         Route::post('/login', [CustomerLoginController::class, 'postLogin'])->name('customerLoginPost');
+        // Step 1: user pilih channel + input ulang email/phone
+        Route::post('/password/channel-verify', [ForgotPasswordController::class, 'verifyChannel'])
+            ->name('password.channel.verify');
+
+        // Step 2: kirim OTP
+        Route::post('/password/send-otp', [ForgotPasswordController::class, 'sendOtp'])
+            ->name('password.send.otp');
+
+        // Step 3: verifikasi OTP
+        Route::post('/password/verify-otp', [ForgotPasswordController::class, 'verifyOtp'])
+            ->name('password.otp.verify');
+
+        // Step 4: resend OTP
+        Route::post('/password/resend-otp', [ForgotPasswordController::class, 'resendOtp'])
+            ->name('password.otp.resend');
+
+        // Step 5: reset password setelah OTP valid
+        Route::post('/password/reset', [ForgotPasswordController::class, 'resetPassword'])
+            ->name('password.reset.submit');
     });
     Route::group(['middleware' => 'customerauth'], function () {
         Route::get('/', [CustomerProfileController::class, 'index'])->name('customer.dashboard');
+        //===============================PROFILE==================================================================================
         Route::get('/profile', [CustomerProfileController::class, 'show'])->name('customer.profile');
+        Route::put('/profile/update', [CustomerProfileController::class, 'update'])->name('customer.profile.update');
+        Route::put('/password/update', [CustomerProfileController::class, 'updatePassword'])->name('customer.password.update');
         Route::post('/logout', [CustomerLoginController::class, 'customerLogout'])->name('customerLogout');
+        //===============================BILLINGS=================================================================================
         Route::get('billings/payments', [PaymentController::class, 'index'])->name('customer.payment.index');
         Route::get('billings/payments/{status}/show', [PaymentController::class, 'index'])->name('customer.payment.state');
         Route::get('billings/payments/{billing:id}/view', [PaymentController::class, 'show'])->name('customer.payment.show');
@@ -97,6 +123,9 @@ Route::group(['prefix' => 'customer', 'namespace' => 'Customer'], function () {
         Route::get('billings/orders/{order:id}/detail', [OrderController::class, 'show'])->name('customer.order.show');
         Route::patch('billings/orders/cancel/payment/{order:id}', [OrderController::class, 'cancelPayment'])->name('customer.order.tripays.cancel');
         Route::get('billings/orders/{order:id}/status', [OrderController::class, 'checkStatus'])->name('customer.order.tripays.status');
+        //=================================DEVICE INFORMATION=====================================================================
+        Route::get('device/information', [DeviceController::class, 'manageDevice'])->name('customer.device.index');
+        Route::get('device/traffic/get-monitoring', [DeviceController::class, 'mikrotikTrafficInterface'])->name('customer.device.traffic_interface');
     });
 });
 
@@ -178,6 +207,8 @@ Route::group(['prefix' => 'cpanel'], function () {
         //========================ROUTE Billing===============================
         Route::delete('billing/periode/{billingperiode:id}/destroy', [BillingController::class, 'destroyPeriode'])->name('billing.periode.destroy');
         Route::get('billing/periode/{billingperiode:id}/delete', [BillingController::class, 'deletePeriode'])->name('billing.periode.delete');
+        Route::get('billing/export/all', [BillingController::class, 'exportAll'])->name('billings.export.all');
+        Route::get('billing/export/selected', [BillingController::class, 'exportSelected'])->name('billings.export.selected');
         Route::resource('billings', BillingController::class);
         Route::resource('banks', BankController::class);
         Route::put('/banks/{bank}/disabled/true', [BankController::class, 'disable'])->name('bank.disable');
@@ -185,7 +216,8 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::resource('receipts', ReceiptController::class);
         Route::get('receipt/{receipt}/print/', [ReceiptController::class, 'print'])->name('receipts.print');
         Route::get('receipt/{receipt}/thermal', [ReceiptController::class, 'thermalPrint'])->name('receipts.thermal');
-        Route::get('/receipt/export', [ReceiptController::class, 'export'])->name('receipts.export');
+        Route::get('/receipt/export/all', [ReceiptController::class, 'exportAll'])->name('receipts.export.all');
+        Route::get('/receipt/export/selected', [ReceiptController::class, 'exportSelected'])->name('receipts.export.selected');
         //Route::get('/billings/state/{status}/show', [BillingController::class, 'index'])->name('billings.show.state');
         Route::get('billings/create/one', [BillingController::class, 'create_one'])->name('billings.create.one');
         Route::post('billings/store/one', [BillingController::class, 'store_one'])->name('billings.store.one');
@@ -275,10 +307,6 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::put('settings/whatsappmessage/{whatsappmessage}/disabled', [WhatsappMessageController::class, 'disable_message'])->name('whatsappmessage.disable');
         Route::get('settings/whatsappmessage/{whatsappmessage}/delete', [WhatsappMessageController::class, 'delete'])->name('whatsappmessage.delete');
         Route::get('settings/whatsappgateway/trigger-job', [WhatsappGatewayController::class, 'dispatchJob'])->name('trigger-job');
-        // Route::get('/test-job', function () {
-        //     dispatch(new SendPaymentReminderJob(app(WhatsappMessageService::class)));
-        //     return 'Job dispatched!';
-        // })->name('test-job')->middleware('auth');
 
         //Telegram Gateway
         Route::get('settings/telegramgateway', [TelegramGatewayController::class, 'index'])->name('telegramgateway.index');
@@ -321,6 +349,4 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('api/fetch-interfaces', [DropdownController::class, 'fetchInterface'])->name('fetch.interface');
     Route::post('api/fetch-monthly-summary', [HomeController::class, 'getBillingMonthly'])->name('monthly.summary');
     Route::post('api/customer-registration-churn-data', [HomeController::class, 'getCustomerRegistrationChurnData'])->name('customer.registration');
-    // Route::post('api/send-whatsapp', [WhatsAppGatewayController::class, 'sendMessage']);
-    // Route::post('api/send-broadcast', [WhatsAppGatewayController::class, 'sendBroadcastMessage']);
 });

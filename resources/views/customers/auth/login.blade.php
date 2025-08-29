@@ -36,7 +36,7 @@
             </div>
 
             <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#loginModal">
-                <i class="fas fa-sign-in-alt me-2"></i> Login
+                <i class="fas fa-sign-in-alt me-2"></i> {{ __('auth.login') }}
             </button>
         </div>
     </nav>
@@ -227,7 +227,7 @@
         <div class="container-fluid px-4">
             <div class="row">
                 <div class="col-md-6 mb-3 mb-md-0">
-                    <img src="/images/nih_buat_jajan.png" alt="Shawnn Network Fiber" height="50" class="mb-3">
+                    <img src="/images/donate.png" alt="Shawnn Network Fiber" height="50" class="mb-3">
                     <p class="text-sm text-neutral-200" style="margin-bottom: 0;">
                         <a href="https://maps.app.goo.gl/zRT4QfXNmoJysKRQ8" target="_blank" rel="noopener noreferrer"
                             class="text-neutral-200 text-decoration-none">
@@ -282,7 +282,7 @@
 
         <div id="copyright-content" class="mitra-text text-center">
             MITRA RESELLER<br>
-            PT GLOBAL SARANA ELEKTRONIKA
+            PT GLOBAL SARANA ELEKTRONIK
         </div>
         <div id="copyright-content" class="copyright-text text-center">
             &copy; 2025 Shanum Network Fiber. All rights reserved.
@@ -290,9 +290,8 @@
     </footer>
 
     <!-- Login Modal -->
-    <!-- Modal -->
     <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-sm modal-md modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-md">
             <div class="modal-content p-4">
                 <!-- Logo / Gambar di atas -->
                 <div class="text-center mb-4">
@@ -331,8 +330,120 @@
                     @enderror
 
                     <button type="submit" class="btn btn-primary w-100">Login</button>
+
+                    <!-- Forgot Password trigger -->
+                    <div class="mt-2 text-end">
+                        <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
+                            {{ __('Forgot Your Password?') }}
+                        </a>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
+
+    <!-- Modal Forgot Password -->
+    <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Lupa Password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+
+                    <!-- Step 1: Pilih Channel -->
+                    <div id="step-channel">
+                        <p>Pilih metode reset password:</p>
+                        <button class="btn btn-primary w-100 mb-2" onclick="showStep('step-confirm', 'email')">Via
+                            Email</button>
+                        <button class="btn btn-success w-100" onclick="showStep('step-confirm', 'whatsapp')">Via
+                            WhatsApp</button>
+                        <div class="text-center mt-3">
+                            <button type="button" class="btn btn-link" onclick="showLoginModal()">Ingat password?
+                                Kembali ke Login</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Input ulang email/nomor -->
+                    <div id="step-confirm" class="d-none">
+                        <form id="form-confirm" method="POST" action="{{ route('password.channel.verify') }}">
+                            @csrf
+                            <input type="hidden" name="channel" id="channelInput">
+                            <div class="mb-2">
+                                <label id="confirmLabel"></label>
+                                <input type="text" name="login" class="form-control" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Kirim OTP</button>
+                        </form>
+                        <button type="button" class="btn btn-link mt-2" onclick="showStep('step-channel')">Ubah
+                            Channel</button>
+                        <div class="text-center mt-3">
+                            <button type="button" class="btn btn-link" onclick="showLoginModal()">Ingat password?
+                                Kembali ke Login</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Input OTP -->
+                    <div id="step-otp" class="d-none">
+                        <form id="form-otp" method="POST" action="{{ route('password.otp.verify') }}">
+                            @csrf
+                            <input type="text" name="otp" class="form-control mb-2" placeholder="Masukkan OTP"
+                                required>
+                            <button type="submit" class="btn btn-primary w-100">Verifikasi</button>
+                        </form>
+                        <form method="POST" action="{{ route('password.otp.resend') }}" class="mt-2">
+                            @csrf
+                            <button type="submit" id="btn-resend" class="btn btn-link">Kirim Ulang OTP</button>
+                        </form>
+                        <button type="button" class="btn btn-link mt-2" onclick="showStep('step-channel')">Ubah
+                            Channel</button>
+                        <div class="text-center mt-3">
+                            <button type="button" class="btn btn-link" onclick="showLoginModal()">Ingat password?
+                                Kembali ke Login</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+@endsection
+
+@section('custom_scripts')
+    <script>
+        // pasang listener sekali saja, misal di bawah script
+        document.getElementById('forgotPasswordModal')
+            .addEventListener('hidden.bs.modal', function() {
+                // reset state setelah modal benar-benar tertutup
+                document.getElementById('step-channel').classList.remove('d-none');
+                document.getElementById('step-confirm').classList.add('d-none');
+                document.getElementById('step-otp').classList.add('d-none');
+                document.getElementById('form-confirm').reset();
+                document.getElementById('form-otp').reset();
+            });
+
+        function showLoginModal() {
+            let forgotEl = document.getElementById('forgotPasswordModal');
+            let forgotModal = bootstrap.Modal.getInstance(forgotEl);
+            if (forgotModal) forgotModal.hide();
+
+            let loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+            loginModal.show();
+        }
+
+        function showStep(step, channel = null) {
+            document.getElementById('step-channel').classList.add('d-none');
+            document.getElementById('step-confirm').classList.add('d-none');
+            document.getElementById('step-otp').classList.add('d-none');
+
+            document.getElementById(step).classList.remove('d-none');
+
+            if (channel) {
+                document.getElementById('channelInput').value = channel;
+                document.getElementById('confirmLabel').innerText =
+                    channel === 'email' ? 'Masukkan Email Anda' : 'Masukkan Nomor WhatsApp';
+            }
+        }
+    </script>
 @endsection

@@ -253,7 +253,7 @@ class BillingService
                     'discount_amount' => $discountAmount,
                     'subtotal' => $priceAfterDiscount,
                     'total_amount' => $totalAmount,
-                    'tax' => $customerTax,
+                    'tax_amount' => $customerTax,
                     'created_name' => auth()->user()->name ?? optional($customer->user)->name,
                     'status' => 'BL',
                     'due_date' => Carbon::parse('15 ' . $billingPeriode->name)->endOfDay(),
@@ -292,7 +292,7 @@ class BillingService
         }
     }
 
-    private function calculateCustomerDiscount(Customer $customer, string $periodeName): float
+    public function calculateCustomerDiscount(Customer $customer, string $periodeName): float
     {
         $discount = optional($customer->member)->discount ?? 0;
 
@@ -302,7 +302,7 @@ class BillingService
             : 0;
     }
 
-    private function calculatePaketDiscount($subDuration, float $basePrice): float
+    public function calculatePaketDiscount($subDuration, float $basePrice): float
     {
         if (!$subDuration || $subDuration->discount_type == 'none') {
             return 0;

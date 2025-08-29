@@ -15,6 +15,13 @@ use App\Helpers\UserAuth;
 
 class ReceiptsExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting, WithStyles
 {
+    protected $period;
+
+    public function __construct($period = null)
+    {
+        $this->period = $period;
+    }
+
     private function getUserAuthData()
     {
         return UserAuth::getUserDetails();
@@ -29,13 +36,18 @@ class ReceiptsExport implements FromCollection, WithHeadings, WithMapping, WithC
             ->with([
                 'customer' => function ($query) {
                     $query->withTrashed()
-                        ->with('user:id,name'); // ambil relasi user dengan id dan name
+                        ->with('user:id,name');
                 }
             ]);
 
-        // Jika user punya permission tertentu, filter by user_id
+        // Filter by user permission
         if ($user && $user->can('view-customers-widget-related')) {
             $query->whereRelation('customer', 'user_id', $user->id);
+        }
+
+        // Filter by periode jika ada
+        if ($this->period) {
+            $query->where('periode', $this->period);
         }
 
         return $query->get();

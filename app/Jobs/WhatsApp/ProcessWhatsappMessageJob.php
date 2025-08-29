@@ -25,21 +25,47 @@ class ProcessWhatsappMessageJob implements ShouldQueue
 
     public function handle(WhatsappMessageService $whatsappService)
     {
-        $this->logJobStart();
+        $this->logSuccess(
+            ['action' => $this->jobData->action, 'billing_id' => $this->jobData->billingId ?? null],
+            'Start processing WhatsApp job'
+        );
 
-        match ($this->jobData->action) {
-            WhatsAppAction::ACTIVATION->value => $this->handleActivation($whatsappService),
-            WhatsAppAction::PAYLATER->value => $this->handlePayment($whatsappService),
-            WhatsAppAction::TRANSFER->value => $this->handlePayment($whatsappService),
-            WhatsAppAction::CASH->value => $this->handlePayment($whatsappService),
-            WhatsAppAction::PAYMENT_GATEWAY->value => $this->handlePayment($whatsappService),
-            WhatsAppAction::UNPAYMENT->value => $this->handleUnpayment($whatsappService),
-            WhatsAppAction::CREATE_NEW_BILL->value => $this->handleCreateNewBill($whatsappService),
-            WhatsAppAction::SEND_INFO_BILLING->value => $this->handleSendInfoBilling($whatsappService),
-            WhatsAppAction::CREATE_ORDER->value => $this->handleCreateOrder($whatsappService),
-            WhatsAppAction::CHANGES_PACKAGE->value => $this->handleChangesPackage($whatsappService),
-            default => $this->handleUnknownAction()
-        };
+        try {
+            match ($this->jobData->action) {
+                WhatsAppAction::ACTIVATION->value      => $this->handleActivation($whatsappService),
+                WhatsAppAction::PAYLATER->value        => $this->handlePayment($whatsappService),
+                WhatsAppAction::TRANSFER->value        => $this->handlePayment($whatsappService),
+                WhatsAppAction::CASH->value            => $this->handlePayment($whatsappService),
+                WhatsAppAction::PAYMENT_GATEWAY->value => $this->handlePayment($whatsappService),
+                WhatsAppAction::UNPAYMENT->value       => $this->handleUnpayment($whatsappService),
+                WhatsAppAction::CREATE_NEW_BILL->value => $this->handleCreateNewBill($whatsappService),
+                WhatsAppAction::SEND_INFO_BILLING->value => $this->handleSendInfoBilling($whatsappService),
+                WhatsAppAction::CREATE_ORDER->value    => $this->handleCreateOrder($whatsappService),
+                WhatsAppAction::CHANGES_PACKAGE->value => $this->handleChangesPackage($whatsappService),
+                default                                => $this->handleUnknownAction()
+            };
+
+            $this->logSuccess(
+                ['action' => $this->jobData->action, 'billing_id' => $this->jobData->billingId ?? null],
+                'Finish processing WhatsApp job'
+            );
+        } catch (\Throwable $e) {
+            $this->logError(
+                [
+                    'error_code' => $e->getCode(),
+                    'error_message' => $e->getMessage(),
+                    'action' => $this->jobData->action,
+                    'customer_id' => $this->jobData->customerId ?? null,
+                    'billing_id' => $this->jobData->billingId ?? null,
+                    'receipt_id' => $this->jobData->receiptId ?? null
+                ],
+                '500',
+                'Failed processing WhatsApp job'
+            );
+
+            // lempar ulang biar Laravel Queue tahu job gagal
+            throw $e;
+        }
     }
 
     private function handleActivation(WhatsappMessageService $whatsappService): void
@@ -74,10 +100,12 @@ class ProcessWhatsappMessageJob implements ShouldQueue
             $payLaterDate = Carbon::parse($billing->pay_later);
         } catch (\Exception $e) {
             $this->logError([
+                'error_code' => $e->getCode(),
+                'error_message' => $e->getMessage(),
                 'billing_id' => $billing->id,
                 'pay_later' => $billing->pay_later,
-                'error' => $e->getMessage()
-            ], "Invalid pay_later date format");
+                'action' => $this->jobData->action
+            ], '500', "Invalid pay_later date format");
             return;
         }
 
@@ -93,8 +121,9 @@ class ProcessWhatsappMessageJob implements ShouldQueue
             'billing_id' => $billing->id,
             'receipt_id' => 'virtual',
             'customer_id' => $billing->customer_id,
-            'amount' => $billing->paket_price,
-            'pay_later_date' => $billing->pay_later
+            'amount' => $billing->total_amount,
+            'pay_later_date' => $billing->pay_later,
+            'action' => $this->jobData->action
         ], "Paylater message has been entered into the sending queue");
     }
 
@@ -117,7 +146,7 @@ class ProcessWhatsappMessageJob implements ShouldQueue
             'billing_id' => $billing->id,
             'receipt_id' => $receipt->id,
             'customer_id' => $billing->customer_id,
-            'amount' => $receipt->total_amount ?? 0
+            'amount' => $billing->total_amount ?? 0
         ], "Payment message has been entered into the sending queue");
     }
 
@@ -134,24 +163,18 @@ class ProcessWhatsappMessageJob implements ShouldQueue
 
             $whatsappService->payment_paket($billing, $receipt, $this->jobData->action, $this->jobData->traceId);
 
-            LogHelper::logInfo(null, [
+            $this->logSuccess([
                 'billing_id' => $billing->id,
                 'receipt_id' => $receipt->id,
                 'customer_id' => $billing->customer_id,
                 'amount' => $receipt->total_amount ?? 0,
-            ], 200, "Unpayment message successfully entered into the send queue", $this->jobData->traceId);
+            ], "Unpayment message successfully entered into the send queue");
         } else {
-            LogHelper::logWarning(
-                null,
-                [
-                    'billing_id' => $this->jobData->billingId,
-                    'receipt_id' => $this->jobData->receiptId,
-                    'action' => $this->jobData->action
-                ],
-                404,
-                "Billing data not found",
-                $this->jobData->traceId
-            );
+            $this->logWarning([
+                'billing_id' => $this->jobData->billingId,
+                'receipt_id' => $this->jobData->receiptId,
+                'action' => $this->jobData->action
+            ], '404', "Billing data not found");
         }
     }
 
@@ -179,10 +202,12 @@ class ProcessWhatsappMessageJob implements ShouldQueue
 
             return null;
         } catch (\Exception $e) {
-            LogHelper::logError(null, [
-                'error' => $e->getMessage(),
+            $this->logError([
+                'error_code' => $e->getCode(),
+                'error_message' => $e->getMessage(),
+                'action' => $this->jobData->action,
                 'trace_id' => $this->jobData->traceId
-            ], 500, "Failed to resolve receipt for unpayment");
+            ], '500', "Failed to resolve receipt for unpayment");
             return null;
         }
     }
@@ -197,7 +222,7 @@ class ProcessWhatsappMessageJob implements ShouldQueue
             'customer_id' => $billing->customer_id,
             'customer_name' => $billing->customer_name,
             'paket_name' => $billing->paket?->name ?? 'Unknown Package',
-            'paket_price' => $billing->paket_price,
+            'paket_price' => $billing->total_amount,
             'payment_time' => now(),
             'payment_methode' => $action,
             'created_name' => 'system',
@@ -250,23 +275,13 @@ class ProcessWhatsappMessageJob implements ShouldQueue
 
     private function handleUnknownAction()
     {
-        $this->logError([], "There is unknown action, please check your code again");
+        $this->logError([], '404', "There is unknown action, please check your code again");
     }
 
     private function handleChangesPackage(WhatsappMessageService $whatsappService)
     {
         $whatsappService->changesPackage($this->jobData->customerId, $this->jobData->oldPaketName, $this->jobData->oldPaketPrice, $this->jobData->traceId);
         $this->logSuccess([], 'Send changes package information successfully proceed and delivery');
-    }
-
-    private function logJobStart(): void
-    {
-        LogHelper::logInfo(null, [
-            'action' => $this->jobData->action,
-            'trace_id' => $this->jobData->traceId,
-            'billing_id' => $this->jobData->billingId,
-            'receipt_id' => $this->jobData->receiptId
-        ], 200, "Whatsapp Message Job started processing", $this->jobData->traceId);
     }
 
     private function logSuccess(array $context, string $message): void
@@ -276,12 +291,12 @@ class ProcessWhatsappMessageJob implements ShouldQueue
 
     private function logWarning(array $context, string $errorCode, string $message): void
     {
-        LogHelper::logWarning(null, $context, 422, $message, $this->jobData->traceId);
+        LogHelper::logWarning(null, $context, $errorCode, $message, $this->jobData->traceId);
     }
 
-    private function logError(array $context, string $message): void
+    private function logError(array $context, string $errorCode, string $message): void
     {
-        LogHelper::logError(null, $context, 400, $message, $this->jobData->traceId);
+        LogHelper::logError(null, $context, $errorCode, $message, $this->jobData->traceId);
     }
 
     private function logBillingNotFound(): void

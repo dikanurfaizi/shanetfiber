@@ -7,16 +7,6 @@
         </h5>
     </div>
 
-    @php
-        $price = $customer->paket->price;
-        $discountPrice = $price * ($customer->discount / 100);
-        $priceAfterDiscount = $price - $discountPrice;
-        $taxPrice = ceil($priceAfterDiscount * ($websystem->tax_rate / 100));
-        $totalPrice = $priceAfterDiscount + $taxPrice;
-
-        $lastBilling = $billings->isNotEmpty() ? $billings->last() : null;
-    @endphp
-
     <div class="card-body">
         <div class="row">
             <div class="col-lg-6">

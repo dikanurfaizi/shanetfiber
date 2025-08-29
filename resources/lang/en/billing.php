@@ -38,6 +38,7 @@ return [
             'paylater' => 'Pay Later',
             'notactive' => 'Not Active Period'
         ],
+        'search-period' => 'Period for export'
     ],
     'title' => [
         'index' => 'Manage Billings',
@@ -90,7 +91,8 @@ return [
         'view-order' => 'View Order',
         'pay-later' => 'Pay Later',
         'activation' => 'Activation',
-        'continue-payment' => 'Lanjutkan Pembayaran'
+        'continue-payment' => 'Lanjutkan Pembayaran',
+        'export-all-receipt' => 'Export All Receipt',
     ],
 
     'action' => [

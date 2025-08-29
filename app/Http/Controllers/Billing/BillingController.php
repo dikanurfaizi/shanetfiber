@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Billing;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\BillingStoreRequest;
 use App\Services\Billings\BillingService;
 use App\Services\Billings\PaymentService;
 use App\Services\Billings\BillingQueryService;
@@ -18,6 +17,8 @@ use App\Models\Billing\Billing;
 use App\Models\Billing\BillingPeriode;
 use App\Models\Bank;
 use App\Models\Websystem;
+use App\Exports\BillingsExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class BillingController extends Controller
 {
@@ -52,35 +53,47 @@ class BillingController extends Controller
     public function index(Request $request)
     {
         $traceId = (string) Str::uuid();
-        // $paginate = 25;
         $paginate = $request->input('perPage', 25);
-        $print = $request->cetak_pdf;
 
-        // Build query
+        // query sudah dipindah ke service
         $billingsQuery = $this->billingQueryService->buildBillingQuery($request, $traceId);
+
         $searchParams = $this->billingQueryService->prepareSearchParams($request);
 
-        // Handle PDF export
-        if ($print === 'true') {
+        // PDF export
+        if ($request->cetak_pdf === 'selected') {
             $pdf = $this->billingReportService->generatePdf($billingsQuery, $searchParams);
             return $pdf->download("Tagihan_{$searchParams['name']}_{$searchParams['address']}_{$searchParams['status']}_{$searchParams['month']}_{$searchParams['year']}.pdf");
         }
 
-        // dd($billingsQuery->toSql(), $billingsQuery->getBindings());
-        // Get data for view
-        $totalPrice = $billingsQuery->sum('total_amount');
-        $data = $billingsQuery->paginate($paginate);
-        $filterData = $this->billingReportService->getFilterData($traceId);
+        if ($request->cetak_pdf) {
+            $allQuery = Billing::with(['billingSubscription', 'customer']);
+            $pdf = $this->billingReportService->generatePdf($allQuery, $searchParams);
+            return $pdf->download("All_Billing.pdf");
+        }
 
-        // dd($data);
+        // total amount
+        $totalPrice = $billingsQuery->sum('total_amount');
+
+        // pagination
+        $data = $billingsQuery->paginate($paginate)->appends($request->all());
+
+        // ambil periode dari item pertama yang sedang ditampilkan (periode terakhir)
+        $firstBilling = collect($data->items())->first();
+        $periode = $firstBilling?->billingSubscription?->billing_periode;
+
+        $filterData = $this->billingReportService->getFilterData($traceId);
 
         return view('billings.index', array_merge(
             [
-                'data' => $data,
-                'totalPrice' => $totalPrice,
-                'searchStatus' => $searchParams['status'],
-                'searchName' => $searchParams['name'],
+                'data'          => $data,
+                'totalPrice'    => $totalPrice,
+                'searchStatus'  => $searchParams['status'],
+                'searchName'    => $searchParams['name'],
                 'searchAddress' => $searchParams['address'],
+                'statuses'      => $this->billingQueryService->getStatuses(),
+                'selectedPeriod' => $request->period,
+                'periode'       => $periode
             ],
             $filterData
         ))->with('i', (request()->input('page', 1) - 1) * $paginate);
@@ -335,5 +348,36 @@ class BillingController extends Controller
         $websystem->save();
 
         return redirect()->back()->with('success', 'Automatic billing configuration has been set');
+    }
+
+    public function exportAll(Request $request)
+    {
+        $timestamp = now()->format('Ymd_His');
+        $periode = $request->get('periode'); // contoh: "August 2025"
+        return Excel::download(new BillingsExport(null, $periode), "Billings_{$periode}_{$timestamp}.xlsx");
+    }
+
+    public function exportSelected(Request $request)
+    {
+        $timestamp = now()->format('Ymd_His');
+        $status  = $request->get('status');
+        $periode = $request->get('periode');
+
+        $statusMap = [
+            'LS' => 'PAID',
+            'BL' => 'UNPAID',
+            'PL' => 'PAYLATER',
+            'NP' => 'NOT ACTIVE PERIOD',
+        ];
+
+        $statusCamel = 'All';
+        if ($status != null) {
+            $statusCamel = Str::title(strtolower($statusMap[$status]));
+        }
+
+        return Excel::download(
+            new BillingsExport($status, $periode),
+            "{$statusCamel}_Billing_{$periode}_{$timestamp}.xlsx"
+        );
     }
 }

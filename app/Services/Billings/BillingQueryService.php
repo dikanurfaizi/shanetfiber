@@ -4,6 +4,7 @@ namespace App\Services\Billings;
 
 use App\Models\Billing\Billing;
 use App\Models\Billing\BillingPeriode;
+use App\Models\Billing\BillingSubscriptionPeriode;
 use App\Models\User;
 use App\Models\Customer;
 use Carbon\Carbon;
@@ -17,6 +18,11 @@ class BillingQueryService
     public function buildBillingQuery(Request $request, string $traceId)
     {
         $query = Billing::with(['customer', 'receipt', 'billingSubscription']);
+
+        // filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
 
         $this->applySearchFilters($query, $request, $traceId);
         $this->applyOrdering($query);
@@ -188,9 +194,22 @@ class BillingQueryService
         );
     }
 
-
     private function getUserAuthData()
     {
         return UserAuth::getUserDetails();
+    }
+
+    public function getStatuses()
+    {
+        $statusLabels = [
+            'LS' => 'PAID',
+            'BL' => 'UNPAID',
+            'NP' => 'NOT ACTIVE PERIOD',
+            'PL' => 'PAYLATER',
+        ];
+
+        $raw = Billing::select('status')->distinct()->pluck('status');
+
+        return $raw->mapWithKeys(fn($st) => [$st => $statusLabels[$st] ?? $st]);
     }
 }

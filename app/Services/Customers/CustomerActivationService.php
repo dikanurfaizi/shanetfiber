@@ -355,7 +355,7 @@ class CustomerActivationService
                 'billing_id' => $billing->id
             ], 200, 'Billing fetched successfully', $traceId);
 
-            $numberReceipt = $this->generateReceiptNumber();
+            $numberReceipt = $this->generateReceiptNumber($traceId);
             LogHelper::logInfo(null, [
                 'number_receipt' => $numberReceipt
             ], 200, 'Generated receipt number', $traceId);
@@ -373,8 +373,8 @@ class CustomerActivationService
                 'paket_name' => $customer->paket->name,
                 'paket_price' => $customer->paket->price * ((100 - $customer->discount) / 100),
                 'payment_methode' => 'cash',
-                'created_name' => auth()->user()->name,
-                'teller_name' => auth()->user()->name,
+                'created_name' => auth()->user()->name ?? 'System',
+                'teller_name' => auth()->user()->name ?? 'System',
                 'payment_time' => $activationDate,
             ]);
             LogHelper::logInfo(null, [
@@ -383,7 +383,7 @@ class CustomerActivationService
 
             $billing->update([
                 'payment_time' => $activationDate,
-                'teller_name' => auth()->user()->name,
+                'teller_name' => auth()->user()->name ?? 'System',
                 'status' => 'LS',
                 'receipt_id' => $receipt->id,
             ]);
@@ -420,21 +420,42 @@ class CustomerActivationService
         }
     }
 
-    private function generateReceiptNumber(): int
+    private function generateReceiptNumber(string $traceId): string
     {
         try {
-            $getLastReceipt = Receipt::latest('created_at')->value('number');
-            return $getLastReceipt ? (int)explode('-', $getLastReceipt)[1] + 1 : 1;
+            $lastReceipt = Receipt::latest('created_at')->value('number');
+
+            LogHelper::logInfo('GenerateReceiptNumber', [
+                'trace_id' => $traceId,
+                'last_receipt_number' => $lastReceipt
+            ], 200, 'Generating new receipt number', $traceId);
+
+            if ($lastReceipt && str_starts_with($lastReceipt, 'KWT-')) {
+                $parts = explode('-', $lastReceipt);
+                $number = (int)$parts[1] + 1;
+            } else {
+                $number = 1;
+            }
+
+            $newNumber = 'KWT-' . sprintf("%05d", $number) . '-' .
+                Carbon::now()->format('F') . '-' . Carbon::now()->format('Y');
+
+            LogHelper::logInfo('GenerateReceiptNumber', [
+                'trace_id' => $traceId,
+                'generated_receipt_number' => $newNumber
+            ], 200, 'Receipt number generated successfully', $traceId);
+
+            return $newNumber;
         } catch (\Throwable $e) {
-            LogHelper::logError(null, [
-                'exception' => [
-                    'message' => $e->getMessage(),
-                    'code' => $e->getCode(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ]
-            ], 500, 'Failed to generate receipt number', 'system');
-            return 1;
+            LogHelper::logError('GenerateReceiptNumber', [
+                'trace_id' => $traceId,
+                'exception' => get_class($e),
+                'error_message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500, 'Failed to generate receipt number', $traceId);
+
+            // fallback kalau gagal
+            return 'KWT-ERROR-' . Carbon::now()->timestamp;
         }
     }
 

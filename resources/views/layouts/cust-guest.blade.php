@@ -38,6 +38,7 @@
     <script src="{{ asset('js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('assets/swiper/swiper-bundle.min.js') }}"></script>
     <script src="{{ asset('js/homepage.js') }}"></script>
+    @yield('custom_scripts')
     @if ($message = Session::get('error'))
         <script>
             Swal.fire({

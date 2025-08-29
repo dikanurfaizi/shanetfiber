@@ -563,7 +563,7 @@ class WhatsappMessageService
 
             if ($action === 'paylater') {
                 $billingOption = $billing->customer->billing_option;
-                $billingPeriodMatch = $billing->customer->billing_period === $billing->billing_periode->name;
+                $billingPeriodMatch = $billing->customer->billing_period === $billing->billingSubscription->billing_periode;
 
                 if ($billingOption == 1 || ($billingOption == 2 && $billingPeriodMatch)) {
                     $discount = $billing->discount_amount ?? 0;
@@ -645,11 +645,13 @@ class WhatsappMessageService
             LogHelper::logError(
                 null,
                 [
+                    'error_code' => $e->getCode(),
+                    'error_message' => $e->getMessage(),
                     'billing_id' => $billing->id ?? null,
                     'action' => $action,
                 ],
-                500, // Internal Error
-                "Terjadi kesalahan dalam payment_paket: " . $e->getMessage(),
+                500,
+                "Terjadi kesalahan dalam payment_paket",
                 $traceId
             );
         }

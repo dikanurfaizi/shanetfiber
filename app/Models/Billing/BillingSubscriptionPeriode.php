@@ -39,4 +39,9 @@ class BillingSubscriptionPeriode extends Model
     {
         return $this->belongsTo(BillingPeriode::class, 'billing_periode_id');
     }
+
+    public function billings()
+    {
+        return $this->hasMany(Billing::class, 'billing_subscription_id');
+    }
 }

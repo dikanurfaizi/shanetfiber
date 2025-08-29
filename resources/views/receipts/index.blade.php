@@ -16,7 +16,32 @@
     </div>
 
     <div class="card-body">
-        {{ $receipts->withQueryString()->links() }}
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-3">
+            {{ $receipts->withQueryString()->links() }}
+
+            <div class="d-flex gap-2">
+                {{-- Export per bulan --}}
+                <form action="{{ route('receipts.export.selected') }}" method="GET" class="d-flex align-items-center">
+                    <div class="col-md-4 col-lg-3">
+                        {!! Form::select('period', $periods, request('period'), [
+                            'placeholder' => __('billing.placeholder.search-period'),
+                            'class' => 'form-control form-select-sm me-2',
+                            'style' => 'width:auto;',
+                            'onchange' => 'this.form.submit()',
+                        ]) !!}
+                    </div>
+                </form>
+
+                {{-- Export semua --}}
+                <form action="{{ route('receipts.export.all') }}" method="GET">
+                    <input type="hidden" name="all" value="1">
+                    <button type="submit" class="btn btn-primary btn-sm d-flex align-items-center"
+                        style="height: 35px;">
+                        <i class="fas fa-file-excel me-1 mr-2"></i>{{ __('billing.button.export-all-receipt') }}
+                    </button>
+                </form>
+            </div>
+        </div>
         @if ($totalPrice > 0)
             <div class="alert alert-success mt-2">
                 <strong> Total Payments: @moneyIDR($totalPrice) </strong>

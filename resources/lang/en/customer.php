@@ -29,7 +29,6 @@ return [
         'create' => 'Create New Customer',
         'edit' => 'Edit Customer',
         'show' => 'View Customer',
-
     ],
     'header' => [
         'index' => 'Customers List',
@@ -44,6 +43,8 @@ return [
         'edit-router' => 'Edit Router',
         'activation-all' => 'Activation All Customer',
         'traffic-monitoring' => 'Traffic Monitoring',
+        'profile-info' => 'Profile Info',
+        'change-password' => 'Change Password'
     ],
     'label' => [
         'id' => 'Customer ID',
@@ -104,7 +105,9 @@ return [
         '1-time-bill' => '1 Time Bill',
         'billing-options' => 'Billing Options',
         'state-lunas' => 'Paid Off',
-        'state-belum-lunas' => 'Unpaid'
+        'state-belum-lunas' => 'Unpaid',
+        'current-password' => 'Current Password',
+        'new-password' => 'New Password',
     ],
     'placeholder' => [
         'name' => 'Insert customer name',
@@ -154,6 +157,9 @@ return [
         'activation-all' => 'Activation Now',
         'search' => 'Search',
         'submit' => 'Submit',
+        'edit-profile' => 'Edit Profile',
+        'update-my-data' => 'Update',
+        'change-password' => 'Change Password'
     ],
 
     'action' => [
@@ -172,8 +178,9 @@ return [
         'server-offline' => 'Server Offline: :server',
         'not-activation' => 'Not Activated',
         'activation-count' => 'Activation :customer customer',
-        'deleted' => 'Deleted'
+        'deleted' => 'Deleted',
     ],
+    'validate' => [],
     'page' => [
         'header' => [
             'index' => 'Welcome ',
@@ -187,6 +194,10 @@ return [
     ],
     'message' => [
         'error-loading-types' => 'Error Loading Types',
+        'current-password-help' => 'Please enter your current password',
+        'current-password-incorrect' => 'The current password is incorrect',
+        'password-changed-successfully' => 'Password change successfully',
+        'password-same-with-before' => 'Password cannot be the same with previous'
     ],
     'restore' => [
         'header' => [
@@ -241,7 +252,6 @@ return [
             'edit-router' => 'Edit Router',
             'activation-all' => 'Activation Now',
             'search' => 'Search',
-
         ],
     ]
 ];

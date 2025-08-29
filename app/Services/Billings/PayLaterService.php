@@ -333,7 +333,7 @@ class PayLaterService
                     orderId: null
                 );
 
-                ProcessWhatsappMessageJob::dispatch($jobData)->onQueue('whatsapp_single');
+                ProcessWhatsappMessageJob::dispatch($jobData)->onQueue('default');
                 $message = 'The delivery of the paylater payment information message has been successfully scheduled';
 
                 LogHelper::logInfo(null, $context, 200, $message, $traceId);

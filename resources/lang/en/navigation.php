@@ -51,5 +51,11 @@ return [
         ]
 
     ],
-
+    'individual' => [
+        'home' => 'Home',
+        'details' => 'Bill & Payment Details',
+        'bill' => 'Bill',
+        'payment' => 'Payment',
+        'device-info' => 'Device Information'
+    ]
 ];

@@ -557,7 +557,7 @@ class CustomerController extends Controller
     {
         $traceId = (string) Str::uuid();
         $timestamp = now()->format('Ymd_His'); // Format: YYYYMMDD_HHMMSS
-        $fileName = "customers_{$timestamp}.xlsx"; // Contoh: customers_20250325_143530.xlsx
+        $fileName = "Customers_{$timestamp}.xlsx"; // Contoh: customers_20250325_143530.xlsx
 
         return Excel::download(new CustomersExport, $fileName);
     }

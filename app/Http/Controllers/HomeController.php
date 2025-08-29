@@ -161,7 +161,7 @@ class HomeController extends Controller
                 $countIsolir = 0;
                 if ($profileIsolir) {
                     $secrets = $this->secretService->getSecretByProfile($router, $profileIsolir, $traceId);
-                    if ($secrets !== 'error') {
+                    if ($secrets !== 'error' || !empty($result)) {
                         $countIsolir = collect($secrets)
                             ->filter(fn($secret) => $usernames->contains($secret['name']) && $secret['disabled'] === 'false')
                             ->count();

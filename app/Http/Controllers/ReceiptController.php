@@ -75,7 +75,12 @@ class ReceiptController extends Controller
         $totalPrice = $invoices->sum('paket_price');
         $receipts = $invoices->paginate($paginate);
 
-        return view('receipts.index', compact('receipts', 'totalPrice'))
+        $periods = Receipt::select('periode')
+            ->distinct()
+            ->orderByRaw("STR_TO_DATE(CONCAT('01 ', periode), '%d %M %Y') DESC")
+            ->pluck('periode', 'periode');
+
+        return view('receipts.index', compact('receipts', 'totalPrice', 'periods'))
             ->with('i', (request()->input('page', 1) - 1) * $paginate);
     }
 
@@ -118,12 +123,30 @@ class ReceiptController extends Controller
         return $pdf->stream($receipt->number . '_thermal_' . str($receipt->customer_name)->slug() . '_' . str($receipt->customer_address)->slug() . '_' . str($receipt->month)->slug() . '_' . $receipt->year . '.pdf');
     }
 
-    public function export()
+    public function exportAll()
     {
         $traceId = (string) Str::uuid();
         $timestamp = now()->format('Ymd_His');
-        $fileName = "Receipts_{$timestamp}.xlsx";
+        $fileName = "Receipts_All_{$timestamp}.xlsx";
 
         return Excel::download(new ReceiptsExport, $fileName);
+    }
+
+    public function exportSelected(Request $request)
+    {
+        $traceId = (string) Str::uuid();
+        $timestamp = now()->format('Ymd_His');
+
+        $period = $request->get('period');
+        // dd($period);
+
+        if (!$period) {
+            return redirect()->back()->with('error', 'Periode harus dipilih.');
+        }
+
+        $fileName = "Receipts_{$period}_{$timestamp}.xlsx";
+
+        // Kirim periode ke ReceiptsExport agar hanya ambil sesuai filter
+        return Excel::download(new ReceiptsExport($period), $fileName);
     }
 }

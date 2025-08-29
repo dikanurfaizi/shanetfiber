@@ -17,6 +17,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Hash;
 
 class Customer extends Authenticatable
 {
@@ -85,5 +86,33 @@ class Customer extends Authenticatable
     public function autoIsolir()
     {
         return $this->hasOne(AutoIsolir::class, 'mikrotik_id', 'mikrotik_id');
+    }
+
+    public function isPreviousPassword($plainPassword)
+    {
+        $previousPasswords = ActivityLog::where('customer_id', $this->id)
+            ->where('field_name', 'password')
+            ->where('is_sensitive', true)
+            ->orderBy('created_at', 'desc')
+            ->take(5) // Ambil 5 password terakhir
+            ->pluck('old_value');
+
+        foreach ($previousPasswords as $oldHash) {
+            if (Hash::check($plainPassword, $oldHash)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function passwordHistory()
+    {
+        return $this->hasMany(PasswordHistory::class);
+    }
+
+    public function activityLogs()
+    {
+        return $this->hasMany(ActivityLog::class);
     }
 }
