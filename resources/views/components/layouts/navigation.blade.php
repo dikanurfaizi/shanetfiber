@@ -74,7 +74,7 @@
         <li class="nav-item @if (request()->routeIs('billings*') || request()->routeIs('billingHistory*')) active @endif">
             <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBilling"
                 aria-expanded="true" aria-controls="collapseBilling">
-                <i class="fas fa-file-invoice-dollar"></i>
+                <i class="fas fa-layer-group"></i>
                 <span>{{ __('navigation.billings.nav-item') }}</span>
             </a>
             <div id="collapseBilling" class="collapse @if (request()->routeIs('billings*') || request()->routeIs('billingHistory*')) show @endif"

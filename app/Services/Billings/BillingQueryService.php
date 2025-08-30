@@ -15,28 +15,40 @@ use Illuminate\Support\Facades\DB;
 
 class BillingQueryService
 {
-    public function buildBillingQuery(Request $request, string $traceId)
+    public function buildBillingQuery(Request $request, string $traceId, bool $showAllPeriods = false)
     {
-        $query = Billing::with(['customer', 'receipt', 'billingSubscription']);
+        $query = Billing::select('billings.*')
+            ->with([
+                'customer',
+                'receipt',
+                'billingSubscription',
+                'billingSubscription.billingPeriode'
+            ]);
+
 
         // filter by status
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $query->where('billings.status', $request->status);
         }
 
-        $this->applySearchFilters($query, $request, $traceId);
+        if ($request->filled('periode_id')) {
+            $query->whereHas('billingSubscription.billingPeriode', function ($q) use ($request) {
+                $q->where('id', $request->periode_id);
+            });
+        }
+
+        $this->applySearchFilters($query, $request, $traceId, $showAllPeriods);
         $this->applyOrdering($query);
 
         return $query;
     }
 
-    private function applySearchFilters($query, Request $request, string $traceId)
+    private function applySearchFilters($query, Request $request, string $traceId, bool $showAllPeriods = false)
     {
-        $searchParams = $this->prepareSearchParams($request);
+        $searchParams = $this->prepareSearchParams($request, $showAllPeriods);
 
         // Filter berdasarkan kolom di tabel billings
         if ($searchParams['name']) {
-            // Karena customer_name ada di tabel billings, bisa pakai langsung
             $query->where('customer_name', 'like', "%{$searchParams['name']}%");
         }
 
@@ -64,11 +76,13 @@ class BillingQueryService
             });
         }
 
-        // Filter berdasarkan periode, melalui relasi billingSubscription → billingPeriode
-        if ($searchParams['periode']) {
+        // Filter berdasarkan periode - handle null billingSubscription
+        if ($searchParams['periode'] && !$searchParams['show_all_periods']) {
             $periode = $searchParams['periode'];
-            $query->whereHas('billingSubscription.billingPeriode', function ($q) use ($periode) {
-                $q->where('name', 'like', "%{$periode}%");
+            $query->where(function ($q) use ($periode) {
+                $q->whereHas('billingSubscription.billingPeriode', function ($q) use ($periode) {
+                    $q->where('name', 'like', "%{$periode}%");
+                });
             });
         }
 
@@ -92,7 +106,7 @@ class BillingQueryService
         }
     }
 
-    public function prepareSearchParams(Request $request): array
+    public function prepareSearchParams(Request $request, bool $showAllPeriods = false): array
     {
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
@@ -118,8 +132,8 @@ class BillingQueryService
             $searchUserId = auth()->user()->name;
         }
 
-        // Default periode jika tidak ada filter
-        if (!$customerSlug && !$searchName && !$searchMonth && !$searchYear && !$searchStatus && !$searchAddress && !$searchDuedate) {
+        // Hanya set default periode jika tidak menampilkan semua periode
+        if (!$showAllPeriods && !$customerSlug && !$searchName && !$searchMonth && !$searchYear && !$searchStatus && !$searchAddress && !$searchDuedate) {
             $latestPeriode = BillingPeriode::latest('created_at')->value('name');
             $searchPeriode = $latestPeriode;
             $searchMonth = Carbon::parse($latestPeriode)->format('F');
@@ -136,6 +150,7 @@ class BillingQueryService
             'user_id' => $searchUserId,
             'month' => $searchMonth,
             'year' => $searchYear,
+            'show_all_periods' => $showAllPeriods, // Tambahkan flag ini
         ];
     }
 
@@ -181,17 +196,12 @@ class BillingQueryService
 
     private function applyOrdering($query)
     {
-        $query->orderByDesc(
-            BillingPeriode::select('billing_periodes.created_at')
-                ->join('billing_subscription_periodes as bsp', 'billing_periodes.id', '=', 'bsp.billing_periode_id')
-                ->orderBy('billing_periodes.created_at', 'desc')
-                ->limit(1)
-        )->orderBy(
-            Customer::select('name')
-                ->whereColumn('customers.id', 'billings.customer_id')
-                ->limit(1),
-            'asc'
-        );
+        $query->leftJoin('billing_subscription_periodes as bsp', 'billings.billing_subscription_id', '=', 'bsp.id')
+            ->leftJoin('billing_periodes', 'bsp.billing_periode_id', '=', 'billing_periodes.id')
+            ->leftJoin('customers', 'billings.customer_id', '=', 'customers.id')
+            ->orderByDesc('billing_periodes.created_at')
+            ->orderBy('customers.name', 'asc')
+            ->select('billings.*'); // Pastikan select hanya kolom billing
     }
 
     private function getUserAuthData()

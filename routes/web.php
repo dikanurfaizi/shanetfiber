@@ -254,6 +254,8 @@ Route::group(['prefix' => 'cpanel'], function () {
 
         //=================================Billing History=============================================
         Route::resource('billing-history', BillingHistoryController::class)->names('billingHistory');
+        Route::get('/billing-history/export/all', [BillingHistoryController::class, 'exportAllPeriode'])->name('billingHistory.export.all');
+        Route::get('/billing-history/export/selected', [BillingHistoryController::class, 'exportSelectedPeriode'])->name('billingHistory.export.selected');
 
         //Payment Gateway
         Route::get('settings/payment-gateway', [PaymentGatewayController::class, 'index'])->name('paymentgateway.index');

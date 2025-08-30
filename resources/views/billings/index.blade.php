@@ -77,41 +77,10 @@
 
 
     <div class="card-body">
-        {{-- <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-3">
-            <div>
-                {{ $data->appends(['perPage' => request('perPage')])->links('vendor.pagination.simple-numeric') }}
-            </div>
-
-            <form method="GET" id="paginationForm" class="d-flex align-items-center" style="margin: 5px;">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="font-weight-bold text-primary">Show</span>
-                    <select name="perPage" id="perPage" class="form-control"
-                        onchange="document.getElementById('paginationForm').submit();"
-                        style="width: auto; min-width: 70px; height: 35px; padding: 2px 8px; text-align: center; margin: 0 10px;">
-                        <option value="25" {{ request('perPage') == 25 ? 'selected' : '' }}>25</option>
-                        <option value="50" {{ request('perPage') == 50 ? 'selected' : '' }}>50</option>
-                        <option value="100" {{ request('perPage') == 100 ? 'selected' : '' }}>100</option>
-                    </select>
-                </div>
-            </form>
-        </div> --}}
-        <div class="row align-items-center gy-2 mt-3">
+        <div class="row align-items-center gy-2 mt-3 justify-content-between">
             {{-- Pagination kiri --}}
             <div class="col-md-4 d-flex justify-content-md-start justify-content-center">
                 {{ $data->appends(['status' => request('status')])->links('vendor.pagination.simple-numeric') }}
-            </div>
-
-            {{-- Dropdown perPage --}}
-            <div class="col-md-2 col-lg-2">
-                <form method="GET" id="paginationForm" class="d-flex align-items-center">
-                    <label for="perPage" class="fw-bold text-primary me-2 mb-0"
-                        style="margin-right:8px; margin-bottom:0;">Show</label>
-                    {!! Form::select('perPage', [25 => 25, 50 => 50, 100 => 100], request('perPage'), [
-                        'class' => 'form-control form-control-sm w-auto me-2',
-                        'onchange' => 'this.form.submit()',
-                        'id' => 'perPage',
-                    ]) !!}
-                </form>
             </div>
 
             {{-- Filter + Export --}}
@@ -136,13 +105,7 @@
                     style="margin-bottom:10px; margin-right:10px;">
                     <input type="hidden" name="status" value="{{ request('status') }}">
                     <input type="hidden" name="periode" value="{{ $periode }}">
-                    <button type="submit" class="btn btn-sm btn-success">Export Selected</button>
-                </form>
-
-                {{-- Export All --}}
-                <form action="{{ route('billings.export.all') }}" method="GET" style="margin-bottom:10px;">
-                    <input type="hidden" name="periode" value="{{ $periode }}">
-                    <button type="submit" class="btn btn-sm btn-dark">Export All</button>
+                    <button type="submit" class="btn btn-sm btn-success">Export Data</button>
                 </form>
             </div>
         </div>
@@ -259,8 +222,22 @@
                 No billing found!
             </div>
         @endif
+        <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
+            {{-- Pagination kiri --}}
+            <div>
+                {{ $data->appends(['status' => request('status')])->links('vendor.pagination.simple-numeric') }}
+            </div>
 
-        {{ $data->withQueryString()->links('vendor.pagination.simple-numeric') }}
+            {{-- Dropdown perPage kanan --}}
+            <form method="GET" id="paginationForm" class="d-flex align-items-center mb-3">
+                <label for="perPage" class="fw-bold text-primary me-2 mb-0 mr-1">Show</label>
+                {!! Form::select('perPage', [25 => 25, 50 => 50, 100 => 100], request('perPage'), [
+                    'class' => 'form-control form-control-sm w-auto',
+                    'onchange' => 'this.form.submit()',
+                    'id' => 'perPage',
+                ]) !!}
+            </form>
+        </div>
     </div>
     @section('custom_styles')
         <link href="{{ asset('css/flatpickr.min.css') }}" rel="stylesheet">

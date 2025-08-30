@@ -56,7 +56,7 @@ class BillingController extends Controller
         $paginate = $request->input('perPage', 25);
 
         // query sudah dipindah ke service
-        $billingsQuery = $this->billingQueryService->buildBillingQuery($request, $traceId);
+        $billingsQuery = $this->billingQueryService->buildBillingQuery($request, $traceId, false);
 
         $searchParams = $this->billingQueryService->prepareSearchParams($request);
 

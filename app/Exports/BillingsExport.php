@@ -15,11 +15,13 @@ use Illuminate\Support\Carbon;
 class BillingsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
     protected $status;
+    protected $periodeId;
     protected $periode;
 
-    public function __construct($status = null, $periode = null)
+    public function __construct($status = null, $periodeId = null, $periode = null)
     {
-        $this->status  = $status;
+        $this->status    = $status;
+        $this->periodeId = $periodeId;
         $this->periode = $periode;
     }
 
@@ -29,16 +31,26 @@ class BillingsExport implements FromCollection, WithHeadings, WithMapping, WithS
             'customer.user',
             'billingSubscription.customerSubscription.paket',
             'billingSubscription.customerSubscription.subscriptionDuration',
+            'billingSubscription',
+            'billingSubscription.billingPeriode',
             'receipt'
         ]);
 
-        if ($this->status && $this->status !== 'ALL') {
-            $query->where('status', $this->status);
+        // Filter status (pastikan uppercase biar konsisten)
+        if (!empty($this->status) && strtoupper($this->status) !== 'ALL') {
+            $query->where('status', strtoupper(trim($this->status)));
         }
 
-        if ($this->periode) {
-            $query->whereHas('billingSubscription', function ($q) {
-                $q->where('billing_periode', 'like', "%{$this->periode}%");
+        // Filter periode (hanya kalau benar-benar ada nilai numerik)
+        if (!empty($this->periodeId) && is_numeric($this->periodeId)) {
+            $query->whereHas('billingSubscription.billingPeriode', function ($q) {
+                $q->where('id', $this->periodeId);
+            });
+        }
+
+        if (!empty($this->periode)) {
+            $query->whereHas('billingSubscription.billingPeriode', function ($q) {
+                $q->where('name', $this->periode);
             });
         }
 
@@ -81,7 +93,7 @@ class BillingsExport implements FromCollection, WithHeadings, WithMapping, WithS
             'NP' => 'NOT ACTIVE PERIOD',
         ];
 
-        $status = $statusMap[$billing->status] ?? ($billing->status ?? 'UNKNOWN');
+        $status = $statusMap[$billing->status] ?? strtoupper($billing->status ?? 'UNKNOWN');
 
         return [
             $number++,
@@ -89,11 +101,11 @@ class BillingsExport implements FromCollection, WithHeadings, WithMapping, WithS
             $billing->customer->name ?? '-',
             $billing->customer->address ?? '-',
             $billing->billingSubscription->customerSubscription->paket->name ?? '-',
-            $billing->billingSubscription->billing_periode ?? '-',
+            $billing->billingSubscription->billingPeriode->name ?? '-', // ambil nama periode
             $billing->billingSubscription->customerSubscription->subscriptionDuration->name_en ?? '-',
-            (int) ($billing->billingSubscription->customerSubscription->paket->price ?? 0),
+            (float) ($billing->billingSubscription->customerSubscription->paket->price ?? 0),
             (float) round($billing->discount_amount ?? 0, 2),
-            (float) round($billing->subTotal ?? 0, 2),
+            (float) round($billing->subtotal ?? 0, 2),
             (float) round($billing->tax_amount ?? 0, 2),
             (float) round($billing->total_amount ?? 0, 2),
             $billing->created_at?->format('d/m/Y') ?? '-',
@@ -110,15 +122,14 @@ class BillingsExport implements FromCollection, WithHeadings, WithMapping, WithS
         ];
     }
 
-    // Buat header bold
     public function styles(Worksheet $sheet)
     {
         return [
             1 => [
-                'font' => ['bold' => true], // header bold
+                'font' => ['bold' => true],
                 'alignment' => [
-                    'horizontal' => Alignment::HORIZONTAL_CENTER, // center horizontal
-                    'vertical'   => Alignment::VERTICAL_CENTER,   // middle vertical
+                    'horizontal' => Alignment::HORIZONTAL_CENTER,
+                    'vertical'   => Alignment::VERTICAL_CENTER,
                 ],
             ],
         ];

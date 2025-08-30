@@ -49,7 +49,7 @@ return [
         'delete' => 'Delete Billing Period',
     ],
     'header' => [
-        'index' => 'Billings List',
+        'index' => 'Active Bills',
         'create' => 'Add New Billing',
         'create-one' => 'Add Billing to Existing Period',
         'edit' => 'Edit Billing',
@@ -57,6 +57,7 @@ return [
         'paid-off' => 'Paid Off',
         'search' => 'Search',
         'delete' => 'Delete billing periode :billingperiode',
+        'history-index' => 'Historical Bills'
     ],
     'label' => [
         'periode' => 'Period:',
