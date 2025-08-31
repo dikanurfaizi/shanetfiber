@@ -8,7 +8,6 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use App\Services\Routerboard\Ppp\SecretService;
 
 class CancelPaymentAfterDueDateJob implements ShouldQueue

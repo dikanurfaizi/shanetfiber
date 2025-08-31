@@ -87,28 +87,28 @@ class UpdatePayLaterSecretService
                             continue;
                         }
 
-                        // LogHelper::logInfo(null, [
-                        //     'router_ip' => $router->host,
-                        //     'username' => $username,
-                        //     'secret_id' => $secretId,
-                        //     'profile_isolir' => $profileIsolir,
-                        //     'comment' => $comment,
-                        // ], 200, 'Ready to update secret', $traceId);
+                        LogHelper::logInfo(null, [
+                            'router_ip' => $router->host,
+                            'username' => $username,
+                            'secret_id' => $secretId,
+                            'profile_isolir' => $profileIsolir,
+                            'comment' => $comment,
+                        ], 200, 'Ready to update secret for cancel payment after due date job', $traceId);
 
-                        dispatch(new CancelPaymentAfterDueDateJob($router, $comment, $profileIsolir, $secretId, $username))->onQueue('default');
+                        dispatch(new CancelPaymentAfterDueDateJob($router, $comment, $profileIsolir, $secretId, $username, $traceId))->onQueue('default');
                     } elseif ($customer->internet_service === 'ip_static') {
                         $simpleque_id = $customer->simpleque_id;
                         $ip_address = $customer->ip_static;
                         $address_list_isolir = $autoIsolir->address_list_isolir;
                         $comment = $customer->username . '_' . $comment_unpayment;
 
-                        // LogHelper::logInfo(null, [
-                        //     'router_ip' => $router->host,
-                        //     'profile_isolir' => $profileIsolir,
-                        //     'comment' => $comment,
-                        // ], 200, 'Ready to update secret', $traceId);
+                        LogHelper::logInfo(null, [
+                            'router_ip' => $router->host,
+                            'profile_isolir' => $profileIsolir,
+                            'comment' => $comment,
+                        ], 200, 'Ready to update secret for cancel payment ip static after due date job', $traceId);
 
-                        dispatch(new CancelPaymentIpStaticAfterDueDateJob($router, $address_list_isolir, $ip_address, $simpleque_id, $comment))->onQueue('default');
+                        dispatch(new CancelPaymentIpStaticAfterDueDateJob($router, $address_list_isolir, $ip_address, $simpleque_id, $comment, $traceId))->onQueue('default');
                     }
 
                     LogHelper::logInfo(null, [
