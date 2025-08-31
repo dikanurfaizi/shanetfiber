@@ -26,15 +26,15 @@ class CreateBillingCron extends Command
         $this->info("Starting CreateBillingCron at {$startedAt->toDateTimeString()}");
 
         try {
-            $periodeNow         = $startedAt->format('F Y');
-            $lastPeriodeName    = BillingPeriode::latest('created_at')->value('name');
+            $currentPeriod   = $startedAt->format('F Y');
+            $lastPeriodName  = BillingPeriode::latest('created_at')->value('name');
 
-            if ($periodeNow === $lastPeriodeName) {
+            if ($currentPeriod === $lastPeriodName) {
                 LogHelper::logInfo(
                     null,
                     [],
                     202,
-                    "Billing Periode '{$periodeNow}' sudah tersedia. Proses dihentikan.",
+                    "Billing period '{$currentPeriod}' already exists. Process stopped.",
                     $traceId
                 );
                 return;
@@ -47,7 +47,7 @@ class CreateBillingCron extends Command
                     null,
                     [],
                     202,
-                    "Auto-generate billing tidak aktif di konfigurasi.",
+                    "Billing auto-generation is disabled in configuration.",
                     $traceId
                 );
                 return;
@@ -58,25 +58,25 @@ class CreateBillingCron extends Command
                     null,
                     [],
                     202,
-                    "Hari ini ({$startedAt->day}) bukan tanggal yang dijadwalkan ({$cfg->billing_auto_day}).",
+                    "Today ({$startedAt->day}) is not the scheduled billing day ({$cfg->billing_auto_day}).",
                     $traceId
                 );
                 return;
             }
 
-            // ========= CALL SERVICE =========
-            CreateInitialBillingJob::dispatch($periodeNow, null)->onQueue('default');
+            // ========= CALL JOB =========
+            CreateInitialBillingJob::dispatch($currentPeriod, null)->onQueue('default');
 
-            $this->info("✅ Billing {$periodeNow} selesai diproses.");
+            $this->info("✅ Billing for {$currentPeriod} has been successfully dispatched.");
         } catch (\Throwable $e) {
             LogHelper::logError(
                 null,
                 ['error' => $e->getMessage()],
                 500,
-                'CreateBillingCron gagal dieksekusi.',
+                'CreateBillingCron execution failed.',
                 $traceId
             );
-            $this->error("❌ Gagal: {$e->getMessage()}");
+            $this->error("❌ Failed: {$e->getMessage()}");
         }
     }
 }

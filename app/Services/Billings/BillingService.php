@@ -24,33 +24,36 @@ class BillingService
         $startTime = microtime(true);
         $context = [
             'periode' => $periode,
-            'action' => 'create_billing_periode'
+            'action'  => 'create_billing_periode'
         ];
 
         try {
             LogHelper::logInfo(null, $context, 200, 'Starting createBillingPeriode', $traceId);
 
-            $periodeExplode = explode(' ', $periode);
-            $billingPeriode = BillingPeriode::create([
-                'name' => $periode,
-                'month' => $periodeExplode[0] ?? null,
-                'year' => $periodeExplode[1] ?? null,
-            ]);
+            $periodeDate = Carbon::createFromFormat('F Y', $periode);
+
+            $billingPeriode = BillingPeriode::firstOrCreate(
+                ['name' => $periode],
+                [
+                    'month' => $periodeDate->format('F'),
+                    'year'  => $periodeDate->format('Y'),
+                ]
+            );
 
             $executionTime = round(microtime(true) - $startTime, 3);
             LogHelper::logInfo(null, array_merge($context, [
                 'billing_periode_id' => $billingPeriode->id,
-                'execution_seconds' => $executionTime
-            ]), 200, 'Billing periode created successfully', $traceId);
+                'execution_seconds'  => $executionTime
+            ]), 200, 'Billing periode ready', $traceId);
 
             return $billingPeriode;
         } catch (\Throwable $e) {
             $executionTime = round(microtime(true) - $startTime, 3);
             LogHelper::logError(null, array_merge($context, [
                 'execution_seconds' => $executionTime,
-                'exception' => get_class($e),
-                'error_code' => $e->getCode(),
-                'error_message' => $e->getMessage()
+                'exception'         => get_class($e),
+                'error_code'        => $e->getCode(),
+                'error_message'     => $e->getMessage()
             ]), 500, 'Failed to create billing periode', $traceId);
 
             return null;
