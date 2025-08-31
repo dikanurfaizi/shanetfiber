@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\Billing\CreateBillingJob;
+use App\Jobs\Billing\CreateInitialBillingJob;
 use App\Models\Websystem;
 use App\Models\Billing\BillingPeriode;
 use App\Helpers\LogHelper;
@@ -47,7 +47,7 @@ class CreateBillingCron extends Command
                     null,
                     [],
                     202,
-                    "Auto‑generate billing tidak aktif di konfigurasi.",
+                    "Auto-generate billing tidak aktif di konfigurasi.",
                     $traceId
                 );
                 return;
@@ -65,7 +65,7 @@ class CreateBillingCron extends Command
             }
 
             // ========= CALL SERVICE =========
-            CreateBillingJob::dispatch($periodeNow)->onQueue('billing');
+            CreateInitialBillingJob::dispatch($periodeNow, null)->onQueue('default');
 
             $this->info("✅ Billing {$periodeNow} selesai diproses.");
         } catch (\Throwable $e) {
