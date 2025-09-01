@@ -34,8 +34,8 @@
                 <tr class="table-borderless">
                     <td class="py-1"><strong>{{ __('customer.label.package') }}</strong></td>
                     <td class="py-1">{{ __(':') }} {{ $customer->paket->name ?? 'No Data' }} -
-                        @if (!empty($totalAmount))
-                            @moneyIDR($totalAmount)
+                        @if (!empty($customer->paket->price))
+                            @moneyIDR($customer->paket->price)
                         @else
                             @moneyIDR(0)
                         @endif
