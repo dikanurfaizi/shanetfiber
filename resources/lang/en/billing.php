@@ -17,8 +17,8 @@ return [
         'action' => 'Action',
         'payment-methode' => 'Payment Method',
         'duedate' => 'Due Date',
-        'customer_id' => 'Cust ID'
-
+        'customer_id' => 'Cust ID',
+        'teller-name' => 'Teller Name'
     ],
     'placeholder' => [
         'search-customer-name' => 'All Customers',

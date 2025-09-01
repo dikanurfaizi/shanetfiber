@@ -59,6 +59,7 @@
                         <th>{{ __('billing.table.periode') }}</th>
                         <th>{{ __('billing.table.bill') }}</th>
                         <th>{{ __('billing.table.payment-methode') }}</th>
+                        <th>{{ __('billing.table.teller-name') }}</th>
                         <th>{{ __('customer.table.action') }}</th>
                     </tr>
                     @foreach ($receipts as $key => $data)
@@ -120,6 +121,7 @@
                                     @endif
                                 </span>
                             </td>
+                            <td><span class="badge text-primary">{{ $data->teller_name ?? 'no name' }}</span></td>
                             <td class="d-flex items-center justify-content-end">
                                 @can('billing-edit')
                                     <a class="btn btn-success btn-sm" href="{{ route('receipts.print', $data->slug) }}"
