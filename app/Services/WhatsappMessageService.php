@@ -121,53 +121,39 @@ class WhatsappMessageService
     public function getBillingPackages($cust_id)
     {
         try {
-            $activePeriodeName = BillingPeriode::latest('created_at')->value('name');
-
-            $packages = Billing::with(['billing_periode', 'customer.paket', 'customer.member'])
-                ->leftJoin('customers',        'billings.customer_id',       '=', 'customers.id')
-                ->leftJoin('pakets',           'customers.paket_id',         '=', 'pakets.id')
-                ->leftJoin('members',          'customers.member_id',        '=', 'members.id')
-                ->leftJoin('billing_periodes', 'billings.billing_periode_id', '=', 'billing_periodes.id')
+            $packages = Billing::query()
+                ->leftJoin('customers', 'billings.customer_id', '=', 'customers.id')
+                ->leftJoin('pakets', 'customers.paket_id', '=', 'pakets.id')
+                ->leftJoin('members', 'customers.member_id', '=', 'members.id')
+                ->leftJoin('billing_subscription_periodes as bsp', 'billings.billing_subscription_id', '=', 'bsp.id')
                 ->where('billings.customer_id', $cust_id)
                 ->whereIn('billings.status', ['BL', 'PL'])
-                ->selectRaw('
-                        pakets.name AS paket_name,
-                        billings.billing_periode_id,
-                        CASE
-                            WHEN customers.billing_option = 2
-                                 AND customers.billing_period = ?
-                                 THEN pakets.price - COALESCE(members.discount,0)
-                            WHEN customers.billing_option = 1
-                                 THEN pakets.price - COALESCE(members.discount,0)
-                            ELSE pakets.price
-                        END AS paket_price,
-                        pakets.price,
-                        CASE
-                            WHEN customers.billing_option = 2 AND customers.billing_period = ?
-                                THEN COALESCE(members.discount,0)
-                            WHEN customers.billing_option = 1
-                                THEN COALESCE(members.discount,0)
-                            ELSE 0
-                        END AS discount,
-                        members.type,
-                        billings.status,
-                        billings.due_date,
-                        billings.pay_later,
-                        billing_periodes.name AS periode_name
-                    ', [$activePeriodeName, $activePeriodeName])    // bind periode aktif di sini
+                ->select([
+                    'pakets.name as paket_name',
+                    'bsp.billing_periode_id',
+                    'pakets.price',
+                    'billings.base_price as paket_price',
+                    'billings.discount_amount as discount',
+                    'members.type',
+                    'billings.status',
+                    'billings.due_date',
+                    'billings.pay_later',
+                    'bsp.billing_periode as periode_name',
+                    'billings.total_amount',
+                ])
                 ->orderByRaw("
-                        CASE
-                            WHEN billings.status = 'BL' THEN billings.due_date
-                            ELSE billings.pay_later
-                        END DESC
-                    ")
+                CASE
+                    WHEN billings.status = 'BL' THEN billings.due_date
+                    ELSE billings.pay_later
+                END DESC
+            ")
                 ->get();
 
             if ($packages->isEmpty()) {
                 LogHelper::logError(
                     null,
                     ['customer_id' => $cust_id],
-                    404, // Bad Request
+                    404,
                     "No billing packages found for customer"
                 );
             }
@@ -177,10 +163,10 @@ class WhatsappMessageService
             LogHelper::logError(
                 null,
                 ['customer_id' => $cust_id],
-                500, // Bad Request
+                500,
                 "Error retrieving billing packages: {$e->getMessage()}"
             );
-            return collect(); // Return collection kosong agar tidak error saat diakses
+            return collect(); // return collection kosong biar aman
         }
     }
 
@@ -190,7 +176,7 @@ class WhatsappMessageService
     public function formatPaketInfo($paket)
     {
         try {
-            $periode = optional($paket->billing_periode)->name ?? 'Tidak ada periode';
+            $periode = $paket->periode_name ?? 'Tidak ada periode';
             $formattedPeriode = $periode !== 'Tidak ada periode'
                 ? Carbon::parse("1 " . $periode)->locale('id')->translatedFormat('F Y')
                 : $periode;
@@ -735,39 +721,46 @@ class WhatsappMessageService
                 'customers.contact          as customer_contact',
                 'customers.address          as customer_address',
                 'billings.due_date',
-                'users.name  as admin_name',
-                'users.id    as admin_id',
+                'users.name    as admin_name',
+                'users.id      as admin_id',
                 'users.contact as admin_contact',
                 DB::raw('COUNT(*)  as total_bills'),
-                DB::raw('SUM(billings.paket_price) as total_amount'),
+                DB::raw('SUM(billings.total_amount) as total_amount'),
             ])
             ->join('customers', 'billings.customer_id', '=', 'customers.id')
             ->leftJoin('users', 'customers.user_id', '=', 'users.id')
 
-            /* === batasi hanya LOG tanggal 1–3 bulan ini ====================== */
+            // join ke billing_subscription_periodes
+            ->leftJoin('billing_subscription_periodes as bsp', 'billings.billing_subscription_id', '=', 'bsp.id')
+
+            // filter message_logs
             ->leftJoin('message_logs as ml', function ($join) use ($startDate, $endDate) {
                 $join->on('billings.customer_id', '=', 'ml.customer_id')
                     ->where('ml.message_type', '=', 'create_new_bill')
                     ->whereBetween('ml.created_at', [$startDate, $endDate]);
             })
+            // filter message_log_errors
             ->leftJoin('message_log_errors as me', function ($join) use ($startDate, $endDate) {
                 $join->on('billings.customer_id', '=', 'me.customer_id')
                     ->where('me.message_type', '=', 'create_new_bill')
                     ->whereBetween('me.created_at', [$startDate, $endDate]);
             })
-            /* ================================================================= */
 
             ->whereNull('ml.id')
             ->whereNull('me.id')
             ->whereNotNull('customers.contact')
             ->where('customers.contact', '!=', '')
-            ->where('billings.billing_periode_id', $billingPeriodeId)
+            ->where('bsp.billing_periode_id', $billingPeriodeId) // ✅ pakai bsp
             ->where(function ($q) {
-                $q->where(fn($q1) => $q1->where('billings.status', 'BL')
-                    ->whereNotNull('billings.due_date'))
-                    ->orWhere(fn($q2) => $q2->where('billings.status', 'PL')
-                        ->whereNotNull('billings.pay_later'));
+                $q->where(function ($q1) {
+                    $q1->where('billings.status', 'BL')
+                        ->whereNotNull('billings.due_date');
+                })->orWhere(function ($q2) {
+                    $q2->where('billings.status', 'PL')
+                        ->whereNotNull('billings.pay_later');
+                });
             })
+
             ->groupBy([
                 'billings.id',
                 'billings.billing_number',
@@ -1035,7 +1028,7 @@ class WhatsappMessageService
             return null;
         }
 
-        $totalAmount = $pakets->sum('paket_price');
+        $totalAmount = $pakets->sum('total_amount');
         $dueDate = $pakets->pluck('due_date')->filter()->sort()->first();
         $remainingDays = $dueDate ? Carbon::today()->diffInDays(Carbon::parse($dueDate), false) : 0;
 
