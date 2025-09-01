@@ -54,13 +54,7 @@
                     <td class="py-1"><strong>{{ __('customer.label.discount') }}</strong></td>
                     <td class="py-1">{{ __(':') }}
                         @if ($customer->billing_option != 0 || !empty($discount))
-                            @if ($customer->billing_option == 1)
-                                @moneyIDR($discount)
-                            @elseif ($customer->billing_option == 2 && $customer->billing_periode === $billingPeriods)
-                                @moneyIDR($discount)
-                            @else
-                                {{ __('No Discount') }}
-                            @endif
+                            @moneyIDR($discount)
                         @else
                             {{ __('No Discount') }}
                         @endif

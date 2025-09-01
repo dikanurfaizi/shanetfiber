@@ -9,4 +9,9 @@ class Websystem extends Model
 {
     use HasFactory;
     public $guarded = [];
+
+    protected $casts = [
+        'enable_tax' => 'boolean',
+        'tax_rate'   => 'float',
+    ];
 }

@@ -11,6 +11,7 @@ use App\Models\Billing\BillingPeriode;
 use App\Models\CustomerSubscription;
 use App\Models\Billing\BillingSubscriptionPeriode;
 use App\Models\SubscriptionDuration;
+use App\Models\Websystem;
 use App\Jobs\AddPaymentBeforeDueDateJob;
 use App\Jobs\AddPaymentIpStaticBeforeDueDateJob;
 use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
@@ -20,6 +21,7 @@ use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Routerboard\QueueService;
 use App\Services\Routerboard\IpStaticService;
 use App\Services\Routerboard\TestConnectionService;
+use App\Services\Billings\BillingService;
 use App\Http\Resources\Pppoe\SecretResource;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
@@ -33,7 +35,8 @@ class CustomerUpdateService
         private SecretService $secretService,
         private QueueService $queueService,
         private IpStaticService $ipStaticService,
-        private TestConnectionService $testConnectionService
+        private TestConnectionService $testConnectionService,
+        private BillingService $billingService
     ) {}
 
     public function updateCustomer(Customer $customer, array $validatedData, string $traceId, string $action): array
@@ -812,30 +815,85 @@ class CustomerUpdateService
 
         try {
             $customer->load(['paket', 'member']);
-            $newPrice = max(0, $customer->paket->price - ($customer->member->discount ?? 0));
 
             $currentPeriode = BillingPeriode::latest('created_at')->first();
-            $shouldUpdate = $this->shouldUpdateBilling($customer, $currentPeriode, $traceId);
+            if (!$currentPeriode) {
+                throw new \RuntimeException('No billing periode found');
+            }
 
-            if ($shouldUpdate) {
-                $updated = Billing::where('customer_id', $customer->id)
-                    ->where('billing_periode_id', $currentPeriode->id)
-                    ->whereIn('status', ['BL', 'PL'])
-                    ->update(['paket_price' => $newPrice]);
+            $subscriptionDuration = SubscriptionDuration::where('customer_id', $customer->id)
+                ->where('paket_id', $customer->paket_id)
+                ->where('status', 'active')
+                ->first();
 
-                if ($updated) {
-                    LogHelper::logInfo(
-                        null,
-                        [
-                            'customer_id' => $customer->id,
-                            'new_price' => $newPrice,
-                            'periode' => $currentPeriode->name
-                        ],
-                        200,
-                        'Billing price updated after member change',
-                        $traceId
-                    );
-                }
+            if (!$customer->paket) {
+                throw new \RuntimeException("Customer paket not found");
+            }
+
+            $websystem = Websystem::where('slug', 'websystem')->firstOrFail();
+
+            // Pastikan casting aman
+            $customerDiscount = $this->billingService->calculateCustomerDiscount(
+                $customer,
+                $currentPeriode->name
+            );
+
+            $discountPaket = $this->billingService->calculatePaketDiscount(
+                $subscriptionDuration,
+                $customer->paket->price
+            );
+
+            $discountAmount = (int) ($customerDiscount + $discountPaket);
+            $priceAfterDiscount = max(0, (int) $customer->paket->price - $discountAmount);
+
+            $taxRate = (float) ($websystem->tax_rate ?? 0);
+            $customerTax = ($websystem->enable_tax)
+                ? (int) ceil($priceAfterDiscount * ($taxRate / 100))
+                : 0;
+
+            $totalAmount = $priceAfterDiscount + $customerTax;
+
+            $updated = Billing::where('customer_id', $customer->id)
+                ->whereIn('status', ['BL', 'PL'])
+                ->whereHas('billingSubscription', function ($q) use ($currentPeriode) {
+                    $q->where('billing_periode_id', $currentPeriode->id);
+                })
+                ->update([
+                    'base_price'      => (int) $customer->paket->price,
+                    'discount_amount' => $discountAmount,
+                    'subtotal'        => $priceAfterDiscount,
+                    'total_amount'    => $totalAmount,
+                    'tax_amount'      => $customerTax,
+                ]);
+
+
+            if ($updated > 0) {
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id'     => $customer->id,
+                        'base_price'      => $customer->paket->price,
+                        'discount_amount' => $discountAmount,
+                        'subtotal'        => $priceAfterDiscount,
+                        'total_amount'    => $totalAmount,
+                        'tax_amount'      => $customerTax,
+                        'periode'         => $currentPeriode->name,
+                    ],
+                    200,
+                    'Billing price updated after member change',
+                    $traceId
+                );
+            } else {
+                LogHelper::logWarning(
+                    null,
+                    [
+                        'customer_id' => $customer->id,
+                        'periode'     => $currentPeriode->name,
+                    ],
+                    404,
+                    'No billing record found to update after member change',
+                    $traceId
+                );
             }
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -843,11 +901,11 @@ class CustomerUpdateService
                 [
                     'exception' => [
                         'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'code'    => $e->getCode(),
+                        'file'    => $e->getFile(),
+                        'line'    => $e->getLine(),
                     ],
-                    'customer_id' => $customer->id
+                    'customer_id' => $customer->id,
                 ],
                 500,
                 'Failed to handle member change',
@@ -855,12 +913,6 @@ class CustomerUpdateService
             );
             throw $e;
         }
-    }
-
-    private function shouldUpdateBilling(Customer $customer, BillingPeriode $periode, string $traceId): bool
-    {
-        return ($customer->billing_option == 1) ||
-            ($customer->billing_option == 2 && $customer->billing_period == $periode->name);
     }
 
     private function switchCustomerSubscription(Customer $customer, int $newPaketId, string $traceId): array

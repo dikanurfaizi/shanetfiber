@@ -78,7 +78,6 @@ class BillingService
                 return 0;
             }
 
-            // dd($billingPeriode);
             $websystem = Websystem::where('slug', 'websystem')->first();
             $routers = Mikrotik::where('disabled', 'false')->get();
 
@@ -229,8 +228,8 @@ class BillingService
                 $discountAmount = $customerDiscount + $discountPaket;
                 $priceAfterDiscount = max(0, $customer->paket->price - $discountAmount);
 
-                $customerTax = ($websystem->enable_tax == 'true')
-                    ? ceil($priceAfterDiscount * ($websystem->tax_rate / 100))
+                $customerTax = ($websystem?->enable_tax)
+                    ? (int) ceil($priceAfterDiscount * ($websystem->tax_rate / 100))
                     : 0;
 
                 $totalAmount = $priceAfterDiscount + $customerTax;
@@ -297,13 +296,15 @@ class BillingService
 
     public function calculateCustomerDiscount(Customer $customer, string $periodeName): float
     {
-        $discount = optional($customer->member)->discount ?? 0;
+        $discount = (float) ($customer->member->discount ?? 0);
 
-        return ($customer->billing_option === 1 ||
-            ($customer->billing_option === 2 && $customer->billing_period === $periodeName))
-            ? $discount
-            : 0;
+        $isEligible =
+            $customer->billing_option === 1 ||
+            ($customer->billing_option === 2 && $customer->billing_period === $periodeName);
+
+        return $isEligible ? $discount : 0.0;
     }
+
 
     public function calculatePaketDiscount($subDuration, float $basePrice): float
     {
