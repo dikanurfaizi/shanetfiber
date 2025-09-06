@@ -123,9 +123,8 @@ class PayLaterService
                 return;
             }
 
-            $paylaterDate  = Carbon::parse($payLaterDate)->format('d');
-            $paylaterMonth = Carbon::parse($payLaterDate)->format('m_Y');
-            $commentPayment = $this->getCommentPayment($autoIsolir, $paylaterDate, $paylaterMonth);
+            $paylaterDate  = Carbon::parse($payLaterDate);
+            $commentPayment = $this->getCommentPayment($autoIsolir, $paylaterDate);
 
             if ($customer->internet_service === 'ppp') {
                 $this->processPppPayment($router, $customer, $commentPayment, $traceId);
@@ -151,11 +150,13 @@ class PayLaterService
         }
     }
 
-    private function getCommentPayment(AutoIsolir $autoIsolir, string $date, string $month): string
+    private function getCommentPayment(AutoIsolir $autoIsolir, string $payLaterDate): string
     {
+        $formattedDate = Carbon::parse($payLaterDate)->format('M/d/Y');
+
         return $autoIsolir->activation_date === 'false'
-            ? $autoIsolir->comment_payment
-            : $autoIsolir->comment_unpayment . '_' . $date . '_' . $month;
+            ? $formattedDate . '/Paylater'
+            : $autoIsolir->comment_unpayment . '_' . $formattedDate . '/Paylater';
     }
 
     private function processPppPayment(Mikrotik $router, Customer $customer, string $commentPayment, $traceId): void

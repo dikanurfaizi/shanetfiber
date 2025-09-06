@@ -19,7 +19,7 @@ class CustomerPppUpdateRequest extends FormRequest
                 'password_ppp' => ['nullable', 'string', 'min:8'],
                 'ppp_type_id' => 'required',
                 'caller_id' => ['nullable', 'string'],
-                'save_with_last_caller_id' => ['nullable', 'string'],
+                'save_with_last_caller_id' => ['nullable', Rule::in(['true', 'false'])],
                 'last_caller_id' => ['nullable', 'string'],
                 'dont_disconnect_client_button' => ['nullable', 'string']
             ];

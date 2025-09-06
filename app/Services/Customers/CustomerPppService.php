@@ -267,7 +267,8 @@ class CustomerPppService
     {
         try {
             $serviceName = PppType::find($data['ppp_type_id'])->name;
-            $callerId = $data['save_with_last_caller_id'] ? $data['last_caller_id'] : $data['caller_id'];
+            $saveWithLastCallerId = filter_var($data['save_with_last_caller_id'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $callerId = $saveWithLastCallerId ? ($data['last_caller_id'] ?? null) : ($data['caller_id'] ?? null);
 
             $response = $this->secretService->updateUserPasswordServiceSecret(
                 $router,
