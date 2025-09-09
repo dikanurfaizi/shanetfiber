@@ -212,7 +212,25 @@ class SecretService
                     ->equal('password', $password)
                     ->equal('service', $service)
                     ->equal('caller-id', $callerID);
-                return $client->query($edit)->read();
+
+                $result = $client->query($edit)->read();
+
+                // ✅ Log success
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'router'   => $mikrotik->name ?? 'unknown',
+                        'username' => $username,
+                        'service'  => $service,
+                        'id'       => $id,
+                        'callerId' => $callerID,
+                    ],
+                    200,
+                    'Successfully updated user password/service secret',
+                    $traceId
+                );
+
+                return $result;
             }
         } catch (\Exception $e) {
             LogHelper::logError(

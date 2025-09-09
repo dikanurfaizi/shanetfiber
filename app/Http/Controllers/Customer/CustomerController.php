@@ -338,51 +338,74 @@ class CustomerController extends Controller
         $traceId = (string) Str::uuid();
 
         try {
-            $this->customerPppService->updatePppData($customer, $request->validated(), $traceId);
+            // ✅ Tangkap return dari service
+            $result = $this->customerPppService->updatePppData($customer, $request->validated(), $traceId);
 
-            LogHelper::logInfo(null, [
-                'request' => $request->only(
-                    $customer->internet_service === 'ppp'
-                        ? ['username', 'ppp_type_id'] // exclude password
-                        : ['ip_static', 'mac_address', 'interface']
-                ),
-                'customer' => $customer,
-            ], 200, 'Successfully updated PPP/IP Static', $traceId);
+            LogHelper::logInfo(
+                null,
+                [
+                    'request' => $request->only(
+                        $customer->internet_service === 'ppp'
+                            ? ['username', 'ppp_type_id'] // exclude password
+                            : ['ip_static', 'mac_address', 'interface']
+                    ),
+                    'customer' => $customer,
+                    'service_result' => $result, // tambahin biar keliatan
+                ],
+                200,
+                'Successfully updated PPP/IP Static',
+                $traceId
+            );
 
+            // ✅ Pakai pesan dari service jika ada
             return redirect()->back()
-                ->with('success', $customer->internet_service === 'ppp'
+                ->with('success', $result['message'] ?? (
+                    $customer->internet_service === 'ppp'
                     ? 'PPP updated successfully'
-                    : 'IP Static updated successfully');
+                    : 'IP Static updated successfully'
+                ));
         } catch (\RuntimeException $e) {
 
-            LogHelper::logError(null, [
-                'request' => $request->only(
-                    $customer->internet_service === 'ppp'
-                        ? ['username', 'ppp_type_id']
-                        : ['ip_static', 'mac_address', 'interface']
-                ),
-                'customer' => $customer,
-                'code' => $e->getCode(),
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ], 500, 'Failed to update PPP/IP Static (RuntimeException)', $traceId);
+            LogHelper::logError(
+                null,
+                [
+                    'request' => $request->only(
+                        $customer->internet_service === 'ppp'
+                            ? ['username', 'ppp_type_id']
+                            : ['ip_static', 'mac_address', 'interface']
+                    ),
+                    'customer' => $customer,
+                    'code' => $e->getCode(),
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ],
+                500,
+                'Failed to update PPP/IP Static (RuntimeException)',
+                $traceId
+            );
 
             return redirect()->back()
                 ->withInput()
                 ->with('error', $e->getMessage());
         } catch (\Exception $e) {
 
-            LogHelper::logError(null, [
-                'request' => $request->only(
-                    $customer->internet_service === 'ppp'
-                        ? ['username', 'ppp_type_id']
-                        : ['ip_static', 'mac_address', 'interface']
-                ),
-                'customer' => $customer,
-                'code' => $e->getCode(),
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ], 500, 'Failed to update PPP/IP Static (Exception)', $traceId);
+            LogHelper::logError(
+                null,
+                [
+                    'request' => $request->only(
+                        $customer->internet_service === 'ppp'
+                            ? ['username', 'ppp_type_id']
+                            : ['ip_static', 'mac_address', 'interface']
+                    ),
+                    'customer' => $customer,
+                    'code' => $e->getCode(),
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ],
+                500,
+                'Failed to update PPP/IP Static (Exception)',
+                $traceId
+            );
 
             return redirect()->back()
                 ->withInput()

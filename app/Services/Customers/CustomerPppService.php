@@ -344,6 +344,29 @@ class CustomerPppService
             if (empty($data['dont_disconnect_client_button'])) {
                 $this->secretService->deleteActiveSecret($router, $data['username'], $traceId);
             }
+
+            // ✅ Log success
+            LogHelper::logInfo(
+                null,
+                [
+                    'customer_id' => $customer->id,
+                    'router_id'   => $router->id ?? null,
+                    'username'    => $data['username'],
+                    'ppp_type_id' => $data['ppp_type_id'],
+                    'caller_id'   => $callerId
+                ],
+                200,
+                'Successfully updated PPP connection',
+                $traceId
+            );
+
+            // ✅ Return success response
+            return [
+                'status'  => true,
+                'code'    => 200,
+                'message' => 'Successfully updated PPP connection',
+                'data'    => $updateData
+            ];
         } catch (\Throwable $e) {
             LogHelper::logError(
                 null,

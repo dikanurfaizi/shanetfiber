@@ -337,13 +337,13 @@ class CustomerUpdateService
 
             // Update Mikrotik profile
             if ($customer->internet_service === 'ppp') {
-                //$this->updatePppPackage($customer, $customer->mikrotik, $customer->autoIsolir, $profile, $traceId);
+                $this->updatePppPackage($customer, $customer->mikrotik, $customer->autoIsolir, $profile, $traceId);
                 $log('info', 200, 'Send update Ppp Package', [
                     'paket_id' => $data['paket_id'],
                     'profile' => $profile
                 ]);
             } elseif ($customer->internet_service === 'ip_static') {
-                //$this->updateIpStaticPackage($customer, $customer->mikrotik, $profile, $traceId);
+                $this->updateIpStaticPackage($customer, $customer->mikrotik, $profile, $traceId);
                 $log('info', 200, 'Send update IP Static Package', [
                     'paket_id' => $data['paket_id'],
                     'profile' => $profile
