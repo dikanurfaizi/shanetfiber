@@ -410,27 +410,105 @@ class CustomerUpdateService
         }
     }
 
-    private function updatePppPackage(Customer $customer, Mikrotik $router, ?AutoIsolir $autoIsolir, string $profile, string $traceId): void
-    {
+    private function updatePppPackage(
+        Customer $customer,
+        Mikrotik $router,
+        ?AutoIsolir $autoIsolir,
+        string $profile,
+        string $traceId
+    ): void {
         try {
+            LogHelper::logInfo(
+                null,
+                [
+                    'customer_id' => $customer->id,
+                    'secret_id'   => $customer->secret_id,
+                    'router_id'   => $router->id,
+                ],
+                200,
+                'Start updating PPP package',
+                $traceId
+            );
+        
+            // Step 1: Ambil secret
             $userSecret = $this->secretService->getSecretById($router, $customer->secret_id, $traceId);
-
+            LogHelper::logInfo(
+                null,
+                ['result' => $userSecret],
+                200,
+                'Fetched secret by ID',
+                $traceId
+            );
+        
             if ($userSecret === 'error') {
                 throw new \RuntimeException("Cannot find user {$customer->username} on server");
             }
-
+        
+            // Step 2: Ambil profile dari secret
             $secretProfiles = SecretResource::collection($userSecret)->value('profile');
-
+            LogHelper::logInfo(
+                null,
+                ['secret_profiles' => $secretProfiles],
+                200,
+                'Fetched current secret profile',
+                $traceId
+            );
+        
+            // Step 3: Update profile jika berbeda
             if (!$autoIsolir || $autoIsolir->profile_id != $secretProfiles) {
-                $response = $this->secretService->updateProfileSecret($router, $profile, $customer->secret_id, $traceId);
-
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'current_profile' => $secretProfiles,
+                        'new_profile'     => $profile
+                    ],
+                    200,
+                    'Profile difference detected, updating profile',
+                    $traceId
+                );
+            
+                $response = $this->secretService->updateProfileSecret(
+                    $router,
+                    $profile,
+                    $customer->secret_id,
+                    $traceId
+                );
+            
+                LogHelper::logInfo(
+                    null,
+                    ['update_response' => $response],
+                    200,
+                    'Profile updated',
+                    $traceId
+                );
+            
                 if (isset($response['after']['message'])) {
                     throw new \RuntimeException($response['after']['message']);
                 }
-
+            
+                // Step 4: Hapus active secret
                 $this->secretService->deleteActiveSecret($router, $customer->username, $traceId);
+                LogHelper::logInfo(
+                    null,
+                    ['username' => $customer->username],
+                    200,
+                    'Deleted active secret',
+                    $traceId
+                );
+            } else {
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'current_profile' => $secretProfiles,
+                        'new_profile'     => $profile
+                    ],
+                    200,
+                    'Profile already matches, no update required',
+                    $traceId
+                );
             }
-
+        
+            // Step 5: Sukses
             LogHelper::logInfo(
                 null,
                 [
@@ -441,18 +519,19 @@ class CustomerUpdateService
                 'PPP package updated successfully',
                 $traceId
             );
+        
         } catch (\Throwable $e) {
             LogHelper::logError(
                 null,
                 [
-                    'exception' => [
+                    'exception'   => [
                         'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'code'    => $e->getCode(),
+                        'file'    => $e->getFile(),
+                        'line'    => $e->getLine()
                     ],
                     'customer_id' => $customer->id,
-                    'router_id' => $router->id
+                    'router_id'   => $router->id
                 ],
                 500,
                 'Failed to update PPP package',
