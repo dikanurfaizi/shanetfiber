@@ -197,38 +197,45 @@ class CustomerDataService
     {
         try {
             $billingPeriodeActive = BillingPeriode::latest('created_at')->first();
-            $billingLastPayment = Billing::where('customer_id', $customer->id)
-                ->where('status', 'LS')
-                ->latest('payment_time')
-                ->first();
 
-            $data = Billing::where('billings.customer_id', $customer->id)
-                ->join('billing_subscription_periodes as bp', 'billings.billing_subscription_id', '=', 'bp.id')
-                ->join('customers as c', 'billings.customer_id', '=', 'c.id')
-                ->leftJoin('members as m', 'c.member_id', '=', 'm.id')
-                ->orderBy('bp.created_at', 'DESC')
-                ->select('bp.billing_periode as billing_period_name', 'billings.discount_amount as discount', 'billings.total_amount as total_amount', 'billings.due_date as due_date')
-                ->first();
-
-            $unpaid = Billing::where('customer_id', $customer->id)
-                ->where('status', '!=', 'LS')
-                ->orderByRaw('COALESCE(pay_later, due_date) DESC')
+            // Ambil semua billing customer dengan relasi
+            $billings = Billing::with([
+                'billingSubscription.billingPeriode', // relasi ke periode
+                'customer',                          // relasi ke customer
+            ])
+                ->where('customer_id', $customer->id)
+                ->orderByDesc('created_at')
                 ->get();
+
+            $billingLastPayment = $billings->where('status', 'LS')
+                ->sortByDesc('payment_time')
+                ->first();
+
+            $lastPayment = 0;
+            if ($billingLastPayment && $billingLastPayment->billingSubscription) {
+                if ($billingLastPayment->billingSubscription->billing_periode_id == $billingPeriodeActive->id) {
+                    $lastPayment = $billingLastPayment->total_amount;
+                }
+            }
+
+            $latestBilling = $billings->first(); // billing terbaru
+            $unpaid = $billings->where('status', '!=', 'LS');
 
             $result = [
                 'billingPeriodeActive' => $billingPeriodeActive,
-                'billingLastPayment' => $billingLastPayment,
-                'billingPeriods' => $data->billing_period_name ?? null,
-                'totalAmount' => $data->total_amount ?? null,
-                'discount' => $data->discount ?? null,
-                'dueDate' => $data->due_date ?? null,
-                'notYetPaid' => $unpaid->sum('total_amount'),
+                'billingLastPayment'   => $billingLastPayment,
+                'lastPayment'          => $lastPayment,
+                'billingPeriods'       => $latestBilling?->billingSubscription?->billingPeriode?->name,
+                'totalAmount'          => $latestBilling?->total_amount,
+                'discount'             => $latestBilling?->discount_amount,
+                'dueDate'              => $latestBilling?->due_date,
+                'notYetPaid'           => $unpaid->sum('total_amount'),
             ];
 
             LogHelper::logInfo(
                 null,
                 [
-                    'customer_id' => $customer->id,
+                    'customer_id'   => $customer->id,
                     'unpaid_amount' => $result['notYetPaid']
                 ],
                 200,
@@ -243,9 +250,9 @@ class CustomerDataService
                 [
                     'exception' => [
                         'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'code'    => $e->getCode(),
+                        'file'    => $e->getFile(),
+                        'line'    => $e->getLine()
                     ],
                     'customer_id' => $customer->id
                 ],

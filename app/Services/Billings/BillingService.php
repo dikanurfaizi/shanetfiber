@@ -234,12 +234,26 @@ class BillingService
 
                 $totalAmount = $priceAfterDiscount + $customerTax;
 
+                $statusPayment = 'BL';
+                $isPaid = false;
+                $paidAt = null;
+                $billSubStatus = 'unpaid';
+
+                if ($totalAmount == 0) {
+                    $statusPayment = 'LS';
+                    $isPaid = true;
+                    $paidAt = Carbon::now();
+                    $billSubStatus = 'paid';
+                }
+
                 // Buat BillingSubscriptionPeriode
                 $billingSubscriptionPeriode = BillingSubscriptionPeriode::create([
                     'customer_subscription_id' => $customerSubscription->id,
                     'billing_periode_id' => $billingPeriode->id,
                     'billing_periode' => $billingPeriode->name,
-                    'is_paid' => false,
+                    'is_paid' => $isPaid,
+                    'status' => $billSubStatus,
+                    'paid_at' => $paidAt
                 ]);
 
                 // Buat Billing
@@ -257,7 +271,7 @@ class BillingService
                     'total_amount' => $totalAmount,
                     'tax_amount' => $customerTax,
                     'created_name' => auth()->user()->name ?? optional($customer->user)->name,
-                    'status' => 'BL',
+                    'status' => $statusPayment,
                     'due_date' => Carbon::parse('15 ' . $billingPeriode->name)->endOfDay(),
                 ]);
 

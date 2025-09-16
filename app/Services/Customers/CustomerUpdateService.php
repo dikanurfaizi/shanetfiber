@@ -45,10 +45,32 @@ class CustomerUpdateService
             if ($action === 'change_package') {
                 $result = $this->validatePackageChange($customer, $traceId);
                 if (!$result['success']) {
+                    LogHelper::logError(
+                        null,
+                        [
+                            'customer_name' => $customer->name,
+                            'old_package_id' => $customer->paket_id,
+                            'new_package_id' => $validatedData['paket_id']
+                        ],
+                        400,
+                        $result['message'],
+                        $traceId
+                    );
                     return $result;
                 }
                 $changesResult = $this->handlePackageChange($customer, $validatedData, $traceId);
                 if (!$changesResult['success']) {
+                    LogHelper::logError(
+                        null,
+                        [
+                            'customer_name' => $customer->name,
+                            'old_package_id' => $customer->paket_id,
+                            'new_package_id' => $validatedData['paket_id']
+                        ],
+                        400,
+                        $changesResult['message'],
+                        $traceId
+                    );
                     return $changesResult;
                 }
                 $message = $changesResult['message'];
@@ -283,10 +305,10 @@ class CustomerUpdateService
             }
 
             // Ambil Paket dan Profile
-            $paket = Paket::find($data['paket_id']);
-            $profile = $paket?->profile;
+            $newPackage = Paket::find($data['paket_id']);
+            $profile = $newPackage?->profile;
 
-            if (!$paket || !$profile) {
+            if (!$newPackage || !$profile) {
                 $message = 'Profile or Package not found';
                 $log('warning', 404, $message, [
                     'paket_id' => $data['paket_id']
@@ -335,31 +357,54 @@ class CustomerUpdateService
                 ];
             }
 
+            $oldPaket = $customer->paket;
+
             // Update Mikrotik profile
             if ($customer->internet_service === 'ppp') {
-                $this->updatePppPackage($customer, $customer->mikrotik, $customer->autoIsolir, $profile, $traceId);
-                $log('info', 200, 'Send update Ppp Package', [
+                $result = $this->updatePppPackage(
+                    $customer,
+                    $customer->mikrotik,
+                    $customer->autoIsolir,
+                    $profile,
+                    $traceId
+                );
+
+                $check = $this->ensureProfileUpdate($result, $customer, 'PPP', $oldPaket->name, $newPackage->name, $traceId);
+                if ($check['success'] === false) {
+                    return $check;
+                }
+
+                $log('info', 200, 'Send update PPP Package', [
                     'paket_id' => $data['paket_id'],
-                    'profile' => $profile
+                    'profile'  => $result['new_profile']
                 ]);
             } elseif ($customer->internet_service === 'ip_static') {
-                $this->updateIpStaticPackage($customer, $customer->mikrotik, $profile, $traceId);
+                $result = $this->updateIpStaticPackage(
+                    $customer,
+                    $customer->mikrotik,
+                    $profile,
+                    $traceId
+                );
+
+                $check = $this->ensureProfileUpdate($result, $customer, 'IP Static', $oldPaket->name, $newPackage->name, $traceId);
+                if ($check['success'] === false) {
+                    return $check;
+                }
+
                 $log('info', 200, 'Send update IP Static Package', [
                     'paket_id' => $data['paket_id'],
-                    'profile' => $profile
+                    'profile'  => $result['new_profile']
                 ]);
             }
 
-            $oldPaket = $customer->paket;
-
-            $switchResult = $this->switchCustomerSubscription($customer, $paket->id, $traceId);
+            $switchResult = $this->switchCustomerSubscription($customer, $newPackage->id, $traceId);
             if ($switchResult['success']) {
                 $customer->update([
-                    'paket_id' => $paket->id
+                    'paket_id' => $newPackage->id
                 ]);
 
                 $log('info', 200, 'Customer paket_id berhasil diperbarui', [
-                    'new_paket_id' => $paket->id
+                    'new_paket_id' => $newPackage->id
                 ]);
 
                 $whatsappJobData = new WhatsappJobDto(
@@ -410,138 +455,89 @@ class CustomerUpdateService
         }
     }
 
+    private function ensureProfileUpdate(array $result, Customer $customer, string $service, string $oldPackageName, string $newPackageName, string $traceId): array
+    {
+        if ($result['success'] === false) {
+            $message = "Failed to update {$service} package from {$oldPackageName} to {$newPackageName}";
+            LogHelper::logError(null, [
+                'customer_id' => $customer->id,
+                'customer_name' => $customer->name,
+                'old_package' => $oldPackageName,
+                'new_package' => $newPackageName,
+                'service' => $service
+            ], 500, $message, $traceId);
+
+            return [
+                'success' => false,
+                'message' => $message,
+                'traceId' => $traceId
+            ];
+        }
+
+        return ['success' => true];
+    }
+
+
     private function updatePppPackage(
         Customer $customer,
         Mikrotik $router,
         ?AutoIsolir $autoIsolir,
         string $profile,
         string $traceId
-    ): void {
+    ): array {
         try {
-            LogHelper::logInfo(
-                null,
-                [
-                    'customer_id' => $customer->id,
-                    'secret_id'   => $customer->secret_id,
-                    'router_id'   => $router->id,
-                ],
-                200,
-                'Start updating PPP package',
-                $traceId
-            );
-        
+            LogHelper::logInfo(null, [
+                'customer_id' => $customer->id,
+                'secret_id'   => $customer->secret_id,
+                'router_id'   => $router->id,
+            ], 200, 'Start updating PPP package', $traceId);
+
             // Step 1: Ambil secret
             $userSecret = $this->secretService->getSecretById($router, $customer->secret_id, $traceId);
-            LogHelper::logInfo(
-                null,
-                ['result' => $userSecret],
-                200,
-                'Fetched secret by ID',
-                $traceId
-            );
-        
+
             if ($userSecret === 'error') {
                 throw new \RuntimeException("Cannot find user {$customer->username} on server");
             }
-        
+
             // Step 2: Ambil profile dari secret
             $secretProfiles = SecretResource::collection($userSecret)->value('profile');
-            LogHelper::logInfo(
-                null,
-                ['secret_profiles' => $secretProfiles],
-                200,
-                'Fetched current secret profile',
-                $traceId
-            );
-        
+
             // Step 3: Update profile jika berbeda
             if (!$autoIsolir || $autoIsolir->profile_id != $secretProfiles) {
-                LogHelper::logInfo(
-                    null,
-                    [
-                        'current_profile' => $secretProfiles,
-                        'new_profile'     => $profile
-                    ],
-                    200,
-                    'Profile difference detected, updating profile',
-                    $traceId
-                );
-            
                 $response = $this->secretService->updateProfileSecret(
                     $router,
                     $profile,
                     $customer->secret_id,
                     $traceId
                 );
-            
-                LogHelper::logInfo(
-                    null,
-                    ['update_response' => $response],
-                    200,
-                    'Profile updated',
-                    $traceId
-                );
-            
+
                 if (isset($response['after']['message'])) {
                     throw new \RuntimeException($response['after']['message']);
                 }
-            
+
                 // Step 4: Hapus active secret
                 $this->secretService->deleteActiveSecret($router, $customer->username, $traceId);
-                LogHelper::logInfo(
-                    null,
-                    ['username' => $customer->username],
-                    200,
-                    'Deleted active secret',
-                    $traceId
-                );
-            } else {
-                LogHelper::logInfo(
-                    null,
-                    [
-                        'current_profile' => $secretProfiles,
-                        'new_profile'     => $profile
-                    ],
-                    200,
-                    'Profile already matches, no update required',
-                    $traceId
-                );
             }
-        
-            // Step 5: Sukses
-            LogHelper::logInfo(
-                null,
-                [
-                    'customer_id' => $customer->id,
-                    'new_profile' => $profile
-                ],
-                200,
-                'PPP package updated successfully',
-                $traceId
-            );
-        
+
+            // Step 5: Return sukses
+            return $this->makeResponse(true, $customer, $profile);
         } catch (\Throwable $e) {
-            LogHelper::logError(
-                null,
-                [
-                    'exception'   => [
-                        'message' => $e->getMessage(),
-                        'code'    => $e->getCode(),
-                        'file'    => $e->getFile(),
-                        'line'    => $e->getLine()
-                    ],
-                    'customer_id' => $customer->id,
-                    'router_id'   => $router->id
+            LogHelper::logError(null, [
+                'exception'   => [
+                    'message' => $e->getMessage(),
+                    'code'    => $e->getCode(),
+                    'file'    => $e->getFile(),
+                    'line'    => $e->getLine()
                 ],
-                500,
-                'Failed to update PPP package',
-                $traceId
-            );
-            throw $e;
+                'customer_id' => $customer->id,
+                'router_id'   => $router->id
+            ], 500, 'Failed to update PPP package', $traceId);
+
+            return $this->makeResponse(false, $customer, $profile);
         }
     }
 
-    private function updateIpStaticPackage(Customer $customer, Mikrotik $router, string $profile, string $traceId): void
+    private function updateIpStaticPackage(Customer $customer, Mikrotik $router, string $profile, string $traceId): array
     {
         try {
             $ipAddress = $this->ipStaticService->getIpByArpId($router, $customer->arp_id, $traceId);
@@ -580,6 +576,8 @@ class CustomerUpdateService
                 'IP Static package updated successfully',
                 $traceId
             );
+
+            return $this->makeResponse(true, $customer, $profile);
         } catch (\Throwable $e) {
             LogHelper::logError(
                 null,
@@ -597,9 +595,20 @@ class CustomerUpdateService
                 'Failed to update IP Static package',
                 $traceId
             );
-            throw $e;
+
+            return $this->makeResponse(false, $customer, $profile);
         }
     }
+
+    private function makeResponse(bool $success, Customer $customer, string $profile): array
+    {
+        return [
+            'success'     => $success,
+            'customer_id' => $customer->id,
+            'new_profile' => $profile
+        ];
+    }
+
 
     private function handleActivationDateChange(Customer $customer, array $data, string $traceId): void
     {

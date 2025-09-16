@@ -74,29 +74,11 @@
                     <td class="py-1"><strong>{{ __('customer.label.bill') }}</strong></td>
                     <td class="py-1">{{ __(':') }}
                         <strong>
-                            @if ($customer->billing_option != 0 || !empty($discount))
-                                @if (
-                                    $customer->billing_option == 1 ||
-                                        ($customer->billing_option == 2 && $customer->billing_periode === $billingPeriods))
-                                    @moneyIDR($customer->paket->price - $discount)
-                                @else
-                                    @moneyIDR($customer->paket->price)
-                                @endif
-                            @else
-                                @moneyIDR($customer->paket->price)
-                            @endif
+                            @moneyIDR($totalAmount)
                         </strong>
                     </td>
                     <td class="py-1"><strong>{{ __('customer.label.already-paid') }}</strong></td>
-                    <td class="py-1">{{ __(':') }}
-                        @if (!empty($billingLastPayment && $billingLastPayment->billing_periode_id == $billingPeriodeActive->id))
-                            <strong>
-                                @moneyIDR($billingLastPayment->paket_price)
-                            </strong>
-                        @else
-                            @moneyIDR(0)
-                        @endif
-                    </td>
+                    <td class="py-1">{{ __(':') }}<strong> @moneyIDR($lastPayment)</strong></td>
                 </tr>
                 @if ($billingLastPayment)
                     <tr class="table-borderless">
