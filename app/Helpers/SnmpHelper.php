@@ -68,4 +68,13 @@ class SnmpHelper
         // Gabungkan lagi menjadi string
         return implode('.', $lastThree);
     }
+
+    public static function mapSnmpStatus(string $snmpStatus): string
+    {
+        return match ($snmpStatus) {
+            'Up' => 'Active',
+            'Down' => 'Inactive',
+            default => 'Scanning',
+        };
+    }
 }

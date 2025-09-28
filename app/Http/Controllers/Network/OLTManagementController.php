@@ -11,6 +11,7 @@ use App\Services\Networks\SnmpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Helpers\LogHelper;
+use App\Helpers\SnmpHelper;
 use App\Jobs\Network\ScanOltsJob;
 use App\Jobs\Network\CheckOltStatusJob;
 use Illuminate\Support\Facades\Cache;
@@ -53,11 +54,7 @@ class OLTManagementController extends Controller
 
         $username = Auth::user()?->name ?? 'System'; // username user yang login (nullable)
 
-        LogHelper::logInfo(null, ['username' => $username], 200, "Desc Username");
-
-        ScanOltsJob::dispatch($jobId, $username);
-
-        return view('networks.olt_managements.index', [
+        $dataForView = [
             'totalOlts'       => $totalOlts,
             'activeOlts'      => $activeOlts,
             'inActiveOlts'    => $inActiveOlts,
@@ -65,9 +62,16 @@ class OLTManagementController extends Controller
             'olts'            => $olts,
             'lastStatusCheck' => $lastStatusCheck,
             'lastUpdate'      => $lastUpdate,
-            'jobId'           => $jobId, // 🔹 kirim ke Blade untuk progress bar
+            'jobId'           => $jobId,
             'oidMappings'     => $oidMappings,
-        ]);
+        ];
+
+        // Log semua data yang dikirim ke view
+        LogHelper::logInfo(null, $dataForView, 200, "Data yang dikirim ke view");
+
+        ScanOltsJob::dispatch($jobId, $username);
+
+        return view('networks.olt_managements.index', $dataForView);
     }
 
     public function create()
@@ -342,6 +346,7 @@ class OLTManagementController extends Controller
         LogHelper::logInfo(null, ['request' => $request->all()], 200, 'OLT validation passed');
 
         try {
+            $totalOnu = 0;
             $oltVendor = OidMapping::where('vendor', $request->olt_type)->first();
 
             if (empty($oltVendor)) {
@@ -363,7 +368,7 @@ class OLTManagementController extends Controller
 
             $healthCheck = SnmpService::checkOltStatus($olt, $username);
 
-            if ($healthCheck['status']) {
+            if ($healthCheck['status'] === 'Up') {
                 $snmpData = SnmpService::getOnus($olt);
                 $totalOnu = isset($snmpData['oid_name']) && is_array($snmpData['oid_name'])
                     ? count($snmpData['oid_name'])
@@ -388,6 +393,8 @@ class OLTManagementController extends Controller
 
             return response()->json([
                 'success' => false,
+                'device_info' => $olt->vendor,
+                'onu_count'   => $totalOnu,
                 'error'   => 'Could not establish SNMP connection to the device',
             ]);
         } catch (\Throwable $e) {
@@ -527,7 +534,7 @@ class OLTManagementController extends Controller
 
         try {
             $healthCheck = SnmpService::checkOltStatus($olt, $username);
-            $status = $this->mapSnmpStatus($healthCheck['status']);
+            $status = SnmpHelper::mapSnmpStatus($healthCheck['status']);
 
             $response = [
                 'success' => true,
@@ -536,7 +543,7 @@ class OLTManagementController extends Controller
                 'message' => "Successfully get {$action}"
             ];
 
-            if ($includeOnus) {
+            if ($status['status'] === 'Up' && $includeOnus) {
                 $snmpData = SnmpService::getOnus($olt);
                 SnmpService::updateOnus($olt, $snmpData['snmpData'], $snmpData['duration'], $username);
                 $response['total_onu'] = Onu::where('olt_id', $oltId)->count();
@@ -552,14 +559,5 @@ class OLTManagementController extends Controller
                 'message' => $e->getMessage()
             ], 500);
         }
-    }
-
-    protected function mapSnmpStatus(string $snmpStatus): string
-    {
-        return match ($snmpStatus) {
-            'Up' => 'Active',
-            'Down' => 'Inactive',
-            default => 'Scanning',
-        };
     }
 }

@@ -60,11 +60,9 @@ class Olt extends Model
 
     public function getDisplayStatusAttribute(): string
     {
-        $status = optional($this->latestUpdateLog)->status;
-
-        return match ($status) {
-            'Up'   => self::STRING_STATUS_ACTIVE,
-            'Down' => self::STRING_STATUS_INACTIVE,
+        return match ($this->status) {
+            1 => self::STRING_STATUS_ACTIVE,   // Up
+            0 => self::STRING_STATUS_INACTIVE, // Down
             default => self::STRING_STATUS_SCANNING,
         };
     }
