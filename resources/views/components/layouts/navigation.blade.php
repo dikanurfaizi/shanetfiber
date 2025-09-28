@@ -140,6 +140,33 @@
         </li>
     @endcanany
 
+    @canany(['olt-management', 'onu-management'])
+        <li class="nav-item @if (request()->routeIs('olts*') || request()->routeIs('onus*')) active @endif">
+            <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseNetworks"
+                aria-expanded="true" aria-controls="collapseNetworks" style="padding-top: inherit;">
+                <i class="fas fa-server"></i>
+                <span>{{ __('navigation.network.nav-item') }}</span>
+            </a>
+
+            <div id="collapseNetworks" class="collapse collapse @if (request()->routeIs('olts*') || request()->routeIs('onus*'))  @endif"
+                aria-labelledby="headingNetwork" data-parent="#accordionSidebar">
+                @canany(['olt-management'])
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item @if (request()->routeIs('olts.index')) active @endif"
+                            href="{{ route('olts.index') }}">{{ __('navigation.network.olt-managements.index') }}</a>
+                    </div>
+                @endcanany
+
+                @canany(['onu-management'])
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item @if (request()->routeIs('onus.index')) active @endif"
+                            href="{{ route('onus.index') }}">{{ __('navigation.network.onu-managements.index') }}</a>
+                    </div>
+                @endcanany
+            </div>
+        </li>
+    @endcanany
+
     <!-- Settings -->
     @canany(['user-list', 'user-create', 'user-edit', 'user-delete', 'role-list', 'role-edit', 'role-delete',
         'server-list', 'server-edit', 'server-delete', 'server-create'])

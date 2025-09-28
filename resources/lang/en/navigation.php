@@ -57,5 +57,14 @@ return [
         'bill' => 'Bill',
         'payment' => 'Payment',
         'device-info' => 'Device Information'
+    ],
+    'network' => [
+        'nav-item' => 'Networks',
+        'olt-managements' => [
+            'index' => 'OLT Management',
+        ],
+        'onu-managements' => [
+            'index' => 'ONU Management'
+        ]
     ]
 ];
