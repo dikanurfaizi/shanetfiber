@@ -2,7 +2,7 @@
 
 /**
  * archive‑laravel‑log.php
- * Pindah log Laravel ke folder arsip harian + hapus arsip >30 hari
+ * Pindah log Laravel ke folder arsip harian + hapus arsip > 30 hari
  */
 
 date_default_timezone_set('Asia/Jakarta');
@@ -31,7 +31,7 @@ if (file_exists($logFile) && filesize($logFile) > 0) {
         echo "✅  Log di‑arsipkan ke $archivedLog\n";
         // Buat file log baru kosong untuk Laravel
         touch($logFile);
-        chmod($logFile, 0664);
+        chmod($logFile, 0644);
         chown($logFile, 'www');          // sesuaikan user (mis. www-data)
     } else {
         fwrite(STDERR, "❌  Gagal memindahkan log ke $archivedLog\n");
