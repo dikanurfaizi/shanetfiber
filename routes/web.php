@@ -382,7 +382,7 @@ Route::group(['prefix' => 'cpanel'], function () {
             ->name('olts.status.progress');
         Route::get('network/oltmanagements/scan/olt/{olt}', [OLTManagementController::class, 'scanSingle'])->name('olt.scanSingle');
         Route::get('network/oltmanagements/health/check/{olt}', [OLTManagementController::class, 'healthCheckSingle'])->name('olt.healtCheckSingle');
-
+        Route::post('/cpanel/network/oltmanagements/scan/clear-cache/{jobId}', [OLTManagementController::class, 'clearScanCache'])->name('olts.clear.scan.cache');
 
         // ==================== ONU MANAGEMENT ====================
         Route::resource('network/onumanagements', ONUManagementController::class)->names('onus');

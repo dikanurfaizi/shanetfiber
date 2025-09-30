@@ -24,6 +24,10 @@ class OLTManagementController extends Controller
 {
     public function index()
     {
+        Cache::forget('olt-status-progress');
+        Cache::forget('olt-status-all');
+        Cache::forget('olt-status-total');
+
         $entries = 25;
 
         $query = Olt::with('onus', 'latestUpdateLog')->orderBy('id', 'asc');
@@ -35,6 +39,9 @@ class OLTManagementController extends Controller
         $totalOlts = Olt::count(); // hanya OLT yang belum soft delete
         $totalOnus = Onu::whereHas('olt', fn($q) => $q->whereNull('deleted_at'))->count();
 
+        $jobId    = Str::uuid()->toString();
+        $username = Auth::user()?->name ?? 'System';
+
         $dataForView = [
             'totalOlts'       => $totalOlts,
             'activeOlts'      => $activeOlts,
@@ -43,22 +50,48 @@ class OLTManagementController extends Controller
             'olts'            => $olts,
             'lastStatusCheck' => now()->format('h:i:s A'),
             'lastUpdate'      => now()->format('F d, Y \a\t h:i A'),
-            'jobId'           => $jobId = Str::uuid()->toString(),
+            'jobId'           => $jobId,
             'oidMappings'     => OidMapping::pluck('vendor', 'id'),
         ];
 
-        Cache::put("scan_progress_{$jobId}", [
-            'current'    => 0,
-            'total'      => $totalOlts,
-            'percent'    => 0,
-            'status'     => 'queued',
-            'currentOlt' => null,
-        ], 600);
+        // Set cache untuk progress scan
+        $cacheKey = "scan_job_progress_{$jobId}";
+        $cacheValue = [
+            'current'      => 0,
+            'total'        => $totalOlts,
+            'percent'      => 0,
+            'status'       => 'queued',
+            'currentOlt'   => null,
+            'onlineOlts'   => 0,
+            'totalOnus'    => 0,
+            'lastResult'   => [
+                'olt_id'         => null,
+                'status'         => null,
+                'onu_count'      => 0,
+                'last_scan'      => null,
+                'last_scan_time' => null,
+                'last_scan_date' => null,
+            ],
+        ];
 
-        $username = Auth::user()?->name ?? 'System';
+        Cache::put($cacheKey, $cacheValue, 600);
+
+        // Logging detail + cache snapshot
+        LogHelper::logInfo($jobId, [
+            'username'     => $username,
+            'entries'      => $entries,
+            'totalOlts'    => $totalOlts,
+            'activeOlts'   => $activeOlts,
+            'inActiveOlts' => $inActiveOlts,
+            'totalOnus'    => $totalOnus,
+            'page'         => $olts->currentPage(),
+            'per_page'     => $olts->perPage(),
+            'cache_key'    => $cacheKey,
+            'cache_value'  => $cacheValue, // <-- snapshot cache
+        ], 200, "Index OLT Management - Data siap dikirim ke view & cache diset");
+
+        // Dispatch background job
         ScanOltsJob::dispatch($jobId, $username);
-
-        LogHelper::logInfo(null, $dataForView, 200, "Data yang dikirim ke view");
 
         return view('networks.olt_managements.index', $dataForView);
     }
@@ -440,9 +473,18 @@ class OLTManagementController extends Controller
 
     public function scanStatus($jobId)
     {
-        return response()->json(
-            Cache::get("scan_progress_{$jobId}", ['status' => 'not_found'])
+        $cacheKey = "scan_job_progress_{$jobId}";
+        $cacheData = Cache::get($cacheKey, ['status' => 'not_found']);
+
+        // Tambahin log supaya kelihatan isi cache
+        LogHelper::logInfo(
+            $cacheKey,
+            ['jobId' => $jobId, 'cacheData' => $cacheData],
+            200,
+            "Scan status diambil dari cache"
         );
+
+        return response()->json($cacheData);
     }
 
     public function checkAllStatusJob(Request $request)
@@ -548,5 +590,16 @@ class OLTManagementController extends Controller
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function clearScanCache(string $jobId)
+    {
+        $cacheKey = "scan_job_progress_{$jobId}";
+        if (Cache::has($cacheKey)) {
+            Cache::forget($cacheKey);
+            LogHelper::logInfo($jobId, ['cache_key' => $cacheKey], 200, "Cache scan progress cleared");
+        }
+
+        return response()->json(['status' => 'ok']);
     }
 }

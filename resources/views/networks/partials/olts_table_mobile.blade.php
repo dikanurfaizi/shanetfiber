@@ -33,7 +33,8 @@
                         <div><strong>{{ __('networks.table.type') }}:</strong> {{ $olt->vendor }}</div>
                         <div><strong>{{ __('networks.table.ip') }}:</strong> {{ $olt->ip }}</div>
                         <div><strong>{{ __('networks.table.port') }}:</strong> {{ $olt->port }}</div>
-                        <div><strong>{{ __('networks.table.onu') }}:</strong> {{ $olt->total_onu }}</div>
+                        <div class="total-onus"><strong>{{ __('networks.table.onu') }}:</strong> {{ $olt->total_onu }}
+                        </div>
                         <div>
                             <strong>{{ __('networks.table.last-scan') }}:</strong>
                             @php

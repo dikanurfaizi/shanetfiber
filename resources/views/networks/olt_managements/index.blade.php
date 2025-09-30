@@ -251,6 +251,7 @@
     </div>
     @section('custom_scripts')
         <script>
+            window.clearCacheUrl = "{{ route('olts.clear.scan.cache', ['jobId' => ':jobId']) }}";
             window.checkAllOltStatus = "{{ route('olts.checkAllStatus') }}";
             window.oltStatusProgressRoute = "{{ route('olts.status.progress') }}";
             window.filterUrl = "{{ route('olts.filter') }}";

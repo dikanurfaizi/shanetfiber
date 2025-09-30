@@ -4,7 +4,6 @@ namespace App\Helpers;
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
 class LogHelper
@@ -17,28 +16,36 @@ class LogHelper
         'authorization',
     ];
 
-    public static function logInfo($uri, $body, $statusCode, $description, $traceId = null)
+    public static function logInfo($uri, $body, $statusCode, $description, $traceId = null, $resTime = null)
     {
-        Log::info(self::formatLog('INFO', $uri, $body, $statusCode, $description, $traceId));
+        Log::info(self::formatLog('INFO', $uri, $body, $statusCode, $description, $traceId, $resTime));
     }
 
-    public static function logWarning($uri, $body, $statusCode, $description, $traceId = null)
+    public static function logWarning($uri, $body, $statusCode, $description, $traceId = null, $resTime = null)
     {
-        Log::warning(self::formatLog('WARNING', $uri, $body, $statusCode, $description, $traceId));
+        Log::warning(self::formatLog('WARNING', $uri, $body, $statusCode, $description, $traceId, $resTime));
     }
 
-    public static function logError($uri, $body, $statusCode, $description, $traceId = null)
+    public static function logError($uri, $body, $statusCode, $description, $traceId = null, $resTime = null)
     {
-        Log::error(self::formatLog('ERROR', $uri, $body, $statusCode, $description, $traceId));
+        Log::error(self::formatLog('ERROR', $uri, $body, $statusCode, $description, $traceId, $resTime));
     }
 
-    private static function formatLog($level, $uri, $body, $statusCode, $description, $traceId)
+    public static function logDebug($uri, $body, $description, $traceId = null, $resTime = null)
+    {
+        if (config('app.debug')) {
+            Log::debug(self::formatLog('DEBUG', $uri, $body, 200, $description, $traceId, $resTime));
+        }
+    }
+
+    private static function formatLog($level, $uri, $body, $statusCode, $description, $traceId, $resTime)
     {
         $caller      = self::getCaller();
         $traceId     = $traceId ?? (string) Str::uuid();
         $uri         = $uri ?? request()?->path() ?? 'null';
         $statusCode  = $statusCode ?? 'null';
         $description = $description ?? 'null';
+        $resTime     = $resTime ?? 0;
 
         // Convert request object ke array
         if ($body instanceof \Illuminate\Http\Request) {
@@ -59,7 +66,7 @@ class LogHelper
         $method   = request()?->method() ?? 'CLI';
         $url      = request()?->fullUrl() ?? $uri;
 
-        return "[$level] | $caller | $traceId | $ip | $userName | $method | $url | $statusCode | $description | $body";
+        return "[$level] | $traceId | $method | $statusCode | $resTime | $caller | $ip | $userName | $url | $description | $body";
     }
 
     private static function getCaller()

@@ -39,18 +39,22 @@ class SnmpHelper
         // Hilangkan prefix "Hex-STRING:" jika ada
         $hexString = preg_replace('/^Hex-STRING:\s*/', '', $hexString);
 
-        // Pecah string menjadi array hex
+        // Ganti ":" jadi spasi biar konsisten
+        $hexString = str_replace(':', ' ', $hexString);
+
+        // Pecah string jadi array hex
         $hexArray = preg_split('/\s+/', trim($hexString));
 
         $ascii = '';
         foreach ($hexArray as $hex) {
+            if ($hex === '') continue;
             $intVal = hexdec($hex);
 
-            // Hanya karakter printable, berhenti saat pertama kali non-printable
+            // Hanya karakter printable
             if ($intVal >= 32 && $intVal <= 126) {
                 $ascii .= chr($intVal);
             } else {
-                break; // berhenti saat karakter aneh muncul
+                break; // berhenti kalau ketemu byte aneh
             }
         }
 

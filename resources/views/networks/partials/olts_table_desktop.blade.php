@@ -24,8 +24,7 @@
             <div class="d-md-none"> <small class="text-muted">{{ $olt->vendor }}</small> </div>
         </td>
         <td class="d-none-xs"><span class="font-monospace">{{ $olt->port }}</span></td>
-        <td><span class="badge onu-badge">{{ $olt->total_onu }}</span>
-            <div class="d-md-none"> <small class="text-muted">Port: {{ $olt->port }}</small> </div>
+        <td class="total-onus"><span class="badge onu-badge">{{ $olt->total_onu }}</span>
         </td>
         <td>
             @php
@@ -43,13 +42,17 @@
             @endif
         </td>
         <td class="text-center">
-            <div class="dropdown">
-                <button class="btn btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <!-- Tombol View di luar dropdown -->
+            <a class="btn btn-sm btn-primary me-1" href="{{ route('olts.show', $olt->id) }}">
+                <i class="fas fa-eye"></i> {{ __('networks.table.view') }}
+            </a>
+
+            <!-- Dropdown action -->
+            <div class="dropdown d-inline">
+                <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
                     <i class="fas fa-cog me-1"></i> {{ __('networks.table.actions') }}
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="{{ route('olts.show', $olt->id) }}"><i
-                                class="fas fa-eye text-primary"></i> {{ __('networks.table.view') }}</a></li>
                     <li>
                         <a href="{{ route('olt.scanSingle', $olt->id) }}" class="dropdown-item scan-olt-btn"
                             data-olt-id="{{ $olt->id }}">
@@ -63,9 +66,11 @@
                         </a>
                     </li>
                     <hr class="dropdown-divider">
+                    <li>
+                        <a class="dropdown-item" href="{{ route('olts.edit', $olt->id) }}">
+                            <i class="fas fa-edit text-warning"></i> {{ __('networks.table.edit') }}
+                        </a>
                     </li>
-                    <li><a class="dropdown-item" href="{{ route('olts.edit', $olt->id) }}"><i
-                                class="fas fa-edit text-warning"></i> {{ __('networks.table.edit') }}</a></li>
                     <li>
                         <button class="dropdown-item text-danger"
                             onclick="confirmDelete({{ $olt->id }}, '{{ $olt->name }}', '{{ route('olts.destroy', $olt->id) }}')">

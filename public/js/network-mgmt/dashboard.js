@@ -149,6 +149,13 @@ function updateOltRow({
                 <span class="last-scan-date">${last_scan_date}</span>
             `;
         });
+
+    document
+        .querySelectorAll(`.olt-row[data-olt-id="${olt_id}"] .total-onus`)
+        .forEach((el) => {
+            el.innerHTML = `<td><span class="badge onu-badge">${onu_count}</span>
+        </td>`;
+        });
 }
 
 function padZero(num) {
@@ -200,6 +207,8 @@ function updateCurrentTimeElements() {
 }
 
 async function startPolling(jobId) {
+    let lastCurrent = 0; // 🔹 simpan state terakhir
+
     let interval = setInterval(async () => {
         try {
             let r = await fetch(
@@ -207,60 +216,29 @@ async function startPolling(jobId) {
             );
             let s = await r.json();
 
-            // progress bar global
-            let currentEl = document.getElementById("batch-check-current");
-            if (currentEl) currentEl.innerText = s.current ?? "-";
+            // 🔹 Interpolasi: isi gap kalau current lompat
+            let targetCurrent = s.current ?? 0;
 
-            let totalEl = document.getElementById("batch-check-total");
-            if (totalEl) totalEl.innerText = s.total ?? "-";
-
-            let percentEl = document.getElementById("batch-check-percentage");
-            if (percentEl) percentEl.innerText = (s.percent ?? 0) + "%";
-
-            let bar = document.getElementById("batch-check-progress-bar");
-            if (bar) bar.style.width = (s.percent ?? 0) + "%";
-
-            let currentOltEl = document.getElementById(
-                "batch-check-current-olt"
-            );
-            if (currentOltEl) currentOltEl.innerText = s.currentOlt ?? "-";
-
-            // 🔹 update jumlah OLT yang masih scanning
-            let scanningValue = document.getElementById("scanning-count");
-            if (scanningValue) {
-                let scanningCount = (s.total ?? 0) - (s.current ?? 0);
-                scanningValue.innerText = scanningCount > 0 ? scanningCount : 0;
-            }
-
-            // 🔹 update online OLTs
-            if (s.onlineOlts !== undefined) {
-                let onlineEl = document.getElementById("online-olts");
-                if (onlineEl) onlineEl.innerText = s.onlineOlts;
-
-                let bar = document.getElementById("online-olts-bar");
-                if (bar) {
-                    let percent =
-                        s.total > 0 ? (s.onlineOlts / s.total) * 100 : 0;
-                    bar.style.width = percent + "%";
+            if (targetCurrent > lastCurrent + 1) {
+                // kalau lompat (misal 0 → 2), isi dulu 1
+                for (let i = lastCurrent + 1; i <= targetCurrent; i++) {
+                    console.log("current: ", s.current);
+                    console.log("Status: ", s.status);
+                    console.log("Online Olts: ", s.onlineOlts);
+                    updateProgressUI(i, s); // bikin fungsi khusus untuk update UI
                 }
+            } else {
+                console.log("current: ", s.current);
+                console.log("Status: ", s.status);
+                console.log("Online Olts: ", s.onlineOlts);
+                updateProgressUI(targetCurrent, s);
             }
 
-            // 🔹 update total ONUs
-            if (s.totalOnus !== undefined) {
-                let totalOnusEl = document.getElementById("total-onus");
-                if (totalOnusEl) totalOnusEl.innerText = s.totalOnus;
-            }
-
-            // 🔹 update row spesifik OLT
-            if (s.lastResult) {
-                updateOltRow(s.lastResult);
-            }
+            lastCurrent = targetCurrent; // simpan posisi terakhir
 
             // kalau sudah selesai
             if (s.status === "done" || s.status === "not_found") {
                 clearInterval(interval);
-
-                // update last-check dan current-time
                 updateCurrentTimeElements();
 
                 if (s.status === "done") {
@@ -281,6 +259,18 @@ async function startPolling(jobId) {
                         document.getElementById("scanning-count");
                     if (scanningValue) scanningValue.innerText = 0;
                 }
+
+                // 🔹 Hapus cache backend lewat endpoint khusus
+                const url = window.clearCacheUrl.replace(":jobId", jobId);
+
+                await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "X-CSRF-TOKEN": document.querySelector(
+                            'meta[name="csrf-token"]'
+                        ).content,
+                    },
+                });
             }
         } catch (err) {
             Swal.fire({
@@ -291,9 +281,61 @@ async function startPolling(jobId) {
                     "An error occurred while retrieving OLT data",
             });
             clearInterval(interval);
-            updateCurrentTimeElements(); // tetap update waktu saat error
+            updateCurrentTimeElements();
         }
-    }, 2000);
+    }, 250);
+}
+
+// 🔹 pisahkan fungsi update UI supaya gampang dipanggil step-by-step
+function updateProgressUI(current, s) {
+    // progress bar global
+    let currentEl = document.getElementById("batch-check-current");
+    if (currentEl) currentEl.innerText = current ?? "-";
+
+    let totalEl = document.getElementById("batch-check-total");
+    if (totalEl) totalEl.innerText = s.total ?? "-";
+
+    let percent = s.total > 0 ? Math.round((current / s.total) * 100) : 0;
+
+    let percentEl = document.getElementById("batch-check-percentage");
+    if (percentEl) percentEl.innerText = percent + "%";
+
+    let bar = document.getElementById("batch-check-progress-bar");
+    if (bar) bar.style.width = percent + "%";
+
+    let currentOltEl = document.getElementById("batch-check-current-olt");
+    if (currentOltEl) currentOltEl.innerText = s.currentOlt ?? "-";
+
+    // 🔹 update jumlah OLT yang masih scanning
+    let scanningValue = document.getElementById("scanning-count");
+    if (scanningValue) {
+        let scanningCount = (s.total ?? 0) - (current ?? 0);
+        scanningValue.innerText = scanningCount > 0 ? scanningCount : 0;
+    }
+
+    // 🔹 update online OLTs
+    if (s.onlineOlts !== undefined) {
+        let onlineEl = document.getElementById("online-olts");
+        if (onlineEl) onlineEl.innerText = s.onlineOlts;
+
+        let bar = document.getElementById("online-olts-bar");
+        if (bar) {
+            let percentOnline =
+                s.total > 0 ? (s.onlineOlts / s.total) * 100 : 0;
+            bar.style.width = percentOnline + "%";
+        }
+    }
+
+    // 🔹 update total ONUs
+    if (s.totalOnus !== undefined) {
+        let totalOnusEl = document.getElementById("total-onus");
+        if (totalOnusEl) totalOnusEl.innerText = s.totalOnus;
+    }
+
+    // 🔹 update row spesifik OLT
+    if (s.lastResult) {
+        updateOltRow(s.lastResult);
+    }
 }
 
 document.getElementById("rescan-olts").addEventListener("click", async () => {
