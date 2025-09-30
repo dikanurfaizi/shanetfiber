@@ -24,35 +24,16 @@ class OLTManagementController extends Controller
 {
     public function index()
     {
-        $entries = 25; // default entries per page, bisa diganti atau diambil dari request
+        $entries = 25;
+
         $query = Olt::with('onus', 'latestUpdateLog')->orderBy('id', 'asc');
+        $olts  = $query->paginate($entries);
 
-        // Paginate langsung
-        $olts = $query->paginate($entries);
-
-        // Hitung status aktif/inaktif dari collection paginasi
-        $activeOlts = $olts->filter(fn($olt) => $olt->display_status === 'Active')->count();
+        $activeOlts   = $olts->filter(fn($olt) => $olt->display_status === 'Active')->count();
         $inActiveOlts = $olts->filter(fn($olt) => $olt->display_status === 'Inactive')->count();
 
-        $totalOlts = Olt::count(); // total OLT di DB
-        $totalOnus = Onu::count();
-
-        $lastStatusCheck = now()->format('h:i:s A');
-        $lastUpdate = now()->format('F d, Y \a\t h:i A');
-
-        $oidMappings = OidMapping::pluck('vendor', 'id');
-
-        // 🔹 Buat job untuk scan ulang (async)
-        $jobId = Str::uuid()->toString();
-        Cache::put("scan_progress_{$jobId}", [
-            'current' => 0,
-            'total'   => $totalOlts,
-            'percent' => 0,
-            'status'  => 'queued',
-            'currentOlt' => null,
-        ], 600);
-
-        $username = Auth::user()?->name ?? 'System'; // username user yang login (nullable)
+        $totalOlts = Olt::count(); // hanya OLT yang belum soft delete
+        $totalOnus = Onu::whereHas('olt', fn($q) => $q->whereNull('deleted_at'))->count();
 
         $dataForView = [
             'totalOlts'       => $totalOlts,
@@ -60,16 +41,24 @@ class OLTManagementController extends Controller
             'inActiveOlts'    => $inActiveOlts,
             'totalOnus'       => $totalOnus,
             'olts'            => $olts,
-            'lastStatusCheck' => $lastStatusCheck,
-            'lastUpdate'      => $lastUpdate,
-            'jobId'           => $jobId,
-            'oidMappings'     => $oidMappings,
+            'lastStatusCheck' => now()->format('h:i:s A'),
+            'lastUpdate'      => now()->format('F d, Y \a\t h:i A'),
+            'jobId'           => $jobId = Str::uuid()->toString(),
+            'oidMappings'     => OidMapping::pluck('vendor', 'id'),
         ];
 
-        // Log semua data yang dikirim ke view
-        LogHelper::logInfo(null, $dataForView, 200, "Data yang dikirim ke view");
+        Cache::put("scan_progress_{$jobId}", [
+            'current'    => 0,
+            'total'      => $totalOlts,
+            'percent'    => 0,
+            'status'     => 'queued',
+            'currentOlt' => null,
+        ], 600);
 
+        $username = Auth::user()?->name ?? 'System';
         ScanOltsJob::dispatch($jobId, $username);
+
+        LogHelper::logInfo(null, $dataForView, 200, "Data yang dikirim ke view");
 
         return view('networks.olt_managements.index', $dataForView);
     }
@@ -370,9 +359,7 @@ class OLTManagementController extends Controller
 
             if ($healthCheck['status'] === 'Up') {
                 $snmpData = SnmpService::getOnus($olt);
-                $totalOnu = isset($snmpData['oid_name']) && is_array($snmpData['oid_name'])
-                    ? count($snmpData['oid_name'])
-                    : 0;
+                $totalOnu = $snmpData['total_onu'];
 
                 LogHelper::logInfo(null, [
                     'result' => 'success',
@@ -444,8 +431,9 @@ class OLTManagementController extends Controller
             'currentOlt' => null,
         ], 600);
 
+        $username = Auth::user()?->name ?? 'System';
         // Dispatch job dengan parameter filter
-        ScanOltsJob::dispatch($jobId, $request->all());
+        ScanOltsJob::dispatch($jobId, $username);
 
         return response()->json(['jobId' => $jobId]);
     }
@@ -459,6 +447,7 @@ class OLTManagementController extends Controller
 
     public function checkAllStatusJob(Request $request)
     {
+        $username = Auth::user()?->name ?? 'System';
         // hapus cache lama
         Cache::forget('olt-status-progress');
         Cache::forget('olt-status-all');
@@ -484,7 +473,7 @@ class OLTManagementController extends Controller
         // dispatch job untuk setiap OLT
         foreach ($olts as $olt) {
             LogHelper::logInfo(null, ['olts' => $olt], 200, "olt desc");
-            CheckOltStatusJob::dispatch($olt);
+            CheckOltStatusJob::dispatch($olt, $username);
         }
 
         return response()->json([
@@ -533,7 +522,7 @@ class OLTManagementController extends Controller
         }
 
         try {
-            $healthCheck = SnmpService::checkOltStatus($olt, $username);
+            $healthCheck = SnmpService::checkOltStatus($olt, $username, true);
             $status = SnmpHelper::mapSnmpStatus($healthCheck['status']);
 
             $response = [

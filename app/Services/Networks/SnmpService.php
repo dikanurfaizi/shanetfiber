@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Cache;
 
 class SnmpService
 {
-    public static function checkOltStatus($olt, $username)
+    public static function checkOltStatus($olt, $username, bool $updateDb = false)
     {
         $startTime = microtime(true);
         $status = 'Down';
@@ -60,10 +60,8 @@ class SnmpService
             'username' => $username
         ], 200, "End checkOltStatus");
 
-        if ($session) {
-            $olt->updateStatus(Olt::STATUS_ACTIVE);
-        } else {
-            $olt->updateStatus(Olt::STATUS_INACTIVE);
+        if ($updateDb && $olt instanceof Olt) {
+            $olt->updateStatus($session ? Olt::STATUS_ACTIVE : Olt::STATUS_INACTIVE);
         }
 
         return [
@@ -151,11 +149,15 @@ class SnmpService
         $endTime = microtime(true);
         $duration = round($endTime - $startTime, 2);
 
+        // hitung total_onu langsung di sini
+        $totalOnu = isset($snmpData['oid_name']) ? count((array) $snmpData['oid_name']) : 0;
+
         LogHelper::logInfo(null, ['snmpData' => $snmpData], 200, "SNMP Data");
 
         return [
             'snmpData' => $snmpData,
             'duration' => $duration,
+            'total_onu' => $totalOnu
         ];
     }
 
@@ -295,7 +297,7 @@ class SnmpService
                     ->first();
 
                 $lastUpdate = $log?->updated_at ? Carbon::parse($log->updated_at) : null;
-                $totalOnus  = Onu::count();
+                $totalOnus = Onu::whereHas('olt', fn($q) => $q->whereNull('deleted_at'))->count();
 
                 // Struktur sama persis seperti updateProgress
                 $progressData = [
