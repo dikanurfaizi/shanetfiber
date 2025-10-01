@@ -138,7 +138,7 @@ class PaymentDashboardService
                 'lastPayment',
                 'banks',
                 'contactAdmin',
-                'discountType',
+                'discountMember',
                 'lastBilling',
                 'totalDiscount',
                 'basePrice',

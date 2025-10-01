@@ -12,7 +12,8 @@ use App\Http\Resources\Pppoe\SecretResource;
 use App\Services\WhatsappMessageService;
 use App\Enums\WhatsappAction;
 use App\DataTransferObjects\WhatsappJobDto;
-
+use App\Models\Billing\BillingSubscriptionPeriode;
+use App\Helpers\LogHelper;
 
 class CallbackPaymentService
 {
@@ -31,7 +32,7 @@ class CallbackPaymentService
     {
         $customer = Customer::find($order->customer_id);
 
-        if ($customer->billing_option == 2 && $billing->billing_periode->name === $customer->billing_period) {
+        if ($customer->billing_option == 2 && $billing->billingSubscription->billingPeriode->name === $customer->billing_period) {
             $customer->update([
                 'billing_option' => '0',
                 'billing_period' => null,
@@ -66,7 +67,7 @@ class CallbackPaymentService
             }
         }
 
-        $periodeName = $billing->billing_periode->name;
+        $periodeName = $billing->billingSubscription->billingPeriode->name;
         $nextMonth = Carbon::parse($periodeName)->addMonth()->format('m_Y');
         $router = Mikrotik::find($customerData['mikrotik_id']);
         $autoIsolir = AutoIsolir::where('mikrotik_id', $customerData['mikrotik_id'])->first();
@@ -92,8 +93,33 @@ class CallbackPaymentService
         ]);
 
         $getBilling = $billing->fresh();
+        LogHelper::logInfo(null, [
+            'billing_id'   => $getBilling->id,
+            'customer_id'  => $getBilling->customer_id,
+            'total_amount' => $getBilling->total_amount,
+            'status'       => $getBilling->status ?? null,
+        ], 200, "[Tripay] Billing Details");
 
         $order->update(['payment_time' => $now]);
+        LogHelper::logInfo(null, [
+            'order_id'     => $order->id,
+            'payment_time' => $now,
+        ], 200, "[Tripay] Order Updated with Payment Time");
+
+        $billSubs = BillingSubscriptionPeriode::where('billing_subscription_id', $billing->billing_subscription_id)->first();
+        LogHelper::logInfo(null, [
+            'billing_subscription_id' => $billing->billing_subscription_id,
+            'periode_id'              => $billSubs?->id,
+            'before_status'           => $billSubs?->status,
+            'before_is_paid'          => $billSubs?->is_paid,
+        ], 200, "[Tripay] BillingSubscriptionPeriode Before Update");
+
+        $billSubs->update(['is_paid' => true, 'status' => 'paid']);
+        LogHelper::logInfo(null, [
+            'periode_id'  => $billSubs->id,
+            'after_status' => $billSubs->status,
+            'after_is_paid' => $billSubs->is_paid,
+        ], 200, "[Tripay] BillingSubscriptionPeriode After Update");
 
         $whatsappJobData = new WhatsappJobDto(
             customerId: $customer->id,
@@ -174,17 +200,13 @@ class CallbackPaymentService
 
     protected function handleCustomerBilling(Customer $customer, $billing, string $traceId): array
     {
-        $discount = 0;
-        $priceAfterDiscount = $customer->paket->price;
+        $discount = (int) $billing->discount_amount;
+        $priceAfterDiscount = (int) $billing->total_amount;
         $member = 'Non Member / Tidak Ada';
 
         if ($customer->billing_option == 1) {
-            $discount = optional($customer->member)->discount ?? 0;
-            $priceAfterDiscount -= $discount;
             $member = optional($customer->member)->type;
         } elseif ($customer->billing_option == 2 && $billing->billing_periode->name === $customer->billing_period) {
-            $discount = optional($customer->member)->discount ?? 0;
-            $priceAfterDiscount -= $discount;
             $member = optional($customer->member)->type;
             $customer->update([
                 'billing_option' => '0',
@@ -208,14 +230,14 @@ class CallbackPaymentService
     {
         return [
             'slug' => $billing->slug,
-            'periode' => $billing->billing_periode->name,
+            'periode' => $billing->billingSubscription->billingPeriode->name,
             'number' => $this->generateReceiptNumber($traceId),
             'billing_number' => $billing->billing_number,
             'customer_id' => $customer->id,
             'customer_name' => $customer->name,
             'customer_address' => $customer->address,
             'paket_name' => $order->package ?? $customer->paket->name,
-            'paket_price' => $customer->paket->price,
+            'paket_price' => $billing->base_price,
             'discount' => $discount,
             'price_after_discount' => $priceAfterDiscount,
             'member_type' => $member,
@@ -224,7 +246,7 @@ class CallbackPaymentService
             'payment_time' => $now,
             'payment_methode' => $order->payment_name,
             'reference_id' => $order->number,
-            'tax' => $billing->tax,
+            'tax' => $billing->tax_amount,
         ];
     }
 

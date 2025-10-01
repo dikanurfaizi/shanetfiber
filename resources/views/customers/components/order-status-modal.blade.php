@@ -9,11 +9,11 @@
     </tr>
     <tr>
         <td>Periode</td>
-        <td><b>{{ $billing->billing_periode->name }}</b></td>
+        <td><b>{{ $billing->billingSubscription->billingPeriode->name }}</b></td>
     </tr>
     <tr>
         <td>Paket</td>
-        <td><b>{{ $billing->paket_name }}</b></td>
+        <td><b>{{ $billing->billingSubscription->customerSubscription->paket->name }}</b></td>
     </tr>
     <tr>
         <td>Harga</td>

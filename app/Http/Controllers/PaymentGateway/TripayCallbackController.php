@@ -53,10 +53,6 @@ class TripayCallbackController extends Controller
         // ]);
 
         if ($signature !== (string) $callbackSignature) {
-            Log::warning('Tripay Signature Mismatch', [
-                'expected' => $signature,
-                'received' => $callbackSignature,
-            ]);
             LogHelper::logWarning(null, [
                 'callbackSignature' => $callbackSignature,
                 'signature' => $signature,

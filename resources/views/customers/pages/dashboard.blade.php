@@ -37,7 +37,7 @@
                             </tr>
                             <tr>
                                 <td><strong>{{ __('customer.label.discount-type') }}</strong></td>
-                                <td>: {{ $discountType }}</td>
+                                <td>: {{ $discountMember }}</td>
                             </tr>
                             @if ($websystem->enable_tax === 'true')
                                 <tr>

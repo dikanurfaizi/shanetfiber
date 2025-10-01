@@ -466,7 +466,7 @@ class WhatsappMessageService
                 '%name%' => $billing->customer->name,
                 '%customer_id%' => $billing->customer->customer_id,
                 '%billing_number%' => $billing->billing_number,
-                '%paket%' => $billing->paket_name ?? 'Tidak tersedia informasi paket',
+                '%paket%' => $billing->billingSubscription->customerSubscription->paket->name ?? 'Tidak tersedia informasi paket',
                 '%admin%' => $billing->customer->user->name,
                 '%customer_service%' => $whatsapp_number,
                 '%payment_details%' => $paymentDetails,
