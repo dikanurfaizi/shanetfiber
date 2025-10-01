@@ -59,21 +59,15 @@
                     </div>
                 </div>
 
-                <div class="row align-items-center">
-                    <div class="col-md-12 mb-3">
-                        <label for="bank"><strong>{{ __('bank.label.bank-name') }} <span
-                                    class="text-danger">*</span></strong></label>
-                        {{-- <select id="bank_name_select" name="bank" class="form-control">
-                            <option value="">{{ __('bank.placeholder.select_bank') }}</option>
-                        </select> --}}
-                        <select id="bank_name_select" name="bank" class="form-control">
-                            <option value="">{{ __('bank.placeholder.select_bank') }}</option>
-                        </select>
-                        @if ($errors->has('bank'))
-                            <span class="text-danger">{{ $errors->first('bank') }}</span>
-                        @endif
-                    </div>
-                </div>
+                <select id="bank_name_select" name="bank" class="form-control">
+                    <option value="">{{ __('bank.placeholder.select_bank') }}</option>
+                    @foreach ($banks as $b)
+                        <option value="{{ $b['short_name'] }}"
+                            {{ old('bank', $bank->bank ?? '') == $b['short_name'] ? 'selected' : '' }}>
+                            {{ $b['short_name'] }} - {{ $b['name'] }}
+                        </option>
+                    @endforeach
+                </select>
 
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
@@ -180,52 +174,6 @@
 
                 // Inisialisasi saat halaman load
                 syncAccountName();
-            });
-        </script>
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                fetch('/data/indonesia-bank.json')
-                    .then(response => response.json())
-                    .then(data => {
-                        let select = document.getElementById('bank_name_select');
-
-                        // Sort ascending berdasarkan code numerik, yang null taruh bawah
-                        data.sort((a, b) => {
-                            let codeA = a.code || 'ZZZ';
-                            let codeB = b.code || 'ZZZ';
-                            return codeA.localeCompare(b.code);
-                        });
-
-                        let selectedBank = "{{ old('bank', $bank->bank ?? '') }}".trim().toLowerCase();
-
-                        data.forEach(function(bank) {
-                            let option = document.createElement('option');
-                            let code = bank.code ? bank.code.toString().padStart(3, '0') : '---';
-                            option.value = bank.short_name;
-                            option.text = `${code} - ${bank.short_name} (${bank.name})`;
-
-                            // Logic auto select berdasarkan short_name atau full name
-                            let shortName = (bank.short_name || '').toLowerCase();
-                            let fullName = (bank.name || '').toLowerCase();
-
-                            // Cek kecocokan persis dengan short_name atau full_name
-                            if (selectedBank === shortName || selectedBank === fullName ||
-                                fullName.includes(selectedBank) || shortName.includes(selectedBank)) {
-                                option.selected = true;
-                            }
-
-                            select.appendChild(option);
-                        });
-
-                        // Inisialisasi Select2
-                        $(select).select2({
-                            placeholder: "{{ __('bank.placeholder.select_bank') }}",
-                            allowClear: true
-                        });
-                    })
-                    .catch(error => {
-                        console.error('Error loading bank list:', error);
-                    });
             });
         </script>
     @endsection

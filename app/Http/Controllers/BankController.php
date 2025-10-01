@@ -23,8 +23,17 @@ class BankController extends Controller
 
     public function create()
     {
-        $users = USER::All();
-        return view('banks.create', compact('users'));
+        $users = User::all();
+
+        // Baca file json dari public
+        $path = public_path('data/indonesia-bank.json');
+        $banks = [];
+
+        if (file_exists($path)) {
+            $banks = json_decode(file_get_contents($path), true);
+        }
+
+        return view('banks.create', compact('users', 'banks'));
     }
 
     /**
@@ -60,8 +69,15 @@ class BankController extends Controller
     }
     public function edit(Bank $bank)
     {
-        $users = USER::All();
-        return view('banks.edit', compact('bank', 'users'));
+        $users = User::All();
+        // Baca file json dari public
+        $path = public_path('data/indonesia-bank.json');
+        $banks = [];
+
+        if (file_exists($path)) {
+            $banks = json_decode(file_get_contents($path), true);
+        }
+        return view('banks.edit', compact('bank', 'users', 'banks'));
     }
     public function update(BankUpdateRequest $request, Bank $bank)
     {

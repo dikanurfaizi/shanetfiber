@@ -64,14 +64,18 @@
                 {{-- Bank Name --}}
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
-                        <label for="bank"><strong>{{ __('bank.label.bank-name') }} <span
-                                    class="text-danger">*</span></strong></label>
-                        {{-- <select id="bank_name_select" name="bank" class="form-control">
-                            <option value="">{{ __('bank.placeholder.select_bank') }}</option>
-                        </select> --}}
+                        <label for="bank">
+                            <strong>{{ __('bank.label.bank-name') }} <span class="text-danger">*</span></strong>
+                        </label>
                         <select id="bank_name_select" name="bank" class="form-control">
                             <option value="">{{ __('bank.placeholder.select_bank') }}</option>
+                            @foreach ($banks as $bank)
+                                <option value="{{ $bank['short_name'] }}">
+                                    {{ $bank['short_name'] }} - {{ $bank['name'] }}
+                                </option>
+                            @endforeach
                         </select>
+
                         @if ($errors->has('bank'))
                             <span class="text-danger">{{ $errors->first('bank') }}</span>
                         @endif
@@ -156,36 +160,6 @@
                     userSelect.classList.remove('is-invalid'); // Remove invalid class from dropdown
                     accountName.classList.remove('is-invalid'); // Remove invalid class from account name
                 }
-            });
-        </script>
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                fetch('/data/indonesia-bank.json')
-                    .then(response => response.json())
-                    .then(data => {
-                        let select = document.getElementById('bank_name_select');
-
-                        // Urutkan code bank
-                        .datasort((a, b) => a.code.localeCompare(b.code));
-
-                        data.forEach(function(bank) {
-                            let option = document.createElement('option');
-                            option.value = bank.short_name;
-                            option.text = bank.code ?
-                                `${bank.code} - ${bank.short_name} (${bank.name})` :
-                                `No Code - ${bank.short_name} (${bank.name})`;
-                            select.appendChild(option);
-                        });
-
-                        // Inisialisasi Select2 setelah data di-load
-                        $(select).select2({
-                            placeholder: "{{ __('bank.placeholder.select_bank') }}",
-                            allowClear: true
-                        });
-                    })
-                    .catch(error => {
-                        console.error('Error loading bank list:', error);
-                    });
             });
         </script>
     @endsection

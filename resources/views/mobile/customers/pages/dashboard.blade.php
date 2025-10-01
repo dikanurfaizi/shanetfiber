@@ -101,7 +101,7 @@
                                             <td>{{ $loop->iteration }}</td>
                                             <td>{{ $billing->billingSubscription->billing_periode }}</td>
                                             <td class="text-right">
-                                                @moneyIDR($billing->paket_price)
+                                                @moneyIDR($billing->total_amount)
                                             </td>
                                             @if ($websystem->payment_gateway === 'enable')
                                                 <td class="text-center">
@@ -116,7 +116,7 @@
                                     @endforeach
                                     <tr class="bg-light">
                                         <td colspan="2" class="text-right"><strong>Total:</strong></td>
-                                        <td class="text-right"><strong>@moneyIDR($billings->sum('paket_price'))</strong></td>
+                                        <td class="text-right"><strong>@moneyIDR($billings->sum('total_amount'))</strong></td>
                                         @if ($websystem->payment_gateway === 'enable')
                                             <td></td>
                                         @endif
