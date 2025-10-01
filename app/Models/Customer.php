@@ -9,6 +9,7 @@ use App\Models\Mikrotik;
 use App\Models\User;
 use App\Models\Member;
 use App\Models\CustomerSubscription;
+use App\Models\Websystem;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -114,5 +115,14 @@ class Customer extends Authenticatable
     public function activityLogs()
     {
         return $this->hasMany(ActivityLog::class);
+    }
+
+    public function getEmailForPayment(): string
+    {
+        $fallbackEmail = Websystem::first()->email ?? 'cs_snf@shanetfiber.co.id';
+
+        return $this->email
+            ?? optional($this->user)->email
+            ?? $fallbackEmail;
     }
 }

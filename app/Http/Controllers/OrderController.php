@@ -294,6 +294,14 @@ class OrderController extends Controller
     {
         $traceId = (string) Str::uuid();
         if (!$billing) {
+            LogHelper::logError(
+                null,
+                ['billing_id' => $order->billing_id ?? null],
+                500,
+                "[Tripay] Billing not found",
+                $traceId ?? null
+            );
+
             return redirect()->back()->with('error', 'Billing not found.');
         }
 
@@ -321,24 +329,29 @@ class OrderController extends Controller
         ];
 
         LogHelper::logInfo(null, [
-            'trace_id'       => $traceId,
             'order_number'   => $orderNumber,
             'customer_id'    => $billing->customer_id,
             'billing_id'     => $billing->id,
             'total_amount'   => (int) $billing->total_amount,
             'payment_method' => $request->input('payment_method'),
             'payment_channel' => $request->input('payment_channel'),
-        ], 200, '[Tripay] Create Transaction Request');
+        ], 200, '[Tripay] Create Transaction Request', $traceId);
 
         $tripay = new TripayController();
         $signature = $tripay->getSignature($tempOrder);
         $tempOrder['signature'] = $signature;
 
+        LogHelper::logInfo(null, [
+            'name' => optional($customer)->name,
+            'email' => $customer->getEmailForPayment(),
+            'contact' => optional($customer)->contac
+        ], 200, "[Tripay] Start to Request Transaction", $traceId);
+
         // Kirim request ke Tripay
         $reqTransaction = $tripay->requestTransaction(
             $tempOrder,
             optional($customer)->name,
-            optional($customer)->email ?? $customer->user->email,
+            $customer->getEmailForPayment(),
             optional($customer)->contact
         );
 
@@ -346,24 +359,29 @@ class OrderController extends Controller
 
         // Jika gagal
         if (!is_array($reqTransaction)) {
+            $message = $reqTransaction['original']['message']
+                ?? $reqTransaction['message']
+                ?? 'Tripay transaction response is not valid.';
+
             LogHelper::logError(
                 null,
                 [
-                    'customer_id' => $customer?->id,
-                    'customer_name' => optional($customer)->name,
+                    'customer_id'     => $customer?->id,
+                    'customer_name'   => optional($customer)->name,
                     'customer_contact' => optional($customer)->contact,
-                    'billing_id'  => $billing->id,
-                    'payment_method' => $request->input('payment_method'),
+                    'billing_id'      => $billing->id,
+                    'payment_method'  => $request->input('payment_method'),
                     'payment_channel' => $request->input('payment_channel'),
-                    'email' => optional($customer)->email ?? $customer->user->email,
-                    'raw_response' => json_encode($reqTransaction),
-                    'error' => 'Tripay transaction response is not valid.'
+                    'email'           => optional($customer)->email ?? optional($customer->user)->email,
+                    'raw_response'    => json_encode($reqTransaction),
+                    'error'           => $message
                 ],
                 500,
-                "Gagal membuat transaksi Tripay."
+                "Gagal membuat transaksi Tripay.",
+                $traceId
             );
 
-            return redirect()->back()->with('error', 'Gagal membuat transaksi.');
+            return redirect()->back()->with('error', "Failed to create transaction. Because: {$message}");
         }
 
         // Kalau berhasil, simpan order ke DB

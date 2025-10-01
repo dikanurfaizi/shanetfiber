@@ -234,10 +234,28 @@ class TripayController extends Controller
             ? $tripay->tripays_sandbox_private_key
             : $tripay->tripays_private_key;
 
-        $signature = hash_hmac('sha256', $tripay->tripays_merchant_id . $order['number'] . $order['total_price'], $tripay_private_key);
+        // Log sebelum generate signature
+        LogHelper::logInfo(null, [
+            'merchant_id' => $tripay->tripays_merchant_id,
+            'order_number' => $order['number'] ?? null,
+            'order_total_price' => $order['total_price'] ?? null,
+            'private_key' => $tripay_private_key, // hati-hati ini sensitif
+        ], 200, '[Tripay Signature]');
+
+        $signature = hash_hmac(
+            'sha256',
+            $tripay->tripays_merchant_id . $order['number'] . $order['total_price'],
+            $tripay_private_key
+        );
+
+        // Log hasil signature
+        LogHelper::logInfo(null, [
+            'signature' => $signature
+        ], 200, '[Tripay Signature Result]');
 
         return $signature;
     }
+
 
     public function requestTransaction(array $order, $name, $mail, $phone)
     {
@@ -268,9 +286,16 @@ class TripayController extends Controller
                 ]
             ],
             'expired_time' => \Carbon\Carbon::parse($order['created_at'])->addDays(3)->timestamp,
-            // 'expired_time' => time() + (24 * 60 * 60), // 24 jam
             'signature'    => $order['signature'],
         ];
+
+        // 🔹 LOG sebelum request
+        LogHelper::logInfo(null, [
+            'environment' => $isProduction ? 'production' : 'sandbox',
+            'url' => $tripayUri,
+            'api_key' => substr($apiKey, 0, 8) . '****', // mask biar aman
+            'payload' => $data
+        ], 200, '[Tripay RequestTransaction - START]');
 
         $curl = curl_init();
 
@@ -280,8 +305,8 @@ class TripayController extends Controller
             CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey, 'Content-Type: application/json'],
             CURLOPT_POST           => true,
             CURLOPT_POSTFIELDS     => json_encode($data),
-            CURLOPT_SSL_VERIFYPEER => $isProduction,        // hanya verifikasi CA saat production
-            CURLOPT_SSL_VERIFYHOST => $isProduction ? 2 : 0, // hanya verifikasi hostname saat production
+            CURLOPT_SSL_VERIFYPEER => $isProduction,
+            CURLOPT_SSL_VERIFYHOST => $isProduction ? 2 : 0,
             CURLOPT_TIMEOUT        => 5,
             CURLOPT_CONNECTTIMEOUT => 3
         ]);
@@ -291,21 +316,40 @@ class TripayController extends Controller
         curl_close($curl);
 
         if ($error) {
+            LogHelper::logError($tripayUri, [
+                'error' => $error
+            ], 500, '[Tripay RequestTransaction - ERROR]');
             return response()->json(['error' => 'cURL Error: ' . $error], 500);
         }
+
+        // 🔹 LOG raw response
+        LogHelper::logInfo($tripayUri, [
+            'response' => $response
+        ], 200, '[Tripay RequestTransaction - RAW RESPONSE]');
 
         $decodedResponse = json_decode($response, true);
 
         if (!$decodedResponse) {
+            LogHelper::logError($tripayUri, [
+                'raw_response' => $response
+            ], 500, '[Tripay RequestTransaction - INVALID JSON]');
             return response()->json(['error' => 'Invalid response format from Tripay'], 500);
         }
 
         if (!isset($decodedResponse['data'])) {
+            LogHelper::logWarning($tripayUri, [
+                'decoded_response' => $decodedResponse
+            ], 404, '[Tripay RequestTransaction - NO DATA]');
             return response()->json([
                 'error'   => 'Invalid response from Tripay',
                 'message' => $decodedResponse['message'] ?? 'Unknown error',
             ], 500);
         }
+
+        // 🔹 LOG sukses
+        LogHelper::logInfo($tripayUri, [
+            'decoded_response' => $decodedResponse
+        ], 200, '[Tripay RequestTransaction - SUCCESS]');
 
         return $decodedResponse['data'];
     }
