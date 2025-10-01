@@ -17,6 +17,8 @@ use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\DataTransferObjects\WhatsappJobDto;
+use phpDocumentor\Reflection\Types\Null_;
 
 class OrderController extends Controller
 {
@@ -70,7 +72,7 @@ class OrderController extends Controller
                 'customer_id' => $billing->customer_id,
                 'billing_id' => $billing->id,
                 'number' => rand(10000000, 99999999) . str_pad($billing->customer_id . $billing->id,  5, STR_PAD_LEFT),
-                'total_price' => $billing->paket_price + $billing->tax,
+                'total_price' => $billing->total_amount,
                 'payment_status' => 1,
             ]);
             $getOrder = $order->fresh();
@@ -305,21 +307,32 @@ class OrderController extends Controller
         $orderNumber = rand(10000000, 99999999) . str_pad($billing->customer_id . $billing->id, 5, STR_PAD_LEFT);
 
         // Buat objek sementara order (belum simpan ke DB)
-        $tempOrder = new Order([
+        $tempOrder = [
             'customer_id'     => $billing->customer_id,
             'billing_id'      => $billing->id,
             'number'          => $orderNumber,
-            'package'         => $billing->paket_name,
-            'total_price'     => $billing->paket_price + $billing->tax,
+            'package'         => $billing->billingSubscription->customerSubscription->paket->name,
+            'total_price'     => (int) $billing->total_amount,
             'payment_status'  => 1,
             'payment_method'  => $request->input('payment_method'),
             'payment_gateway' => $request->input('payment_channel'),
             'icon_url'        => $request->input('icon_url'),
-        ]);
+            'created_at'      => now(),
+        ];
+
+        LogHelper::logInfo(null, [
+            'trace_id'       => $traceId,
+            'order_number'   => $orderNumber,
+            'customer_id'    => $billing->customer_id,
+            'billing_id'     => $billing->id,
+            'total_amount'   => (int) $billing->total_amount,
+            'payment_method' => $request->input('payment_method'),
+            'payment_channel' => $request->input('payment_channel'),
+        ], 200, '[Tripay] Create Transaction Request');
 
         $tripay = new TripayController();
         $signature = $tripay->getSignature($tempOrder);
-        $tempOrder->signature = $signature;
+        $tempOrder['signature'] = $signature;
 
         // Kirim request ke Tripay
         $reqTransaction = $tripay->requestTransaction(
@@ -358,8 +371,8 @@ class OrderController extends Controller
             'customer_id'     => $billing->customer_id,
             'billing_id'      => $billing->id,
             'number'          => $orderNumber,
-            'package'         => $billing->paket_name,
-            'total_price'     => $billing->paket_price + $billing->tax,
+            'package'         => $billing->billingSubscription->customerSubscription->paket->name,
+            'total_price'     => $billing->total_amount,
             'payment_status'  => 1,
             'payment_method'  => $request->input('payment_method'),
             'payment_gateway' => $request->input('payment_channel'),
@@ -373,7 +386,7 @@ class OrderController extends Controller
             'payment_name'    => $reqTransaction['payment_name'],
             'total_fee'       => $reqTransaction['total_fee'],
             'quantity'        => $reqTransaction['order_items'][0]['quantity'] ?? 1,
-            'total_amount'    => ($reqTransaction['total_fee'] ?? 0) + $billing->paket_price + $billing->tax,
+            'total_amount'    => ($reqTransaction['total_fee'] ?? 0) + $billing->total_amount,
             'qr_string'       => $reqTransaction['qr_string'] ?? null,
             'qr_url'          => $reqTransaction['qr_url'] ?? null,
             'merchant_ref'    => $reqTransaction['merchant_ref'] ?? null,
@@ -382,17 +395,21 @@ class OrderController extends Controller
 
         $getOrder = $order->fresh();
 
-        ProcessWhatsappMessageJob::dispatch(
-            $customer->id,
-            'create_order',
-            $traceId,
-            $billing->id,
-            null,
-            null,
-            null,
-            null,
-            $getOrder->id
-        )->onQueue('default');
+        $jobData = new WhatsappJobDto(
+            customerId: (int) $billing->customer_id,
+            action: 'create_order',
+            traceId: (string) $traceId,
+            billingId: (int) $billing->id,
+            receiptId: null,
+            receiptData: null,
+            startDate: null,
+            endDate: null,
+            orderId: $getOrder->id,
+            oldPaketName: null,
+            oldPaketPrice: null
+        );
+
+        ProcessWhatsappMessageJob::dispatch($jobData)->onQueue('whatsapp_single');
 
         return redirect()->route('customer.pages.order.tripays.show', $order->id)
             ->with('success', 'Order created successfully.');

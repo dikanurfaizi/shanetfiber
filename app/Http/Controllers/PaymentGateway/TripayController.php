@@ -163,7 +163,6 @@ class TripayController extends Controller
     {
         $tripay = $this->getTripayData();
 
-        // Tentukan URL & API Key berdasarkan mode (Production / Sandbox)
         $url = $tripay->tripays_is_production === 'false'
             ? config('tripay.sandbox_url') . '/merchant/payment-channel'
             : config('tripay.production_url') . '/merchant/payment-channel';
@@ -173,6 +172,12 @@ class TripayController extends Controller
             : $tripay->tripays_api_key;
 
         $isProduction = $tripay->tripays_is_production === 'true';
+
+        LogHelper::logInfo(null, [
+            'url' => $url,
+            'isProduction' => $isProduction,
+            'apiKey_prefix' => substr($apiKey, 0, 5) . '***', // biar aman
+        ], 200, '[Tripay] Request Payment Channels');
 
         $curl = curl_init();
 
@@ -184,8 +189,8 @@ class TripayController extends Controller
             CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey],
             CURLOPT_FAILONERROR    => false,
             CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
-            CURLOPT_SSL_VERIFYPEER => $isProduction,        // hanya verifikasi CA saat production
-            CURLOPT_SSL_VERIFYHOST => $isProduction ? 2 : 0, // hanya verifikasi hostname saat production
+            CURLOPT_SSL_VERIFYPEER => $isProduction,
+            CURLOPT_SSL_VERIFYHOST => $isProduction ? 2 : 0,
             CURLOPT_TIMEOUT        => 5,
             CURLOPT_CONNECTTIMEOUT => 3,
         ));
@@ -195,23 +200,32 @@ class TripayController extends Controller
 
         curl_close($curl);
 
-        // Cek apakah respons cURL valid
         if ($error) {
+            LogHelper::logError(null, ['error' => $error], 500, '[Tripay] CURL Error');
             return response()->json(['error' => $error], 500);
         }
 
-        // Decode respons JSON
+        LogHelper::logInfo(null, [
+            'response' => $response
+        ], 200, '[Tripay] Raw Response');
+
         $decodedResponse = json_decode($response, true);
 
-        // Pastikan respons memiliki key "data"
         if (!isset($decodedResponse['data'])) {
+            LogHelper::logWarning(null, [
+                'decoded' => $decodedResponse
+            ], 500, '[Tripay] Invalid Response');
             return response()->json(['error' => 'Invalid response from Tripay'], 500);
         }
+
+        LogHelper::logInfo(null, [
+            'data_count' => count($decodedResponse['data'])
+        ], 200, '[Tripay] Success Response');
 
         return $decodedResponse['data'] ?? [];
     }
 
-    public function getSignature(Order $order)
+    public function getSignature(array $order)
     {
         $tripay = $this->getTripayData();
 
@@ -220,12 +234,12 @@ class TripayController extends Controller
             ? $tripay->tripays_sandbox_private_key
             : $tripay->tripays_private_key;
 
-        $signature = hash_hmac('sha256', $tripay->tripays_merchant_id . $order->number . $order->total_price, $tripay_private_key);
+        $signature = hash_hmac('sha256', $tripay->tripays_merchant_id . $order['number'] . $order['total_price'], $tripay_private_key);
 
         return $signature;
     }
 
-    public function requestTransaction(Order $order, $name, $mail, $phone)
+    public function requestTransaction(array $order, $name, $mail, $phone)
     {
         $tripay = $this->getTripayData();
 
@@ -240,22 +254,22 @@ class TripayController extends Controller
         $isProduction = $tripay->tripays_is_production === 'true';
 
         $data = [
-            'method'         => $order->payment_method,
-            'merchant_ref'   => $order->number,
-            'amount'         => $order->total_price,
+            'method'         => $order['payment_method'],
+            'merchant_ref'   => $order['number'],
+            'amount'         => (int) $order['total_price'],
             'customer_name'  => $name,
             'customer_email' => $mail,
             'customer_phone' => $this->manipulateContact($phone) ?? null,
             'order_items'    => [
                 [
-                    'name'     => $order->package,
-                    'price'    => $order->total_price,
+                    'name'     => $order['package'],
+                    'price'    => (int) $order['total_price'],
                     'quantity' => 1,
                 ]
             ],
-            'expired_time' => \Carbon\Carbon::parse($order->created_at)->addDays(3)->timestamp,
+            'expired_time' => \Carbon\Carbon::parse($order['created_at'])->addDays(3)->timestamp,
             // 'expired_time' => time() + (24 * 60 * 60), // 24 jam
-            'signature'    => $order->signature,
+            'signature'    => $order['signature'],
         ];
 
         $curl = curl_init();

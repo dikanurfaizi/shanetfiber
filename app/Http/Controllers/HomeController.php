@@ -89,14 +89,19 @@ class HomeController extends Controller
         $packageSummary = $this->calculatePackageSummary();
 
         // Get last billing data
-        [$lastBillingPeriode, $lastBillings] = $this->getLastBillingData();
+        [$lastBillingPeriode, $lastBillings] = $this->getLastBillingData($traceId);
 
         // Calculate billing summary
         $summaryTotals = $this->calculateBillingSummary($lastBillings, $traceId);
 
         // Initialize admin billing summary
-        $adminBillingSummary = $user->can('view-billings-widget-total') ?
-            $this->getOwnerBillingSummary($lastBillingPeriode->id) : null;
+        $adminBillingSummary = null;
+
+        if ($user && $user->can('view-billings-widget-total') && $lastBillingPeriode) {
+            $adminBillingSummary = $this->getOwnerBillingSummary($lastBillingPeriode->id);
+        } else if (!$lastBillingPeriode) {
+            LogHelper::logWarning(null, ['user_id' => $user->id], 404, 'No last billing period found for admin summary', $traceId);
+        }
 
         $movementData = $this->calculateCustomerRegistrationChurnData($request, $traceId);
 
@@ -292,19 +297,24 @@ class HomeController extends Controller
             ->toArray();
     }
 
-    private function getLastBillingData()
+    private function getLastBillingData($traceId)
     {
+        $startTime = microtime(true); // start time
+
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
         $userId = $auth['userId'];
 
-        $now = Carbon::now();
-        $bulanTahun = $now->format('F Y'); // Contoh: "August 2025"
-
-        $billingPeriode = BillingPeriode::where('name', $bulanTahun)->first();
+        $billingPeriode = BillingPeriode::orderBy('created_at', 'desc')->first();
 
         if (!$billingPeriode) {
-            // Jika tidak ada billing periode, return kosong atau sesuai kebutuhan
+            $duration = microtime(true) - $startTime; // lama eksekusi
+            LogHelper::logInfo(null, [
+                'duration' => $duration,
+                'billingPeriode' => $billingPeriode,
+                'lastBillings' => collect(),
+            ], 200, "Details getLastBillingData (no billing period found)", $traceId, $duration);
+
             return [null, collect()];
         }
 
@@ -327,11 +337,21 @@ class HomeController extends Controller
 
         $lastBillings = $billingQuery->get();
 
+        $duration = microtime(true) - $startTime;
+
+        LogHelper::logInfo(null, [
+            'duration' => $duration, // durasi eksekusi dalam detik
+            'billingPeriode' => $billingPeriode,
+            'lastBillings' => $lastBillings,
+            'userId' => $userId,
+        ], 200, "Details getLastBillingData", $traceId, $duration);
+
         return [$billingPeriode, $lastBillings];
     }
 
     private function calculateCustomerSummary()
     {
+        $startTime = microtime(true); // start time
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
         $userId = $auth['userId'];
@@ -385,6 +405,7 @@ class HomeController extends Controller
 
     private function calculatePackageSummary()
     {
+        $startTime = microtime(true); // start time
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
         $userId = $auth['userId'];
@@ -412,6 +433,7 @@ class HomeController extends Controller
 
     private function calculateCustomerRegistrationChurnData($request, $traceId): array
     {
+        $startTime = microtime(true); // start time
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
         $userId = $auth['userId'];
@@ -501,6 +523,7 @@ class HomeController extends Controller
 
     private function calculateBillingSummary($billings, $traceId)
     {
+        $startTime = microtime(true); // start time
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
 
@@ -536,14 +559,12 @@ class HomeController extends Controller
 
     public function getBillingMonthly()
     {
+        $startTime = microtime(true); // start time
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
         $userId = $auth['userId'];
 
-        $now = Carbon::now();
-        $bulanTahun = $now->format('F Y');
-
-        $billingPeriode = BillingPeriode::where('name', $bulanTahun)->first();
+        $billingPeriode = BillingPeriode::orderBy('created_at', 'desc')->first();
 
         // Menentukan billing summary berdasarkan permission
         $billingSummary = match (true) {
@@ -573,6 +594,7 @@ class HomeController extends Controller
 
     public function getCustomerRegistrationChurnData(Request $request)
     {
+        $startTime = microtime(true); // start time
         $traceId = (string) Str::uuid();
         try {
             return response()->json($this->calculateCustomerRegistrationChurnData($request, $traceId));

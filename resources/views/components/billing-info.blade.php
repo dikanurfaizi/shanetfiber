@@ -20,7 +20,7 @@
         @if ($websystem->enable_tax === 'true')
             <tr>
                 <td>Harga</td>
-                <td><b>@moneyIDR($billing->paket_price)</b></td>
+                <td><b>@moneyIDR($billing->base_price)</b></td>
             </tr>
             <tr>
                 <td>PPN</td>
@@ -30,7 +30,7 @@
 
         <tr>
             <td>Total Price</td>
-            <td><b>@moneyIDR($billing->paket_price + $billing->tax)</b></td>
+            <td><b>@moneyIDR($billing->total_amount)</b></td>
         </tr>
         <tr>
             <td>Status Pembayaran</td>
