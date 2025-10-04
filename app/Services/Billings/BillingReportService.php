@@ -72,7 +72,7 @@ class BillingReportService
         })->toArray();
     }
 
-    public function generatePdf($query, array $searchParams, string $traceId = null)
+    public function generatePdf($query, array $searchParams, string $traceId)
     {
         $startTime = microtime(true);
 

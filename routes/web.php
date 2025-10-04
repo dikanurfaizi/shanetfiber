@@ -150,7 +150,8 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::post('/testcon', [TestConnectionController::class, 'testConn'])->name('test-con');
         Route::post('server/cek-online', [TestConnectionController::class, 'checkOnline'])->name('check-online');
         Route::get('/server/{mikrotik:slug}', [MikrotikController::class, 'show'])->name('mikrotiks.show');
-        Route::get('/server/{mikrotik:slug}/get-resource', [SystemController::class, 'routerResource'])->name('mikrotik.resources');
+        Route::post('/server/{mikrotik}/update-cache', [SystemController::class, 'updateCache'])->name('router.update.cache');
+        Route::get('/server/{mikrotik}/resources', [SystemController::class, 'routerResource'])->name('router.resources');
         Route::get('/server/{mikrotik:slug}/time', [SystemController::class, 'getTimeRouter'])->name('mikrotik.time');
         Route::get('/server/traffic/{mikrotik:slug}/get-monitoring', [SystemController::class, 'mikrotikTrafficInterface'])->name('mikrotik.traffic_interface');
 
@@ -401,5 +402,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('api/fetch-account-bank', [DropdownController::class, 'fetchAccountBank'])->name('fetch.account.bank');
     Route::post('api/fetch-interfaces', [DropdownController::class, 'fetchInterface'])->name('fetch.interface');
     Route::post('api/fetch-monthly-summary', [HomeController::class, 'getBillingMonthly'])->name('monthly.summary');
+    Route::post('api/trigger-fetch-routers', [HomeController::class, 'triggerDashboard'])->name('dashboard.trigger');
+    Route::get('api/fetch-routers', [HomeController::class, 'getDashboardCache'])->name('dashboard.cache');
     Route::post('api/customer-registration-churn-data', [HomeController::class, 'getCustomerRegistrationChurnData'])->name('customer.registration');
 });

@@ -352,29 +352,27 @@ class SecretController extends Controller
                 'mikrotik_id' => $mikrotik->id
             ], 200, 'Counting active PPP secrets', $traceId);
 
-            $allPppActive = $this->secretService->getPppActive($mikrotik, $traceId);
-            $allPppActiveCount = count($allPppActive);
-
-            LogHelper::logInfo(null, [
-                'mikrotik_id' => $mikrotik->id,
-                'active_secrets' => $allPppActiveCount
-            ], 200, 'Active PPP secrets count retrieved', $traceId);
+            $allPppActive = $this->secretService->getPppActive($mikrotik, $traceId) ?? [];
+            $allPppActiveCount = is_countable($allPppActive) ? count($allPppActive) : 0;
 
             return response()->json([
+                'status'            => 'success',
                 'allPppActiveCount' => $allPppActiveCount,
-            ]);
-        } catch (Exception $e) {
+            ], 200);
+        } catch (\Throwable $e) {
+            // Log lengkap biar tau error teknisnya
             LogHelper::logError(null, [
-                'mikrotik_id' => $mikrotik->id,
-                'error_code' => $e->getCode(),
+                'mikrotik_id'   => $mikrotik->id,
+                'error_code'    => $e->getCode(),
                 'error_message' => $e->getMessage(),
-                'error_trace' => $e->getTraceAsString()
             ], 500, 'Failed to count active PPP secrets', $traceId);
 
+            // Tapi response ke frontend tetap aman
             return response()->json([
-                'error' => 'Failed to retrieve active secret count',
-                'allPppActiveCount' => 0
-            ], 500);
+                'status'            => 'error',
+                'message'           => 'Router tidak dapat dihubungi (timeout/connection refused)',
+                'allPppActiveCount' => 0,
+            ], 200); // <- ubah ke 200 supaya frontend tetap bisa update UI
         }
     }
 

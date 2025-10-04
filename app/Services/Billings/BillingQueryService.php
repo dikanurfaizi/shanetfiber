@@ -4,14 +4,11 @@ namespace App\Services\Billings;
 
 use App\Models\Billing\Billing;
 use App\Models\Billing\BillingPeriode;
-use App\Models\Billing\BillingSubscriptionPeriode;
 use App\Models\User;
-use App\Models\Customer;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Helpers\UserAuth;
 use App\Helpers\LogHelper;
-use Illuminate\Support\Facades\DB;
 
 class BillingQueryService
 {
@@ -37,8 +34,8 @@ class BillingQueryService
             });
         }
 
-        $this->applySearchFilters($query, $request, $traceId, $showAllPeriods);
-        $this->applyOrdering($query);
+        $query = $this->applySearchFilters($query, $request, $traceId, $showAllPeriods);
+        $query = $this->applyOrdering($query);
 
         return $query;
     }
@@ -98,12 +95,12 @@ class BillingQueryService
                 if ($userId === 'Not Linked User' || $userId === 0) {
                     $q->whereNull('user_id');
                 } else {
-                    $q->where('user_id', function ($subQuery) use ($userId) {
-                        $subQuery->select('id')->from('users')->where('name', $userId)->limit(1);
-                    });
+                    $q->where('user_id', $userId);
                 }
             });
         }
+
+        return $query;
     }
 
     public function prepareSearchParams(Request $request, bool $showAllPeriods = false): array
@@ -123,8 +120,8 @@ class BillingQueryService
         // Konversi admin_name (ID -> nama user)
         $searchUserId = null;
         if ($request->filled('admin_name')) {
-            $userById = User::find($request->admin_name);
-            $searchUserId = $userById?->name;
+            $userById = User::where('name', $request->admin_name)->first();
+            $searchUserId = $userById?->id;
         }
 
         // Fallback: jika tidak ada dari request, pakai user yang login jika punya izin
@@ -178,22 +175,6 @@ class BillingQueryService
         }
     }
 
-    private function applyUserFilter($query, $userId)
-    {
-        $query->whereHas('customer', function ($q) use ($userId) {
-            $q->whereColumn('billings.customer_id', 'customers.id')
-                ->whereNull('customers.deleted_at');
-
-            if ($userId === 'Not Linked User' || $userId === 0) {
-                $q->whereNull('customers.user_id');
-            } else {
-                $q->where('customers.user_id', function ($subQuery) use ($userId) {
-                    $subQuery->select('id')->from('users')->where('name', $userId)->limit(1);
-                });
-            }
-        });
-    }
-
     private function applyOrdering($query)
     {
         $query->leftJoin('billing_subscription_periodes as bsp', 'billings.billing_subscription_id', '=', 'bsp.id')
@@ -202,6 +183,8 @@ class BillingQueryService
             ->orderByDesc('billing_periodes.created_at')
             ->orderBy('customers.name', 'asc')
             ->select('billings.*'); // Pastikan select hanya kolom billing
+
+        return $query;
     }
 
     private function getUserAuthData()

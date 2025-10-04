@@ -136,12 +136,17 @@ class TestConnectionService
      * @throws BadCredentialsException
      * @throws ConfigException
      */
-    public function checkOnline($router, string $traceId)
+    public function checkOnline($router, string $traceId): array
     {
         try {
             $client = $this->getMikrotik($router, $traceId);
+
             if (!$client) {
-                throw new \Exception('Mikrotik client is null. Connection failed.');
+                return [
+                    'status' => false,
+                    'message' => 'Mikrotik client is null. Connection failed.',
+                    'data' => null,
+                ];
             }
 
             $query = (new Query('/system/resource/print'));
@@ -159,7 +164,11 @@ class TestConnectionService
                 $traceId
             );
 
-            return $result;
+            return [
+                'status' => true,
+                'message' => 'Mikrotik is online',
+                'data' => $result[0] ?? [],
+            ];
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
@@ -179,7 +188,12 @@ class TestConnectionService
                 "Mikrotik is offline or unreachable",
                 $traceId
             );
-            return [];
+
+            return [
+                'status' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+            ];
         }
     }
 }

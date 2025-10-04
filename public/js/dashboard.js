@@ -151,199 +151,292 @@ async function fetchMonthlySummary() {
     }
 }
 
-// Fungsi untuk Router Status
-function initializeRouterStatus() {
-    $.ajaxSetup({
-        headers: {
-            "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content"),
-        },
-    });
-
-    // Event click check online
-    $(document).on("click", "#check-online", function (e) {
-        e.preventDefault();
-        const selectedRouterId = $(this).data("id");
-
-        const url = window.routes.checkOnline.replace(
-            "__ID__",
-            selectedRouterId
-        );
-
-        $.ajax({
-            url: url,
-            method: "POST",
-            data: { id: selectedRouterId },
-            success: function (response) {
-                new Notify({
-                    status: response.status,
-                    title: response.title,
-                    text: response.message,
-                    effect: "slide",
-                    speed: 500,
-                    showCloseButton: true,
-                    autotimeout: 5000,
-                    autoclose: true,
-                });
-            },
-            error: function (data) {
-                console.error("[CHECK ONLINE ERROR]", data);
-                new Notify({
-                    status: "error",
-                    title: "Connection failed!",
-                    text: data.responseJSON?.message || "An error occurred",
-                    effect: "slide",
-                    speed: 500,
-                    showCloseButton: true,
-                    autotimeout: 5000,
-                    autoclose: true,
-                });
-            },
-        });
-    });
-
-    // Router status update
-    function updateRouterData(routerSlug) {
-        $("#loading_ppp_secret-" + routerSlug).removeClass("d-none");
-        $("#loading_ppp_non_active-" + routerSlug).removeClass("d-none");
-        $("#loading_ppp_active-" + routerSlug).removeClass("d-none");
-
-        let allPppSecretsCount = 0;
-        let allPppActiveCount = 0;
-
-        function updateCountPppSecret() {
-            return $.ajax({
-                url: window.routes.getPppSecrets.replace(
-                    "__ROUTER__",
-                    routerSlug
-                ),
-                method: "GET",
-                success: function (response) {
-                    allPppSecretsCount = response.allPppSecretsCount;
-                    $("#ppp-secrets-count-" + routerSlug).text(
-                        allPppSecretsCount
-                    );
-
-                    // console.log(
-                    //     `[PPP SECRETS] ${routerSlug} → total =`,
-                    //     allPppSecretsCount
-                    // );
-                },
-            });
-        }
-
-        function updateCountPppActive() {
-            return $.ajax({
-                url: window.routes.getPppActive.replace(
-                    "__ROUTER__",
-                    routerSlug
-                ),
-                method: "GET",
-                success: function (response) {
-                    allPppActiveCount = response.allPppActiveCount;
-                    $("#ppp-secrets-active-count-" + routerSlug).text(
-                        allPppActiveCount
-                    );
-
-                    // console.log(
-                    //     `[PPP ACTIVE] ${routerSlug} → active =`,
-                    //     allPppActiveCount
-                    // );
-                },
-            });
-        }
-
-        function updateCountPppNonActive() {
-            const total = allPppSecretsCount - allPppActiveCount;
-            $("#ppp-secrets-non-active-count-" + routerSlug).text(total);
-
-            // console.log(`[PPP NON ACTIVE] ${routerSlug} → non-active =`, total);
-        }
-
-        function updateSystemResources() {
-            return $.ajax({
-                url: window.routes.mikrotikResources.replace(
-                    "__ROUTER__",
-                    routerSlug
-                ),
-                method: "GET",
-                success: function (response) {
-                    if (response.resources?.length > 0) {
-                        const r = response.resources[0];
-                        const memoryUse = r.totalMemory - r.freeMemory;
-                        const memoryPercent = Math.round(
-                            (memoryUse / r.totalMemory) * 100
-                        );
-                        const hddUse = r.totalHdd - r.freeHdd;
-                        const hddPercent = Math.round(
-                            (hddUse / r.totalHdd) * 100
-                        );
-
-                        $("#cpu-bar-" + routerSlug).css(
-                            "width",
-                            r.cpuLoad + "%"
-                        );
-                        $("#cpu-" + routerSlug).text(r.cpuLoad + "%");
-
-                        $("#ram-bar-" + routerSlug).css(
-                            "width",
-                            memoryPercent + "%"
-                        );
-                        $("#memory-" + routerSlug).text(
-                            r.memoryUsage + "/" + r.totalMemorySpace
-                        );
-
-                        $("#hdd-bar-" + routerSlug).css(
-                            "width",
-                            hddPercent + "%"
-                        );
-                        $("#hdd-" + routerSlug).text(
-                            r.hddUsage + "/" + r.totalHddSpace
-                        );
-
-                        $("#boardname-" + routerSlug).text(r.boardName);
-                        $("#uptime-" + routerSlug).text(r.uptime);
-                        $("#status-" + routerSlug)
-                            .removeClass("text-danger")
-                            .addClass("text-success");
-
-                        // console.log(
-                        //     `[RESOURCES] ${routerSlug} → CPU: ${r.cpuLoad}% | RAM: ${memoryPercent}% | HDD: ${hddPercent}%`
-                        // );
-                    }
-                },
-            });
-        }
-
-        async function updateData() {
-            await updateCountPppActive();
-            await updateCountPppSecret();
-            updateCountPppNonActive();
-            await updateSystemResources();
-        }
-
-        updateData().catch(console.error);
-
-        setInterval(updateSystemResources, 10000);
-        setInterval(updateCountPppNonActive, 5000);
-        setInterval(() => {
-            updateCountPppSecret();
-            updateCountPppActive();
-        }, 10000);
-
-        $(document).ajaxStop(function () {
-            $("#loading_ppp_secret-" + routerSlug).addClass("d-none");
-            $("#loading_ppp_non_active-" + routerSlug).addClass("d-none");
-            $("#loading_ppp_active-" + routerSlug).addClass("d-none");
-        });
-    }
-
-    // Init routers
-    if (window.onlineRouters && window.onlineRouters.length > 0) {
-        window.onlineRouters.forEach(function (router) {
-            updateRouterData(router.slug); // ✅ passing slug saja
-        });
-    }
+// Trigger update cache tiap 20 detik
+function scheduleTriggerCache(routerSlug) {
+    setInterval(() => {
+        triggerUpdateCache(routerSlug);
+    }, 20000); // tiap 20 detik
 }
+
+function triggerUpdateCache(routerSlug) {
+    $.post(
+        window.routes.updateCache.replace("__ROUTER__", routerSlug),
+        {
+            _token: $('meta[name="csrf-token"]').attr("content"),
+        },
+        function (res) {
+            // console.log("[CACHE UPDATED]", res);
+        }
+    ).fail(function (err) {
+        // console.error("[CACHE UPDATE ERROR]", err);
+    });
+}
+
+// polling untuk ambil data dari cache
+function pollResource(routerSlug) {
+    setInterval(() => {
+        $.get(
+            window.routes.getResource.replace("__ROUTER__", routerSlug),
+            function (res) {
+                // console.log("[CACHE DATA]", res);
+                if (res.resources?.length > 0) {
+                    updateSystemResources(routerSlug, res.resources[0]);
+                }
+            }
+        ).fail(function (err) {
+            // console.error("[CACHE ERROR]", err);
+        });
+    }, 10000); // tiap 10 detik
+}
+
+function updateSystemResources(routerSlug, r) {
+    const memoryUse = r.totalMemory - r.freeMemory;
+    const memoryPercent = Math.round((memoryUse / r.totalMemory) * 100);
+
+    const hddUse = r.totalHdd - r.freeHdd;
+    const hddPercent = Math.round((hddUse / r.totalHdd) * 100);
+
+    // CPU
+    $("#cpu-bar-" + routerSlug).css("width", r.cpuLoad + "%");
+    $("#cpu-" + routerSlug).text(r.cpuLoad + "%");
+
+    // RAM
+    $("#ram-bar-" + routerSlug).css("width", memoryPercent + "%");
+    $("#memory-" + routerSlug).text(r.memoryUsage + "/" + r.totalMemorySpace);
+
+    // HDD
+    $("#hdd-bar-" + routerSlug).css("width", hddPercent + "%");
+    $("#hdd-" + routerSlug).text(r.hddUsage + "/" + r.totalHddSpace);
+
+    // Board & uptime
+    $("#boardname-" + routerSlug).text(r.boardName);
+    $("#uptime-" + routerSlug).text(r.uptime);
+
+    // Status
+    $("#status-" + routerSlug)
+        .removeClass("text-danger")
+        .addClass("text-success");
+}
+
+// init
+window.mikrotiks.forEach((router) => {
+    triggerUpdateCache(router.slug); // langsung trigger sekali saat load
+    scheduleTriggerCache(router.slug); // rutin trigger tiap 20 detik
+    pollResource(router.slug); // rutin ambil cache tiap 10 detik
+});
+
+// // Fungsi untuk Router Status
+// function initializeRouterStatus() {
+//     $.ajaxSetup({
+//         headers: {
+//             "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content"),
+//         },
+//     });
+
+//     // Event click check online
+//     $(document).on("click", "#check-online", function (e) {
+//         e.preventDefault();
+//         const selectedRouterId = $(this).data("id");
+
+//         const url = window.routes.checkOnline.replace(
+//             "__ID__",
+//             selectedRouterId
+//         );
+
+//         console.log(
+//             "[CHECK ONLINE] Triggered for router:",
+//             selectedRouterId,
+//             "URL:",
+//             url
+//         );
+
+//         $.ajax({
+//             url: url,
+//             method: "POST",
+//             data: { id: selectedRouterId },
+//             success: function (response) {
+//                 console.log("[CHECK ONLINE SUCCESS]", response);
+
+//                 new Notify({
+//                     status: response.status,
+//                     title: response.title,
+//                     text: response.message,
+//                     effect: "slide",
+//                     speed: 500,
+//                     showCloseButton: true,
+//                     autotimeout: 5000,
+//                     autoclose: true,
+//                 });
+//             },
+//             error: function (data) {
+//                 console.error("[CHECK ONLINE ERROR]", data);
+//                 new Notify({
+//                     status: "error",
+//                     title: "Connection failed!",
+//                     text: data.responseJSON?.message || "An error occurred",
+//                     effect: "slide",
+//                     speed: 500,
+//                     showCloseButton: true,
+//                     autotimeout: 5000,
+//                     autoclose: true,
+//                 });
+//             },
+//         });
+//     });
+
+//     // Router status update
+//     function updateRouterData(routerSlug) {
+//         console.log("[INIT ROUTER DATA]", routerSlug);
+
+//         $("#loading_ppp_secret-" + routerSlug).removeClass("d-none");
+//         $("#loading_ppp_non_active-" + routerSlug).removeClass("d-none");
+//         $("#loading_ppp_active-" + routerSlug).removeClass("d-none");
+
+//         let allPppSecretsCount = 0;
+//         let allPppActiveCount = 0;
+
+//         function updateCountPppSecret() {
+//             console.log(`[REQ] Get PPP Secrets for ${routerSlug}`);
+//             return $.ajax({
+//                 url: window.routes.getPppSecrets.replace(
+//                     "__ROUTER__",
+//                     routerSlug
+//                 ),
+//                 method: "GET",
+//                 success: function (response) {
+//                     console.log(
+//                         `[RES] PPP Secrets for ${routerSlug}`,
+//                         response
+//                     );
+//                     allPppSecretsCount = response.allPppSecretsCount;
+//                     $("#ppp-secrets-count-" + routerSlug).text(
+//                         allPppSecretsCount
+//                     );
+//                 },
+//                 error: function (err) {
+//                     console.error(`[ERR] PPP Secrets for ${routerSlug}`, err);
+//                 },
+//             });
+//         }
+
+//         function updateCountPppActive() {
+//             console.log(`[REQ] Get PPP Active for ${routerSlug}`);
+//             return $.ajax({
+//                 url: window.routes.getPppActive.replace(
+//                     "__ROUTER__",
+//                     routerSlug
+//                 ),
+//                 method: "GET",
+//                 success: function (response) {
+//                     console.log(`[RES] PPP Active for ${routerSlug}`, response);
+//                     allPppActiveCount = response.allPppActiveCount;
+//                     $("#ppp-secrets-active-count-" + routerSlug).text(
+//                         allPppActiveCount
+//                     );
+//                 },
+//                 error: function (err) {
+//                     console.error(`[ERR] PPP Active for ${routerSlug}`, err);
+//                 },
+//             });
+//         }
+
+//         function updateCountPppNonActive() {
+//             const total = allPppSecretsCount - allPppActiveCount;
+//             console.log(`[CALC] Non Active for ${routerSlug} = ${total}`);
+//             $("#ppp-secrets-non-active-count-" + routerSlug).text(total);
+//         }
+
+//         function updateSystemResources() {
+//             console.log(`[REQ] Get Resources for ${routerSlug}`);
+//             return $.ajax({
+//                 url: window.routes.mikrotikResources.replace(
+//                     "__ROUTER__",
+//                     routerSlug
+//                 ),
+//                 method: "GET",
+//                 success: function (response) {
+//                     console.log(`[RES] Resources for ${routerSlug}`, response);
+
+//                     if (response.resources?.length > 0) {
+//                         const r = response.resources[0];
+//                         const memoryUse = r.totalMemory - r.freeMemory;
+//                         const memoryPercent = Math.round(
+//                             (memoryUse / r.totalMemory) * 100
+//                         );
+//                         const hddUse = r.totalHdd - r.freeHdd;
+//                         const hddPercent = Math.round(
+//                             (hddUse / r.totalHdd) * 100
+//                         );
+
+//                         $("#cpu-bar-" + routerSlug).css(
+//                             "width",
+//                             r.cpuLoad + "%"
+//                         );
+//                         $("#cpu-" + routerSlug).text(r.cpuLoad + "%");
+
+//                         $("#ram-bar-" + routerSlug).css(
+//                             "width",
+//                             memoryPercent + "%"
+//                         );
+//                         $("#memory-" + routerSlug).text(
+//                             r.memoryUsage + "/" + r.totalMemorySpace
+//                         );
+
+//                         $("#hdd-bar-" + routerSlug).css(
+//                             "width",
+//                             hddPercent + "%"
+//                         );
+//                         $("#hdd-" + routerSlug).text(
+//                             r.hddUsage + "/" + r.totalHddSpace
+//                         );
+
+//                         $("#boardname-" + routerSlug).text(r.boardName);
+//                         $("#uptime-" + routerSlug).text(r.uptime);
+//                         $("#status-" + routerSlug)
+//                             .removeClass("text-danger")
+//                             .addClass("text-success");
+//                     }
+//                 },
+//                 error: function (err) {
+//                     console.error(`[ERR] Resources for ${routerSlug}`, err);
+//                 },
+//             });
+//         }
+
+//         async function updateData() {
+//             console.log(`[START UPDATE DATA] ${routerSlug}`);
+//             await updateCountPppActive();
+//             await updateCountPppSecret();
+//             updateCountPppNonActive();
+//             await updateSystemResources();
+//             console.log(`[DONE UPDATE DATA] ${routerSlug}`);
+//         }
+
+//         updateData().catch(console.error);
+
+//         setInterval(updateSystemResources, 10000);
+//         setInterval(updateCountPppNonActive, 5000);
+//         setInterval(() => {
+//             updateCountPppSecret();
+//             updateCountPppActive();
+//         }, 10000);
+
+//         $(document).ajaxStop(function () {
+//             console.log(`[AJAX COMPLETE] ${routerSlug}`);
+//             $("#loading_ppp_secret-" + routerSlug).addClass("d-none");
+//             $("#loading_ppp_non_active-" + routerSlug).addClass("d-none");
+//             $("#loading_ppp_active-" + routerSlug).addClass("d-none");
+//         });
+//     }
+
+//     // Init routers
+//     if (window.mikrotiks && window.mikrotiks.length > 0) {
+//         console.log("[INIT ONLINE ROUTERS]", window.mikrotiks);
+//         window.mikrotiks.forEach(function (router) {
+//             updateRouterData(router.slug);
+//         });
+//     }
+// }
 
 // Fungsi untuk Customer Registration & Churn Chart
 let customerChart;
@@ -730,8 +823,8 @@ document.addEventListener("DOMContentLoaded", function () {
     fetchMonthlySummary();
     setInterval(fetchMonthlySummary, 300000);
 
-    // Router Status
-    initializeRouterStatus();
+    // // Router Status
+    // initializeRouterStatus();
 
     // Customer Registration & Churn Chart
     fetchCustomerRegistrationChurnData();
@@ -788,10 +881,11 @@ document.addEventListener("DOMContentLoaded", function () {
                     xaxis: {
                         labels: {
                             formatter: function (value) {
+                                const strVal = String(value); // pastikan string
                                 if (window.innerWidth < 768) {
-                                    return value.split(" ")[0].substring(0, 3);
+                                    return strVal.split(" ")[0].substring(0, 3);
                                 }
-                                return value;
+                                return strVal;
                             },
                         },
                     },
@@ -799,4 +893,51 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }, 200);
     });
+
+    function setLoadingRouters() {
+        $("#routerOnline").html(
+            '<i class="fas fa-spinner fa-spin text-muted"></i>'
+        );
+        $("#routerOffline").html(
+            '<i class="fas fa-spinner fa-spin text-muted"></i>'
+        );
+    }
+
+    function fetchDashboardCache() {
+        const dashboardCacheUrl = window.dashboardCache;
+        $.get(dashboardCacheUrl, function (data) {
+            $("#routerOnline").text(data.countRouterOnline);
+            $("#routerOffline").text(data.countRouterOffline);
+            $("#customersOnline").text(data.sumCustomersOnline);
+            $("#customersOffline").text(data.sumCustomersOffline);
+            $("#customersIsolir").text(data.sumCustomersIsolir);
+        });
+    }
+
+    // Trigger refresh sekali di awal
+    setLoadingRouters();
+    const dashboardTriggerUrl = window.dashboardTrigger;
+    postWithCsrf(
+        dashboardTriggerUrl,
+        {},
+        function (response) {
+            fetchDashboardCache();
+        },
+        function (err) {
+            console.error("[DASHBOARD TRIGGER ERROR]", err);
+        }
+    );
 });
+
+function postWithCsrf(url, data, onSuccess, onError) {
+    $.ajax({
+        url: url,
+        method: "POST",
+        headers: {
+            "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content"),
+        },
+        data: data || {},
+        success: onSuccess,
+        error: onError,
+    });
+}

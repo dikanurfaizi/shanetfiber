@@ -20,7 +20,7 @@
                                 <h6 class="text-uppercase text-muted mb-2">Total Servers</h6>
                                 <h3 class="mb-0">
                                     <a href="{{ route('servers.index') }}" class="text-decoration-none">
-                                        {{ $mikrotiks->count() ?? 0 }}
+                                        {{ $totalRouters }}
                                     </a>
                                 </h3>
                             </div>
@@ -36,24 +36,27 @@
                                 <i class="fas fa-check-circle me-1"></i>
                                 <a href="{{ route('servers.index', ['disabled' => 'false']) }}"
                                     class="text-decoration-none">
-                                    {{ $routersEnable->count() }} Active
+                                    {{ $routerEnabled }} Enabled
                                 </a>
                             </span>
                             <span class="text-danger">
                                 <i class="fas fa-times-circle me-1"></i>
                                 <a href="{{ route('servers.index', ['disabled' => 'true']) }}"
                                     class="text-decoration-none">
-                                    {{ $mikrotiks->count() - $routersEnable->count() }} Inactive
+                                    {{ $routerDisabled }} Disabled
                                 </a>
                             </span>
                         </div>
 
                         <div class="d-flex justify-content-between">
                             <span class="text-success">
-                                <i class="fas fa-wifi me-1"></i> {{ $countRouterOnline }} Online
+                                <i class="fas fa-wifi me-1"></i>
+                                <span id="routerOnline"><i class="fas fa-spinner fa-spin text-muted"></i></span> Online
                             </span>
                             <span class="text-danger">
-                                <i class="fas fa-plug me-1"></i> {{ $countRouterOffline }} Offline
+                                <i class="fas fa-plug me-1"></i>
+                                <span id="routerOffline"><i class="fas fa-spinner fa-spin text-muted"></i></span>
+                                Offline
                             </span>
                         </div>
 
@@ -540,7 +543,7 @@
 
         <!-- Router Status Section -->
         <div class="row g-4">
-            @foreach ($routersEnable as $mikrotik)
+            @foreach ($mikrotiks as $mikrotik)
                 <div class="col-md-6 col-xl-4">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-header bg-white border-0 py-3">
@@ -614,22 +617,25 @@
     @section('custom_scripts')
         <script>
             @if (app()->environment('local'))
-                window.onlineRouters = [];
-                // console.log("local",window.onlineRouters);
+                window.mikrotiks = [];
+                console.log("local", window.mikrotiks);
             @else
-                window.onlineRouters = @json($onlineRouters);
-                // console.log("production",window.onlineRouters);
+                window.mikrotiks = @json($mikrotiks);
+                console.log("production", window.mikrotiks);
             @endif
 
             window.packageData = @json($packageSummary);
             window.apifetchCustomerRegistrationUrl = "{{ route('customer.registration') }}";
             window.apiMonthlySummaryUrl = "{{ route('monthly.summary') }}";
+            window.dashboardTrigger = "{{ route('dashboard.trigger') }}";
+            window.dashboardCache = "{{ route('dashboard.cache') }}";
 
             window.routes = {
-                checkOnline: @json(route('check-online', ['id' => '__ID__'])),
-                getPppSecrets: @json(route('get.ppp.secrets', ['mikrotik' => '__ROUTER__'])),
-                getPppActive: @json(route('get.ppp.active', ['mikrotik' => '__ROUTER__'])),
-                mikrotikResources: @json(route('mikrotik.resources', ['mikrotik' => '__ROUTER__']))
+                // checkOnline: @json(route('check-online', ['id' => '__ID__'])),
+                // getPppSecrets: @json(route('get.ppp.secrets', ['mikrotik' => '__ROUTER__'])),
+                // getPppActive: @json(route('get.ppp.active', ['mikrotik' => '__ROUTER__'])),
+                updateCache: @json(route('router.update.cache', ['mikrotik' => '__ROUTER__'])),
+                getResource: @json(route('router.resources', ['mikrotik' => '__ROUTER__']))
             };
         </script>
         <script src="{{ asset('assets/apexcharts/apexcharts.js') }}"></script>

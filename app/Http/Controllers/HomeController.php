@@ -7,33 +7,26 @@ use App\Models\Customer;
 use App\Models\Mikrotik;
 use Illuminate\Http\Request;
 use App\Models\Billing\Billing;
-use App\Models\AutoIsolir;
 use App\Models\Billing\BillingPeriode;
 use App\Models\Websystem;
 use App\Models\User;
-use Illuminate\Support\Carbon;
-use App\Services\Routerboard\Ppp\SecretService;
-use App\Services\Routerboard\SystemService;
-use App\Services\Routerboard\TestConnectionService;
+use App\Services\Dashboard\DashboardService;
 use Illuminate\Support\Facades\Log;
 use App\Helpers\LogHelper;
 use App\Helpers\UserAuth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 
 class HomeController extends Controller
 {
-    private TestConnectionService $testConnectionService;
-    private SecretService $secretService;
-    private SystemService $systemService;
+    private DashboardService $dashboardService;
     protected $newVersion;
     protected $version;
 
-    public function __construct(SystemService $systemService, SecretService $secretService, TestConnectionService $testConnectionService)
+    public function __construct(DashboardService $dashboardService)
     {
-        $this->testConnectionService = $testConnectionService;
-        $this->secretService = $secretService;
-        $this->systemService = $systemService;
+        $this->dashboardService = $dashboardService;
 
         $this->middleware('permission:server-edit', ['only' => ['index', 'update']]);
         $this->newVersion = config('app.version');
@@ -68,19 +61,18 @@ class HomeController extends Controller
             return redirect()->route('settings.update.index')->with('error', 'Please update first!');
         }
 
-        // Fetch active Mikrotik routers based on permissions
-        $routersEnable = $user->can('view-customers-widget-total') ?
-            Mikrotik::where('disabled', 'false')->get() :
-            Mikrotik::whereIn('id', Customer::where('user_id', $userId)->pluck('mikrotik_id'))
-            ->where('disabled', 'false')
-            ->get();
+        // Base query sesuai permission
+        $baseQuery = $user->can('view-customers-widget-total')
+            ? Mikrotik::query()
+            : Mikrotik::whereIn('id', Customer::where('user_id', $userId)->pluck('mikrotik_id'));
 
-        // Process router stats
-        $routerStats = $this->processRouters($routersEnable, $traceId);
-        extract($routerStats);
+        // Ambil semua routers (aktif + disabled)
+        $mikrotiks = $baseQuery->orderBy('name')->get();
 
-        // Get Mikrotik list
-        $mikrotiks = Mikrotik::orderBy('name')->get();
+        // Hitungan
+        $totalRouters  = $mikrotiks->count();
+        $routerEnabled  = $mikrotiks->where('disabled', 'false')->count();
+        $routerDisabled = $totalRouters - $routerEnabled;
 
         // Get customer summary
         $customerSummary = $this->calculateCustomerSummary();
@@ -111,13 +103,9 @@ class HomeController extends Controller
 
         return view('home', array_merge(compact(
             'mikrotiks',
-            'routersEnable',
-            'onlineRouters',
-            'sumCustomersOnline',
-            'sumCustomersOffline',
-            'sumCustomersIsolir',
-            'countRouterOnline',
-            'countRouterOffline',
+            'totalRouters',
+            'routerEnabled',
+            'routerDisabled',
             'lastBillingPeriode',
             'lastBillings',
             'adminBillingSummary',
@@ -129,69 +117,81 @@ class HomeController extends Controller
         ), $summaryTotals, $customerSummary));
     }
 
-    private function processRouters($routersEnable, $traceId)
-    {
-        $auth = $this->getUserAuthData();
-        $user = $auth['user'];
-        $userId = $auth['userId'];
+    // private function processRouters($routersEnable, $traceId): void
+    // {
+    //     $auth = $this->getUserAuthData();
+    //     $user = $auth['user'];
+    //     $userId = $auth['userId'];
 
-        $countRouterOnline = $countRouterOffline = $sumCustomersOnline = $sumCustomersOffline = $sumCustomersIsolir = 0;
-        $onlineRouters = collect();
+    //     $cacheKey = "dashboard:routers:summary:user:{$userId}";
 
-        $isolirProfiles = AutoIsolir::whereIn('mikrotik_id', $routersEnable->pluck('id'))->pluck('profile_id', 'mikrotik_id');
+    //     $countRouterOnline = $countRouterOffline = $sumCustomersOnline = $sumCustomersOffline = $sumCustomersIsolir = 0;
+    //     $onlineRouters = collect();
 
-        foreach ($routersEnable as $router) {
-            $profileIsolir = $isolirProfiles->get($router->id);
+    //     $isolirProfiles = AutoIsolir::whereIn('mikrotik_id', $routersEnable->pluck('id'))->pluck('profile_id', 'mikrotik_id');
 
-            try {
-                $this->testConnectionService->checkOnline($router, $traceId);
-                $onlineRouters->push($router);
-                $countRouterOnline++;
+    //     foreach ($routersEnable as $router) {
+    //         $profileIsolir = $isolirProfiles->get($router->id);
 
-                // Tentukan query berdasarkan permission
-                $customerQuery = Customer::query();
-                if ($user->can('view-customers-widget-total')) {
-                    $customerQuery->where('mikrotik_id', $router->id)->where('disabled', 'false');
-                } else {
-                    $customerQuery->where('user_id', $userId)->where('mikrotik_id', $router->id);
-                }
+    //         try {
+    //             $response = $this->testConnectionService->checkOnline($router, $traceId);
 
-                $usernames = $customerQuery->pluck('username');
-                $activeSecrets = collect($this->secretService->getPppActive($router, $traceId))->pluck('name');
-                $activeSecretsForUser = $activeSecrets->intersect($usernames);
+    //             if ($response['status']) {
+    //                 $onlineRouters->push([
+    //                     'id' => $router->id,
+    //                     'host' => $router->host,
+    //                     'data' => $response['data'],
+    //                 ]);
+    //                 $countRouterOnline++;
 
-                $sumCustomersOnline += $activeSecretsForUser->count();
-                $sumCustomersOffline += $usernames->diff($activeSecretsForUser)->count();
+    //                 // Tentukan query berdasarkan permission
+    //                 $customerQuery = Customer::query();
+    //                 if ($user->can('view-customers-widget-total')) {
+    //                     $customerQuery->where('mikrotik_id', $router->id)->where('disabled', 'false');
+    //                 } else {
+    //                     $customerQuery->where('user_id', $userId)->where('mikrotik_id', $router->id);
+    //                 }
 
-                $countIsolir = 0;
-                if ($profileIsolir) {
-                    $secrets = $this->secretService->getSecretByProfile($router, $profileIsolir, $traceId);
-                    if ($secrets !== 'error' || !empty($result)) {
-                        $countIsolir = collect($secrets)
-                            ->filter(fn($secret) => $usernames->contains($secret['name']) && $secret['disabled'] === 'false')
-                            ->count();
-                    }
-                }
+    //                 $usernames = $customerQuery->pluck('username');
+    //                 $activeSecrets = collect($this->secretService->getPppActive($router, $traceId))->pluck('name');
+    //                 $activeSecretsForUser = $activeSecrets->intersect($usernames);
 
-                $sumCustomersIsolir += $countIsolir;
-            } catch (\Exception $e) {
-                $countRouterOffline++;
-                LogHelper::logError(null, [
-                    'mikrotik_id' => $router->id,
-                    'error_message' => $e->getMessage(),
-                ], 500, 'Router connection failed', $traceId);
-            }
-        }
+    //                 $sumCustomersOnline += $activeSecretsForUser->count();
+    //                 $sumCustomersOffline += $usernames->diff($activeSecretsForUser)->count();
 
-        return compact(
-            'onlineRouters',
-            'countRouterOnline',
-            'countRouterOffline',
-            'sumCustomersOnline',
-            'sumCustomersOffline',
-            'sumCustomersIsolir'
-        );
-    }
+    //                 $countIsolir = 0;
+    //                 if ($profileIsolir) {
+    //                     $secrets = $this->secretService->getSecretByProfile($router, $profileIsolir, $traceId);
+    //                     if ($secrets !== 'error' && !empty($secrets)) {
+    //                         $countIsolir = collect($secrets)
+    //                             ->filter(fn($secret) => $usernames->contains($secret['name']) && $secret['disabled'] === 'false')
+    //                             ->count();
+    //                     }
+    //                 }
+
+    //                 $sumCustomersIsolir += $countIsolir;
+    //             } else {
+    //                 $countRouterOffline++;
+    //             }
+    //         } catch (\Exception $e) {
+    //             $countRouterOffline++;
+    //             LogHelper::logError(null, [
+    //                 'mikrotik_id' => $router->id,
+    //                 'error_message' => $e->getMessage(),
+    //             ], 500, 'Router connection failed', $traceId);
+    //         }
+    //     }
+
+    //     // simpan ke cache langsung, nggak perlu return
+    //     Cache::put($cacheKey, [
+    //         'onlineRouters' => $onlineRouters,
+    //         'countRouterOnline' => $countRouterOnline,
+    //         'countRouterOffline' => $countRouterOffline,
+    //         'sumCustomersOnline' => $sumCustomersOnline,
+    //         'sumCustomersOffline' => $sumCustomersOffline,
+    //         'sumCustomersIsolir' => $sumCustomersIsolir,
+    //     ], now()->addMinutes(10));
+    // }
 
     private function getOwnerBillingSummary(int $billingPeriodeId)
     {
@@ -243,7 +243,10 @@ class HomeController extends Controller
         return DB::table('billings as b')
             ->join('billing_subscription_periodes as bsp', 'b.billing_subscription_id', '=', 'bsp.id')
             ->join('billing_periodes as bp', 'bp.id', '=', 'bsp.billing_periode_id')
-            ->where('bp.created_at', '>=', DB::raw('DATE_SUB(NOW(), INTERVAL 6 MONTH)'))
+            ->whereBetween('bp.created_at', [
+                DB::raw("STR_TO_DATE(CONCAT(YEAR(CURDATE()), '-01-01'), '%Y-%m-%d')"), // Januari tahun ini
+                now() // hari ini
+            ])
             ->select(
                 'bsp.billing_periode_id',
                 'bp.name as month_name',
@@ -265,7 +268,10 @@ class HomeController extends Controller
             ->join('billing_periodes as bp', 'bp.id', '=', 'bsp.billing_periode_id')
             ->join('customers as c', 'c.id', '=', 'b.customer_id')
             ->where('c.user_id', $userId)
-            ->where('bp.created_at', '>=', DB::raw('DATE_SUB(NOW(), INTERVAL 6 MONTH)'))
+            ->whereBetween('bp.created_at', [
+                DB::raw("STR_TO_DATE(CONCAT(YEAR(CURDATE()), '-01-01'), '%Y-%m-%d')"), // Januari tahun ini
+                now() // hari ini
+            ])
             ->select(
                 'bsp.billing_periode_id',
                 'bp.name as month_name',
@@ -607,5 +613,41 @@ class HomeController extends Controller
             ], 500, 'ERROR getCustomerRegistrationChurnData');
             return response()->json(['error' => 'Failed to fetch data'], $traceId);
         }
+    }
+
+    public function triggerDashboard(Request $request)
+    {
+        $auth = $this->getUserAuthData();
+        $userId = $auth['userId'];
+        $traceId = (string) Str::uuid();
+
+        $routersEnable = Mikrotik::where('disabled', 'false')->get();
+
+        // langsung jalankan proses & simpan ke cache
+        $this->dashboardService->refreshRoutersSummary($routersEnable, $traceId, $userId);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Dashboard refresh triggered, please wait a moment.'
+        ]);
+    }
+
+    public function getDashboardCache(Request $request)
+    {
+        $auth = $this->getUserAuthData();
+        $userId = $auth['userId'];
+
+        $cacheKey = "dashboard:routers:summary:user:{$userId}";
+
+        $data = Cache::get($cacheKey, [
+            'onlineRouters' => [],
+            'countRouterOnline' => 0,
+            'countRouterOffline' => 0,
+            'sumCustomersOnline' => 0,
+            'sumCustomersOffline' => 0,
+            'sumCustomersIsolir' => 0,
+        ]);
+
+        return response()->json($data);
     }
 }
