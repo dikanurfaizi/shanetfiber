@@ -15,49 +15,10 @@ use App\Helpers\LogHelper;
 
 class QueueService
 {
-    /**
-     * @throws ClientException
-     * @throws ConnectException
-     * @throws BadCredentialsException
-     * @throws QueryException
-     * @throws ConfigException
-     * @throws Exception
-     */
-    public function getMikrotik($mikrotik, string $traceId): Client
-    {
-        try {
-            if (!$mikrotik) {
-                throw new Exception('Mikrotik not found.');
-            }
-
-            $config = (new Config())
-                ->set('timeout', 2)
-                ->set('host', $mikrotik->host)
-                ->set('port', (int) $mikrotik->port)
-                ->set('pass', $mikrotik->password)
-                ->set('user', $mikrotik->username);
-
-            return new Client($config);
-        } catch (\Exception $e) {
-            LogHelper::logError(
-                null,
-                [
-                    'host' => $mikrotik->host ?? 'N/A',
-                    'port' => $mikrotik->port ?? 'N/A',
-                    'error' => $e->getMessage()
-                ],
-                503,
-                "Failed to connect to Mikrotik",
-                $traceId
-            );
-            throw $e;
-        }
-    }
-
     public function getParentSimpleQueues($mikrotik, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
             $query = new Query('/queue/simple/print');
             $query->where('parent', 'none')->where('disabled', 'false');
             $parentSimpleQueue = $client->query($query)->read();
@@ -91,7 +52,7 @@ class QueueService
     public function getQueueTypes($mikrotik, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
             $query = new Query('/queue/type/print');
             $queueTypes = $client->query($query)->read();
 
@@ -124,7 +85,7 @@ class QueueService
     public function createSimpleQueue($mikrotik, $name, $target, $parent, $priority, $queuetype, $limitat, $maxlimit, $comment, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
             $query = (new Query('/queue/simple/add'))
                 ->equal('name', $name)
                 ->equal('target', $target)
@@ -181,7 +142,7 @@ class QueueService
     public function setLimitSimplequeById($mikrotik, $simpleque_id, $parent, $priority, $queuetype, $limitat, $maxlimit, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
             $simpleques = (new Query('/queue/simple/print'))
                 ->where('.id', $simpleque_id);
             $results = $client->query($simpleques)->read();

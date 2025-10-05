@@ -8,6 +8,8 @@ use App\Models\Network\OidMapping;
 use App\Models\Network\OltUpdateLog;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Helpers\OltHelper;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class OltService
 {
@@ -36,20 +38,49 @@ class OltService
         return Olt::with('onts', 'latestUpdateLog')->findOrFail($oltId);
     }
 
-    public function getOltDetails(int $oltId): array
+    public function getOltDetails(Request $request, int $oltId): array
     {
+        $perPageOnts = $request->get('perPageOnts', 10); // jumlah ONT per page
+
         $olt = $this->findOltWithDetails($oltId);
-        $onts = Ont::where('olt_id', $oltId)->get(['ont_index', 'name', 'status', 'rx_power', 'mac_address', 'last_updated']);
+
+        $onts = DB::table('customers as c')
+            ->rightJoin('onts as o', DB::raw('LEFT(c.mac_address, 14)'), '=', DB::raw('LEFT(o.mac_address, 14)'))
+            ->where('o.olt_id', $oltId)
+            ->select([
+                'c.id as customer_id',
+                'c.mac_address as customer_mac',
+                'c.ip_address as customer_ip_address',
+                'o.id as ont_id',
+                'o.mac_address as ont_mac',
+                'o.ont_index as ont_index',
+                'c.name as customer_name',
+                'o.status as ont_status',
+                'o.rx_power as ont_rx_power',
+                'o.temperature as ont_temp',
+                'o.last_updated as ont_last_updated',
+            ])
+            ->paginate($perPageOnts);
+
         $histories = OltUpdateLog::where('olt_id', $oltId)
             ->orderBy('updated_at', 'desc')
+            ->take(5)
             ->get();
 
-        $totalOnts = $onts->count();
-        $onlineOnts = $onts->where('status', 'Up')->count();
-        $offlineOnts = $onts->where('status', 'Down')->count();
-        $lastUpdateOnts = $onts->max('last_updated');
+        $totalOnts = $onts->total();
+        $onlineOnts = Ont::where('olt_id', $oltId)->where('status', 'Up')->count();
+        $offlineOnts = Ont::where('olt_id', $oltId)->where('status', 'Down')->count();
+        $lastUpdateOnts = Ont::where('olt_id', $oltId)->max('last_updated');
 
-        return compact('olt', 'onts', 'totalOnts', 'onlineOnts', 'offlineOnts', 'lastUpdateOnts', 'histories');
+        return compact(
+            'olt',
+            'onts',
+            'totalOnts',
+            'onlineOnts',
+            'offlineOnts',
+            'lastUpdateOnts',
+            'histories'
+        );
     }
 
     public function createOlt(array $data): Olt

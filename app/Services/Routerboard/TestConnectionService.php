@@ -20,77 +20,13 @@ class TestConnectionService
      * @throws QueryException
      * @throws BadCredentialsException
      * @throws ConfigException
-     * @throws \Exception
-     */
-    public function getMikrotik($router, string $traceId): ?Client
-    {
-        try {
-            if (!$router) {
-                throw new \Exception('Mikrotik not found.');
-            }
-
-            $config = (new Config())
-                ->set('timeout', 2)
-                ->set('host', $router->host)
-                ->set('port', (int) $router->port)
-                ->set('pass', $router->password)
-                ->set('user', $router->username);
-
-            $client = new Client($config);
-
-            LogHelper::logInfo(
-                null,
-                [
-                    'host' => $router->host,
-                    'port' => $router->port,
-                    'connection_timeout' => '2s'
-                ],
-                200,
-                "Successfully connected to Mikrotik",
-                $traceId
-            );
-
-            return $client;
-        } catch (\Exception $e) {
-            LogHelper::logError(
-                null,
-                [
-                    'exception' => [
-                        'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
-                    ],
-                    'connection_details' => [
-                        'host' => $router->host ?? 'N/A',
-                        'port' => $router->port ?? 'N/A'
-                    ]
-                ],
-                500,
-                "Failed to connect to Mikrotik",
-                $traceId
-            );
-            return null;
-        }
-    }
-
-    /**
-     * @throws ClientException
-     * @throws ConnectException
-     * @throws QueryException
-     * @throws BadCredentialsException
-     * @throws ConfigException
      */
     public function testConnection($router, string $traceId)
     {
         try {
-            $config = (new Config())
-                ->set('host', $router['host'])
-                ->set('port', (int) $router['port'])
-                ->set('pass', $router['password'])
-                ->set('user', $router['username']);
+            $client = MikrotikConnectionService::getClient($router, $traceId);
 
-            $client = new Client($config);
+            $client = new Client($client);
             $query = (new Query('/system/resource/print'));
             $result = $client->query($query)->read();
 
@@ -139,7 +75,7 @@ class TestConnectionService
     public function checkOnline($router, string $traceId): array
     {
         try {
-            $client = $this->getMikrotik($router, $traceId);
+            $client = MikrotikConnectionService::getClient($router, $traceId);
 
             if (!$client) {
                 return [

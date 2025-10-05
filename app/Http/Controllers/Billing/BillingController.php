@@ -84,6 +84,18 @@ class BillingController extends Controller
 
         $filterData = $this->billingReportService->getFilterData($traceId);
 
+        LogHelper::logInfo(
+            null,
+            [
+                'searchParams' => array_filter($searchParams, fn($v) => !is_null($v) && $v !== ''),
+                'totalPrice'   => $totalPrice,
+                'totalData'    => $data->total()
+            ],
+            200,
+            "Successfully retrieved billing data",
+            $traceId
+        );
+
         return view('billings.index', array_merge(
             [
                 'data'          => $data,

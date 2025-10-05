@@ -245,8 +245,8 @@ class SnmpService
                     'rx_power'     => trim($data['rxpower'] ?? 'N/A', '"'),
                     'status'       => ($data['status'] ?? '') == '1' ? 'Up' : 'Down',
                     'mac_address'  => SnmpHelper::formatMacFromSnmp($data['macaddress'] ?? ''),
-                    'temperature'  => isset($data['temperature'])
-                        ? trim($data['temperature'], '"') . " °C"
+                    'temperature' => isset($data['temperature'])
+                        ? (int) round(floatval(trim($data['temperature'], '"'))) . " °C"
                         : 'N/A',
                 ];
 

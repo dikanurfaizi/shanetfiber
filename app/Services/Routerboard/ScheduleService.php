@@ -15,49 +15,10 @@ use App\Helpers\LogHelper;
 
 class ScheduleService
 {
-    /**
-     * @throws ClientException
-     * @throws ConnectException
-     * @throws QueryException
-     * @throws BadCredentialsException
-     * @throws ConfigException
-     * @throws Exception
-     */
-    public function getMikrotik($routerboard, string $traceId): Client
-    {
-        try {
-            $mikrotik = $routerboard;
-            if (!$mikrotik) {
-                throw new Exception('Mikrotik not found.');
-            }
-
-            $config = (new Config())
-                ->set('host', $mikrotik->host)
-                ->set('port', (int) $mikrotik->port)
-                ->set('pass', $mikrotik->password)
-                ->set('user', $mikrotik->username);
-
-            return new Client($config);
-        } catch (\Exception $e) {
-            LogHelper::logError(
-                null,
-                [
-                    'host' => $mikrotik->host ?? 'N/A',
-                    'port' => $mikrotik->port ?? 'N/A',
-                    'error' => $e->getMessage()
-                ],
-                503,
-                "Failed to connect to Mikrotik",
-                $traceId
-            );
-            throw $e;
-        }
-    }
-
     public function getAllSchedule($routerboard, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($routerboard, $traceId);
+            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
             $query = new Query('/system/schedule/print');
             $schedules = $client->query($query)->read();
 
@@ -90,7 +51,7 @@ class ScheduleService
     public function getScheduleByName($routerboard, $scheduleName, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($routerboard, $traceId);
+            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
             $query = (new Query('/system/schedule/print'))
                 ->where('name', $scheduleName);
             $schedule = $client->query($query)->read();
@@ -125,7 +86,7 @@ class ScheduleService
     public function getScheduleById($routerboard, $scheduleId, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($routerboard, $traceId);
+            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
             $query = (new Query('/system/schedule/print'))
                 ->where('.id', $scheduleId);
             $schedule = $client->query($query)->read();
@@ -161,7 +122,7 @@ class ScheduleService
     {
         try {
             $onEventSchedule = '/system script run ' . $nameScript . '';
-            $client = $this->getMikrotik($routerboard, $traceId);
+            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
 
             $query = (new Query('/system/schedule/add'))
                 ->equal('name', $nameSchedule)
@@ -204,7 +165,7 @@ class ScheduleService
     public function disabledSchedule($routerboard, $scheduleName, $disabledStatus, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($routerboard, $traceId);
+            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
             $schedules = new Query('/system/schedule/print');
             $schedules->where('name', $scheduleName);
             $resultSchedules = $client->query($schedules)->read();
@@ -261,7 +222,7 @@ class ScheduleService
     public function disabledScheduleById($routerboard, $scheduleId, $disabledStatus, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($routerboard, $traceId);
+            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
             $schedules = new Query('/system/schedule/print');
             $schedules->where('.id', $scheduleId);
             $resultSchedules = $client->query($schedules)->read();
@@ -318,7 +279,7 @@ class ScheduleService
     public function removeSchedule($routerboard, $scheduleId, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($routerboard, $traceId);
+            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
             $schedules = new Query('/system/schedule/print');
             $schedules->where('.id', $scheduleId);
             $resultSchedules = $client->query($schedules)->read();

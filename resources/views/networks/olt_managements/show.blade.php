@@ -41,7 +41,7 @@
             </div>
             <hr>
             <div class="status-indicator">
-                <i class="fas fa-history"></i> Last scan: {{ $lastUpdateOnus }}
+                <i class="fas fa-history"></i> Last scan: {{ $lastUpdateOnts }}
             </div>
             <div id="scan-progress-container" class="progress-container mx-4 mb-3" style="display: none;">
                 <div class="progress-label">
@@ -56,7 +56,7 @@
             </div>
         </div>
 
-        <!-- ONU Summary Cards -->
+        <!-- ONT Summary Cards -->
         <div class="row summary-cards">
             <div class="col-lg-3 col-md-6 mb-3">
                 <div class="summary-card" data-status="total">
@@ -64,8 +64,8 @@
                         <i class="fas fa-network-wired"></i>
                     </div>
                     <div class="summary-content">
-                        <div class="summary-value" id="summary-total">{{ $totalOnus }}</div>
-                        <div class="summary-label">Total ONUs</div>
+                        <div class="summary-value" id="summary-total">{{ $totalOnts }}</div>
+                        <div class="summary-label">Total ONTs</div>
                     </div>
                 </div>
             </div>
@@ -75,7 +75,7 @@
                         <i class="fas fa-check-circle"></i>
                     </div>
                     <div class="summary-content">
-                        <div class="summary-value" id="summary-online">{{ $onlineOnus }}</div>
+                        <div class="summary-value" id="summary-online">{{ $onlineOnts }}</div>
                         <div class="summary-label">Online</div>
                     </div>
                 </div>
@@ -86,7 +86,7 @@
                         <i class="fas fa-times-circle"></i>
                     </div>
                     <div class="summary-content">
-                        <div class="summary-value" id="summary-offline">{{ $offlineOnus }}</div>
+                        <div class="summary-value" id="summary-offline">{{ $offlineOnts }}</div>
                         <div class="summary-label">Offline</div>
                     </div>
                 </div>
@@ -104,25 +104,30 @@
             </div>
         </div>
 
-        <!-- ONU Data Table -->
+        <!-- ONT Data Table -->
         <div class="data-card">
             <div class="data-card-header">
                 <h2 class="data-card-title">
-                    <i class="fas fa-microchip"></i> ONU Devices
+                    <i class="fas fa-microchip"></i> ONT Devices
                 </h2>
                 <div class="timestamp-display">
-                    <i class="fas fa-clock"></i> Last updated: {{ $lastUpdateOnus }}
+                    <i class="fas fa-clock"></i> Last updated: {{ $lastUpdateOnts }}
                 </div>
             </div>
             <div class="data-card-body">
                 <div class="table-controls d-flex justify-content-between align-items-center mb-3">
                     <div class="show-entries">
                         <label>Show
-                            <select class="form-select form-select-sm d-inline-block mx-1" style="width: 70px;">
-                                <option value="10">10</option>
-                                <option value="25">25</option>
-                                <option value="50">50</option>
-                                <option value="100">100</option>
+                            <select class="form-control form-select-sm d-inline-block mx-1" style="width: 70px;"
+                                onchange="location = this.value;">
+                                <option value="?perPage=10" {{ request('perPage', 10) == 10 ? 'selected' : '' }}>10
+                                </option>
+                                <option value="?perPage=25" {{ request('perPage') == 25 ? 'selected' : '' }}>25
+                                </option>
+                                <option value="?perPage=50" {{ request('perPage') == 50 ? 'selected' : '' }}>50
+                                </option>
+                                <option value="?perPage=100" {{ request('perPage') == 100 ? 'selected' : '' }}>100
+                                </option>
                             </select> entries
                         </label>
                     </div>
@@ -138,24 +143,27 @@
                         <thead>
                             <tr>
                                 <th>INDEX</th>
-                                <th>ONU NAME</th>
+                                <th>ONT NAME</th>
                                 <th>STATE</th>
                                 <th>RX POWER</th>
-                                <th>PHYSICAL ID</th>
+                                <th>TEMPERATURE</th>
+                                <th>MAC ADDRESS</th>
+                                <th>IP ADDRESS</th>
+                                <th>REBOOT</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($onus as $onu)
+                            @foreach ($onts as $ont)
                                 <tr>
-                                    {{-- ONU Index --}}
-                                    <td>{{ $onu->onu_index }}</td>
+                                    {{-- ONT Index --}}
+                                    <td>{{ $ont->ont_index }}</td>
 
-                                    {{-- ONU Name --}}
-                                    <td>{{ $onu->name }}</td>
+                                    {{-- ONT Name --}}
+                                    <td>{{ $ont->customer_name }}</td>
 
                                     {{-- Status --}}
                                     <td>
-                                        @if ($onu->status === 'Up')
+                                        @if ($ont->ont_status === 'Up')
                                             <span class="status-badge badge-online">
                                                 <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i>
                                                 Online
@@ -173,20 +181,41 @@
                                         <div class="d-flex align-items-center">
                                             <div
                                                 class="signal-indicator
-                        @if ($onu->rx_power > -20) signal-good
-                        @elseif($onu->rx_power > -27) signal-fair
-                        @else signal-bad @endif">
+            @if ($ont->ont_rx_power >= -15 && $ont->ont_rx_power <= -1) signal-too-strong
+            @elseif($ont->ont_rx_power > -24 && $ont->ont_rx_power < -15)
+                signal-good
+            @elseif($ont->ont_rx_power > -25 && $ont->ont_rx_power <= -24)
+                signal-low
+            @elseif($ont->ont_rx_power >= -30 && $ont->ont_rx_power <= -25)
+                signal-too-low @endif">
                                                 <i class="fas fa-signal"></i>
                                             </div>
-                                            {{ $onu->rx_power }} dBm
+                                            {{ $ont->ont_rx_power }} dBm
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <span class="font-monospace">{{ $ont->ont_temp }}</span>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <span class="font-monospace">{{ $ont->ont_mac }}</span>
                                         </div>
                                     </td>
 
                                     {{-- MAC Address --}}
                                     <td>
                                         <div class="d-flex align-items-center justify-content-between">
-                                            <span class="font-monospace">{{ $onu->mac_address }}</span>
-                                            <button class="btn btn-refresh" title="Update ONU data">
+                                            <span class="font-monospace">{{ $ont->customer_ip_address }}</span>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <button class="btn btn-refresh" title="Update ONT data">
                                                 <i class="fas fa-sync-alt"></i>
                                             </button>
                                         </div>
@@ -198,20 +227,10 @@
                 </div>
                 <div class="table-footer d-flex justify-content-between align-items-center mt-3">
                     <div class="showing-entries">
-                        Showing 1 to 10 of 58 entries
+                        Showing {{ $onts->firstItem() }} to {{ $onts->lastItem() }} of {{ $onts->total() }} entries
                     </div>
                     <nav>
-                        <ul class="pagination pagination-sm">
-                            <li class="page-item disabled">
-                                <a class="page-link" href="#"><i class="fas fa-angle-left"></i></a>
-                            </li>
-                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                            <li class="page-item"><a class="page-link" href="#">2</a></li>
-                            <li class="page-item"><a class="page-link" href="#">3</a></li>
-                            <li class="page-item">
-                                <a class="page-link" href="#"><i class="fas fa-angle-right"></i></a>
-                            </li>
-                        </ul>
+                        {{ $onts->links('pagination::default') }}
                     </nav>
                 </div>
             </div>
@@ -232,7 +251,7 @@
                             <tr>
                                 <th>Timestamp</th>
                                 <th>Status</th>
-                                <th>ONUs Found</th>
+                                <th>ONTs Found</th>
                                 <th>Duration</th>
                                 <th>User</th>
                                 <th>Message</th>
@@ -258,7 +277,7 @@
                                         @endphp
                                         <span class="badge {{ $badgeClass }}">{{ $status }}</span>
                                     </td>
-                                    <td>{{ $history->onu_count ?? '-' }}</td>
+                                    <td>{{ $history->ont_count ?? '-' }}</td>
                                     <td>{{ $history->duration ?? '-' }}</td>
                                     <td>{{ $history->username ?? '-' }}</td>
                                     <td class="text-truncate" style="max-width: 300px;"

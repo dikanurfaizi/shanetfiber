@@ -126,7 +126,7 @@ class BillingQueryService
 
         // Fallback: jika tidak ada dari request, pakai user yang login jika punya izin
         if (empty($searchUserId) && $user && $user->can('view-customers-widget-related')) {
-            $searchUserId = auth()->user()->name;
+            $searchUserId = $auth['userId'];
         }
 
         // Hanya set default periode jika tidak menampilkan semua periode

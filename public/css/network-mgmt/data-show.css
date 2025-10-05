@@ -209,20 +209,24 @@ body {
     text-align: center;
 }
 
-.signal-excellent {
-    color: var(--success-color);
+/* Too Strong */
+.signal-too-strong {
+    color: var(--warning-color); /* kuning */
 }
 
+/* Good */
 .signal-good {
-    color: var(--info-color);
+    color: var(--success-color); /* hijau */
 }
 
-.signal-fair {
-    color: var(--warning-color);
+/* Low */
+.signal-low {
+    color: #ff69b4; /* pink, atau bisa definisikan var(--pink-color) */
 }
 
-.signal-poor {
-    color: var(--danger-color);
+/* Too Low */
+.signal-too-low {
+    color: var(--danger-color); /* merah */
 }
 
 .btn-refresh {

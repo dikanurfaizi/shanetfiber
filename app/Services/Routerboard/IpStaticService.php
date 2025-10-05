@@ -15,47 +15,10 @@ use App\Helpers\LogHelper;
 
 class IpStaticService
 {
-    /**
-     * @throws ClientException
-     * @throws ConnectException
-     * @throws BadCredentialsException
-     * @throws QueryException
-     * @throws ConfigException
-     * @throws Exception
-     */
-    public function getMikrotik($mikrotik, string $traceId): Client
-    {
-        try {
-            if (!$mikrotik) {
-                throw new Exception('Mikrotik not found.');
-            }
-            $config = (new Config())
-                ->set('timeout', 2)
-                ->set('host', $mikrotik->host)
-                ->set('port', (int) $mikrotik->port)
-                ->set('pass', $mikrotik->password)
-                ->set('user', $mikrotik->username);
-            return new Client($config);
-        } catch (\Exception $e) {
-            LogHelper::logError(
-                null,
-                [
-                    'host' => $mikrotik->host ?? 'N/A',
-                    'port' => $mikrotik->port ?? 'N/A',
-                    'error' => $e->getMessage()
-                ],
-                503,
-                "Failed to connect to Mikrotik",
-                $traceId
-            );
-            throw $e;
-        }
-    }
-
     public function addIpToAddressList($mikrotik, $ip_address, $address_list, $comment, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
             $query = new Query('/ip/firewall/address-list/add');
             $query->equal('list', $address_list);
             $query->equal('address', $ip_address);
@@ -96,7 +59,7 @@ class IpStaticService
     public function deleteIpFromAddressList($mikrotik, $ip_address, $addresst_list_name, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
             $query = new Query('/ip/firewall/address-list/print');
             $query->where('address', $ip_address);
             $query->where('list', $addresst_list_name);
@@ -155,7 +118,7 @@ class IpStaticService
     public function deleteIpFromSimpleQueue($mikrotik, $simpleque_id, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
             $simplequeues = new Query('/queue/simple/print');
             $simplequeues->where('.id', $simpleque_id);
             $simplequeues = $client->query($simplequeues)->read();
@@ -209,7 +172,7 @@ class IpStaticService
     public function getAddressListByIpAddress($mikrotik, $ip_address, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
             $address_lists = (new Query('/ip/firewall/address-list/print'))
                 ->where('address', $ip_address);
             $address_list = $client->query($address_lists)->read();
@@ -244,7 +207,7 @@ class IpStaticService
     public function getDataByIpAddressWithAddressListName($mikrotik, $ip_address, $address_list_name, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
             $address_lists = (new Query('/ip/firewall/address-list/print'))
                 ->where('address', $ip_address)
                 ->where('list', $address_list_name);
@@ -284,7 +247,7 @@ class IpStaticService
     public function setCommentSimpleque($mikrotik, $simpleque_id, $comment, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
             $simpleques = (new Query('/queue/simple/print'))
                 ->where('.id', $simpleque_id);
             $results = $client->query($simpleques)->read();
@@ -340,7 +303,7 @@ class IpStaticService
     public function setIpSimpleque($mikrotik, $simpleque_id, $ip_address, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
             $simpleques = (new Query('/queue/simple/print'))
                 ->where('.id', $simpleque_id);
             $results = $client->query($simpleques)->read();
@@ -396,7 +359,7 @@ class IpStaticService
     public function setIpAddressAndMacAddress($mikrotik, $arp_id, $ip_address, $mac_address, $interface, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
             $query = new Query('/ip/arp/print');
             $query->where('.id', $arp_id);
             $results = $client->query($query)->read();
@@ -458,7 +421,7 @@ class IpStaticService
     public function addIpToArp($mikrotik, $ip_address, $mac_address, $interface, $comment, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
             $query = new Query('/ip/arp/add');
             $query->equal('address', $ip_address);
             $query->equal('mac-address', $mac_address);
@@ -502,7 +465,7 @@ class IpStaticService
     public function deleteIpFromArp($mikrotik, $arp_id, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
             $query = new Query('/ip/arp/print');
             $query->where('.id', $arp_id);
             $results = $client->query($query)->read();
@@ -555,7 +518,7 @@ class IpStaticService
     public function getInterfaces($mikrotik, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
             $query = new Query('/interface/print');
             $query->where('type', 'ether');
             $query->where('type', 'vlan');
@@ -591,7 +554,7 @@ class IpStaticService
     public function getIpByArpId($mikrotik, $id, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
             $query = new Query('/ip/arp/print');
             $query->where('.id', $id);
             $getARP = $client->query($query)->read();
@@ -626,7 +589,7 @@ class IpStaticService
     public function getAddressList($mikrotik, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
             $addresslist = new Query('/ip/firewall/address-list/print');
             $response = $client->query($addresslist)->read();
 

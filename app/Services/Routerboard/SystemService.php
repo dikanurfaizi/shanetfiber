@@ -15,52 +15,14 @@ use RouterOS\Exceptions\ConnectException;
 use RouterOS\Exceptions\QueryException;
 use RouterOS\Query;
 use App\Helpers\LogHelper;
+use App\Helpers\SnmpHelper;
 
 class SystemService
 {
-    /**
-     * @throws ClientException
-     * @throws ConnectException
-     * @throws QueryException
-     * @throws BadCredentialsException
-     * @throws ConfigException
-     * @throws Exception
-     */
-    public function getMikrotik($routerboard, string $traceId): Client
-    {
-        try {
-            $mikrotik = $routerboard;
-            if (!$mikrotik) {
-                throw new Exception('Mikrotik not found.');
-            }
-
-            $config = (new Config())
-                ->set('host', $mikrotik->host)
-                ->set('port', (int) $mikrotik->port)
-                ->set('pass', $mikrotik->password)
-                ->set('user', $mikrotik->username);
-
-            return new Client($config);
-        } catch (\Exception $e) {
-            LogHelper::logError(
-                null,
-                [
-                    'host' => $mikrotik->host ?? 'N/A',
-                    'port' => $mikrotik->port ?? 'N/A',
-                    'error' => $e->getMessage()
-                ],
-                503,
-                "Failed to connect to Mikrotik",
-                $traceId
-            );
-            throw $e;
-        }
-    }
-
     public function getAllResources($router, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($router, $traceId);
+            $client = MikrotikConnectionService::getClient($router, $traceId);
             $query = new Query('/system/resource/print');
             $resources = $client->query($query)->read();
 
@@ -93,7 +55,7 @@ class SystemService
     public function getTime($router, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($router, $traceId);
+            $client = MikrotikConnectionService::getClient($router, $traceId);
             $query = new Query('/system/clock/print');
             $time = $client->query($query)->read();
 
@@ -127,7 +89,7 @@ class SystemService
     {
         try {
             $interface = request()->interface;
-            $client = $this->getMikrotik($routerboard, $traceId);
+            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
             $eth = (new Query('/interface/monitor-traffic'))
                 ->equal('interface', $interface)
                 ->equal('once');
@@ -176,7 +138,19 @@ class SystemService
     public function mikrotikInterface(Mikrotik $routerboard, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($routerboard, $traceId);
+            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+
+            if (!$client) {
+                LogHelper::logError(
+                    null,
+                    ['mikrotik_id' => $routerboard->id ?? null],
+                    500,
+                    "Failed to connect to Mikrotik",
+                    $traceId
+                );
+                return []; // return kosong agar job tetap berjalan
+            }
+
             $inf = new Query('/interface/print');
             $interfaces = $client->query($inf)->read();
 
@@ -206,20 +180,21 @@ class SystemService
             LogHelper::logError(
                 null,
                 [
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
+                    'mikrotik_id' => $routerboard->id ?? null
                 ],
                 500,
                 "Failed to get interfaces",
                 $traceId
             );
-            throw $e;
+            return []; // jangan throw, cukup return kosong
         }
     }
 
     public function mikrotikEtherInterface(Mikrotik $routerboard, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($routerboard, $traceId);
+            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
             $query = new Query('/interface/print');
             $query->where('type', 'ether');
             $query->where('type', 'vlan');
@@ -265,7 +240,7 @@ class SystemService
     public function getInterfacePppByName($router, $username, string $traceId)
     {
         try {
-            $client = $this->getMikrotik($router, $traceId);
+            $client = MikrotikConnectionService::getClient($router, $traceId);
             $inf = new Query('/interface/print');
             $inf->where('name', $username);
             $interface = $client->query($inf)->read();

@@ -9,6 +9,7 @@ use App\Services\Networks\OltValidationService;
 use App\Helpers\LogHelper;
 use App\Jobs\Network\ScanOltsJob;
 use App\Jobs\Network\CheckOltStatusJob;
+use App\Jobs\Network\FetchMikrotikInfo;
 use App\Models\Network\OidMapping;
 use App\Models\Network\Olt;
 use App\Models\Network\Ont;
@@ -40,8 +41,7 @@ class OLTManagementController extends Controller
         $username = Auth::user()?->name ?? 'System';
 
         ScanOltsJob::dispatch($jobId, $username);
-
-        // dd($olts);
+        FetchMikrotikInfo::dispatch($jobId);
 
         $dataForView = array_merge($statistics, [
             'olts' => $olts,
@@ -88,9 +88,9 @@ class OLTManagementController extends Controller
         }
     }
 
-    public function show($oltId)
+    public function show($oltId, Request $request)
     {
-        $data = $this->oltService->getOltDetails($oltId);
+        $data = $this->oltService->getOltDetails($request, $oltId);
         return view('networks.olt_managements.show', $data);
     }
 
