@@ -3,25 +3,29 @@
 namespace App\Http\Controllers\Network;
 
 use App\Http\Controllers\Controller;
-use App\Models\Network\Olt;
-use App\Models\Network\Onu;
-use App\Models\Network\OidMapping;
-use App\Models\Network\OltUpdateLog;
-use App\Services\Networks\SnmpService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use App\Services\Networks\OltService;
+use App\Services\Networks\OltScanService;
+use App\Services\Networks\OltValidationService;
 use App\Helpers\LogHelper;
-use App\Helpers\SnmpHelper;
 use App\Jobs\Network\ScanOltsJob;
 use App\Jobs\Network\CheckOltStatusJob;
+use App\Models\Network\OidMapping;
+use App\Models\Network\Olt;
+use App\Models\Network\Ont;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Jenssegers\Agent\Agent;
-use Illuminate\Support\Facades\Auth;
 
 class OLTManagementController extends Controller
 {
+    public function __construct(
+        private OltService $oltService,
+        private OltScanService $scanService,
+        private OltValidationService $validationService
+    ) {}
+
     public function index()
     {
         Cache::forget('olt-status-progress');
@@ -29,68 +33,32 @@ class OLTManagementController extends Controller
         Cache::forget('olt-status-total');
 
         $entries = 25;
+        $olts = $this->oltService->getPaginatedOlts($entries);
+        $statistics = $this->oltService->getOltStatistics();
 
-        $query = Olt::with('onus', 'latestUpdateLog')->orderBy('id', 'asc');
-        $olts  = $query->paginate($entries);
-
-        $activeOlts   = $olts->filter(fn($olt) => $olt->display_status === 'Active')->count();
-        $inActiveOlts = $olts->filter(fn($olt) => $olt->display_status === 'Inactive')->count();
-
-        $totalOlts = Olt::count(); // hanya OLT yang belum soft delete
-        $totalOnus = Onu::whereHas('olt', fn($q) => $q->whereNull('deleted_at'))->count();
-
-        $jobId    = Str::uuid()->toString();
+        $jobId = Str::uuid()->toString();
         $username = Auth::user()?->name ?? 'System';
 
-        $dataForView = [
-            'totalOlts'       => $totalOlts,
-            'activeOlts'      => $activeOlts,
-            'inActiveOlts'    => $inActiveOlts,
-            'totalOnus'       => $totalOnus,
-            'olts'            => $olts,
+        ScanOltsJob::dispatch($jobId, $username);
+
+        // dd($olts);
+
+        $dataForView = array_merge($statistics, [
+            'olts' => $olts,
             'lastStatusCheck' => now()->format('h:i:s A'),
-            'lastUpdate'      => now()->format('F d, Y \a\t h:i A'),
-            'jobId'           => $jobId,
-            'oidMappings'     => OidMapping::pluck('vendor', 'id'),
-        ];
+            'lastUpdate' => now()->format('F d, Y \a\t h:i A'),
+            'jobId' => $jobId,
+            'oidMappings' => OidMapping::pluck('vendor', 'id'),
+        ]);
 
-        // Set cache untuk progress scan
-        $cacheKey = "scan_job_progress_{$jobId}";
-        $cacheValue = [
-            'current'      => 0,
-            'total'        => $totalOlts,
-            'percent'      => 0,
-            'status'       => 'queued',
-            'currentOlt'   => null,
-            'onlineOlts'   => 0,
-            'totalOnus'    => 0,
-            'lastResult'   => [
-                'olt_id'         => null,
-                'status'         => null,
-                'onu_count'      => 0,
-                'last_scan'      => null,
-                'last_scan_time' => null,
-                'last_scan_date' => null,
-            ],
-        ];
-
-        Cache::put($cacheKey, $cacheValue, 600);
-
-        // Logging detail + cache snapshot
         LogHelper::logInfo($jobId, [
-            'username'     => $username,
-            'entries'      => $entries,
-            'totalOlts'    => $totalOlts,
-            'activeOlts'   => $activeOlts,
-            'inActiveOlts' => $inActiveOlts,
-            'totalOnus'    => $totalOnus,
-            'page'         => $olts->currentPage(),
-            'per_page'     => $olts->perPage(),
-            'cache_key'    => $cacheKey,
-            'cache_value'  => $cacheValue, // <-- snapshot cache
-        ], 200, "Index OLT Management - Data siap dikirim ke view & cache diset");
+            'username' => $username,
+            'entries' => $entries,
+            'statistics' => $statistics,
+            'page' => $olts->currentPage(),
+            'per_page' => $olts->perPage(),
+        ], 200, "Index OLT Management - Data siap dikirim ke view");
 
-        // Dispatch background job
         ScanOltsJob::dispatch($jobId, $username);
 
         return view('networks.olt_managements.index', $dataForView);
@@ -99,185 +67,73 @@ class OLTManagementController extends Controller
     public function create()
     {
         $oidMappings = OidMapping::all()->mapWithKeys(function ($item) {
-            return [$item->vendor => $item->description]; // key=vendor, value=description
+            return [$item->vendor => $item->description];
         });
+
         return view('networks.olt_managements.create', ['oidMappings' => $oidMappings]);
     }
 
     public function store(Request $request)
     {
-        $request->validate([
-            'olt_name'     => 'required|string|max:255',
-            'ip_address'   => 'required|string',
-            'port'         => 'nullable|numeric',
-            'community'    => 'nullable|string',
-            'olt_type'     => [
-                'required',
-                'string',
-                Rule::in(OidMapping::pluck('vendor')->toArray()),
-            ],
-        ]);
+        try {
+            $this->oltService->createOlt($request->all());
 
-        // Default values
-        $reqPort = $request->port ?? 161;
-        $reqCommunity = $request->community ?? 'public';
-
-        $oltVendor = OidMapping::where('vendor', $request->olt_type)->first();
-
-        if (!$oltVendor) {
+            return redirect()
+                ->route('olts.index')
+                ->with('success', 'OLT stored successfully.');
+        } catch (\InvalidArgumentException $e) {
             return redirect()->back()
-                ->withErrors(['olt_type' => 'Selected OLT type is invalid.'])
+                ->withErrors(['error' => $e->getMessage()])
                 ->withInput();
         }
-
-        // ✅ Cek duplikasi berdasarkan IP + Port
-        $exists = Olt::where('ip', $request->ip_address)
-            ->where('port', $reqPort)
-            ->exists();
-
-        if ($exists) {
-            return redirect()->back()
-                ->withErrors([
-                    'ip_address' => "An OLT with IP {$request->ip_address} and port {$reqPort} already exists."
-                ])
-                ->withInput();
-        }
-
-        // Insert baru
-        Olt::create([
-            'name'      => $request->olt_name,
-            'ip'        => $request->ip_address,
-            'port'      => $reqPort,
-            'community' => $reqCommunity,
-            'version'   => 'v2c',
-            'vendor'    => $oltVendor->vendor,
-        ]);
-
-        return redirect()
-            ->route('olts.index')
-            ->with('success', 'OLT stored successfully.');
     }
 
     public function show($oltId)
     {
-        $olt = Olt::findOrFail($oltId);
-        $onus = Onu::where('olt_id', $oltId)->get(['onu_index', 'name', 'status', 'rx_power', 'mac_address', 'last_updated']);
-        $histories = OltUpdateLog::where('olt_id', $oltId)
-            ->orderBy('updated_at', 'desc')
-            ->get();
-
-        // Hitungan summary
-        $totalOnus   = $onus->count();
-        $onlineOnus  = $onus->where('status', 'Up')->count();
-        $offlineOnus = $onus->where('status', 'Down')->count();
-
-        // Ambil last_updated terbaru
-        $lastUpdateOnus = $onus->max('last_updated'); // setara dengan ORDER BY last_updated DESC LIMIT 1
-
-        return view('networks.olt_managements.show', compact(
-            'olt',
-            'onus',
-            'totalOnus',
-            'onlineOnus',
-            'offlineOnus',
-            'lastUpdateOnus',
-            'histories'
-        ));
+        $data = $this->oltService->getOltDetails($oltId);
+        return view('networks.olt_managements.show', $data);
     }
 
     public function edit($oltId)
     {
-        $olt = Olt::with('onus', 'latestUpdateLog')->where('id', $oltId)->first();
+        $olt = $this->oltService->findOltWithDetails($oltId);
         $oidMappings = OidMapping::all()->mapWithKeys(function ($item) {
-            return [$item->vendor => $item->description]; // key=vendor, value=description
+            return [$item->vendor => $item->description];
         });
-        // dd($olt);
-        return view('networks.olt_managements.edit', [
-            'olt' => $olt,
-            'oidMappings' => $oidMappings
-        ]);
+
+        return view('networks.olt_managements.edit', compact('olt', 'oidMappings'));
     }
 
     public function update(Request $request, Olt $oltmanagement)
     {
-        $request->validate([
-            'olt_name'   => 'required|string|max:255',
-            'ip_address' => 'required|string',
-            'port'       => 'nullable|numeric',
-            'community'  => 'nullable|string',
-            'latitude'   => 'nullable|numeric',
-            'longitude'  => 'nullable|numeric',
-            'olt_type'   => [
-                'required',
-                'string',
-                Rule::in(OidMapping::pluck('vendor')->toArray()),
-            ],
-        ]);
-
-        if (!$oltmanagement->exists) {
-            return redirect()->route('olts.index')->with('error', 'OLT not found.');
-        }
-
-        $reqPort = $request->port ?? 161;
-
-        // ✅ Cek duplikasi (kecuali dirinya sendiri)
-        $exists = Olt::where('ip', $request->ip_address)
-            ->where('port', $reqPort)
-            ->where('id', '!=', $oltmanagement->id)
-            ->exists();
-
-        if ($exists) {
-            return redirect()->back()
-                ->withErrors([
-                    'ip_address' => "Another OLT with IP {$request->ip_address} and port {$reqPort} already exists."
-                ])
-                ->withInput();
-        }
-
-        // Update fields
-        $oltmanagement->fill([
-            'name'      => $request->olt_name,
-            'ip'        => $request->ip_address,
-            'port'      => $reqPort,
-            'community' => $request->community ?? 'public',
-            'vendor'    => $request->olt_type,
-            'latitude'  => $request->latitude,
-            'longitude' => $request->longitude,
-            'version'   => 'v2c',
-        ]);
-
         try {
-            $oltmanagement->save();
+            $this->oltService->updateOlt($oltmanagement, $request->all());
+
+            return redirect()->route('olts.index')->with('success', 'OLT updated successfully.');
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->back()
+                ->withErrors(['error' => $e->getMessage()])
+                ->withInput();
         } catch (\Throwable $e) {
             return redirect()->back()
                 ->with('error', 'Failed to update OLT: ' . $e->getMessage());
         }
-
-        return redirect()->route('olts.index')->with('success', 'OLT updated successfully.');
     }
-
-    public function delete(Olt $oltmanagement) {}
 
     public function destroy(Olt $oltmanagement)
     {
         try {
-            // Hapus OLT
-            $oltmanagement->delete();
+            $this->oltService->deleteOlt($oltmanagement);
 
-            // Ambil semua OLT setelah delete
-            $olts = Olt::with('onus', 'latestUpdateLog')->orderBy('id', 'asc')->get();
-
-            // Hitung OLT aktif
+            $olts = Olt::with('onts', 'latestUpdateLog')->orderBy('id', 'asc')->get();
             $activeOlts = $olts->filter(fn($olt) => $olt->display_status === 'Active')->count();
-
-            // Total ONU
-            $totalOnus = Onu::count();
+            $totalOnts = Ont::count();
 
             return response()->json([
                 'success' => true,
                 'message' => 'OLT deleted successfully.',
                 'onlineOlts' => $activeOlts,
-                'totalOnus' => $totalOnus,
+                'totalOnts' => $totalOnts,
                 'totalOlts' => $olts->count()
             ]);
         } catch (\Throwable $e) {
@@ -290,38 +146,7 @@ class OLTManagementController extends Controller
 
     public function filter(Request $request)
     {
-        $search   = $request->search ?? null;
-        $olt_type = $request->olt_type ?? null;
-        $status   = strToUpper($request->status) ?? null;
-        $entries  = $request->entries ?? 25;
-
-        $query = Olt::with('onus', 'latestUpdateLog');
-
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%$search%")
-                    ->orWhere('ip', 'like', "%$search%");
-            });
-        }
-
-        if ($olt_type) {
-            $vendorName = OidMapping::find($olt_type)?->vendor;
-            if ($vendorName) {
-                $query->where('vendor', $vendorName);
-            }
-        }
-
-        if ($status && $status != 0) {
-            $statusMapping = match ($status) {
-                Olt::STRING_STATUS_INACTIVE => Olt::STATUS_INACTIVE,
-                Olt::STRING_STATUS_ACTIVE   => Olt::STATUS_ACTIVE,
-                Olt::STRING_STATUS_SCANNING => Olt::STATUS_SCANNING,
-            };
-            $query->where('status', $statusMapping);
-        }
-
-        // Paginasi langsung
-        $olts = $query->paginate($entries);
+        $olts = $this->oltService->filterOlts($request->all());
         $agent = new Agent();
 
         if ($agent->isMobile() || $agent->isTablet()) {
@@ -331,141 +156,43 @@ class OLTManagementController extends Controller
         }
 
         return response()->json([
-            'table'   => $table,
+            'table' => $table,
             'summary' => view('networks.partials.olts_summary', compact('olts'))->render(),
         ]);
     }
 
     public function testSNMP(Request $request)
     {
-        $username = Auth::user()?->name ?? 'System'; // username user yang login (nullable)
-        LogHelper::logInfo(null, ['request' => $request->all()], 200, 'Request data for OLT validation');
-
-        // Ambil list vendor dari DB
-        $vendors = OidMapping::pluck('vendor')->toArray();
-        LogHelper::logInfo(null, ['vendors' => $vendors], 200, 'Valid vendors');
-
-        $validator = Validator::make($request->all(), [
-            'olt_name'   => 'required|string|max:255',
-            'ip' => 'required|string',
-            'port'       => 'nullable|numeric',
-            'community'  => 'nullable|string',
-            'olt_type'   => [
-                'required',
-                'string',
-                Rule::in($vendors),
-            ],
-        ]);
-
-        if ($validator->fails()) {
-            LogHelper::logWarning(null, ['validator_error' => $validator->errors()->toArray()], 422, 'OLT validation failed');
-            return response()->json([
-                'success' => false,
-                'errors'  => $validator->errors(),
-            ], 422);
-        }
-
-        LogHelper::logInfo(null, ['request' => $request->all()], 200, 'OLT validation passed');
+        $username = Auth::user()?->name ?? 'System';
 
         try {
-            $totalOnu = 0;
-            $oltVendor = OidMapping::where('vendor', $request->olt_type)->first();
-
-            if (empty($oltVendor)) {
-                return response()->json([
-                    'success' => false,
-                    'error'   => 'OID mapping not found.',
-                ]);
-            }
-
-            // bikin object sederhana untuk dikirim ke service
-            $olt = (object) [
-                'name'      => $request->olt_name,
-                'ip'        => $request->ip,
-                'port'      => $request->port,
-                'community' => $request->community,
-                'vendor'    => $oltVendor->vendor,
-                'version'   => 'v2c'
-            ];
-
-            $healthCheck = SnmpService::checkOltStatus($olt, $username);
-
-            if ($healthCheck['status'] === 'Up') {
-                $snmpData = SnmpService::getOnus($olt);
-                $totalOnu = $snmpData['total_onu'];
-
-                LogHelper::logInfo(null, [
-                    'result' => 'success',
-                    'device_info' => $olt->vendor,
-                    'onu_count' => $totalOnu
-                ], 200, 'SNMP | Success Response');
-
-                return response()->json([
-                    'success'     => true,
-                    'device_info' => $olt->vendor,
-                    'onu_count'   => $totalOnu,
-                ]);
-            }
-
-            LogHelper::logInfo(null, [
-                'result' => 'failed',
-            ], 200, 'SNMP | Failed Response');
-
+            $result = $this->validationService->testSnmpConnection($request->all(), $username);
+            return response()->json($result);
+        } catch (\InvalidArgumentException $e) {
             return response()->json([
                 'success' => false,
-                'device_info' => $olt->vendor,
-                'onu_count'   => $totalOnu,
-                'error'   => 'Could not establish SNMP connection to the device',
-            ]);
+                'errors' => ['general' => $e->getMessage()],
+            ], 422);
         } catch (\Throwable $e) {
             LogHelper::logInfo(null, [
                 'exception' => $e->getMessage(),
-                'trace'     => $e->getTraceAsString(),
+                'trace' => $e->getTraceAsString(),
             ], 500, 'SNMP | Exception Caught');
 
             return response()->json([
                 'success' => false,
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
     public function startScan(Request $request)
     {
+        $username = Auth::user()?->name ?? 'System';
         $jobId = Str::uuid()->toString();
 
-        $query = Olt::query();
+        $jobId = $this->scanService->startBulkScan($request->all());
 
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%$search%")
-                    ->orWhere('ip_address', 'like', "%$search%");
-            });
-        }
-
-        if ($request->filled('olt_type')) {
-            $query->where('vendor', $request->olt_type);
-        }
-
-        if ($request->filled('status') && $request->status != "0") {
-            $query->where('status', $request->status);
-        }
-
-        // entries tidak dipakai untuk filter data OLT, skip
-
-        $total = $query->count();
-
-        Cache::put("scan_progress_{$jobId}", [
-            'current' => 0,
-            'total'   => $total,
-            'percent' => 0,
-            'status'  => 'queued',
-            'currentOlt' => null,
-        ], 600);
-
-        $username = Auth::user()?->name ?? 'System';
-        // Dispatch job dengan parameter filter
         ScanOltsJob::dispatch($jobId, $username);
 
         return response()->json(['jobId' => $jobId]);
@@ -473,12 +200,10 @@ class OLTManagementController extends Controller
 
     public function scanStatus($jobId)
     {
-        $cacheKey = "scan_job_progress_{$jobId}";
-        $cacheData = Cache::get($cacheKey, ['status' => 'not_found']);
+        $cacheData = $this->scanService->getScanProgress($jobId);
 
-        // Tambahin log supaya kelihatan isi cache
         LogHelper::logInfo(
-            $cacheKey,
+            "scan_status_{$jobId}",
             ['jobId' => $jobId, 'cacheData' => $cacheData],
             200,
             "Scan status diambil dari cache"
@@ -490,31 +215,10 @@ class OLTManagementController extends Controller
     public function checkAllStatusJob(Request $request)
     {
         $username = Auth::user()?->name ?? 'System';
-        // hapus cache lama
-        Cache::forget('olt-status-progress');
-        Cache::forget('olt-status-all');
-        Cache::forget('olt-status-total');
+        $this->scanService->initializeStatusCheck();
 
-        // ambil semua OLT
         $olts = Olt::all();
-
-        // set semua OLT ke status Scanning dulu
-        $allStatus = $olts->mapWithKeys(fn($olt) => [
-            $olt->id => ['status' => 'Scanning', 'name' => $olt->name]
-        ])->toArray();
-
-        Cache::put('olt-status-all', $allStatus, now()->addMinutes(5));
-        Cache::put('olt-status-total', count($olts), now()->addMinutes(5));
-        Cache::put('olt-status-progress', [
-            'current' => 0,
-            'total' => count($olts),
-            'statuses' => $allStatus,
-            'currentOltName' => $olts->first()->name ?? null
-        ], now()->addMinutes(5));
-
-        // dispatch job untuk setiap OLT
         foreach ($olts as $olt) {
-            LogHelper::logInfo(null, ['olts' => $olt], 200, "olt desc");
             CheckOltStatusJob::dispatch($olt, $username);
         }
 
@@ -525,81 +229,59 @@ class OLTManagementController extends Controller
 
     public function getOltStatusProgress()
     {
-        $progress = Cache::get('olt-status-progress', [
-            'current' => 0,
-            'total' => Olt::count(),
-            'statuses' => [],
-            'currentOltName' => null, // default kalau cache belum ada
-        ]);
-
+        $progress = $this->scanService->getStatusCheckProgress();
         return response()->json($progress);
     }
 
     public function scanSingle($oltId)
     {
-        return $this->handleOltCheck($oltId, includeOnus: true, action: 'OLT Scan');
-    }
+        $username = Auth::user()?->name ?? 'System';
 
-    public function healthCheckSingle($oltId)
-    {
-        return $this->handleOltCheck($oltId, includeOnus: false, action: 'OLT Health Check');
-    }
-
-    /**
-     * Helper untuk scan atau health check OLT
-     */
-    private function handleOltCheck(int $oltId, bool $includeOnus = false, string $action = 'Check')
-    {
-        $username = Auth::user()?->name ?? 'System'; // username user yang login (nullable)
-        $olt = Olt::find($oltId);
-
-        if (!$olt) {
+        try {
+            $result = $this->scanService->scanSingleOlt($oltId, $username);
+            return response()->json($result);
+        } catch (\InvalidArgumentException $e) {
             return response()->json([
                 'success' => false,
                 'olt_name' => null,
                 'status' => 'Scanning',
-                'total_onu' => 0,
-                'message' => "OLT ID {$oltId} tidak ditemukan"
+                'total_ont' => 0,
+                'message' => $e->getMessage()
             ], 404);
-        }
-
-        try {
-            $healthCheck = SnmpService::checkOltStatus($olt, $username, true);
-            $status = SnmpHelper::mapSnmpStatus($healthCheck['status']);
-
-            $response = [
-                'success' => true,
-                'olt_name' => $olt->name,
-                'status' => $status,
-                'message' => "Successfully get {$action}"
-            ];
-
-            if ($status['status'] === 'Up' && $includeOnus) {
-                $snmpData = SnmpService::getOnus($olt);
-                SnmpService::updateOnus($olt, $snmpData['snmpData'], $snmpData['duration'], $username);
-                $response['total_onu'] = Onu::where('olt_id', $oltId)->count();
-            }
-
-            return response()->json($response, 200);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'olt_name' => $olt->name,
+                'olt_name' => null,
                 'status' => 'Inactive',
-                'total_onu' => 0,
+                'total_ont' => 0,
                 'message' => $e->getMessage()
             ], 500);
         }
     }
 
-    public function clearScanCache(string $jobId)
+    public function healthCheckSingle($oltId)
     {
-        $cacheKey = "scan_job_progress_{$jobId}";
-        if (Cache::has($cacheKey)) {
-            Cache::forget($cacheKey);
-            LogHelper::logInfo($jobId, ['cache_key' => $cacheKey], 200, "Cache scan progress cleared");
-        }
+        $username = Auth::user()?->name ?? 'System';
 
-        return response()->json(['status' => 'ok']);
+        try {
+            $result = $this->scanService->healthCheckSingleOlt($oltId, $username);
+            return response()->json($result);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'success' => false,
+                'olt_name' => null,
+                'status' => 'Scanning',
+                'total_ont' => 0,
+                'message' => $e->getMessage()
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'olt_name' => null,
+                'status' => 'Inactive',
+                'total_ont' => 0,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 }

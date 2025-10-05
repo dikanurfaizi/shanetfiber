@@ -18,7 +18,7 @@ class OltUpdateLog extends Model
         'failed_count',
         'details',
         'olt_id',
-        'onu_count',
+        'ont_count',
         'status',
         'duration',
         'username'

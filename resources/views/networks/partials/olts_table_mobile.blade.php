@@ -18,12 +18,14 @@
                         </div>
 
                         <div class="d-flex align-items-center gap-1 olt-status-indicator-wrapper">
-                            @php $status = strtolower($olt->display_status); @endphp
+                            @php
+                                $status = strtolower($olt->status_text);
+                            @endphp
                             <div class="olt-status-indicator {{ $status }}">
                                 <i class="fas fa-circle"></i>
                             </div>
                             <span class="status-badge {{ $status }}">
-                                {{ strtoupper($olt->display_status) }}
+                                {{ strtoupper($olt->status_text) }}
                             </span>
                         </div>
                     </div>

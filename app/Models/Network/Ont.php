@@ -5,15 +5,15 @@ namespace App\Models\Network;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Onu extends Model
+class Ont extends Model
 {
     use HasFactory;
 
-    protected $table = 'onus';
+    protected $table = 'onts';
 
     protected $fillable = [
         'olt_id',
-        'onu_index',
+        'ont_index',
         'name',
         'tx_power',
         'rx_power',

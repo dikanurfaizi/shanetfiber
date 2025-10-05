@@ -4,14 +4,16 @@ namespace App\Services\Networks;
 
 use App\Models\Network\OidMapping;
 use App\Models\Network\OltUpdateLog;
-use App\Models\Network\Onu;
+use App\Models\Network\Ont;
 use App\Models\Network\Olt;
 use App\Helpers\SnmpHelper;
 use App\Helpers\LogHelper;
+use App\Helpers\OltHelper;
 use App\Services\Networks\HouseKeepingLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Database\Eloquent\Collection;
 
 class SnmpService
 {
@@ -20,15 +22,19 @@ class SnmpService
         $startTime = microtime(true);
         $status = 'Down';
 
-        LogHelper::logInfo(null, ['olt' => $olt], 200, "Start checkOltStatus");
-
         // Ambil mapping OID vendor
-        $mapping = OidMapping::with('details')->where('vendor', $olt->vendor)->first();
+        $mapping = OidMapping::with('details')
+            ->find($olt->oid_mapping_id);
+
         $sysNameOid = $mapping?->getOid('sysName');
 
         $resolvedIp = $sysNameOid ? SnmpHelper::resolveIp($olt->ip) : null;
         if (!$resolvedIp) {
-            LogHelper::logError(null, ['olt' => $olt], 404, "IP resolution failed");
+            LogHelper::logError(null, [
+                'sysNameOid' => $sysNameOid,
+                'resolvedIp' => $resolvedIp,
+                'olt' => $olt
+            ], 404, "IP resolution failed");
             return ['status' => $status, 'duration' => 0];
         }
 
@@ -39,12 +45,6 @@ class SnmpService
             default => 1,
         };
 
-        LogHelper::logInfo(null, [
-            'resolvedIp' => $resolvedIp,
-            'sysNameOid' => $sysNameOid,
-            'version'    => $version
-        ], 200, "SNMP parameters");
-
         // Panggil SNMP di global namespace
         $session = @\snmpget("{$resolvedIp}:{$olt->port}", $olt->community, $sysNameOid, 1000000, $version);
 
@@ -53,16 +53,19 @@ class SnmpService
         $endTime = microtime(true);
         $duration = round($endTime - $startTime, 2);
 
+        if ($updateDb && $olt instanceof Olt) {
+            $olt->updateStatus($session ? OltHelper::STATUS_ACTIVE : OltHelper::STATUS_INACTIVE);
+        }
+
         LogHelper::logInfo(null, [
+            'resolvedIp' => $resolvedIp,
+            'sysNameOid' => $sysNameOid,
+            'version'    => $version,
             'session'  => $session,
             'status'   => $session ? 'Up' : 'Down',
             'duration' => $duration,
-            'username' => $username
-        ], 200, "End checkOltStatus");
-
-        if ($updateDb && $olt instanceof Olt) {
-            $olt->updateStatus($session ? Olt::STATUS_ACTIVE : Olt::STATUS_INACTIVE);
-        }
+            'username' => $username,
+        ], 200, "checkOltStatus Success");
 
         return [
             'status'   => $session ? 'Up' : 'Down',
@@ -102,25 +105,23 @@ class SnmpService
         return $sysDescr;
     }
 
-    public static function getOnus($olt)
+    public static function getOnts($olt)
     {
         $startTime = microtime(true);
-        LogHelper::logInfo(null, ['ip' => $olt->ip], 200, "Start getOnus");
 
         $mapping = OidMapping::with(['details' => fn($q) => $q->where('query_type', 2)])
-            ->where('vendor', $olt->vendor)
-            ->first();
+            ->find($olt->oid_mapping_id);
 
         if (!$mapping) {
-            LogHelper::logError(null, ['olt' => $olt], 404, "Mapping not found");
-            return ['snmpData' => false, 'duration' => 0, 'totalOnu' => 0];
+            LogHelper::logError(null, ['mapping' => $mapping, 'olt' => $olt], 404, "Mapping not found");
+            return ['snmpData' => false, 'duration' => 0, 'totalOnt' => 0];
         }
 
         $oids = [];
         foreach ($mapping->details as $detail) {
             $oids[$detail->oid_key] = trim($detail->oid_value, ' .');
         }
-        LogHelper::logInfo(null, ['oids_keys' => array_keys($oids)], 200, "OID list prepared");
+        // LogHelper::logInfo(null, ['oids_keys' => array_keys($oids)], 200, "OID list prepared");
 
         $resolvedIp = SnmpHelper::resolveIp($olt->ip);
         $target     = "{$resolvedIp}:" . ($olt->port ?? 161);
@@ -135,47 +136,47 @@ class SnmpService
 
         if (!$snmpWalkFn) {
             LogHelper::logError(null, ['version' => $version], 200, "SNMP Version not recognized");
-            return ['snmpData' => false, 'duration' => 0, 'totalOnu' => 0];
+            return ['snmpData' => false, 'duration' => 0, 'totalOnt' => 0];
         }
 
         $rawSnmp   = [];
-        $onusList  = [];
+        $ontsList  = [];
         foreach ($oids as $key => $baseOid) {
             $walkRes = $snmpWalkFn($target, $community, $baseOid);
             $rawSnmp[$key] = $walkRes;
             $count = count((array)$walkRes);
 
-            // log jumlah hasil per OID (tidak semua isi)
-            LogHelper::logInfo(null, ['key' => $key, 'count' => $count], 200, "SNMP walk count");
+            // // log jumlah hasil per OID (tidak semua isi)
+            // LogHelper::logInfo(null, ['key' => $key, 'count' => $count], 200, "SNMP walk count");
 
             foreach ((array)$walkRes as $fullOid => $val) {
                 if (is_array($val)) $val = reset($val);
                 $index = self::extractIndex($fullOid, $baseOid);
 
                 $clean = self::normalizeSnmpValue($val);
-                if (!isset($onusList[$index])) $onusList[$index] = [];
-                $onusList[$index][$key] = $clean;
+                if (!isset($ontsList[$index])) $ontsList[$index] = [];
+                $ontsList[$index][$key] = $clean;
             }
         }
 
         $endTime = microtime(true);
         $duration = round($endTime - $startTime, 2);
 
-        $totalOnu = count($onusList);
+        $totalOnt = count($ontsList);
 
         // Log sample saja biar ringkas
         LogHelper::logInfo(null, [
-            'sample_onus' => array_slice($onusList, 0, 5, true),
-            'total_onu'   => $totalOnu
-        ], 200, "ONU data sample");
+            'sample_onts' => array_slice($ontsList, 0, 5, true),
+            'total_ont'   => $totalOnt
+        ], 200, "ONT data sample");
 
         LogHelper::logDebug(null, ['rawSnmp' => $rawSnmp], "SNMP Raw Data (debug only)");
 
         return [
             'snmpData'  => $rawSnmp,
-            'onus'      => $onusList,
+            'onts'      => $ontsList,
             'duration'  => $duration,
-            'total_onu' => $totalOnu
+            'total_ont' => $totalOnt
         ];
     }
 
@@ -205,38 +206,39 @@ class SnmpService
         return trim($val);
     }
 
-    public static function updateOnus($olt, $snmpData, $duration, $username)
+    public static function updateOnts($olt, $snmpData, $duration, $username)
     {
         if (empty($snmpData) || !is_array($snmpData)) {
             self::OltInsertLog(
                 $olt,
-                "SNMP walk gagal / tidak ada response dari OLT {$olt->ip}",
+                "SNMP walk failed / not any response from OLT {$olt->ip}",
                 0,
-                1,
+                0,
                 'Down',
                 $username,
                 $duration
             );
+
+            LogHelper::logError(null, [
+                'olt_id' => $olt->id,
+                'olt_ip' => $olt->ip,
+                'message' => 'SNMP walk failed or empty data'
+            ], 500, "Failed Update ONT");
+
             return false;
         }
 
         // Reset data lama
-        Onu::where('olt_id', $olt->id)->delete();
-        DB::statement('ALTER TABLE onus AUTO_INCREMENT = 1');
-        LogHelper::logInfo(null, [
-            'olt_id' => $olt->id,
-            'olt_ip' => $olt->ip,
-            'total_candidates' => count($snmpData)
-        ], 200, "Reset data ONU sebelum insert baru");
+        Ont::where('olt_id', $olt->id)->delete();
 
-        $success = 0;
-        $failed  = 0;
+        $successList = [];
+        $failedList  = [];
 
         foreach ($snmpData as $index => $data) {
             try {
-                $onuData = [
+                $ontData = [
                     'olt_id'       => $olt->id,
-                    'onu_index'    => $index,
+                    'ont_index'    => $index,
                     'last_updated' => now(),
                     'name'         => SnmpHelper::parseHexStringToAscii($data['oid_name'] ?? ''),
                     'tx_power'     => trim($data['txpower'] ?? 'N/A', '"'),
@@ -248,41 +250,38 @@ class SnmpService
                         : 'N/A',
                 ];
 
-                // Debug detail per ONU (hanya muncul kalau APP_DEBUG=true)
-                LogHelper::logDebug(null, [
-                    'index'    => $index,
-                    'raw'      => $data,
-                    'prepared' => $onuData
-                ], "Prepared ONU data");
-
-                Onu::create($onuData);
-                $success++;
+                Ont::create($ontData);
+                $successList[] = $ontData;
             } catch (\Throwable $e) {
-                $failed++;
-                LogHelper::logError(null, [
+                $failedList[] = [
                     'index'   => $index,
-                    'olt_id'  => $olt->id,
-                    'message' => $e->getMessage(),
-                ], 500, "Gagal insert ONU");
+                    'raw'     => $data,
+                    'error'   => $e->getMessage()
+                ];
             }
         }
 
+        // Simpan log ke OltUpdateLog / table log internal
         self::OltInsertLog(
             $olt,
-            "Update ONU selesai: {$olt->name} ({$olt->ip}:{$olt->port})",
-            $success,
-            $failed,
+            "Update ONT selesai: {$olt->name} ({$olt->ip}:{$olt->port})",
+            count($successList),
+            count($failedList),
             'Up',
             $username,
             $duration
         );
 
+        // Log summary lengkap sekali di akhir
         LogHelper::logInfo(null, [
             'olt_id'   => $olt->id,
-            'inserted' => $success,
-            'failed'   => $failed,
+            'olt_ip'   => $olt->ip,
+            'total_candidates' => count($snmpData),
+            'inserted' => count($successList),
+            'failed'   => count($failedList),
+            'failed_list'  => $failedList,
             'duration' => $duration,
-        ], 200, "Summary insert ONU");
+        ], 200, "Summary insert ONT");
 
         HouseKeepingLog::houseKeepingLog();
         return true;
@@ -296,27 +295,27 @@ class SnmpService
             'success_count' => $success,
             'failed_count'  => $failed,
             'details'       => $details,
-            'onu_count'     => ($status === 'Down') ? $failed : $success,
+            'ont_count'     => ($status === 'Down') ? $failed : $success,
             'status'        => $status,
             'username'      => $username,
             'duration'      => $duration
         ]);
     }
 
-    public function scanAll($jobId, $username): void
+    public function scanAll(string $jobId, string $username): void
     {
         $startTime = microtime(true);
 
-        $olts = Olt::with('onus')->get();
+        $olts = Olt::with('onts')->get();
         $total = $olts->count();
         $current = 0;
         $onlineOlts = 0;
-        $totalOnus = 0;
+        $totalOnts = 0;
 
-        LogHelper::logInfo(null, [
-            'total_olts' => $total,
-            'username'   => $username
-        ], 200, "Memulai scan semua OLT", $jobId);
+        // LogHelper::logInfo(null, [
+        //     'total_olts' => $total,
+        //     'username'   => $username
+        // ], 200, "Memulai scan semua OLT", $jobId);
 
         foreach ($olts as $olt) {
             $current++;
@@ -327,8 +326,8 @@ class SnmpService
                     'olt_name' => $olt->name,
                     'ip'       => $olt->ip,
                     'port'     => $olt->port,
-                    'status'   => $olt->display_status
-                ], 200, "Mulai scan OLT", $jobId);
+                    'status_in_db'   => OltHelper::getDisplayStatus($olt->status)
+                ], 200, "ScanAll Started", $jobId);
 
                 $healthCheck = Self::checkOltStatus($olt, $username);
 
@@ -336,89 +335,67 @@ class SnmpService
                     LogHelper::logWarning(null, [
                         'olt_id' => $olt->id,
                         'ip'     => $olt->ip,
-                    ], 204, "HealthCheck tidak ada response", $jobId);
+                    ], 204, "HealthCheck not response", $jobId);
 
                     continue;
                 }
 
-                LogHelper::logInfo(null, ['healthCheck' => $healthCheck], 200, "Response HealthCheck", $jobId);
+                // LogHelper::logInfo(null, ['healthCheck' => $healthCheck], 200, "Response HealthCheck", $jobId);
 
                 if ($healthCheck['status'] === 'Up') {
-                    $snmpData = Self::getOnus($olt);
+                    $snmpData = Self::getOnts($olt);
+                    $ontsData = $snmpData['onts'] ?? [];
 
-                    // --- Validasi isi onus ---
-                    $onusData = $snmpData['onus'] ?? [];
-                    LogHelper::logInfo(null, ['onus_data' => $onusData], 200, "SnmpData Onus", $jobId);
-
-                    $isValidOnus = is_array($onusData) && !empty($onusData);
-                    if ($isValidOnus) {
-                        $firstOnu = reset($onusData);
+                    // validasi OLT
+                    $isValidOnts = is_array($ontsData) && !empty($ontsData);
+                    if ($isValidOnts) {
+                        $firstOnt = reset($ontsData);
                         $requiredKeys = ['oid_name', 'txpower', 'rxpower', 'status', 'macaddress', 'temperature'];
                         foreach ($requiredKeys as $k) {
-                            if (!array_key_exists($k, $firstOnu)) {
-                                $isValidOnus = false;
+                            if (!array_key_exists($k, $firstOnt)) {
+                                $isValidOnts = false;
                                 break;
                             }
                         }
                     }
 
-                    if ($isValidOnus) {
-                        LogHelper::logInfo(null, [
-                            'allData'  => $snmpData,
-                            'duration' => $snmpData['duration']
-                        ], 200, "SNMP data valid, siap update", $jobId);
-
-                        $olt->updateStatus(Olt::STATUS_ACTIVE);
-                        Self::updateOnus($olt, $onusData, $snmpData['duration'], $username);
-                        $totalOnus += $snmpData['total_onu'] ?? 0;
+                    if ($isValidOnts) {
+                        $olt->updateStatus(OltHelper::STATUS_ACTIVE);
+                        Self::updateOnts($olt, $ontsData, $snmpData['duration'], $username);
+                        $totalOnts += $snmpData['total_ont'] ?? 0;
                         $onlineOlts++;
                     } else {
-                        LogHelper::logError(null, [
-                            'olt_id'  => $olt->id,
-                            'ip'      => $olt->ip,
-                            'snmpRes' => $snmpData,
-                        ], 500, "SNMP data invalid / tidak sesuai format", $jobId);
-
-                        $olt->updateStatus(Olt::STATUS_INACTIVE);
+                        $olt->updateStatus(OltHelper::STATUS_INACTIVE);
                         self::OltInsertLog($olt, "SNMP data invalid dari OLT {$olt->ip}", 0, 0, 'Down', $username, $snmpData['duration'] ?? 0);
                     }
                 }
 
-                $log = OltUpdateLog::where('olt_id', $olt->id)
-                    ->latest('updated_at')
-                    ->first();
-
+                // ambil last scan log
+                $log = OltUpdateLog::where('olt_id', $olt->id)->latest('updated_at')->first();
                 $lastUpdate = $log?->updated_at ? Carbon::parse($log->updated_at) : null;
 
                 $progressData = $this->buildProgressData(
                     $current,
                     $total,
                     $onlineOlts,
-                    $totalOnus,
+                    $totalOnts,
                     ($current < $total) ? 'queue' : 'done',
                     $olt->name,
                     [
                         'olt_id'         => $olt->id,
                         'status'         => SnmpHelper::mapSnmpStatus($healthCheck['status']),
-                        'onu_count'      => $olt->onus->count(),
+                        'ont_count'      => $olt->onts->count(),
                         'last_scan'      => $lastUpdate?->toDateTimeString(),
                         'last_scan_time' => $lastUpdate?->format('H:i'),
                         'last_scan_date' => $lastUpdate?->format('d/m/y'),
-                    ]
+                    ],
+                    $duration = round(microtime(true) - $startTime, 2),
+                    $jobId
                 );
-
-                LogHelper::logInfo(null, $progressData, 200, "Hasil scan OLT", $jobId);
 
                 $this->updateProgress($jobId, $progressData);
                 HouseKeepingLog::houseKeepingLog();
             } catch (\Throwable $e) {
-                LogHelper::logError(null, [
-                    'olt_id'        => $olt->id,
-                    'olt_name'      => $olt->name,
-                    'error_message' => $e->getMessage(),
-                    'trace'         => $e->getTraceAsString(),
-                ], 500, "Scan OLT gagal", $jobId);
-
                 $this->updateProgress($jobId, [
                     'current'    => $current,
                     'total'      => $total,
@@ -438,43 +415,43 @@ class SnmpService
         ], 200, "Selesai scan semua OLT", $jobId);
     }
 
-    protected function updateProgress($jobId, array $progressData): void
+    protected function updateProgress(string $jobId, array $progressData): void
     {
         $cacheKey = "scan_job_progress_{$jobId}";
+        $cache = Cache::get($cacheKey, [
+            'current' => 0,
+            'total' => $progressData['total'] ?? 0,
+            'percent' => 0,
+            'status' => 'queued',
+            'onlineOlts' => 0,
+            'totalOnts' => 0,
+            'olts' => [],
+        ]);
 
-        // Ambil data lama biar bisa interpolasi (smooth increment)
-        $last = Cache::get($cacheKey);
-
-        if ($last && isset($last['current'], $progressData['current'])) {
-            if ($progressData['current'] > $last['current'] + 1) {
-                $progressData['current'] = $last['current'] + 1;
-            }
+        // Update data OLT tertentu
+        if (isset($progressData['lastResult']['olt_id'])) {
+            $oltId = $progressData['lastResult']['olt_id'];
+            $cache['olts'][$oltId] = $progressData['lastResult'];
         }
 
-        if (isset($progressData['current'], $progressData['total']) && $progressData['total'] > 0) {
-            $progressData['percent'] = round(($progressData['current'] / $progressData['total']) * 100, 2);
-        }
+        // Update summary
+        $cache['current'] = $progressData['current'] ?? $cache['current'];
+        $cache['total'] = $progressData['total'] ?? $cache['total'];
+        $cache['percent'] = isset($cache['total']) && $cache['total'] > 0
+            ? round(($cache['current'] / $cache['total']) * 100, 2)
+            : 0;
+        $cache['status'] = $progressData['status'] ?? $cache['status'];
+        $cache['onlineOlts'] = $progressData['onlineOlts'] ?? $cache['onlineOlts'];
+        $cache['totalOnts'] = $progressData['totalOnts'] ?? $cache['totalOnts'];
 
-        // 🔹 Log sebelum menyimpan cache
-        LogHelper::logInfo(
-            $jobId,
-            [
-                'cache_key' => $cacheKey,
-                'before_cache' => $last,
-                'after_cache' => $progressData,
-            ],
-            200,
-            "Update progress cache"
-        );
-
-        Cache::put($cacheKey, $progressData, now()->addMinutes(30));
+        Cache::put($cacheKey, $cache, now()->addMinutes(30));
     }
 
     protected function buildProgressData(
         int $current,
         int $total,
         int $onlineOlts,
-        int $totalOnus,
+        int $totalOnts,
         string $status,
         ?string $currentOlt,
         ?array $lastResult = null,
@@ -484,8 +461,9 @@ class SnmpService
         $progressData = [
             'current'      => $current,
             'total'        => $total,
+            'percent' => ($total > 0) ? round(($current / $total) * 100, 2) : 0,
             'onlineOlts'   => $onlineOlts,
-            'totalOnus'    => $totalOnus,
+            'totalOnts'    => $totalOnts,
             'status'       => $status,
             'currentOlt'   => $currentOlt,
             'lastResult'   => $lastResult,

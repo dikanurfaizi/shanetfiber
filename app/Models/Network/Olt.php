@@ -5,20 +5,13 @@ namespace App\Models\Network;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Helpers\OltHelper;
 
 class Olt extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $table = 'olts';
-
-    const STATUS_INACTIVE = 0;
-    const STATUS_ACTIVE   = 1;
-    const STATUS_SCANNING = 2;
-
-    const STRING_STATUS_INACTIVE = 'INACTIVE';
-    const STRING_STATUS_ACTIVE   = 'ACTIVE';
-    const STRING_STATUS_SCANNING = 'SCANNING';
 
     protected $primaryKey = 'id';
 
@@ -32,20 +25,20 @@ class Olt extends Model
         'port',
         'community',
         'version',
-        'vendor',
+        'oid_mapping_id',
         'status',
         'latitude',
         'longitude'
     ];
 
-    public function onus()
+    public function onts()
     {
-        return $this->hasMany(Onu::class, 'olt_id');
+        return $this->hasMany(Ont::class, 'olt_id');
     }
 
-    public function getTotalOnuAttribute(): int
+    public function getTotalOntAttribute(): int
     {
-        return $this->onus->count();
+        return $this->onts->count();
     }
 
     public function updateLogs()
@@ -58,27 +51,26 @@ class Olt extends Model
         return $this->hasOne(OltUpdateLog::class, 'olt_id')->latest('updated_at');
     }
 
-    public function getDisplayStatusAttribute(): string
-    {
-        return match ($this->status) {
-            1 => self::STRING_STATUS_ACTIVE,   // Up
-            0 => self::STRING_STATUS_INACTIVE, // Down
-            default => self::STRING_STATUS_SCANNING,
-        };
-    }
-
-    public function getStatusLabelAttribute(): string
-    {
-        return match ($this->status) {
-            self::STATUS_ACTIVE   => 'Active',
-            self::STATUS_SCANNING => 'Scanning',
-            default               => 'Inactive',
-        };
-    }
-
     public function updateStatus(int $status): bool
     {
         $this->status = $status;
         return $this->save();
+    }
+
+    // 🔹 Relasi baru ke OidMapping
+    public function mapping()
+    {
+        return $this->belongsTo(OidMapping::class, 'oid_mapping_id');
+    }
+
+    // 🔹 Helper untuk langsung ambil vendor
+    public function getVendorAttribute(): ?string
+    {
+        return $this->mapping?->vendor;
+    }
+
+    public function getStatusTextAttribute(): string
+    {
+        return OltHelper::getDisplayStatus($this->status);
     }
 }

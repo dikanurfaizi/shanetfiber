@@ -93,68 +93,95 @@ document.getElementById("batch-scan").addEventListener("click", async () => {
 function updateOltRow({
     olt_id,
     status,
-    onu_count,
+    ont_count,
     last_scan_time,
     last_scan_date,
 }) {
-    // 1. update status cell di desktop & mobile
-    document
-        .querySelectorAll(`.olt-row[data-olt-id="${olt_id}"] .status-cell`)
-        .forEach((cell) => {
-            let icon = "";
-            switch ((status || "").toLowerCase()) {
-                case "active":
-                    icon = '<i class="fas fa-check-circle text-success"></i>';
-                    break;
-                case "inactive":
-                    icon = '<i class="fas fa-times-circle text-danger"></i>';
-                    break;
-                case "scanning":
-                    icon =
-                        '<i class="fas fa-circle-notch fa-spin text-warning"></i>';
-                    break;
-                default:
-                    icon =
-                        '<i class="fas fa-question-circle text-secondary"></i>';
-            }
+    const lowerStatus = (status || "").toLowerCase();
 
-            cell.innerHTML = `
+    // 🔹 Desktop: status-cell, last-scan-time/date, total-onus
+    document
+        .querySelectorAll(`.olt-row[data-olt-id="${olt_id}"]`)
+        .forEach((row) => {
+            // Status
+            const statusCell = row.querySelector(".status-cell");
+            if (statusCell) {
+                let icon = "";
+                switch (lowerStatus) {
+                    case "active":
+                        icon =
+                            '<i class="fas fa-check-circle text-success"></i>';
+                        break;
+                    case "inactive":
+                        icon =
+                            '<i class="fas fa-times-circle text-danger"></i>';
+                        break;
+                    case "scanning":
+                        icon =
+                            '<i class="fas fa-circle-notch fa-spin text-warning"></i>';
+                        break;
+                    default:
+                        icon =
+                            '<i class="fas fa-question-circle text-secondary"></i>';
+                }
+                statusCell.innerHTML = `
                 <div class="d-flex align-items-center">
-                    <div class="olt-status-indicator ${status.toLowerCase()}">
-                        ${icon}
-                    </div>
-                    <span class="badge status-badge ${status.toLowerCase()}">
-                        ${status.toUpperCase()}
-                    </span>
+                    <div class="olt-status-indicator ${lowerStatus}">${icon}</div>
+                    <span class="badge status-badge ${lowerStatus}">${status.toUpperCase()}</span>
                 </div>
             `;
+            }
+
+            // Last scan
+            const lastScanTime = row.querySelector(".last-scan-time");
+            if (lastScanTime)
+                lastScanTime.innerHTML = `<span class="last-scan-time" title="${last_scan_date}">${last_scan_time}</span>`;
+            const lastScanDate = row.querySelector(".last-scan-date");
+            if (lastScanDate)
+                lastScanDate.innerHTML = `<span class="last-scan-date">${last_scan_date}</span>`;
+
+            // Total ONUs
+            const totalOnus = row.querySelector(".total-onus");
+            if (totalOnus)
+                totalOnus.innerHTML = `<td><span class="badge onu-badge">${ont_count}</span></td>`;
         });
 
-    // 2. update last scan time
+    // 🔹 Mobile card structure: .card-body[data-olt-id]
     document
-        .querySelectorAll(`.olt-row[data-olt-id="${olt_id}"] .last-scan-time`)
-        .forEach((el) => {
-            el.innerHTML = `
-                <span class="last-scan-time" title="${last_scan_date}">
-                    ${last_scan_time}
-                </span>
+        .querySelectorAll(`.card-body[data-olt-id="${olt_id}"]`)
+        .forEach((card) => {
+            // Status
+            const statusWrapper = card.querySelector(
+                ".olt-status-indicator-wrapper"
+            );
+            if (statusWrapper) {
+                const icon = (() => {
+                    switch (lowerStatus) {
+                        case "active":
+                            return '<i class="fas fa-check-circle text-success"></i>';
+                        case "inactive":
+                            return '<i class="fas fa-times-circle text-danger"></i>';
+                        case "scanning":
+                            return '<i class="fas fa-circle-notch fa-spin text-warning"></i>';
+                        default:
+                            return '<i class="fas fa-question-circle text-secondary"></i>';
+                    }
+                })();
+                statusWrapper.innerHTML = `
+                <div class="olt-status-indicator ${lowerStatus}">${icon}</div>
+                <span class="status-badge ${lowerStatus}">${status.toUpperCase()}</span>
             `;
-        });
+            }
 
-    // 3. update last scan date
-    document
-        .querySelectorAll(`.olt-row[data-olt-id="${olt_id}"] .last-scan-date`)
-        .forEach((el) => {
-            el.innerHTML = `
-                <span class="last-scan-date">${last_scan_date}</span>
-            `;
-        });
+            // Total ONUs
+            const totalOnus = card.querySelector(".total-onus");
+            if (totalOnus)
+                totalOnus.innerHTML = `<strong>{{ __('networks.table.onu') }}:</strong> ${ont_count}`;
 
-    document
-        .querySelectorAll(`.olt-row[data-olt-id="${olt_id}"] .total-onus`)
-        .forEach((el) => {
-            el.innerHTML = `<td><span class="badge onu-badge">${onu_count}</span>
-        </td>`;
+            // Last scan
+            const lastScan = card.querySelector(".last-scan");
+            if (lastScan)
+                lastScan.innerHTML = `<strong>{{ __('networks.table.last-scan') }}:</strong> ${last_scan_date} ${last_scan_time}`;
         });
 }
 
@@ -222,15 +249,15 @@ async function startPolling(jobId) {
             if (targetCurrent > lastCurrent + 1) {
                 // kalau lompat (misal 0 → 2), isi dulu 1
                 for (let i = lastCurrent + 1; i <= targetCurrent; i++) {
-                    console.log("current: ", s.current);
-                    console.log("Status: ", s.status);
-                    console.log("Online Olts: ", s.onlineOlts);
+                    // console.log("current: ", s.current);
+                    // console.log("Status: ", s.status);
+                    // console.log("Online Olts: ", s.onlineOlts);
                     updateProgressUI(i, s); // bikin fungsi khusus untuk update UI
                 }
             } else {
-                console.log("current: ", s.current);
-                console.log("Status: ", s.status);
-                console.log("Online Olts: ", s.onlineOlts);
+                // console.log("current: ", s.current);
+                // console.log("Status: ", s.status);
+                // console.log("Online Olts: ", s.onlineOlts);
                 updateProgressUI(targetCurrent, s);
             }
 
@@ -238,6 +265,7 @@ async function startPolling(jobId) {
 
             // kalau sudah selesai
             if (s.status === "done" || s.status === "not_found") {
+                console.log("Response: ", s);
                 clearInterval(interval);
                 updateCurrentTimeElements();
 
@@ -259,18 +287,6 @@ async function startPolling(jobId) {
                         document.getElementById("scanning-count");
                     if (scanningValue) scanningValue.innerText = 0;
                 }
-
-                // 🔹 Hapus cache backend lewat endpoint khusus
-                const url = window.clearCacheUrl.replace(":jobId", jobId);
-
-                await fetch(url, {
-                    method: "POST",
-                    headers: {
-                        "X-CSRF-TOKEN": document.querySelector(
-                            'meta[name="csrf-token"]'
-                        ).content,
-                    },
-                });
             }
         } catch (err) {
             Swal.fire({
@@ -331,11 +347,12 @@ function updateProgressUI(current, s) {
         let totalOnusEl = document.getElementById("total-onus");
         if (totalOnusEl) totalOnusEl.innerText = s.totalOnus;
     }
+    console.log("Result: ", s);
 
     // 🔹 update row spesifik OLT
-    if (s.lastResult) {
-        updateOltRow(s.lastResult);
-    }
+    const oltsArray =
+        s.olts && typeof s.olts === "object" ? Object.values(s.olts) : [];
+    oltsArray.forEach(updateOltRow);
 }
 
 document.getElementById("rescan-olts").addEventListener("click", async () => {

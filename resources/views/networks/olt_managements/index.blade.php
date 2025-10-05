@@ -88,7 +88,7 @@
                         <i class="fas fa-network-wired"></i>
                     </div>
                     <div class="slim-stats-info">
-                        <div id="total-onus" class="slim-stats-value">{{ $totalOnus }}</div>
+                        <div id="total-onus" class="slim-stats-value">{{ $totalOnts }}</div>
                         <div class="slim-stats-label">
                             {{ __('networks.label.total-onus') }}
                             <span class="personal-data-badge"
@@ -251,7 +251,6 @@
     </div>
     @section('custom_scripts')
         <script>
-            window.clearCacheUrl = "{{ route('olts.clear.scan.cache', ['jobId' => ':jobId']) }}";
             window.checkAllOltStatus = "{{ route('olts.checkAllStatus') }}";
             window.oltStatusProgressRoute = "{{ route('olts.status.progress') }}";
             window.filterUrl = "{{ route('olts.filter') }}";

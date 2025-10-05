@@ -618,10 +618,10 @@
         <script>
             @if (app()->environment('local'))
                 window.mikrotiks = [];
-                console.log("local", window.mikrotiks);
+                // console.log("local", window.mikrotiks);
             @else
                 window.mikrotiks = @json($mikrotiks);
-                console.log("production", window.mikrotiks);
+                // console.log("production", window.mikrotiks);
             @endif
 
             window.packageData = @json($packageSummary);
