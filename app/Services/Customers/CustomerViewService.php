@@ -43,6 +43,17 @@ class CustomerViewService
             $secretData = $this->getSecretData($router, $customer, $traceId);
             $customer->refresh();
 
+            // Update kolom ip_address dan mac_address kalau ada data dari secret
+            if (!empty($secretData['secretActive']['address'])) {
+                $customer->ip_address = $secretData['secretActive']['address'];
+            }
+
+            if (!empty($secretData['pppsecret']['last-caller-id'])) {
+                $customer->mac_address = $secretData['pppsecret']['last-caller-id'];
+            }
+
+            $customer->save();
+
             $result = array_merge(
                 $secretData,
                 [
@@ -55,6 +66,8 @@ class CustomerViewService
             );
 
             LogHelper::logInfo(null, [
+                'ip_address' => $secretData['secretActive']['address'],
+                'mac_address' => $secretData['pppsecret']['last-caller-id'],
                 'customer_id' => $customer->id,
                 'data_count' => count($result)
             ], 200, 'Successfully retrieved customer view data', $traceId);

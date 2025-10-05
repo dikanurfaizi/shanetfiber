@@ -44,22 +44,31 @@ class OltService
 
         $olt = $this->findOltWithDetails($oltId);
 
-        $onts = DB::table('customers as c')
-            ->rightJoin('onts as o', DB::raw('LEFT(c.mac_address, 14)'), '=', DB::raw('LEFT(o.mac_address, 14)'))
+        $onts = DB::table('onts as o')
+            ->join('customers as c', function ($join) {
+                $join->on('c.mac_address', 'LIKE', DB::raw("CONCAT(LEFT(o.mac_address, 15), '%')"));
+            })
+            ->join('olts as ol', function ($join) {
+                $join->on('o.olt_id', '=', 'ol.id')
+                    ->whereNull('ol.deleted_at');
+            })
             ->where('o.olt_id', $oltId)
             ->select([
-                'c.id as customer_id',
-                'c.mac_address as customer_mac',
-                'c.ip_address as customer_ip_address',
                 'o.id as ont_id',
                 'o.mac_address as ont_mac',
-                'o.ont_index as ont_index',
-                'c.name as customer_name',
+                DB::raw('LEFT(o.mac_address, 15) as ont_prefix'),
+                'o.ont_index',
                 'o.status as ont_status',
                 'o.rx_power as ont_rx_power',
                 'o.temperature as ont_temp',
                 'o.last_updated as ont_last_updated',
+                'c.id as customer_id',
+                'c.mac_address as customer_mac',
+                DB::raw('LEFT(c.mac_address, 15) as customer_prefix'),
+                'c.ip_address as customer_ip_address',
+                DB::raw('COALESCE(c.name, o.name) as customer_name'),
             ])
+            ->orderBy('o.ont_index', 'asc')
             ->paginate($perPageOnts);
 
         $histories = OltUpdateLog::where('olt_id', $oltId)

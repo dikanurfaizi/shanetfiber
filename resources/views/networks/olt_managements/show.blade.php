@@ -149,7 +149,6 @@
                                 <th>TEMPERATURE</th>
                                 <th>MAC ADDRESS</th>
                                 <th>IP ADDRESS</th>
-                                <th>REBOOT</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -210,12 +209,7 @@
                                     <td>
                                         <div class="d-flex align-items-center justify-content-between">
                                             <span class="font-monospace">{{ $ont->customer_ip_address }}</span>
-                                        </div>
-                                    </td>
-
-                                    <td>
-                                        <div class="d-flex align-items-center justify-content-between">
-                                            <button class="btn btn-refresh" title="Update ONT data">
+                                            <button class="btn btn-refresh" title="Refresh ONT data">
                                                 <i class="fas fa-sync-alt"></i>
                                             </button>
                                         </div>

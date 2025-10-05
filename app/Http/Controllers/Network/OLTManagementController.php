@@ -40,8 +40,8 @@ class OLTManagementController extends Controller
         $jobId = Str::uuid()->toString();
         $username = Auth::user()?->name ?? 'System';
 
-        ScanOltsJob::dispatch($jobId, $username);
-        FetchMikrotikInfo::dispatch($jobId);
+        ScanOltsJob::dispatch($jobId, $username)->onQueue('default');
+        // FetchMikrotikInfo::dispatch($jobId)->onQueue('mikrotik-heavy');
 
         $dataForView = array_merge($statistics, [
             'olts' => $olts,
