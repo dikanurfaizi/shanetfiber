@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use App\Console\Commands\BillingCheckAndUpdateProfile;
 use App\Console\Commands\SendMessages;
 use App\Console\commands\CreateInitialBilling;
+use App\Console\Commands\FetchMikrotikInfoCommand;
 
 class Kernel extends ConsoleKernel
 {
@@ -21,6 +22,7 @@ class Kernel extends ConsoleKernel
         BillingCheckAndUpdateProfile::class,
         SendMessages::class,
         CreateInitialBilling::class,
+        FetchMikrotikInfoCommand::class
     ];
     /**
      * Define the application's command schedule.
