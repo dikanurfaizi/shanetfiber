@@ -1,12 +1,12 @@
 // SNMP Test functionality
 document.getElementById("test-snmp").addEventListener("click", function () {
     const olt_name = document.getElementById("olt_name").value;
-    const ip = document.getElementById("ip_address").value;
+    const ip_address = document.getElementById("ip_address").value;
     const port = document.getElementById("port").value;
     const community = document.getElementById("community").value;
     const olt_type = document.getElementById("olt_type").value;
 
-    if (!ip || !port || !community || !olt_type) {
+    if (!ip_address || !port || !community || !olt_type) {
         Swal.fire({
             icon: "warning",
             title: "Incomplete Form",
@@ -27,7 +27,9 @@ document.getElementById("test-snmp").addEventListener("click", function () {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30 * 1000);
 
-    fetch(window.snmpTestUrl, {
+    const url = `/cpanel/network/oltmanagements/SNMPConnection`;
+
+    fetch(url, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -37,7 +39,7 @@ document.getElementById("test-snmp").addEventListener("click", function () {
         },
         body: JSON.stringify({
             olt_name,
-            ip,
+            ip_address,
             port,
             community,
             olt_type,
@@ -57,7 +59,7 @@ document.getElementById("test-snmp").addEventListener("click", function () {
                         <hr>
                         <div class="d-flex align-items-center mb-2">
                             <span class="badge bg-success me-2"><i class="fas fa-wifi"></i></span>
-                            <span class="ml-1">Connection to <strong>${ip}:${port}</strong> is working</span>
+                            <span class="ml-1">Connection to <strong>${ip_address}:${port}</strong> is working</span>
                         </div>
                         <div class="row mt-3">
                             <div class="col-md-6">
@@ -70,10 +72,10 @@ document.getElementById("test-snmp").addEventListener("click", function () {
                             </div>
                             <div class="col-md-6">
                                 <div class="card p-2 mb-0">
-                                    <small class="text-muted">ONU Count</small>
+                                    <small class="text-muted">ONT Count</small>
                                     <div class="fw-bold">${
-                                        typeof data.onu_count === "number"
-                                            ? data.onu_count
+                                        typeof data.ont_count === "number"
+                                            ? data.ont_count
                                             : "Unknown"
                                     }</div>
                                 </div>

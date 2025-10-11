@@ -60,7 +60,7 @@
                     <label for="olt_type" class="form-label">{{ __('networks.label.olt-type') }}</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-server"></i></span>
-                        {!! Form::select('olt_type', ['' => 'OLT Types'] + $oidMappings->toArray(), $olt->vendor ?? null, [
+                        {!! Form::select('olt_type', ['' => 'Select OLT Type'] + $oidMappings->toArray(), $olt->oid_mapping_id ?? null, [
                             'class' => 'form-control',
                             'id' => 'olt_type',
                         ]) !!}
@@ -124,9 +124,6 @@
         </div>
     </div>
     @section('custom_scripts')
-        <script>
-            window.snmpTestUrl = "{{ route('olts.test.snmp') }}";
-        </script>
         <!-- Leaflet JS -->
         <script src="{{ asset('js/network-mgmt/leaflet-1.9.4.js') }}"></script>
         <script src="{{ asset('js/network-mgmt/data-update.js') }}"></script>

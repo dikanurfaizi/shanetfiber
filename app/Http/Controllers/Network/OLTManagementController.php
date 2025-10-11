@@ -51,7 +51,6 @@ class OLTManagementController extends Controller
         LogHelper::logInfo(null, [
             'username' => $username,
             'entries' => $entries,
-            'statistics' => $statistics,
             'page' => $olts->currentPage(),
             'per_page' => $olts->perPage(),
         ], 200, "Index OLT Management - Data ready to sent to blade view", $traceId);
@@ -62,7 +61,7 @@ class OLTManagementController extends Controller
     public function create()
     {
         $oidMappings = OidMapping::all()->mapWithKeys(function ($item) {
-            return [$item->vendor => $item->description];
+            return [$item->id => $item->vendor];
         });
 
         return view('networks.olt_managements.create', ['oidMappings' => $oidMappings]);
@@ -70,8 +69,11 @@ class OLTManagementController extends Controller
 
     public function store(Request $request)
     {
+        $traceId = Str::uuid()->toString();
+        $username = Auth::user()?->name ?? 'System';
         try {
-            $this->oltService->createOlt($request->all());
+            $olt = $this->oltService->createOlt($request->all());
+            $this->scanService->scanSingleOlt($olt->id, $username, $traceId);
 
             return redirect()
                 ->route('olts.index')
@@ -92,9 +94,7 @@ class OLTManagementController extends Controller
     public function edit($oltId)
     {
         $olt = $this->oltService->findOltWithDetails($oltId);
-        $oidMappings = OidMapping::all()->mapWithKeys(function ($item) {
-            return [$item->vendor => $item->description];
-        });
+        $oidMappings = OidMapping::pluck('vendor', 'id');
 
         return view('networks.olt_managements.edit', compact('olt', 'oidMappings'));
     }
@@ -158,20 +158,36 @@ class OLTManagementController extends Controller
 
     public function testSNMP(Request $request)
     {
+        $traceId = Str::uuid()->toString();
         $username = Auth::user()?->name ?? 'System';
 
         try {
             $result = $this->validationService->testSnmpConnection($request->all(), $username);
+            LogHelper::logInfo(null, ['result' => $result], 200, "Successfully test SNMP Connection", $traceId);
             return response()->json($result);
         } catch (\InvalidArgumentException $e) {
+            LogHelper::logError(null, [
+                'request' => $request->all(),
+                'success' => false,
+                'errors' => [
+                    'code' => $e->getCode(),
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ],
+            ], 500, "Failed test SNMP Connection", $traceId);
             return response()->json([
                 'success' => false,
                 'errors' => ['general' => $e->getMessage()],
             ], 422);
         } catch (\Throwable $e) {
-            LogHelper::logInfo(null, [
-                'exception' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+            LogHelper::logError(null, [
+                'request' => $request->all(),
+                'success' => false,
+                'errors' => [
+                    'code' => $e->getCode(),
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]
             ], 500, 'SNMP | Exception Caught');
 
             return response()->json([

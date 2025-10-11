@@ -175,7 +175,8 @@ class SnmpService
             'total_ont'   => $totalOnt
         ], 200, "ONT data sample");
 
-        LogHelper::logDebug(null, ['rawSnmp' => $rawSnmp], "SNMP Raw Data (debug only)");
+        // LogHelper::logInfo(null, ['rawSnmp' => $rawSnmp], 200, "SNMP Raw Data (debug only)");
+        // LogHelper::logInfo(null, ['ontsList' => $ontsList], 200, "OntsList Raw Data (debug only)");
 
         return [
             'snmpData'  => $rawSnmp,
@@ -201,13 +202,24 @@ class SnmpService
     {
         if (!is_string($val)) return $val;
 
+        // Example: Hex-STRING: 54 65 73 74
         if (preg_match('/Hex-STRING:\s*([0-9A-Fa-f\s]+)/', $val, $m)) {
             $hex = preg_replace('/\s+/', '', $m[1]);
-            return strtoupper(implode(':', str_split($hex, 2)));
+            $hex2 = strtoupper(implode(':', str_split($hex, 2)));
+            return trim(SnmpHelper::parseHexStringToAscii($hex2));
         }
-        if (preg_match('/^[A-Z\-]+:\s*(.*)$/', $val, $m2)) {
+
+        // Example: STRING: "Tamat" → Tamat
+        if (preg_match('/^[A-Z\-]+:\s*"?([^"]*)"?$/', $val, $m2)) {
             return trim($m2[1]);
         }
+
+        // Example: "STRING: Anis Nurfatimah" → Anis Nurfatimah
+        if (str_starts_with($val, 'STRING:')) {
+            $clean = trim(substr($val, 7));
+            return trim($clean, "\" \t\n\r\0\x0B");
+        }
+
         return trim($val);
     }
 
@@ -260,7 +272,7 @@ class SnmpService
                     'ont_index'    => $index,
                     'pon_group'    => $data['pon_group'] ?? NULL,
                     'last_updated' => now(),
-                    'name'         => SnmpHelper::parseHexStringToAscii($data['oid_name'] ?? ''),
+                    'name'         => $data['oid_name'] ?? '',
                     'tx_power'     => trim($data['txpower'] ?? 'N/A', '"'),
                     'rx_power'     => trim($data['rxpower'] ?? 'N/A', '"'),
                     'status'       => ($data['status'] ?? '') == '1' ? 'Up' : 'Down',

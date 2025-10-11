@@ -30,7 +30,6 @@ class OltService
         $olts = Olt::with('onts')->get();
 
         LogHelper::logInfo(null, [
-            'olts' => $olts,
             'totalOlts' => Olt::count(),
             'activeOlts' => $olts->where('status', OltHelper::STATUS_ACTIVE)->count(),
             'inActiveOlts' => $olts->where('status', OltHelper::STATUS_INACTIVE)->count(),
@@ -53,13 +52,13 @@ class OltService
 
     public function getOltDetails(Request $request, int $oltId): array
     {
-        $perPageOnts = $request->get('perPage', 64); // jumlah ONT per page
+        $perPageOnts = $request->get('perPage', 64);
+        $selectedPon = $request->get('pon_group', 1);
 
         $olt = $this->findOltWithDetails($oltId);
 
-        $selectedPon = $request->get('pon_group', 1); // default ke 1 kalau kosong
-
-        $ontsQuery = DB::table('onts as o')
+        // ---------- List query (untuk tabel/pagination) ----------
+        $listQuery = DB::table('onts as o')
             ->leftJoin('customers as c', function ($join) {
                 $join->on('c.mac_address', 'LIKE', DB::raw("CONCAT(LEFT(o.mac_address, 15), '%')"));
             })
@@ -68,7 +67,9 @@ class OltService
                     ->whereNull('ol.deleted_at');
             })
             ->where('o.olt_id', $oltId)
-            ->where('o.pon_group', $selectedPon)
+            ->where('o.pon_group', $selectedPon);
+
+        $onts = (clone $listQuery)
             ->select([
                 'o.mac_address as ont_mac',
                 DB::raw('LEFT(o.mac_address, 15) as ont_prefix'),
@@ -86,12 +87,22 @@ class OltService
                 DB::raw('COALESCE(c.name, o.name) as customer_name'),
             ])
             ->orderByRaw("
-        CAST(SUBSTRING_INDEX(o.ont_index, '.', 1) AS UNSIGNED),
-        CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(o.ont_index, '.', 2), '.', -1) AS UNSIGNED),
-        CAST(SUBSTRING_INDEX(o.ont_index, '.', -1) AS UNSIGNED)
-    ");
+            CAST(SUBSTRING_INDEX(o.ont_index, '.', 1) AS UNSIGNED),
+            CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(o.ont_index, '.', 2), '.', -1) AS UNSIGNED),
+            CAST(SUBSTRING_INDEX(o.ont_index, '.', -1) AS UNSIGNED)
+        ")
+            ->paginate($perPageOnts);
 
-        $onts = $ontsQuery->paginate($perPageOnts);
+        // ---------- Summary cards (global untuk 1 OLT, tidak terpengaruh pagination/PON) ----------
+        $baseOnts = Ont::where('olt_id', $oltId);
+
+        $totalOnts   = (clone $baseOnts)->count();                 // total semua ONT di OLT ini
+        $onlineOnts  = (clone $baseOnts)->where('status', 'Up')->count();
+        $offlineOnts = (clone $baseOnts)->where('status', 'Down')->count();
+        $lastUpdateOnts = (clone $baseOnts)->max('last_updated');
+
+        // Jika kamu ingin juga tahu total untuk PON terpilih (opsional):
+        // $totalOntsForSelectedPon = (clone $baseOnts)->where('pon_group', $selectedPon)->count();
 
         $histories = OltUpdateLog::where('olt_id', $oltId)
             ->orderBy('updated_at', 'desc')
@@ -102,21 +113,17 @@ class OltService
             ->distinct()
             ->pluck('pon_group');
 
-        $totalOnts = $onts->total();
-        $onlineOnts = Ont::where('olt_id', $oltId)->where('status', 'Up')->count();
-        $offlineOnts = Ont::where('olt_id', $oltId)->where('status', 'Down')->count();
-        $lastUpdateOnts = Ont::where('olt_id', $oltId)->max('last_updated');
-
         return compact(
             'olt',
             'onts',
-            'totalOnts',
-            'onlineOnts',
-            'offlineOnts',
+            'totalOnts',     // global (1 OLT)
+            'onlineOnts',    // global (1 OLT)
+            'offlineOnts',   // global (1 OLT)
             'lastUpdateOnts',
             'histories',
             'ponGroups',
             'selectedPon'
+            // ,'totalOntsForSelectedPon' // kalau mau dipakai di UI
         );
     }
 
@@ -125,12 +132,7 @@ class OltService
         $data['port'] = $data['port'] ?? 161;
         $data['community'] = $data['community'] ?? 'public';
         $data['version'] = 'v2c';
-
-        $oltVendor = OidMapping::where('vendor', $data['olt_type'])->first();
-        if (!$oltVendor) {
-            throw new \InvalidArgumentException('Selected OLT type is invalid.');
-        }
-        $data['vendor'] = $oltVendor->vendor;
+        $data['oid_mapping_id'] = $data['olt_type'];
 
         // Check for duplicate IP and port
         if (Olt::where('ip', $data['ip_address'])->where('port', $data['port'])->exists()) {
@@ -143,7 +145,8 @@ class OltService
             'port' => $data['port'],
             'community' => $data['community'],
             'version' => $data['version'],
-            'vendor' => $data['vendor'],
+            'oid_mapping_id' => $data['oid_mapping_id'],
+            'status' => 1
         ]);
     }
 
@@ -165,7 +168,7 @@ class OltService
             'ip' => $data['ip_address'],
             'port' => $data['port'],
             'community' => $data['community'] ?? 'public',
-            'vendor' => $data['olt_type'],
+            'oid_mapping_id' => $data['olt_type'],
             'latitude' => $data['latitude'],
             'longitude' => $data['longitude'],
         ]);

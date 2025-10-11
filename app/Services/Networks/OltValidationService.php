@@ -18,7 +18,7 @@ class OltValidationService
             'ip_address' => 'required|string',
             'port' => 'nullable|numeric',
             'community' => 'nullable|string',
-            'olt_type' => ['required', 'string', Rule::in($vendors)],
+            'olt_type' => 'required|numeric',
         ]);
     }
 
@@ -30,7 +30,7 @@ class OltValidationService
             throw new \InvalidArgumentException(implode(', ', $validator->errors()->all()), 422);
         }
 
-        $oltVendor = OidMapping::where('vendor', $data['olt_type'])->first();
+        $oltVendor = OidMapping::where('id', $data['olt_type'])->first();
 
         if (!$oltVendor) {
             throw new \InvalidArgumentException('OID mapping not found.');
@@ -38,9 +38,10 @@ class OltValidationService
 
         $olt = (object) [
             'name' => $data['olt_name'],
-            'ip' => $data['ip'],
+            'ip' => $data['ip_address'],
             'port' => $data['port'],
             'community' => $data['community'],
+            'oid_mapping_id' => $oltVendor->id,
             'vendor' => $oltVendor->vendor,
             'version' => 'v2c'
         ];

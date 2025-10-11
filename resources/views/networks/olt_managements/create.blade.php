@@ -80,9 +80,6 @@
     </div>
 
     @section('custom_scripts')
-        <script>
-            window.snmpTestUrl = "{{ route('olts.test.snmp') }}";
-        </script>
         <script src="{{ asset('js/network-mgmt/snmp-con-test.js') }}"></script>
     @endsection
     </x-layouts.cpanel.customers.app-layout>
