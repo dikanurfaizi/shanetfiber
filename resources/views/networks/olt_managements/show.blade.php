@@ -117,17 +117,18 @@
             <div class="data-card-body">
                 <div class="table-controls d-flex justify-content-between align-items-center mb-3">
                     <div class="show-entries">
-                        <label>Show
+                        <label>
+                            Show
                             <select class="form-control form-select-sm d-inline-block mx-1" style="width: 70px;"
-                                onchange="location = this.value;">
-                                <option value="?perPage=10" {{ request('perPage', 10) == 10 ? 'selected' : '' }}>10
-                                </option>
-                                <option value="?perPage=25" {{ request('perPage') == 25 ? 'selected' : '' }}>25
-                                </option>
-                                <option value="?perPage=50" {{ request('perPage') == 50 ? 'selected' : '' }}>50
-                                </option>
-                                <option value="?perPage=100" {{ request('perPage') == 100 ? 'selected' : '' }}>100
-                                </option>
+                                onchange="location = this.options[this.selectedIndex].dataset.url;">
+                                @foreach ([10, 25, 50, 100] as $size)
+                                    <option
+                                        data-url="{{ request()->fullUrlWithQuery(['perPage' => $size, 'page' => 1]) }}"
+                                        value="{{ $size }}"
+                                        {{ request('perPage', 10) == $size ? 'selected' : '' }}>
+                                        {{ $size }}
+                                    </option>
+                                @endforeach
                             </select> entries
                         </label>
                     </div>
@@ -138,6 +139,22 @@
                         </div>
                     </div>
                 </div>
+
+                {{-- PON Group Buttons --}}
+                @if ($ponGroups && count($ponGroups) > 0)
+                    <div class="pon-group-buttons mb-3 d-flex flex-wrap gap-2">
+                        @foreach ($ponGroups as $group)
+                            @php
+                                $isActive = request('pon_group', $selectedPon ?? 1) == $group;
+                            @endphp
+                            <a href="{{ request()->fullUrlWithQuery(['pon_group' => $group]) }}"
+                                class="mr-2 btn btn-sm {{ $isActive ? 'btn-primary' : 'btn-outline-primary' }}">
+                                <i class="fas fa-network-wired me-1"></i> PON {{ $group }}
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>

@@ -40,11 +40,13 @@ class OltService
 
     public function getOltDetails(Request $request, int $oltId): array
     {
-        $perPageOnts = $request->get('perPageOnts', 10); // jumlah ONT per page
+        $perPageOnts = $request->get('perPage', 10); // jumlah ONT per page
 
         $olt = $this->findOltWithDetails($oltId);
 
-        $onts = DB::table('onts as o')
+        $selectedPon = $request->get('pon_group', 1); // default ke 1 kalau kosong
+
+        $ontsQuery = DB::table('onts as o')
             ->join('customers as c', function ($join) {
                 $join->on('c.mac_address', 'LIKE', DB::raw("CONCAT(LEFT(o.mac_address, 15), '%')"));
             })
@@ -53,11 +55,12 @@ class OltService
                     ->whereNull('ol.deleted_at');
             })
             ->where('o.olt_id', $oltId)
+            ->where('o.pon_group', $selectedPon) // filter default ke PON 1
             ->select([
-                'o.id as ont_id',
                 'o.mac_address as ont_mac',
                 DB::raw('LEFT(o.mac_address, 15) as ont_prefix'),
                 'o.ont_index',
+                'o.pon_group',
                 'o.status as ont_status',
                 'o.rx_power as ont_rx_power',
                 'o.temperature as ont_temp',
@@ -68,13 +71,18 @@ class OltService
                 'c.ip_address as customer_ip_address',
                 DB::raw('COALESCE(c.name, o.name) as customer_name'),
             ])
-            ->orderBy('o.ont_index', 'asc')
-            ->paginate($perPageOnts);
+            ->orderBy('o.ont_index', 'asc');
+
+        $onts = $ontsQuery->paginate($perPageOnts);
 
         $histories = OltUpdateLog::where('olt_id', $oltId)
             ->orderBy('updated_at', 'desc')
             ->take(5)
             ->get();
+
+        $ponGroups = Ont::where('olt_id', $oltId)
+            ->distinct()
+            ->pluck('pon_group');
 
         $totalOnts = $onts->total();
         $onlineOnts = Ont::where('olt_id', $oltId)->where('status', 'Up')->count();
@@ -88,7 +96,9 @@ class OltService
             'onlineOnts',
             'offlineOnts',
             'lastUpdateOnts',
-            'histories'
+            'histories',
+            'ponGroups',
+            'selectedPon'
         );
     }
 
@@ -147,6 +157,26 @@ class OltService
 
     public function deleteOlt(Olt $olt): void
     {
+        $existingOnts = Ont::where('olt_id', $olt->id)->get();
+
+        if ($existingOnts->isNotEmpty()) {
+            $archiveData = $existingOnts->map(function ($ont) {
+                return [
+                    'source_olt_id' => $ont->olt_id,
+                    'ont_index'     => $ont->ont_index,
+                    'pon_group'     => $ont->pon_group,
+                    'name'          => $ont->name,
+                    'tx_power'      => $ont->tx_power,
+                    'rx_power'      => $ont->rx_power,
+                    'status'        => $ont->status,
+                    'mac_address'   => $ont->mac_address,
+                    'temperature'   => $ont->temperature,
+                    'archived_at'   => now(),
+                ];
+            })->toArray();
+
+            DB::table('ont_archives')->insert($archiveData);
+        }
         $olt->delete();
     }
 

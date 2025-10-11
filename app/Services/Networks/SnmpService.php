@@ -155,7 +155,12 @@ class SnmpService
 
                 $clean = self::normalizeSnmpValue($val);
                 if (!isset($ontsList[$index])) $ontsList[$index] = [];
+
                 $ontsList[$index][$key] = $clean;
+
+                // === Tambahan: ambil nomor PON dari index ===
+                $ponNumber = self::extractPonNumber($index);
+                $ontsList[$index]['pon_group'] = $ponNumber;
             }
         }
 
@@ -206,6 +211,13 @@ class SnmpService
         return trim($val);
     }
 
+    private static function extractPonNumber($index)
+    {
+        $parts = explode('.', $index);
+        // fallback: kalau panjang kurang dari 2, ambil terakhir
+        return $parts[1] ?? end($parts);
+    }
+
     public static function updateOnts($olt, $snmpData, $duration, $username)
     {
         if (empty($snmpData) || !is_array($snmpData)) {
@@ -228,8 +240,15 @@ class SnmpService
             return false;
         }
 
-        // Reset data lama
-        Ont::where('olt_id', $olt->id)->delete();
+        // Hapus semua ONT milik OLT tertentu
+        $deletedCount = Ont::where('olt_id', $olt->id)->delete();
+
+        // Logging untuk verifikasi
+        LogHelper::logInfo(null, [
+            'olt_id'       => $olt->id,
+            'olt_ip'       => $olt->ip,
+            'deleted_rows' => $deletedCount,
+        ], 200, "Delete Ont Successfully");
 
         $successList = [];
         $failedList  = [];
@@ -239,6 +258,7 @@ class SnmpService
                 $ontData = [
                     'olt_id'       => $olt->id,
                     'ont_index'    => $index,
+                    'pon_group'    => $data['pon_group'] ?? NULL,
                     'last_updated' => now(),
                     'name'         => SnmpHelper::parseHexStringToAscii($data['oid_name'] ?? ''),
                     'tx_power'     => trim($data['txpower'] ?? 'N/A', '"'),
