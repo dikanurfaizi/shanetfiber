@@ -53,7 +53,7 @@ class OltService
 
     public function getOltDetails(Request $request, int $oltId): array
     {
-        $perPageOnts = $request->get('perPage', 10); // jumlah ONT per page
+        $perPageOnts = $request->get('perPage', 64); // jumlah ONT per page
 
         $olt = $this->findOltWithDetails($oltId);
 
@@ -79,6 +79,7 @@ class OltService
                 'o.temperature as ont_temp',
                 'o.last_updated as ont_last_updated',
                 'c.id as customer_id',
+                'c.slug as slug',
                 'c.mac_address as customer_mac',
                 DB::raw('LEFT(c.mac_address, 15) as customer_prefix'),
                 'c.ip_address as customer_ip_address',

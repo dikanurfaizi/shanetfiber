@@ -121,11 +121,11 @@
                             Show
                             <select class="form-control form-select-sm d-inline-block mx-1" style="width: 70px;"
                                 onchange="location = this.options[this.selectedIndex].dataset.url;">
-                                @foreach ([10, 25, 50, 100] as $size)
+                                @foreach ([64, 128, 192] as $size)
                                     <option
                                         data-url="{{ request()->fullUrlWithQuery(['perPage' => $size, 'page' => 1]) }}"
                                         value="{{ $size }}"
-                                        {{ request('perPage', 10) == $size ? 'selected' : '' }}>
+                                        {{ request('perPage', 64) == $size ? 'selected' : '' }}>
                                         {{ $size }}
                                     </option>
                                 @endforeach
@@ -155,8 +155,8 @@
                     </div>
                 @endif
 
-                <div class="table-responsive">
-                    <table class="table table-hover">
+                <div class="table-responsive ont-table-wrapper">
+                    <table class="table table-hover ont-table">
                         <thead>
                             <tr>
                                 <th>INDEX</th>
@@ -172,69 +172,100 @@
                             @foreach ($onts as $ont)
                                 <tr>
                                     {{-- ONT Index --}}
-                                    <td>{{ $ont->ont_index }}</td>
-
+                                    <td class="text-primary">{{ $ont->ont_index }}</td>
                                     {{-- ONT Name --}}
-                                    <td>{{ $ont->customer_name }}</td>
-
+                                    <td><a
+                                            href="{{ route('customers.show', $ont->slug) }}">{{ $ont->customer_name }}</a>
+                                    </td>
                                     {{-- Status --}}
                                     <td>
                                         @if ($ont->ont_status === 'Up')
                                             <span class="status-badge badge-online">
-                                                <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i>
-                                                Online
+                                                <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i> Online
                                             </span>
                                         @else
                                             <span class="status-badge badge-offline">
-                                                <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i>
-                                                Offline
+                                                <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i> Offline
                                             </span>
                                         @endif
                                     </td>
-
                                     {{-- RX Power --}}
                                     <td>
-                                        <div class="d-flex align-items-center">
-                                            <div
-                                                class="signal-indicator
-            @if ($ont->ont_rx_power >= -15 && $ont->ont_rx_power <= -1) signal-too-strong
-            @elseif($ont->ont_rx_power > -24 && $ont->ont_rx_power < -15)
-                signal-good
-            @elseif($ont->ont_rx_power > -25 && $ont->ont_rx_power <= -24)
-                signal-low
-            @elseif($ont->ont_rx_power >= -30 && $ont->ont_rx_power <= -25)
-                signal-too-low @endif">
-                                                <i class="fas fa-signal"></i>
-                                            </div>
-                                            {{ $ont->ont_rx_power }} dBm
+                                        <div
+                                            class="d-flex align-items-center
+                            @if ($ont->ont_rx_power >= -15 && $ont->ont_rx_power <= -1) signal-too-strong
+                            @elseif($ont->ont_rx_power > -24 && $ont->ont_rx_power < -15)
+                                signal-good
+                            @elseif($ont->ont_rx_power > -25 && $ont->ont_rx_power <= -24)
+                                signal-low
+                            @elseif($ont->ont_rx_power >= -30 && $ont->ont_rx_power <= -25)
+                                signal-too-low @endif">
+                                            <div class="signal-indicator me-1"><i class="fas fa-signal"></i></div>
+                                            <span>{{ $ont->ont_rx_power }} dBm</span>
                                         </div>
                                     </td>
-
-                                    <td>
-                                        <div class="d-flex align-items-center justify-content-between">
-                                            <span class="font-monospace">{{ $ont->ont_temp }}</span>
-                                        </div>
-                                    </td>
-
-                                    <td>
-                                        <div class="d-flex align-items-center justify-content-between">
-                                            <span class="font-monospace">{{ $ont->ont_mac }}</span>
-                                        </div>
-                                    </td>
-
-                                    {{-- MAC Address --}}
-                                    <td>
-                                        <div class="d-flex align-items-center justify-content-between">
-                                            <span class="font-monospace">{{ $ont->customer_ip_address }}</span>
-                                            <button class="btn btn-refresh" title="Refresh ONT data">
-                                                <i class="fas fa-sync-alt"></i>
-                                            </button>
-                                        </div>
+                                    {{-- Temp --}}
+                                    <td class="font-monospace text-primary">{{ $ont->ont_temp }}</td>
+                                    {{-- MAC --}}
+                                    <td class="font-monospace text-primary">{{ $ont->ont_mac }}</td>
+                                    {{-- IP --}}
+                                    <td class="font-monospace text-primary">
+                                        {{ $ont->customer_ip_address }}
+                                        <a class="badge bg-primary text-white ms-2"
+                                            href="http://{{ $ont->customer_ip_address }}:{{ $ont->port ?? '80' }}"
+                                            target="_blank">
+                                            Remote
+                                        </a>
                                     </td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
+
+                    {{-- Mobile Card View --}}
+                    <div class="ont-cards d-md-none">
+                        @foreach ($onts as $ont)
+                            <div class="ont-card">
+                                <div class="ont-card-header d-flex justify-content-between align-items-center">
+                                    <strong class="text-primary">#{{ $ont->ont_index }}</strong>
+                                    @if ($ont->ont_status === 'Up')
+                                        <span class="status-badge badge-online"><i
+                                                class="fas fa-circle me-1 mr-1"></i>
+                                            Online</span>
+                                    @else
+                                        <span class="status-badge badge-offline"><i
+                                                class="fas fa-circle me-1 mr-1"></i>
+                                            Offline</span>
+                                    @endif
+                                </div>
+                                <div class="ont-card-body">
+                                    <div><a
+                                            href="{{ route('customers.show', $ont->slug) }}">{{ $ont->customer_name }}</a>
+                                    </div>
+                                    <div
+                                        class="
+                        @if ($ont->ont_rx_power >= -15 && $ont->ont_rx_power <= -1) signal-too-strong
+                        @elseif($ont->ont_rx_power > -24 && $ont->ont_rx_power < -15)
+                            signal-good
+                        @elseif($ont->ont_rx_power > -25 && $ont->ont_rx_power <= -24)
+                            signal-low
+                        @elseif($ont->ont_rx_power >= -30 && $ont->ont_rx_power <= -25)
+                            signal-too-low @endif">
+                                        <i class="fas fa-signal me-1"></i>
+                                        <strong>RX Power:</strong> {{ $ont->ont_rx_power }} dBm
+                                    </div>
+                                    <div><strong>Temp:</strong> {{ $ont->ont_temp }}</div>
+                                    <div><strong>MAC:</strong> {{ $ont->ont_mac }}</div>
+                                    <div><strong>IP:</strong> {{ $ont->customer_ip_address }} <a
+                                            class="badge bg-primary text-white ms-2"
+                                            href="http://{{ $ont->customer_ip_address }}:{{ $ont->port ?? '80' }}"
+                                            target="_blank">
+                                            Remote
+                                        </a></div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
                 <div class="table-footer d-flex justify-content-between align-items-center mt-3">
                     <div class="showing-entries">

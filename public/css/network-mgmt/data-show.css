@@ -320,3 +320,232 @@ body {
         gap: 8px;
     }
 }
+
+/* ============================= */
+/* 📱 RESPONSIVE ADJUSTMENTS     */
+/* ============================= */
+
+/* --- General Container --- */
+@media (max-width: 992px) {
+    .olt-header-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .olt-info {
+        width: 100%;
+    }
+
+    .olt-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .olt-actions .btn {
+        flex: 1 1 calc(50% - 0.5rem);
+    }
+}
+
+/* --- Summary Cards --- */
+@media (max-width: 768px) {
+    .summary-cards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .summary-card {
+        flex: 1 1 calc(50% - 0.75rem);
+        text-align: center;
+    }
+
+    .summary-icon {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* --- Table Controls --- */
+@media (max-width: 768px) {
+    .table-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+
+    .show-entries {
+        width: 100%;
+    }
+
+    .search-box {
+        width: 100%;
+    }
+}
+
+/* --- Table Responsive Enhancements --- */
+@media (max-width: 768px) {
+    .table-responsive {
+        border: 1px solid #e5e5e5;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    table.table {
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+
+    table.table th,
+    table.table td {
+        padding: 0.4rem 0.5rem;
+    }
+
+    /* Sticky header for scrollable tables */
+    table thead th {
+        position: sticky;
+        top: 0;
+        background: #f9f9f9;
+        z-index: 2;
+    }
+}
+
+/* --- Table Extreme Small Device (<480px) --- */
+@media (max-width: 480px) {
+    /* Hide less important columns for space */
+    table.table th:nth-child(5),
+  table.table td:nth-child(5), /* Temperature */
+  table.table th:nth-child(7),
+  table.table td:nth-child(7) /* IP Address */ {
+        display: none;
+    }
+
+    .data-card-title i {
+        display: none;
+    }
+
+    .data-card-title {
+        font-size: 1rem;
+    }
+}
+
+/* --- Scan History --- */
+@media (max-width: 768px) {
+    .scan-history-card .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .scan-history-card button {
+        align-self: stretch;
+    }
+
+    .scan-history-card table {
+        font-size: 0.85rem;
+    }
+
+    .scan-history-card td {
+        white-space: nowrap;
+    }
+}
+
+/* --- Status Indicator --- */
+@media (max-width: 768px) {
+    .status-indicator {
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+    }
+}
+
+/* =============== */
+/* 💻 DESKTOP MODE */
+/* =============== */
+.ont-cards {
+    display: none;
+}
+
+/* =============== */
+/* 📱 MOBILE MODE  */
+/* =============== */
+@media (max-width: 768px) {
+    .ont-table {
+        display: none !important;
+    }
+
+    .ont-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .ont-card {
+        background: #fff;
+        border: 1px solid #e5e5e5;
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .ont-card-header {
+        border-bottom: 1px solid #f0f0f0;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .ont-card-body div a {
+        font-size: 1.05rem; /* lebih besar dari teks biasa */
+        font-weight: 600;
+        color: #007bff; /* warna link biru */
+        text-decoration: none;
+    }
+
+    .ont-card-body div a:hover {
+        text-decoration: underline;
+    }
+
+    .ont-card-body div i {
+        width: 18px;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .badge-online {
+        background-color: rgba(28, 200, 138, 0.2);
+        color: var(--success-color);
+    }
+
+    .badge-offline {
+        background-color: rgba(231, 74, 59, 0.2);
+        /* merah transparan */
+        color: var(--danger-color);
+        /* pakai variabel danger di theme */
+    }
+
+    /* Signal Colors */
+    .signal-too-strong {
+        color: var(--warning-color);
+    }
+    .signal-good {
+        color: var(--success-color);
+    }
+    .signal-low {
+        color: #ff69b4;
+    }
+    .signal-too-low {
+        color: var(--danger-color);
+    }
+
+    /* Smooth hover effect */
+    .ont-card:hover {
+        background: #fafafa;
+        transition: 0.2s ease;
+    }
+}
