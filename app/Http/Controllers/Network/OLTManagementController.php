@@ -8,8 +8,6 @@ use App\Services\Networks\OltScanService;
 use App\Services\Networks\OltValidationService;
 use App\Helpers\LogHelper;
 use App\Jobs\Network\ScanOltsJob;
-use App\Jobs\Network\CheckOltStatusJob;
-use App\Jobs\Network\FetchMikrotikInfo;
 use App\Models\Network\OidMapping;
 use App\Models\Network\Olt;
 use App\Models\Network\Ont;
@@ -29,37 +27,34 @@ class OLTManagementController extends Controller
 
     public function index()
     {
+        $traceId = Str::uuid()->toString();
         Cache::forget('olt-status-progress');
         Cache::forget('olt-status-all');
         Cache::forget('olt-status-total');
 
         $entries = 25;
-        $olts = $this->oltService->getPaginatedOlts($entries);
-        $statistics = $this->oltService->getOltStatistics();
+        $olts = $this->oltService->getPaginatedOlts($entries, $traceId);
+        $statistics = $this->oltService->getOltStatistics($traceId);
 
-        $jobId = Str::uuid()->toString();
         $username = Auth::user()?->name ?? 'System';
 
-        ScanOltsJob::dispatch($jobId, $username)->onQueue('default');
+        // ScanOltsJob::dispatch($jobId, $username)->onQueue('default');
         // FetchMikrotikInfo::dispatch($jobId)->onQueue('mikrotik-heavy');
 
         $dataForView = array_merge($statistics, [
             'olts' => $olts,
             'lastStatusCheck' => now()->format('h:i:s A'),
             'lastUpdate' => now()->format('F d, Y \a\t h:i A'),
-            'jobId' => $jobId,
             'oidMappings' => OidMapping::pluck('vendor', 'id'),
         ]);
 
-        LogHelper::logInfo($jobId, [
+        LogHelper::logInfo(null, [
             'username' => $username,
             'entries' => $entries,
             'statistics' => $statistics,
             'page' => $olts->currentPage(),
             'per_page' => $olts->perPage(),
-        ], 200, "Index OLT Management - Data siap dikirim ke view");
-
-        ScanOltsJob::dispatch($jobId, $username);
+        ], 200, "Index OLT Management - Data ready to sent to blade view", $traceId);
 
         return view('networks.olt_managements.index', $dataForView);
     }
@@ -191,11 +186,12 @@ class OLTManagementController extends Controller
         $username = Auth::user()?->name ?? 'System';
         $jobId = Str::uuid()->toString();
 
-        $jobId = $this->scanService->startBulkScan($request->all());
-
         ScanOltsJob::dispatch($jobId, $username);
 
-        return response()->json(['jobId' => $jobId]);
+        return response()->json([
+            'message'   => 'Scan job dispatched successfully',
+            'job_id'    => $jobId,
+        ]);
     }
 
     public function scanStatus($jobId)
@@ -214,23 +210,16 @@ class OLTManagementController extends Controller
 
     public function checkAllStatusJob(Request $request)
     {
+        $jobId = Str::uuid()->toString();
         $username = Auth::user()?->name ?? 'System';
-        $this->scanService->initializeStatusCheck();
 
-        $olts = Olt::all();
-        foreach ($olts as $olt) {
-            CheckOltStatusJob::dispatch($olt, $username);
-        }
+        // Dispatch background job dengan jobId
+        ScanOltsJob::dispatch($jobId, $username);
 
         return response()->json([
-            'message' => 'Status check job dispatched',
+            'message'   => 'Status check job dispatched successfully',
+            'job_id'    => $jobId,
         ]);
-    }
-
-    public function getOltStatusProgress()
-    {
-        $progress = $this->scanService->getStatusCheckProgress();
-        return response()->json($progress);
     }
 
     public function scanSingle($oltId)
@@ -283,5 +272,14 @@ class OLTManagementController extends Controller
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function clearCache($jobId)
+    {
+        $this->scanService->clearScanCache($jobId);
+
+        return response()->json([
+            'message' => "Cache cleared for job {$jobId}",
+        ]);
     }
 }

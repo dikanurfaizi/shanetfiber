@@ -6,10 +6,7 @@ use App\Models\Network\Olt;
 use App\Models\Network\Ont;
 use App\Services\Networks\SnmpService;
 use App\Helpers\SnmpHelper;
-use App\Jobs\Network\ScanOltsJob;
-use App\Jobs\Networks\CheckOltStatusJob;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Database\Eloquent\Collection;
 
 class OltScanService
 {
@@ -47,37 +44,6 @@ class OltScanService
     {
         $cacheKey = "scan_job_progress_{$jobId}";
         Cache::forget($cacheKey);
-    }
-
-    public function initializeStatusCheck(): void
-    {
-        Cache::forget('olt-status-progress');
-        Cache::forget('olt-status-all');
-        Cache::forget('olt-status-total');
-
-        $olts = Olt::all();
-        $allStatus = $olts->mapWithKeys(fn($olt) => [
-            $olt->id => ['status' => 'Scanning', 'name' => $olt->name]
-        ])->toArray();
-
-        Cache::put('olt-status-all', $allStatus, now()->addMinutes(5));
-        Cache::put('olt-status-total', count($olts), now()->addMinutes(5));
-        Cache::put('olt-status-progress', [
-            'current' => 0,
-            'total' => count($olts),
-            'statuses' => $allStatus,
-            'currentOltName' => $olts->first()->name ?? null
-        ], now()->addMinutes(5));
-    }
-
-    public function getStatusCheckProgress(): array
-    {
-        return Cache::get('olt-status-progress', [
-            'current' => 0,
-            'total' => Olt::count(),
-            'statuses' => [],
-            'currentOltName' => null,
-        ]);
     }
 
     public function scanSingleOlt(int $oltId, string $username): array

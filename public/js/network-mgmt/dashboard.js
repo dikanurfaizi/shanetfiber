@@ -1,7 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-    let jobId = document.getElementById("scan-job-id")?.value;
-    if (jobId) startPolling(jobId);
-
     const filterForm = document.getElementById("filter-form");
 
     filterForm.addEventListener("submit", async function (e) {
@@ -58,6 +55,100 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
     });
+
+    function handleOltAction(btn, updateTotalOnu = false) {
+        btn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const url = btn.href;
+
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML =
+                '<i class="fas fa-spinner fa-spin"></i> Scanning...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(url, {
+                    method: "GET",
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest",
+                        Accept: "application/json",
+                    },
+                });
+
+                let data = {};
+                try {
+                    data = await res.json();
+                } catch (jsonErr) {
+                    Swal.fire({
+                        icon: "error",
+                        title: "❌ JSON Parse Error",
+                        text:
+                            err.message ||
+                            "An error occurred while reading the JSON response.",
+                    });
+                }
+
+                const oltId = btn.dataset.oltId;
+                const status = data.status;
+
+                const iconHtml = {
+                    Active: '<i class="fas fa-check-circle text-success"></i>',
+                    Inactive: '<i class="fas fa-times-circle text-danger"></i>',
+                    Scanning: '<i class="fas fa-sync-alt text-warning"></i>',
+                }[status];
+
+                // Update desktop row
+                const desktopRow = document.querySelector(
+                    `.olt-row-desktop[data-olt-id="${oltId}"] .status-cell .olt-status-indicator`
+                );
+                const desktopBadge = document.querySelector(
+                    `.olt-row-desktop[data-olt-id="${oltId}"] .status-cell .status-badge`
+                );
+                if (desktopRow) desktopRow.innerHTML = iconHtml;
+                if (desktopBadge) desktopBadge.innerText = status;
+
+                // Update mobile row
+                const mobileRow = document.querySelector(
+                    `.olt-row-mobile[data-olt-id="${oltId}"] .status-badge`
+                );
+                const mobileIcon = document.querySelector(
+                    `.olt-row-mobile[data-olt-id="${oltId}"] .olt-status-indicator`
+                );
+                if (mobileRow) mobileRow.innerText = status;
+                if (mobileIcon) mobileIcon.innerHTML = iconHtml;
+
+                // Update total ONU jika perlu
+                if (updateTotalOnu) {
+                    const totalOnuBadge = document.querySelector(
+                        `.olt-row-desktop[data-olt-id="${oltId}"] .onu-badge`
+                    );
+                    const totalOnuMobileBadge = document.querySelector(
+                        `.olt-row-mobile[data-olt-id="${oltId}"] .onu-badge`
+                    );
+                    if (totalOnuBadge) totalOnuBadge.innerText = data.total_onu;
+                    if (totalOnuMobileBadge)
+                        totalOnuMobileBadge.innerText = data.total_onu;
+                }
+            } catch (err) {
+                Swal.fire({
+                    icon: "error",
+                    title: "Failed to Scan",
+                    text: err.message,
+                });
+            } finally {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        });
+    }
+
+    // Apply to both types of buttons
+    document
+        .querySelectorAll(".scan-olt-btn")
+        .forEach((btn) => handleOltAction(btn, true));
+    document
+        .querySelectorAll(".check-snmp-status")
+        .forEach((btn) => handleOltAction(btn, false));
 });
 
 document.getElementById("batch-scan").addEventListener("click", async () => {
@@ -86,7 +177,7 @@ document.getElementById("batch-scan").addEventListener("click", async () => {
     }
 
     let data = await res.json();
-    startPolling(data.jobId);
+    startPolling(data.job_id);
 });
 
 // 🔹 helper untuk update status row OLT
@@ -249,15 +340,9 @@ async function startPolling(jobId) {
             if (targetCurrent > lastCurrent + 1) {
                 // kalau lompat (misal 0 → 2), isi dulu 1
                 for (let i = lastCurrent + 1; i <= targetCurrent; i++) {
-                    // console.log("current: ", s.current);
-                    // console.log("Status: ", s.status);
-                    // console.log("Online Olts: ", s.onlineOlts);
                     updateProgressUI(i, s); // bikin fungsi khusus untuk update UI
                 }
             } else {
-                // console.log("current: ", s.current);
-                // console.log("Status: ", s.status);
-                // console.log("Online Olts: ", s.onlineOlts);
                 updateProgressUI(targetCurrent, s);
             }
 
@@ -265,11 +350,13 @@ async function startPolling(jobId) {
 
             // kalau sudah selesai
             if (s.status === "done" || s.status === "not_found") {
-                console.log("Response: ", s);
                 clearInterval(interval);
                 updateCurrentTimeElements();
 
                 if (s.status === "done") {
+                    await fetch(
+                        `/cpanel/network/oltmanagements/${jobId}/clear`
+                    );
                     let currentOltEl = document.getElementById(
                         "batch-check-current-olt"
                     );
@@ -347,7 +434,6 @@ function updateProgressUI(current, s) {
         let totalOnusEl = document.getElementById("total-onus");
         if (totalOnusEl) totalOnusEl.innerText = s.totalOnus;
     }
-    console.log("Result: ", s);
 
     // 🔹 update row spesifik OLT
     const oltsArray =
@@ -395,8 +481,8 @@ document.getElementById("rescan-olts").addEventListener("click", async () => {
         return; // hentikan eksekusi jika JSON gagal di-parse
     }
 
-    if (data.jobId) {
-        startPolling(data.jobId);
+    if (data.job_id) {
+        startPolling(data.job_id);
     } else {
         Swal.fire({
             icon: "warning",
@@ -470,7 +556,10 @@ function setProgressBar(totalOlts = 0) {
     const progressContainer = document.getElementById(
         "batch-check-progress-container"
     );
-    if (progressContainer) progressContainer.style.display = "block";
+    if (progressContainer) {
+        progressContainer.classList.remove("d-none");
+        progressContainer.style.display = "block";
+    }
 
     const currentEl = document.getElementById("batch-check-current");
     const totalEl = document.getElementById("batch-check-total");
@@ -496,9 +585,13 @@ document
         btn.innerHTML =
             '<i class="fas fa-sync-alt fa-spin me-1"></i> Checking...';
 
+        // hitung total OLT visible di tabel
         const oltRows = Array.from(document.querySelectorAll(".olt-row"));
         const totalOlts = oltRows.length;
 
+        // update kartu statistik & progress awal
+        const scanningCount = document.getElementById("scanning-count");
+        if (scanningCount) scanningCount.innerText = totalOlts;
         setProgressBar(totalOlts);
 
         try {
@@ -512,10 +605,19 @@ document
                 },
             });
 
+            if (!res.ok) throw new Error("Failed to dispatch batch job");
+
             const data = await res.json();
 
-            // mulai polling dengan totalOlts
-            startOltStatusPolling(totalOlts);
+            if (!data.job_id) throw new Error("Missing job ID in response");
+
+            const jobId = data.job_id;
+
+            // simpan ke window biar bisa diakses global
+            window.currentJobId = jobId;
+
+            // mulai polling progress spesifik untuk job ini
+            startPolling(jobId);
         } catch (err) {
             Swal.fire({
                 icon: "error",
@@ -527,191 +629,3 @@ document
             btn.innerHTML = originalText;
         }
     });
-
-async function startOltStatusPolling(totalOlts) {
-    const interval = setInterval(async () => {
-        try {
-            const res = await fetch(window.oltStatusProgressRoute);
-
-            if (!res.ok) {
-                Swal.fire({
-                    icon: "error",
-                    title: `❌ Fetch Failed`,
-                    text: `Request failed with status: ${res.status}`,
-                });
-                return;
-            }
-
-            const data = await res.json();
-
-            // jumlah OLT yang selesai
-            let completedCount = data.current ?? 0;
-            const percent = Math.round((completedCount / totalOlts) * 100);
-
-            // update progress bar
-            document.getElementById("batch-check-current").innerText =
-                completedCount;
-            document.getElementById("batch-check-total").innerText = totalOlts;
-            document.getElementById("batch-check-percentage").innerText =
-                percent + "%";
-            document.getElementById("batch-check-progress-bar").style.width =
-                percent + "%";
-
-            // update OLT rows
-            for (let oltId in data.statuses) {
-                const oltEntry = data.statuses[oltId];
-                const status = oltEntry.status; // <-- ambil statusnya
-                const oltName = oltEntry.name; // <-- ambil nama OLT
-
-                const iconHtml = {
-                    Active: '<i class="fas fa-check-circle text-success"></i>',
-                    Inactive: '<i class="fas fa-times-circle text-danger"></i>',
-                    Scanning: '<i class="fas fa-sync-alt text-warning"></i>',
-                }[status];
-
-                const desktopRow = document.querySelector(
-                    `.olt-row-desktop[data-olt-id="${oltId}"] .status-cell .olt-status-indicator`
-                );
-                const desktopBadge = document.querySelector(
-                    `.olt-row-desktop[data-olt-id="${oltId}"] .status-cell .status-badge`
-                );
-                if (desktopRow) desktopRow.innerHTML = iconHtml;
-                if (desktopBadge) desktopBadge.innerText = status;
-
-                const mobileRow = document.querySelector(
-                    `.olt-row-mobile[data-olt-id="${oltId}"] .status-badge`
-                );
-                const mobileIcon = document.querySelector(
-                    `.olt-row-mobile[data-olt-id="${oltId}"] .olt-status-indicator`
-                );
-                if (mobileRow) mobileRow.innerText = status;
-                if (mobileIcon) mobileIcon.innerHTML = iconHtml;
-            }
-
-            // update teks OLT yang sedang dicek
-            const nextOltId = Object.keys(data.statuses).find(
-                (id) => data.statuses[id].status === "Scanning"
-            );
-            const nextOltName = nextOltId ? data.statuses[nextOltId].name : "-";
-            const nextOltEl = nextOltId
-                ? document.querySelector(`.olt-row[data-olt-id="${nextOltId}"]`)
-                : null;
-
-            if (completedCount === totalOlts) {
-                clearInterval(interval);
-
-                document.getElementById("batch-check-current-olt").innerText =
-                    "Done";
-                document.getElementById(
-                    "batch-check-progress-container"
-                ).style.display = "none";
-            } else {
-                document.getElementById(
-                    "batch-check-current-olt"
-                ).innerText = `Checking ${nextOltName} (${completedCount} of ${totalOlts})`;
-            }
-        } catch (err) {
-            Swal.fire({
-                icon: "error",
-                title: "❌ Polling Error",
-                text: err.message || "An error occurred while polling the job.",
-            });
-        }
-    }, 2000);
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-    function handleOltAction(btn, updateTotalOnu = false) {
-        btn.addEventListener("click", async (e) => {
-            e.preventDefault();
-            const url = btn.href;
-
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML =
-                '<i class="fas fa-spinner fa-spin"></i> Scanning...';
-            btn.disabled = true;
-
-            try {
-                const res = await fetch(url, {
-                    method: "GET",
-                    headers: {
-                        "X-Requested-With": "XMLHttpRequest",
-                        Accept: "application/json",
-                    },
-                });
-
-                let data = {};
-                try {
-                    data = await res.json();
-                } catch (jsonErr) {
-                    Swal.fire({
-                        icon: "error",
-                        title: "❌ JSON Parse Error",
-                        text:
-                            err.message ||
-                            "An error occurred while reading the JSON response.",
-                    });
-                }
-
-                const oltId = btn.dataset.oltId;
-                const status = data.status;
-
-                const iconHtml = {
-                    Active: '<i class="fas fa-check-circle text-success"></i>',
-                    Inactive: '<i class="fas fa-times-circle text-danger"></i>',
-                    Scanning: '<i class="fas fa-sync-alt text-warning"></i>',
-                }[status];
-
-                // Update desktop row
-                const desktopRow = document.querySelector(
-                    `.olt-row-desktop[data-olt-id="${oltId}"] .status-cell .olt-status-indicator`
-                );
-                const desktopBadge = document.querySelector(
-                    `.olt-row-desktop[data-olt-id="${oltId}"] .status-cell .status-badge`
-                );
-                if (desktopRow) desktopRow.innerHTML = iconHtml;
-                if (desktopBadge) desktopBadge.innerText = status;
-
-                // Update mobile row
-                const mobileRow = document.querySelector(
-                    `.olt-row-mobile[data-olt-id="${oltId}"] .status-badge`
-                );
-                const mobileIcon = document.querySelector(
-                    `.olt-row-mobile[data-olt-id="${oltId}"] .olt-status-indicator`
-                );
-                if (mobileRow) mobileRow.innerText = status;
-                if (mobileIcon) mobileIcon.innerHTML = iconHtml;
-
-                // Update total ONU jika perlu
-                if (updateTotalOnu) {
-                    const totalOnuBadge = document.querySelector(
-                        `.olt-row-desktop[data-olt-id="${oltId}"] .onu-badge`
-                    );
-                    const totalOnuMobileBadge = document.querySelector(
-                        `.olt-row-mobile[data-olt-id="${oltId}"] .onu-badge`
-                    );
-                    if (totalOnuBadge) totalOnuBadge.innerText = data.total_onu;
-                    if (totalOnuMobileBadge)
-                        totalOnuMobileBadge.innerText = data.total_onu;
-                }
-            } catch (err) {
-                Swal.fire({
-                    icon: "error",
-                    title: "Failed to Scan",
-                    text: err.message,
-                });
-            } finally {
-                btn.innerHTML = originalHTML;
-                btn.disabled = false;
-            }
-        });
-    }
-
-    // Apply to both types of buttons
-    document
-        .querySelectorAll(".scan-olt-btn")
-        .forEach((btn) => handleOltAction(btn, true));
-    document
-        .querySelectorAll(".check-snmp-status")
-        .forEach((btn) => handleOltAction(btn, false));
-});

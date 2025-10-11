@@ -105,7 +105,7 @@
                         <i class="fas fa-spinner fa-spin"></i>
                     </div>
                     <div class="slim-stats-info">
-                        <div id="scanning-count" class="slim-stats-value">{{ $totalOlts }}</div>
+                        <div id="scanning-count" class="slim-stats-value">0</div>
                         <div class="slim-stats-label">
                             {{ __('networks.label.scanning') }}
                             <span class="personal-data-badge" title="Only shows OLTs you have permission to view">
@@ -117,9 +117,9 @@
             </div>
 
             <!-- Batch Check Progress Bar -->
-            <input type="hidden" id="scan-job-id" value="{{ $jobId }}">
+            <input type="hidden" id="scan-job-id" value="">
 
-            <div id="batch-check-progress-container" class="mt-3">
+            <div id="batch-check-progress-container" class="mt-3 d-none">
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     <div id="batch-check-status">
                         Checking OLT <span id="batch-check-current">0</span>/<span id="batch-check-total">0</span>
@@ -252,7 +252,6 @@
     @section('custom_scripts')
         <script>
             window.checkAllOltStatus = "{{ route('olts.checkAllStatus') }}";
-            window.oltStatusProgressRoute = "{{ route('olts.status.progress') }}";
             window.filterUrl = "{{ route('olts.filter') }}";
             window.rescanUrl = "{{ route('olts.scan.start') }}";
         </script>

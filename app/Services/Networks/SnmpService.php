@@ -171,7 +171,7 @@ class SnmpService
 
         // Log sample saja biar ringkas
         LogHelper::logInfo(null, [
-            'sample_onts' => array_slice($ontsList, 0, 5, true),
+            // 'sample_onts' => array_slice($ontsList, 0, 5, true),
             'total_ont'   => $totalOnt
         ], 200, "ONT data sample");
 

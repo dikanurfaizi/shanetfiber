@@ -8,21 +8,34 @@ use App\Models\Network\OidMapping;
 use App\Models\Network\OltUpdateLog;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Helpers\OltHelper;
+use App\Helpers\LogHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class OltService
 {
-    public function getPaginatedOlts(int $entries = 25): LengthAwarePaginator
+    public function getPaginatedOlts(int $entries = 25, string $traceId): LengthAwarePaginator
     {
-        return Olt::with('onts', 'latestUpdateLog', 'mapping')
+        $data = Olt::with('onts', 'latestUpdateLog', 'mapping')
             ->orderBy('id', 'asc')
             ->paginate($entries);
+
+        LogHelper::logInfo(null, [], 200, "Successfully getPaginatedOlts", $traceId);
+
+        return $data;
     }
 
-    public function getOltStatistics(): array
+    public function getOltStatistics(string $traceId): array
     {
         $olts = Olt::with('onts')->get();
+
+        LogHelper::logInfo(null, [
+            'olts' => $olts,
+            'totalOlts' => Olt::count(),
+            'activeOlts' => $olts->where('status', OltHelper::STATUS_ACTIVE)->count(),
+            'inActiveOlts' => $olts->where('status', OltHelper::STATUS_INACTIVE)->count(),
+            'totalOnts' => Ont::whereHas('olt', fn($q) => $q->whereNull('deleted_at'))->count(),
+        ], 200, "Successfully getOltStatistics", $traceId);
 
         return [
             'olts' => $olts,

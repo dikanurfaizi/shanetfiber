@@ -4,17 +4,17 @@
         {{-- Desktop Table Row --}}
         <td class="status-cell">
             <div class="d-flex align-items-center">
-                <div class="olt-status-indicator {{ strtolower($olt->display_status) }}">
-                    @if (strtolower($olt->display_status) === 'active')
+                <div class="olt-status-indicator {{ strtolower($olt->status_text) }}">
+                    @if (strtolower($olt->status_text) === 'active')
                         <i class="fas fa-check-circle text-success"></i>
-                    @elseif (strtolower($olt->display_status) === 'inactive')
+                    @elseif (strtolower($olt->status_text) === 'inactive')
                         <i class="fas fa-times-circle text-danger"></i>
-                    @elseif (strtolower($olt->display_status) === 'scanning')
+                    @elseif (strtolower($olt->status_text) === 'scanning')
                         <i class="fas fa-sync-alt text-warning"></i>
                     @endif
                 </div>
-                <span class="badge status-badge {{ strtolower($olt->display_status) }}">
-                    {{ strtoupper($olt->display_status) }}
+                <span class="badge status-badge {{ strtolower($olt->status_text) }}">
+                    {{ strtoupper($olt->status_text) }}
                 </span>
             </div>
         </td>
@@ -24,7 +24,7 @@
             <div class="d-md-none"> <small class="text-muted">{{ $olt->vendor }}</small> </div>
         </td>
         <td class="d-none-xs"><span class="font-monospace">{{ $olt->port }}</span></td>
-        <td class="total-onus"><span class="badge onu-badge">{{ $olt->total_onu }}</span>
+        <td class="total-onus"><span class="badge onu-badge">{{ $olt->total_ont }}</span>
         </td>
         <td>
             @php
