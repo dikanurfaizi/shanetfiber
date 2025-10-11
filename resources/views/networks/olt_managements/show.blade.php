@@ -174,8 +174,20 @@
                                     {{-- ONT Index --}}
                                     <td class="text-primary">{{ $ont->ont_index }}</td>
                                     {{-- ONT Name --}}
-                                    <td><a
-                                            href="{{ route('customers.show', $ont->slug) }}">{{ $ont->customer_name }}</a>
+                                    <td>
+                                        @if (!empty($ont->slug))
+                                            <a href="{{ route('customers.show', $ont->slug) }}">
+                                                {{ $ont->customer_name }}
+                                            </a>
+                                        @elseif(!empty($ont->customer_id))
+                                            <a href="{{ route('customers.show', $ont->customer_id) }}">
+                                                {{ $ont->customer_name }}
+                                            </a>
+                                        @else
+                                            <span class="text-muted">
+                                                {{ $ont->customer_name ?? 'Unknown Customer' }}
+                                            </span>
+                                        @endif
                                     </td>
                                     {{-- Status --}}
                                     <td>
@@ -210,12 +222,21 @@
                                     <td class="font-monospace text-primary">{{ $ont->ont_mac }}</td>
                                     {{-- IP --}}
                                     <td class="font-monospace text-primary">
-                                        {{ $ont->customer_ip_address }}
-                                        <a class="badge bg-primary text-white ms-2"
-                                            href="http://{{ $ont->customer_ip_address }}:{{ $ont->port ?? '80' }}"
-                                            target="_blank">
-                                            Remote
-                                        </a>
+                                        @if (!empty($ont->customer_ip_address))
+                                            {{ $ont->customer_ip_address }}
+                                            <a class="badge bg-primary text-white ms-2"
+                                                href="http://{{ $ont->customer_ip_address }}:{{ $ont->port ?? '80' }}"
+                                                target="_blank">
+                                                Remote
+                                            </a>
+                                        @else
+                                            <span class="text-muted">N/A</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-refresh ms-2" title="Refresh ONT data">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
                                     </td>
                                 </tr>
                             @endforeach
@@ -228,19 +249,39 @@
                             <div class="ont-card">
                                 <div class="ont-card-header d-flex justify-content-between align-items-center">
                                     <strong class="text-primary">#{{ $ont->ont_index }}</strong>
-                                    @if ($ont->ont_status === 'Up')
-                                        <span class="status-badge badge-online"><i
-                                                class="fas fa-circle me-1 mr-1"></i>
-                                            Online</span>
-                                    @else
-                                        <span class="status-badge badge-offline"><i
-                                                class="fas fa-circle me-1 mr-1"></i>
-                                            Offline</span>
-                                    @endif
+
+                                    <div class="d-flex align-items-center gap-1">
+                                        @if ($ont->ont_status === 'Up')
+                                            <span class="status-badge badge-online">
+                                                <i class="fas fa-circle me-1 mr-1"></i> Online
+                                            </span>
+                                        @else
+                                            <span class="status-badge badge-offline">
+                                                <i class="fas fa-circle me-1 mr-1"></i> Offline
+                                            </span>
+                                        @endif
+
+                                        <button class="btn btn-refresh p-0 border-0 bg-transparent text-primary ms-1"
+                                            title="Refresh ONT data">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="ont-card-body">
-                                    <div><a
-                                            href="{{ route('customers.show', $ont->slug) }}">{{ $ont->customer_name }}</a>
+                                    <div>
+                                        @if (!empty($ont->slug))
+                                            <a href="{{ route('customers.show', $ont->slug) }}">
+                                                {{ $ont->customer_name }}
+                                            </a>
+                                        @elseif(!empty($ont->customer_id))
+                                            <a href="{{ route('customers.show', $ont->customer_id) }}">
+                                                {{ $ont->customer_name }}
+                                            </a>
+                                        @else
+                                            <span class="text-muted" title="Customer record not linked">
+                                                {{ $ont->customer_name ?? 'Unknown Customer' }}
+                                            </span>
+                                        @endif
                                     </div>
                                     <div
                                         class="
@@ -256,12 +297,19 @@
                                     </div>
                                     <div><strong>Temp:</strong> {{ $ont->ont_temp }}</div>
                                     <div><strong>MAC:</strong> {{ $ont->ont_mac }}</div>
-                                    <div><strong>IP:</strong> {{ $ont->customer_ip_address }} <a
-                                            class="badge bg-primary text-white ms-2"
-                                            href="http://{{ $ont->customer_ip_address }}:{{ $ont->port ?? '80' }}"
-                                            target="_blank">
-                                            Remote
-                                        </a></div>
+                                    <div>
+                                        <strong>IP:</strong>
+                                        @if (!empty($ont->customer_ip_address))
+                                            {{ $ont->customer_ip_address }}
+                                            <a class="badge bg-primary text-white ms-2"
+                                                href="http://{{ $ont->customer_ip_address }}:{{ $ont->port ?? '80' }}"
+                                                target="_blank" title="Open ONU Web Management">
+                                                Remote
+                                            </a>
+                                        @else
+                                            <span class="text-muted">N/A</span>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
                         @endforeach

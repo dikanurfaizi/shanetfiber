@@ -60,7 +60,7 @@ class OltService
         $selectedPon = $request->get('pon_group', 1); // default ke 1 kalau kosong
 
         $ontsQuery = DB::table('onts as o')
-            ->join('customers as c', function ($join) {
+            ->leftJoin('customers as c', function ($join) {
                 $join->on('c.mac_address', 'LIKE', DB::raw("CONCAT(LEFT(o.mac_address, 15), '%')"));
             })
             ->join('olts as ol', function ($join) {
@@ -68,7 +68,7 @@ class OltService
                     ->whereNull('ol.deleted_at');
             })
             ->where('o.olt_id', $oltId)
-            ->where('o.pon_group', $selectedPon) // filter default ke PON 1
+            ->where('o.pon_group', $selectedPon)
             ->select([
                 'o.mac_address as ont_mac',
                 DB::raw('LEFT(o.mac_address, 15) as ont_prefix'),
@@ -85,7 +85,11 @@ class OltService
                 'c.ip_address as customer_ip_address',
                 DB::raw('COALESCE(c.name, o.name) as customer_name'),
             ])
-            ->orderBy('o.ont_index', 'asc');
+            ->orderByRaw("
+        CAST(SUBSTRING_INDEX(o.ont_index, '.', 1) AS UNSIGNED),
+        CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(o.ont_index, '.', 2), '.', -1) AS UNSIGNED),
+        CAST(SUBSTRING_INDEX(o.ont_index, '.', -1) AS UNSIGNED)
+    ");
 
         $onts = $ontsQuery->paginate($perPageOnts);
 

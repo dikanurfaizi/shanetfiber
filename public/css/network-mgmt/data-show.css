@@ -494,6 +494,38 @@ body {
         font-size: 0.95rem;
     }
 
+    .ont-card-header .badge-offline {
+        color: #dc3545; /* merah untuk offline */
+    }
+
+    .ont-card-header .btn-refresh {
+        font-size: 0.9rem;
+        color: #198754;
+        opacity: 0.8;
+        transition: all 0.25s ease;
+    }
+
+    .ont-card-header .badge-offline + .btn-refresh {
+        color: #dc3545;
+    }
+
+    .ont-card-header .btn-refresh:hover {
+        opacity: 1;
+        transform: rotate(25deg);
+    }
+
+    .ont-card-header .d-flex.gap-1 {
+        gap: 0.4rem !important; /* jarak kecil antara Online ↻ */
+    }
+
+    .ont-card-header .status-badge {
+        font-size: 0.8rem;
+        display: inline-flex;
+        align-items: center;
+        color: #198754; /* default hijau untuk online */
+        font-weight: 500;
+    }
+
     .ont-card-body div a {
         font-size: 1.05rem; /* lebih besar dari teks biasa */
         font-weight: 600;
