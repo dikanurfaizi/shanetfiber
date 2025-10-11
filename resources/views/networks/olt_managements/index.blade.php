@@ -250,11 +250,6 @@
         </div>
     </div>
     @section('custom_scripts')
-        <script>
-            window.checkAllOltStatus = "{{ route('olts.checkAllStatus') }}";
-            window.filterUrl = "{{ route('olts.filter') }}";
-            window.rescanUrl = "{{ route('olts.scan.start') }}";
-        </script>
         <script src="{{ asset('js/network-mgmt/dashboard.js') }}"></script>
     @endsection
 </x-layouts.app-layout>

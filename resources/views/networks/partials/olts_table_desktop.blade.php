@@ -54,13 +54,13 @@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li>
-                        <a href="{{ route('olt.scanSingle', $olt->id) }}" class="dropdown-item scan-olt-btn"
+                        <a href="{{ route('olts.scanSingle', $olt->id) }}" class="dropdown-item scan-olt-btn"
                             data-olt-id="{{ $olt->id }}">
                             <i class="fas fa-sync-alt text-success"></i> {{ __('networks.table.scan') }}
                         </a>
                     </li>
                     <li>
-                        <a href="{{ route('olt.healtCheckSingle', $olt->id) }}" class="dropdown-item check-snmp-status"
+                        <a href="{{ route('olts.healtCheckSingle', $olt->id) }}" class="dropdown-item check-snmp-status"
                             data-olt-id="{{ $olt->id }}">
                             <i class="fas fa-heartbeat text-info"></i> {{ __('networks.table.health-check') }}
                         </a>

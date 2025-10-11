@@ -62,10 +62,10 @@
                             <li><a class="dropdown-item"
                                     href="{{ route('olts.show', $olt->id) }}">{{ __('networks.table.view') }}</a></li>
                             <li><a class="dropdown-item scan-olt-btn"
-                                    href="{{ route('olt.scanSingle', $olt->id) }}">{{ __('networks.table.scan') }}</a>
+                                    href="{{ route('olts.scanSingle', $olt->id) }}">{{ __('networks.table.scan') }}</a>
                             </li>
                             <li><a class="dropdown-item check-snmp-status"
-                                    href="{{ route('olt.healtCheckSingle', $olt->id) }}">{{ __('networks.table.health-check') }}</a>
+                                    href="{{ route('olts.healtCheckSingle', $olt->id) }}">{{ __('networks.table.health-check') }}</a>
                             </li>
                             <li>
                                 <hr class="dropdown-divider">

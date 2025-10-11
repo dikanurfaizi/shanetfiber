@@ -224,12 +224,21 @@ class OLTManagementController extends Controller
 
     public function scanSingle($oltId)
     {
+        $traceId = Str::uuid()->toString();
         $username = Auth::user()?->name ?? 'System';
 
         try {
-            $result = $this->scanService->scanSingleOlt($oltId, $username);
+            $result = $this->scanService->scanSingleOlt($oltId, $username, $traceId);
+            LogHelper::logInfo(null, ['result' => $result], 200, "Successfully scanSingle", $traceId);
             return response()->json($result);
         } catch (\InvalidArgumentException $e) {
+            LogHelper::logInfo(null, [
+                'success' => false,
+                'olt_name' => null,
+                'status' => 'Scanning',
+                'total_ont' => 0,
+                'message' => $e->getMessage()
+            ], 500, "Failed scanSingle", $traceId);
             return response()->json([
                 'success' => false,
                 'olt_name' => null,
@@ -238,6 +247,13 @@ class OLTManagementController extends Controller
                 'message' => $e->getMessage()
             ], 404);
         } catch (\Exception $e) {
+            LogHelper::logInfo(null, [
+                'success' => false,
+                'olt_name' => null,
+                'status' => 'Inactive',
+                'total_ont' => 0,
+                'message' => $e->getMessage()
+            ], 500, "Failed scanSingle: unknown response", $traceId);
             return response()->json([
                 'success' => false,
                 'olt_name' => null,
@@ -250,12 +266,21 @@ class OLTManagementController extends Controller
 
     public function healthCheckSingle($oltId)
     {
+        $traceId = Str::uuid()->toString();
         $username = Auth::user()?->name ?? 'System';
 
         try {
-            $result = $this->scanService->healthCheckSingleOlt($oltId, $username);
+            $result = $this->scanService->healthCheckSingleOlt($oltId, $username, $traceId);
+            LogHelper::logInfo(null, ['result' => $result], 200, "Successfully healthCheckSingle", $traceId);
             return response()->json($result);
         } catch (\InvalidArgumentException $e) {
+            LogHelper::logInfo(null, [
+                'success' => false,
+                'olt_name' => null,
+                'status' => 'Scanning',
+                'total_ont' => 0,
+                'message' => $e->getMessage()
+            ], 500, "Failed healthCheckSingle", $traceId);
             return response()->json([
                 'success' => false,
                 'olt_name' => null,
@@ -264,6 +289,13 @@ class OLTManagementController extends Controller
                 'message' => $e->getMessage()
             ], 404);
         } catch (\Exception $e) {
+            LogHelper::logInfo(null, [
+                'success' => false,
+                'olt_name' => null,
+                'status' => 'Inactive',
+                'total_ont' => 0,
+                'message' => $e->getMessage()
+            ], 500, "Failed healthCheckSingle: unknown response", $traceId);
             return response()->json([
                 'success' => false,
                 'olt_name' => null,

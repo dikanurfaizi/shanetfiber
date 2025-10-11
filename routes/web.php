@@ -378,8 +378,8 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::post('network/oltmanagements/scan/start', [OLTManagementController::class, 'startScan'])->name('olts.scan.start');
         Route::get('network/oltmanagements/scan/status/{jobId}', [OLTManagementController::class, 'scanStatus'])->name('olts.scan.status');
         Route::post('network/oltmanagements/check-all-status', [OLTManagementController::class, 'checkAllStatusJob'])->name('olts.checkAllStatus');
-        Route::get('network/oltmanagements/scan/olt/{olt}', [OLTManagementController::class, 'scanSingle'])->name('olt.scanSingle');
-        Route::get('network/oltmanagements/health/check/{olt}', [OLTManagementController::class, 'healthCheckSingle'])->name('olt.healtCheckSingle');
+        Route::get('network/oltmanagements/scan/olt/{olt}', [OLTManagementController::class, 'scanSingle'])->name('olts.scanSingle');
+        Route::get('network/oltmanagements/health/check/{olt}', [OLTManagementController::class, 'healthCheckSingle'])->name('olts.healtCheckSingle');
         Route::get('network/oltmanagements/{jobId}/clear', [OLTManagementController::class, 'clearCache'])->name('olts.clear.cache');
 
         // ==================== ONU MANAGEMENT ====================
