@@ -1,5 +1,10 @@
 // Simple JavaScript for interactivity
 document.addEventListener("DOMContentLoaded", function () {
+    const tooltipTriggerList = [].slice.call(
+        document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    );
+    tooltipTriggerList.map((el) => new bootstrap.Tooltip(el));
+
     // Refresh button functionality
     document
         .getElementById("refresh-data-btn")

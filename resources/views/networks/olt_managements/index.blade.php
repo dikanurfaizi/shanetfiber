@@ -6,7 +6,7 @@
 
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
         <h5 class="m-0 font-weight-bold text-primary mb-2">
-            {{ __('networks.header.index') }}
+            {{ __('networks.header.olt-index') }}
         </h5>
         <a href="{{ route('olts.create') }}" class="btn btn-primary btn-sm">
             <i class="fas fa-plus-circle me-1"></i> {{ __('networks.header.add-olt') }}

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Networks;
+namespace App\Services\Networks\Olt;
 
 use App\Models\Network\Olt;
 use App\Models\Network\Ont;
@@ -12,9 +12,9 @@ use App\Helpers\LogHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-class OltService
+class OltDataService
 {
-    public function getPaginatedOlts(int $entries = 25, string $traceId): LengthAwarePaginator
+    public static function getPaginatedOlts(int $entries = 25, string $traceId): LengthAwarePaginator
     {
         $data = Olt::with('onts', 'latestUpdateLog', 'mapping')
             ->orderBy('id', 'asc')
@@ -25,7 +25,7 @@ class OltService
         return $data;
     }
 
-    public function getOltStatistics(string $traceId): array
+    public static function getOltStatistics(string $traceId): array
     {
         $olts = Olt::with('onts')->get();
 
@@ -45,17 +45,17 @@ class OltService
         ];
     }
 
-    public function findOltWithDetails(int $oltId): Olt
+    public static function findOltWithDetails(int $oltId): Olt
     {
         return Olt::with('onts', 'latestUpdateLog')->findOrFail($oltId);
     }
 
-    public function getOltDetails(Request $request, int $oltId): array
+    public static function getOltDetails(Request $request, int $oltId): array
     {
         $perPageOnts = $request->get('perPage', 64);
         $selectedPon = $request->get('pon_group', 1);
 
-        $olt = $this->findOltWithDetails($oltId);
+        $olt = self::findOltWithDetails($oltId);
 
         // ---------- List query (untuk tabel/pagination) ----------
         $listQuery = DB::table('onts as o')
@@ -65,6 +65,11 @@ class OltService
             ->join('olts as ol', function ($join) {
                 $join->on('o.olt_id', '=', 'ol.id')
                     ->whereNull('ol.deleted_at');
+            })
+            // ✅ join dinamis ke tabel signal_thresholds berdasarkan range Rx Power
+            ->leftJoin('signal_thresholds as s', function ($join) {
+                $join->whereColumn('o.rx_power', '>=', 's.min_value')
+                    ->whereColumn('o.rx_power', '<=', 's.max_value');
             })
             ->where('o.olt_id', $oltId)
             ->where('o.pon_group', $selectedPon);
@@ -85,6 +90,8 @@ class OltService
                 DB::raw('LEFT(c.mac_address, 15) as customer_prefix'),
                 'c.ip_address as customer_ip_address',
                 DB::raw('COALESCE(c.name, o.name) as customer_name'),
+                's.name as signal_class',
+                's.label as signal_label',
             ])
             ->orderByRaw("
             CAST(SUBSTRING_INDEX(o.ont_index, '.', 1) AS UNSIGNED),
@@ -127,7 +134,7 @@ class OltService
         );
     }
 
-    public function createOlt(array $data): Olt
+    public static function createOlt(array $data): Olt
     {
         $data['port'] = $data['port'] ?? 161;
         $data['community'] = $data['community'] ?? 'public';
@@ -150,7 +157,7 @@ class OltService
         ]);
     }
 
-    public function updateOlt(Olt $olt, array $data): Olt
+    public static function updateOlt(Olt $olt, array $data): Olt
     {
         $data['port'] = $data['port'] ?? 161;
 
@@ -176,7 +183,7 @@ class OltService
         return $olt->fresh();
     }
 
-    public function deleteOlt(Olt $olt): void
+    public static function deleteOlt(Olt $olt): void
     {
         $existingOnts = Ont::where('olt_id', $olt->id)->get();
 
@@ -201,7 +208,7 @@ class OltService
         $olt->delete();
     }
 
-    public function filterOlts(array $filters): LengthAwarePaginator
+    public static function filterOlts(array $filters): LengthAwarePaginator
     {
         $query = Olt::with('onts', 'latestUpdateLog');
         $entries = $filters['entries'] ?? 25;

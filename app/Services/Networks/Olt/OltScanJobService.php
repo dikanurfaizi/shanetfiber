@@ -1,20 +1,21 @@
 <?php
 
-namespace App\Services\Networks;
+namespace App\Services\Networks\Olt;
 
 use App\Models\Network\Olt;
 use App\Models\Network\Ont;
 use App\Models\Network\OltUpdateLog;
-use App\Services\Networks\SnmpService;
 use App\Helpers\SnmpHelper;
 use App\Helpers\OltHelper;
 use App\Helpers\LogHelper;
+use App\Services\Networks\Ont\OntUpdateService;
+use App\Services\Networks\Snmp\SnmpFetchService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Carbon;
 
-class OltScanService
+class OltScanJobService
 {
-    public function startBulkScan(array $filters = []): string
+    public static function startBulkScan(array $filters = []): string
     {
         $query = Olt::query();
 
@@ -38,26 +39,26 @@ class OltScanService
         return $total;
     }
 
-    public function getScanProgress(string $jobId): array
+    public static function getScanProgress(string $jobId): array
     {
         $cacheKey = "scan_job_progress_{$jobId}";
         return Cache::get($cacheKey, ['status' => 'not_found']);
     }
 
-    public function clearScanCache(string $jobId): void
+    public static function clearScanCache(string $jobId): void
     {
         $cacheKey = "scan_job_progress_{$jobId}";
         Cache::forget($cacheKey);
     }
 
-    public function scanSingleOlt(int $oltId, string $username, string $traceId): array
+    public static function scanSingleOlt(int $oltId, string $username, string $traceId): array
     {
-        return $this->performOltCheck($oltId, $username, true, 'OLT Scan', $traceId);
+        return self::performOltCheck($oltId, $username, true, 'OLT Scan', $traceId);
     }
 
-    public function healthCheckSingleOlt(int $oltId, string $username, string $traceId): array
+    public static function healthCheckSingleOlt(int $oltId, string $username, string $traceId): array
     {
-        return $this->performOltCheck($oltId, $username, false, 'OLT Health Check', $traceId);
+        return self::performOltCheck($oltId, $username, false, 'OLT Health Check', $traceId);
     }
 
     private function performOltCheck(int $oltId, string $username, bool $includeOnts, string $action, string $traceId): array
@@ -93,12 +94,12 @@ class OltScanService
             ];
         }
 
-        $healthCheck = SnmpService::checkOltStatus($olt, $username, true);
+        $healthCheck = OltStatusService::checkOltStatus($olt, $username, true);
         $status = SnmpHelper::mapSnmpStatus($healthCheck['status']);
         $totalOnts = 0;
 
         if ($status === 'Active' && $includeOnts) {
-            $snmpData = SnmpService::getOnts($olt);
+            $snmpData = SnmpFetchService::getOnts($olt);
             $ontsData = $snmpData['onts'];
 
             // validasi OLT
@@ -116,26 +117,38 @@ class OltScanService
 
             if ($isValidOnts) {
                 $olt->updateStatus(OltHelper::STATUS_ACTIVE);
-                SnmpService::updateOnts($olt, $ontsData, $snmpData['duration'], $username);
+                OntUpdateService::updateOnts($olt, $ontsData, $snmpData['duration'], $username);
             } else {
                 $olt->updateStatus(OltHelper::STATUS_INACTIVE);
-                SnmpService::OltInsertLog(
-                    $olt,
-                    $isValidOnts
-                        ? "OLT {$olt->ip} reachable tetapi data ONT tidak valid"
-                        : "OLT {$olt->ip} tidak merespon SNMP request",
-                    0,
-                    0,
-                    $healthCheck['status'],
-                    $username,
-                    $snmpData['duration'] ?? $duration ?? 0
-                );
+                $data = [
+                    'olt_id'        => $olt->id,
+                    'updated_at'    => now(),
+                    'success_count' => 0,
+                    'failed_count'  => 0,
+                    'details'       => $isValidOnts ? "OLT {$olt->ip} reachable tetapi data ONT tidak valid" : "OLT {$olt->ip} tidak merespon SNMP request",
+                    'ont_count'     => 0,
+                    'status'        => $healthCheck['status'],
+                    'username'      => $username,
+                    'duration'      => $snmpData['duration'] ?? $duration ?? 0
+                ];
+                OltLogService::insertLog($data);
             }
             $totalOnts = Ont::where('olt_id', $oltId)->count();
         } else {
             $olt->updateStatus(OltHelper::STATUS_INACTIVE);
             $duration = round(microtime(true) - $startTime, 2);
-            SnmpService::OltInsertLog($olt, "SNMP data invalid dari OLT {$olt->ip}", 0, 0, $healthCheck['status'], $username, $duration ?? 0);
+            $data = [
+                'olt_id'        => $olt->id,
+                'updated_at'    => now(),
+                'success_count' => 0,
+                'failed_count'  => 0,
+                'details'       => "SNMP data invalid dari OLT {$olt->ip}",
+                'ont_count'     => 0,
+                'status'        => $healthCheck['status'],
+                'username'      => $username,
+                'duration'      => $duration ?? 0
+            ];
+            OltLogService::insertLog($data);
         }
 
         // ambil last scan log

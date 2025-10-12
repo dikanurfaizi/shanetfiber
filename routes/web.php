@@ -383,7 +383,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('network/oltmanagements/{jobId}/clear', [OLTManagementController::class, 'clearCache'])->name('olts.clear.cache');
 
         // ==================== ONU MANAGEMENT ====================
-        Route::resource('network/onumanagements', ONTManagementController::class)->names('onus');
+        Route::resource('network/onumanagements', ONTManagementController::class)->names('onts');
     });
 });
 

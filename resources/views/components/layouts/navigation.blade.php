@@ -140,6 +140,7 @@
         </li>
     @endcanany
 
+    <!-- Network Management -->
     @canany(['olt-management', 'onu-management'])
         <li class="nav-item @if (request()->routeIs('olts*') || request()->routeIs('onus*')) active @endif">
             <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseNetworks"
@@ -159,8 +160,8 @@
 
                 @canany(['onu-management'])
                     <div class="bg-white py-2 collapse-inner rounded">
-                        <a class="collapse-item @if (request()->routeIs('onus.index')) active @endif"
-                            href="{{ route('onus.index') }}">{{ __('navigation.network.onu-managements.index') }}</a>
+                        <a class="collapse-item @if (request()->routeIs('onts.index')) active @endif"
+                            href="{{ route('onts.index') }}">{{ __('navigation.network.onu-managements.index') }}</a>
                     </div>
                 @endcanany
             </div>

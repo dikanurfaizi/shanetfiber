@@ -3,63 +3,67 @@
 namespace App\Http\Controllers\Network;
 
 use App\Http\Controllers\Controller;
-use App\Services\Networks\OltService;
-use App\Services\Networks\OltScanService;
-use App\Services\Networks\OltValidationService;
 use App\Helpers\LogHelper;
 use App\Jobs\Network\ScanOltsJob;
 use App\Models\Network\OidMapping;
 use App\Models\Network\Olt;
 use App\Models\Network\Ont;
+use App\Services\Networks\Olt\OltDataService;
+use App\Services\Networks\Olt\OltScanJobService;
+use App\Services\Networks\Olt\OltValidationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Jenssegers\Agent\Agent;
+use Throwable;
 
 class OLTManagementController extends Controller
 {
-    public function __construct(
-        private OltService $oltService,
-        private OltScanService $scanService,
-        private OltValidationService $validationService
-    ) {}
-
+    /**
+     * Menampilkan halaman utama OLT Management.
+     */
     public function index()
     {
         $traceId = Str::uuid()->toString();
-        Cache::forget('olt-status-progress');
-        Cache::forget('olt-status-all');
-        Cache::forget('olt-status-total');
-
-        $entries = 25;
-        $olts = $this->oltService->getPaginatedOlts($entries, $traceId);
-        $statistics = $this->oltService->getOltStatistics($traceId);
-
         $username = Auth::user()?->name ?? 'System';
+        LogHelper::logInfo(null, ['user' => $username], 200, '[START] Load OLT Management Index', $traceId);
 
-        // ScanOltsJob::dispatch($jobId, $username)->onQueue('default');
-        // FetchMikrotikInfo::dispatch($jobId)->onQueue('mikrotik-heavy');
+        try {
+            Cache::forget('olt-status-progress');
+            Cache::forget('olt-status-all');
+            Cache::forget('olt-status-total');
 
-        $dataForView = array_merge($statistics, [
-            'olts' => $olts,
-            'lastStatusCheck' => now()->format('h:i:s A'),
-            'lastUpdate' => now()->format('F d, Y \a\t h:i A'),
-            'oidMappings' => OidMapping::pluck('vendor', 'id'),
-        ]);
+            $entries = 25;
+            $olts = OltDataService::getPaginatedOlts($entries, $traceId);
+            $statistics = OltDataService::getOltStatistics($traceId);
 
-        LogHelper::logInfo(null, [
-            'username' => $username,
-            'entries' => $entries,
-            'page' => $olts->currentPage(),
-            'per_page' => $olts->perPage(),
-        ], 200, "Index OLT Management - Data ready to sent to blade view", $traceId);
+            $dataForView = array_merge($statistics, [
+                'olts' => $olts,
+                'lastStatusCheck' => now()->format('H:i:s'),
+                'lastUpdate' => now()->format('Y-m-d H:i:s'),
+                'oidMappings' => OidMapping::pluck('vendor', 'id'),
+            ]);
 
-        return view('networks.olt_managements.index', $dataForView);
+            LogHelper::logInfo(null, [
+                'entries' => $entries,
+                'total_olts' => $olts->total(),
+                'page' => $olts->currentPage(),
+            ], 200, '[SUCCESS] OLT Management data loaded', $traceId);
+
+            return view('networks.olt_managements.index', $dataForView);
+        } catch (Throwable $e) {
+            LogHelper::logError(null, [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ], 500, '[FAILED] Load OLT Management Index', $traceId);
+            abort(500, 'Failed to load OLT Management.');
+        }
     }
 
     public function create()
     {
+        $traceId = Str::uuid()->toString();
         $oidMappings = OidMapping::all()->mapWithKeys(function ($item) {
             return [$item->id => $item->vendor];
         });
@@ -71,29 +75,45 @@ class OLTManagementController extends Controller
     {
         $traceId = Str::uuid()->toString();
         $username = Auth::user()?->name ?? 'System';
-        try {
-            $olt = $this->oltService->createOlt($request->all());
-            $this->scanService->scanSingleOlt($olt->id, $username, $traceId);
+        LogHelper::logInfo(null, ['user' => $username], 200, '[START] Create OLT', $traceId);
 
-            return redirect()
-                ->route('olts.index')
-                ->with('success', 'OLT stored successfully.');
+        try {
+            $olt = OltDataService::createOlt($request->all());
+            LogHelper::logInfo(null, [
+                'olt_id' => $olt->id,
+                'olt_name' => $olt->name,
+                'ip' => $olt->ip,
+            ], 200, '[SUCCESS] OLT Created', $traceId);
+
+            OltScanJobService::scanSingleOlt($olt->id, $username, $traceId);
+            LogHelper::logInfo(null, ['olt_id' => $olt->id], 200, '[DISPATCH] Single OLT scan job started', $traceId);
+
+            return redirect()->route('olts.index')->with('success', 'OLT stored successfully.');
         } catch (\InvalidArgumentException $e) {
-            return redirect()->back()
-                ->withErrors(['error' => $e->getMessage()])
-                ->withInput();
+            LogHelper::logWarning(null, [
+                'input' => $request->all(),
+                'error' => $e->getMessage(),
+            ], 422, '[VALIDATION FAILED] OLT Store', $traceId);
+            return back()->withErrors(['error' => $e->getMessage()])->withInput();
+        } catch (Throwable $e) {
+            LogHelper::logError(null, [
+                'input' => $request->all(),
+                'error' => $e->getMessage(),
+            ], 500, '[FAILED] OLT Store', $traceId);
+            return back()->with('error', 'Failed to store OLT: ' . $e->getMessage());
         }
     }
 
     public function show($oltId, Request $request)
     {
-        $data = $this->oltService->getOltDetails($request, $oltId);
+        $data = OltDataService::getOltDetails($request, $oltId);
         return view('networks.olt_managements.show', $data);
     }
 
     public function edit($oltId)
     {
-        $olt = $this->oltService->findOltWithDetails($oltId);
+        $traceId = Str::uuid()->toString();
+        $olt = OltDataService::findOltWithDetails($oltId);
         $oidMappings = OidMapping::pluck('vendor', 'id');
 
         return view('networks.olt_managements.edit', compact('olt', 'oidMappings'));
@@ -101,47 +121,82 @@ class OLTManagementController extends Controller
 
     public function update(Request $request, Olt $oltmanagement)
     {
+        $traceId = Str::uuid()->toString();
         try {
-            $this->oltService->updateOlt($oltmanagement, $request->all());
-
+            OltDataService::updateOlt($oltmanagement, $request->all());
+            LogHelper::logInfo(null, [
+                'input' => $request->all(),
+                'olt' => $oltmanagement
+            ], 200, '[SUCCESS] OLT Updated', $traceId);
             return redirect()->route('olts.index')->with('success', 'OLT updated successfully.');
         } catch (\InvalidArgumentException $e) {
+            LogHelper::logError(null, [
+                'input' => $request->all(),
+                'olt' => $oltmanagement,
+                'error' => [
+                    'code' => $e->getCode(),
+                    'message' => $e->getMessage()
+                ]
+            ], 500, '[VALIDATION FAILED] OLT Update', $traceId);
             return redirect()->back()
                 ->withErrors(['error' => $e->getMessage()])
                 ->withInput();
         } catch (\Throwable $e) {
+            LogHelper::logError(null, [
+                'input' => $request->all(),
+                'olt' => $oltmanagement,
+                'error' => [
+                    'code' => $e->getCode(),
+                    'message' => $e->getMessage()
+                ]
+            ], 500, '[FAILED] OLT Update', $traceId);
             return redirect()->back()
                 ->with('error', 'Failed to update OLT: ' . $e->getMessage());
         }
     }
 
-    public function destroy(Olt $oltmanagement)
+    public function destroy(Olt $olt)
     {
-        try {
-            $this->oltService->deleteOlt($oltmanagement);
+        $traceId = Str::uuid()->toString();
+        $username = Auth::user()?->name ?? 'System';
+        LogHelper::logInfo(null, [
+            'user' => $username,
+            'olt_id' => $olt->id,
+        ], 200, '[START] Delete OLT', $traceId);
 
-            $olts = Olt::with('onts', 'latestUpdateLog')->orderBy('id', 'asc')->get();
-            $activeOlts = $olts->filter(fn($olt) => $olt->display_status === 'Active')->count();
-            $totalOnts = Ont::count();
+        try {
+            OltDataService::deleteOlt($olt);
+            $olts = Olt::with('onts', 'latestUpdateLog')->get();
+
+            LogHelper::logInfo(null, [
+                'olt_id' => $olt->id,
+                'remaining_olts' => $olts->count(),
+            ], 200, '[SUCCESS] OLT Deleted', $traceId);
 
             return response()->json([
                 'success' => true,
                 'message' => 'OLT deleted successfully.',
-                'onlineOlts' => $activeOlts,
-                'totalOnts' => $totalOnts,
-                'totalOlts' => $olts->count()
+                'totalOlts' => $olts->count(),
+                'totalOnts' => Ont::count(),
+                'onlineOlts' => $olts->where('display_status', 'Active')->count(),
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
+            LogHelper::logError(null, [
+                'olt_id' => $olt->id,
+                'error' => $e->getMessage(),
+            ], 500, '[FAILED] Delete OLT', $traceId);
+
             return response()->json([
                 'success' => false,
-                'error' => 'Failed to delete OLT: ' . $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
     public function filter(Request $request)
     {
-        $olts = $this->oltService->filterOlts($request->all());
+        $traceId = Str::uuid()->toString();
+        $olts = OltDataService::filterOlts($request->all());
         $agent = new Agent();
 
         if ($agent->isMobile() || $agent->isTablet()) {
@@ -160,68 +215,64 @@ class OLTManagementController extends Controller
     {
         $traceId = Str::uuid()->toString();
         $username = Auth::user()?->name ?? 'System';
+        LogHelper::logInfo(null, [
+            'user' => $username,
+            'ip' => $request->ip_address,
+        ], 200, '[START] Test SNMP Connection', $traceId);
 
         try {
-            $result = $this->validationService->testSnmpConnection($request->all(), $username);
-            LogHelper::logInfo(null, ['result' => $result], 200, "Successfully test SNMP Connection", $traceId);
+            $result = OltValidationService::testSnmpConnection($request->all(), $username);
+            LogHelper::logInfo(null, ['result' => $result], 200, '[SUCCESS] Test SNMP Connection', $traceId);
             return response()->json($result);
         } catch (\InvalidArgumentException $e) {
-            LogHelper::logError(null, [
+            LogHelper::logWarning(null, [
                 'request' => $request->all(),
-                'success' => false,
-                'errors' => [
-                    'code' => $e->getCode(),
-                    'message' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
-                ],
-            ], 500, "Failed test SNMP Connection", $traceId);
-            return response()->json([
-                'success' => false,
-                'errors' => ['general' => $e->getMessage()],
-            ], 422);
-        } catch (\Throwable $e) {
-            LogHelper::logError(null, [
-                'request' => $request->all(),
-                'success' => false,
-                'errors' => [
-                    'code' => $e->getCode(),
-                    'message' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
-                ]
-            ], 500, 'SNMP | Exception Caught');
-
-            return response()->json([
-                'success' => false,
                 'error' => $e->getMessage(),
-            ], 500);
+            ], 422, '[VALIDATION FAILED] Test SNMP Connection', $traceId);
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 422);
+        } catch (Throwable $e) {
+            LogHelper::logError(null, [
+                'request' => $request->all(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ], 500, '[FAILED] Test SNMP Connection', $traceId);
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
 
     public function startScan(Request $request)
     {
+        $traceId = Str::uuid()->toString();
         $username = Auth::user()?->name ?? 'System';
-        $jobId = Str::uuid()->toString();
+        LogHelper::logInfo(null, ['user' => $username], 200, '[START] Dispatch Bulk Scan Job', $traceId);
 
-        ScanOltsJob::dispatch($jobId, $username);
-
-        return response()->json([
-            'message'   => 'Scan job dispatched successfully',
-            'job_id'    => $jobId,
-        ]);
+        try {
+            $jobId = Str::uuid()->toString();
+            ScanOltsJob::dispatch($jobId, $username);
+            LogHelper::logInfo(null, ['job_id' => $jobId], 200, '[DISPATCHED] ScanOltsJob', $traceId);
+            return response()->json(['message' => 'Scan job dispatched successfully', 'job_id' => $jobId]);
+        } catch (Throwable $e) {
+            LogHelper::logError(null, ['error' => $e->getMessage()], 500, '[FAILED] Dispatch Scan Job', $traceId);
+            return response()->json(['error' => 'Failed to start scan job.'], 500);
+        }
     }
 
     public function scanStatus($jobId)
     {
-        $cacheData = $this->scanService->getScanProgress($jobId);
+        $traceId = Str::uuid()->toString();
+        LogHelper::logInfo(null, ['jobId' => $jobId], 200, '[START] Get Scan Status', $traceId);
 
-        LogHelper::logInfo(
-            "scan_status_{$jobId}",
-            ['jobId' => $jobId, 'cacheData' => $cacheData],
-            200,
-            "Scan status diambil dari cache"
-        );
-
-        return response()->json($cacheData);
+        try {
+            $cacheData = OltScanJobService::getScanProgress($jobId);
+            LogHelper::logInfo(null, ['cacheData' => $cacheData], 200, '[SUCCESS] Scan Status Retrieved', $traceId);
+            return response()->json($cacheData);
+        } catch (Throwable $e) {
+            LogHelper::logError(null, [
+                'jobId' => $jobId,
+                'error' => $e->getMessage(),
+            ], 500, '[FAILED] Get Scan Status', $traceId);
+            return response()->json(['error' => 'Failed to get scan status'], 500);
+        }
     }
 
     public function checkAllStatusJob(Request $request)
@@ -242,40 +293,20 @@ class OLTManagementController extends Controller
     {
         $traceId = Str::uuid()->toString();
         $username = Auth::user()?->name ?? 'System';
+        LogHelper::logInfo(null, ['olt_id' => $oltId, 'user' => $username], 200, '[START] Scan Single OLT', $traceId);
 
         try {
-            $result = $this->scanService->scanSingleOlt($oltId, $username, $traceId);
-            LogHelper::logInfo(null, ['result' => $result], 200, "Successfully scanSingle", $traceId);
+            $result = OltScanJobService::scanSingleOlt($oltId, $username, $traceId);
+            LogHelper::logInfo(null, ['result' => $result], 200, '[SUCCESS] Scan Single OLT', $traceId);
             return response()->json($result);
-        } catch (\InvalidArgumentException $e) {
-            LogHelper::logInfo(null, [
-                'success' => false,
-                'olt_name' => null,
-                'status' => 'Scanning',
-                'total_ont' => 0,
-                'message' => $e->getMessage()
-            ], 500, "Failed scanSingle", $traceId);
+        } catch (Throwable $e) {
+            LogHelper::logError(null, [
+                'olt_id' => $oltId,
+                'error' => $e->getMessage(),
+            ], 500, '[FAILED] Scan Single OLT', $traceId);
             return response()->json([
                 'success' => false,
-                'olt_name' => null,
-                'status' => 'Scanning',
-                'total_ont' => 0,
-                'message' => $e->getMessage()
-            ], 404);
-        } catch (\Exception $e) {
-            LogHelper::logInfo(null, [
-                'success' => false,
-                'olt_name' => null,
-                'status' => 'Inactive',
-                'total_ont' => 0,
-                'message' => $e->getMessage()
-            ], 500, "Failed scanSingle: unknown response", $traceId);
-            return response()->json([
-                'success' => false,
-                'olt_name' => null,
-                'status' => 'Inactive',
-                'total_ont' => 0,
-                'message' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -284,47 +315,25 @@ class OLTManagementController extends Controller
     {
         $traceId = Str::uuid()->toString();
         $username = Auth::user()?->name ?? 'System';
+        LogHelper::logInfo(null, ['olt_id' => $oltId], 200, '[START] Health Check Single OLT', $traceId);
 
         try {
-            $result = $this->scanService->healthCheckSingleOlt($oltId, $username, $traceId);
-            LogHelper::logInfo(null, ['result' => $result], 200, "Successfully healthCheckSingle", $traceId);
+            $result = OltScanJobService::healthCheckSingleOlt($oltId, $username, $traceId);
+            LogHelper::logInfo(null, ['result' => $result], 200, '[SUCCESS] Health Check Single OLT', $traceId);
             return response()->json($result);
-        } catch (\InvalidArgumentException $e) {
-            LogHelper::logInfo(null, [
-                'success' => false,
-                'olt_name' => null,
-                'status' => 'Scanning',
-                'total_ont' => 0,
-                'message' => $e->getMessage()
-            ], 500, "Failed healthCheckSingle", $traceId);
-            return response()->json([
-                'success' => false,
-                'olt_name' => null,
-                'status' => 'Scanning',
-                'total_ont' => 0,
-                'message' => $e->getMessage()
-            ], 404);
-        } catch (\Exception $e) {
-            LogHelper::logInfo(null, [
-                'success' => false,
-                'olt_name' => null,
-                'status' => 'Inactive',
-                'total_ont' => 0,
-                'message' => $e->getMessage()
-            ], 500, "Failed healthCheckSingle: unknown response", $traceId);
-            return response()->json([
-                'success' => false,
-                'olt_name' => null,
-                'status' => 'Inactive',
-                'total_ont' => 0,
-                'message' => $e->getMessage()
-            ], 500);
+        } catch (Throwable $e) {
+            LogHelper::logError(null, [
+                'olt_id' => $oltId,
+                'error' => $e->getMessage(),
+            ], 500, '[FAILED] Health Check Single OLT', $traceId);
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
 
     public function clearCache($jobId)
     {
-        $this->scanService->clearScanCache($jobId);
+        $traceId = Str::uuid()->toString();
+        OltScanJobService::clearScanCache($jobId);
 
         return response()->json([
             'message' => "Cache cleared for job {$jobId}",

@@ -2,9 +2,10 @@
 
 return [
     'header' => [
-        'index' => 'OLT Management',
+        'olt-index' => 'OLT Management',
         'add-olt' => 'Add New OLT',
-        'edit-olt' => 'Edit OLT'
+        'edit-olt' => 'Edit OLT',
+        'ont-index' => 'ONT Management'
     ],
     'title' => [
         'olt-statistics' => 'OLT Statistics',
@@ -54,7 +55,13 @@ return [
         'olt-type' => 'OLT Type',
         'map-location' => 'Map Location',
         'latitude' => 'Latitude',
-        'longitude' => 'Longitude'
+        'longitude' => 'Longitude',
+        'ont-info' => 'Manage all ONTs organized by user',
+        'filter-ont' => 'Filter ONTs',
+        'total-onts' => 'Total ONTs',
+        'active-onts' => 'Online',
+        'offline-onts' => 'Offline',
+        'other-onts-status' => 'Other State',
     ],
     'placeholder' => [
         'search' => 'Search by OLT name or IP address...',

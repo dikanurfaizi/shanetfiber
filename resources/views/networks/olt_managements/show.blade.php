@@ -203,17 +203,15 @@
                                     </td>
                                     {{-- RX Power --}}
                                     <td>
-                                        <div
-                                            class="d-flex align-items-center
-                            @if ($ont->ont_rx_power >= -15 && $ont->ont_rx_power <= -1) signal-too-strong
-                            @elseif($ont->ont_rx_power > -24 && $ont->ont_rx_power < -15)
-                                signal-good
-                            @elseif($ont->ont_rx_power > -25 && $ont->ont_rx_power <= -24)
-                                signal-low
-                            @elseif($ont->ont_rx_power >= -30 && $ont->ont_rx_power <= -25)
-                                signal-too-low @endif">
-                                            <div class="signal-indicator me-1"><i class="fas fa-signal"></i></div>
-                                            <span>{{ $ont->ont_rx_power }} dBm</span>
+                                        <div class="d-flex align-items-center {{ $ont->signal_class }}">
+                                            <div class="signal-indicator me-2" data-bs-toggle="tooltip"
+                                                data-bs-placement="top" title="{{ $ont->signal_label }}">
+                                                <i class="fas fa-signal"></i>
+                                            </div>
+                                            <span data-bs-toggle="tooltip" data-bs-placement="top"
+                                                title="{{ $ont->signal_label }}">
+                                                {{ $ont->ont_rx_power }} dBm
+                                            </span>
                                         </div>
                                     </td>
                                     {{-- Temp --}}

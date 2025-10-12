@@ -1,15 +1,14 @@
 <?php
 
-namespace App\Services\Networks;
+namespace App\Services\Networks\Olt;
 
 use App\Models\Network\OidMapping;
-use App\Services\Networks\SnmpService;
+use App\Services\Networks\Snmp\SnmpFetchService;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 
 class OltValidationService
 {
-    public function validateOltData(array $data): \Illuminate\Validation\Validator
+    public static function validateOltData(array $data): \Illuminate\Validation\Validator
     {
         $vendors = OidMapping::pluck('vendor')->toArray();
 
@@ -22,9 +21,9 @@ class OltValidationService
         ]);
     }
 
-    public function testSnmpConnection(array $data, string $username): array
+    public static function testSnmpConnection(array $data, string $username): array
     {
-        $validator = $this->validateOltData($data);
+        $validator = self::validateOltData($data);
 
         if ($validator->fails()) {
             throw new \InvalidArgumentException(implode(', ', $validator->errors()->all()), 422);
@@ -46,10 +45,10 @@ class OltValidationService
             'version' => 'v2c'
         ];
 
-        $healthCheck = SnmpService::checkOltStatus($olt, $username);
+        $healthCheck = OltStatusService::checkOltStatus($olt, $username);
 
         if ($healthCheck['status'] === 'Up') {
-            $snmpData = SnmpService::getOnts($olt);
+            $snmpData = SnmpFetchService::getOnts($olt);
             $totalOnt = $snmpData['total_ont'];
 
             return [
