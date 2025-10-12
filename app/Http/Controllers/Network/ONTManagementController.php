@@ -21,7 +21,7 @@ class ONTManagementController extends Controller
 
         $data = [
             'status' => $request->status ?? '',
-            'olt_id' => $request->olt_Id ?? '',
+            'olt_id' => $request->olt_id ?? '',
             'signal_id' => $request->signal_id ?? '',
             'search' => $request->search ?? ''
         ];
