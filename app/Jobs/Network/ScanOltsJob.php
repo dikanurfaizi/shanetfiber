@@ -7,8 +7,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
-use App\Services\Networks\SnmpService;
-use App\Models\Network\Olt;
+use App\Services\Networks\Ont\OntScanJobService;
 
 class ScanOltsJob implements ShouldQueue
 {
@@ -23,7 +22,7 @@ class ScanOltsJob implements ShouldQueue
         $this->username = $username;
     }
 
-    public function handle(SnmpService $scanService): void
+    public function handle(OntScanJobService $scanService): void
     {
         LogHelper::logInfo(null, [
             'job_id' => $this->jobId,

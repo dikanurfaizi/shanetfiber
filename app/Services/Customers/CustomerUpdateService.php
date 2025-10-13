@@ -42,50 +42,148 @@ class CustomerUpdateService
     public function updateCustomer(Customer $customer, array $validatedData, string $traceId, string $action): array
     {
         try {
+            LogHelper::logInfo(
+                null,
+                [
+                    'customer_id'     => $customer->id,
+                    'customer_name'   => $customer->name,
+                    'action'          => $action,
+                    'validated_keys'  => array_keys($validatedData),
+                ],
+                200,
+                'Starting customer update process',
+                $traceId
+            );
+
+            $message = '';
+            $result  = ['success' => false, 'message' => ''];
+
+            // === CASE 1: Change Package ===
             if ($action === 'change_package') {
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id'     => $customer->id,
+                        'old_package_id'  => $customer->paket_id,
+                        'new_package_id'  => $validatedData['paket_id'] ?? null,
+                    ],
+                    200,
+                    'Initiating package change validation',
+                    $traceId
+                );
+
+                // Validasi pergantian paket
                 $result = $this->validatePackageChange($customer, $traceId);
+
                 if (!$result['success']) {
-                    LogHelper::logError(
+                    LogHelper::logWarning(
                         null,
                         [
-                            'customer_name' => $customer->name,
-                            'old_package_id' => $customer->paket_id,
-                            'new_package_id' => $validatedData['paket_id']
+                            'customer_id'     => $customer->id,
+                            'customer_name'   => $customer->name,
+                            'old_package_id'  => $customer->paket_id,
+                            'new_package_id'  => $validatedData['paket_id'] ?? null,
+                            'reason'          => $result['message'],
                         ],
                         400,
-                        $result['message'],
+                        'Package change validation failed',
                         $traceId
                     );
                     return $result;
                 }
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id'    => $customer->id,
+                        'customer_name'  => $customer->name,
+                        'old_package_id' => $customer->paket_id,
+                        'new_package_id' => $validatedData['paket_id'] ?? null,
+                    ],
+                    200,
+                    'Package validation passed, applying change',
+                    $traceId
+                );
+
+                // Jalankan perubahan paket
                 $changesResult = $this->handlePackageChange($customer, $validatedData, $traceId);
+
                 if (!$changesResult['success']) {
                     LogHelper::logError(
                         null,
                         [
-                            'customer_name' => $customer->name,
-                            'old_package_id' => $customer->paket_id,
-                            'new_package_id' => $validatedData['paket_id']
+                            'customer_id'     => $customer->id,
+                            'customer_name'   => $customer->name,
+                            'old_package_id'  => $customer->paket_id,
+                            'new_package_id'  => $validatedData['paket_id'] ?? null,
+                            'reason'          => $changesResult['message'],
                         ],
                         400,
-                        $changesResult['message'],
+                        'Package change failed during update',
                         $traceId
                     );
                     return $changesResult;
                 }
+
                 $message = $changesResult['message'];
-            } else {
-                $this->handleActivationDateChange($customer, $validatedData, $traceId);
-                $this->updateCustomerData($customer, $validatedData, $traceId);
-                $this->handleMemberChange($customer, $traceId);
-                $message = 'Customer update successfully';
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id'     => $customer->id,
+                        'customer_name'   => $customer->name,
+                        'old_package_id'  => $customer->paket_id,
+                        'new_package_id'  => $validatedData['paket_id'] ?? null,
+                        'package_change'  => true,
+                    ],
+                    200,
+                    'Customer package updated successfully',
+                    $traceId
+                );
             }
 
+            // === CASE 2: Normal Update ===
+            else {
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id'    => $customer->id,
+                        'customer_name'  => $customer->name,
+                        'action'         => $action,
+                    ],
+                    200,
+                    'Processing standard customer update (activation/member/data)',
+                    $traceId
+                );
+
+                // Langkah-langkah update normal
+                $this->handleActivationDateChange($customer, $validatedData, $traceId);
+                $this->updateCustomerData($customer, $validatedData, $traceId);
+                $this->handleMemberChange($customer, $validatedData, $traceId);
+
+                $message = 'Customer updated successfully';
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id'    => $customer->id,
+                        'customer_name'  => $customer->name,
+                        'updated_fields' => array_keys($validatedData),
+                    ],
+                    200,
+                    'Customer data and related entities updated successfully',
+                    $traceId
+                );
+            }
+
+            // === FINAL SUCCESS LOG ===
             LogHelper::logInfo(
                 null,
                 [
-                    'customer_id' => $customer->id,
-                    'changes' => array_keys($validatedData)
+                    'customer_id'   => $customer->id,
+                    'customer_name' => $customer->name,
+                    'action'        => $action,
+                    'status'        => 'success',
                 ],
                 200,
                 $message,
@@ -95,7 +193,7 @@ class CustomerUpdateService
             return [
                 'success' => true,
                 'message' => $message,
-                'traceId' => $traceId
+                'traceId' => $traceId,
             ];
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -103,21 +201,24 @@ class CustomerUpdateService
                 [
                     'exception' => [
                         'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'code'    => $e->getCode(),
+                        'file'    => $e->getFile(),
+                        'line'    => $e->getLine(),
                     ],
-                    'customer_id' => $customer->id,
-                    'data' => $validatedData
+                    'customer_id'   => $customer->id ?? null,
+                    'customer_name' => $customer->name ?? null,
+                    'validated_data' => $validatedData,
+                    'action'        => $action,
                 ],
                 500,
                 'Failed to update customer',
                 $traceId
             );
+
             return [
                 'success' => false,
-                'message' => "Failed to update customer. Please call the IT Helpdesk",
-                'traceId' => $traceId
+                'message' => 'Failed to update customer. Please contact IT Helpdesk.',
+                'traceId' => $traceId,
             ];
         }
     }
@@ -781,60 +882,153 @@ class CustomerUpdateService
     private function calculateLastBillPayment(Customer $customer, string $activationDate, string $traceId): string
     {
         try {
-            $activationDate = Carbon::parse($activationDate);
-            $totalDaysInMonth = $activationDate->daysInMonth;
-            $day = min($activationDate->day, $totalDaysInMonth);
+            LogHelper::logInfo(
+                null,
+                [
+                    'customer_id'      => $customer->id,
+                    'activation_date'  => $activationDate,
+                    'billing_period'   => $customer->billing_period,
+                ],
+                200,
+                'Starting last bill payment calculation',
+                $traceId
+            );
 
+            $activationDate   = Carbon::parse($activationDate);
+            $totalDaysInMonth = $activationDate->daysInMonth;
+            $day              = min($activationDate->day, $totalDaysInMonth);
+
+            // === Fetch last billing records ===
             $lastPayment = Billing::where('customer_id', $customer->id)
-                ->where('status', 'LS')
+                ->where('status', 'LS') // Lunas
                 ->latest('payment_time')
                 ->first();
 
             $lastPayLater = Billing::where('customer_id', $customer->id)
-                ->where('status', 'PL')
+                ->where('status', 'PL') // Pay Later
                 ->latest('pay_later')
                 ->first();
 
+            LogHelper::logInfo(
+                null,
+                [
+                    'customer_id'   => $customer->id,
+                    'last_payment'  => $lastPayment?->payment_time,
+                    'last_paylater' => $lastPayLater?->pay_later,
+                ],
+                200,
+                'Fetched last payment and pay-later records',
+                $traceId
+            );
+
+            // === Determine reference date ===
             if ($lastPayLater && $lastPayment) {
                 $referenceDate = $lastPayLater->pay_later > $lastPayment->payment_time
                     ? $lastPayLater->pay_later
                     : $lastPayment->payment_time;
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id'    => $customer->id,
+                        'reference_type' => 'both_found',
+                        'reference_date' => $referenceDate,
+                    ],
+                    200,
+                    'Both payment and pay-later found, using most recent as reference date',
+                    $traceId
+                );
             } elseif ($lastPayment) {
                 $referenceDate = $lastPayment->payment_time;
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id'    => $customer->id,
+                        'reference_type' => 'payment_only',
+                        'reference_date' => $referenceDate,
+                    ],
+                    200,
+                    'Using last payment as reference date',
+                    $traceId
+                );
             } elseif ($lastPayLater) {
                 $referenceDate = $lastPayLater->pay_later;
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id'    => $customer->id,
+                        'reference_type' => 'paylater_only',
+                        'reference_date' => $referenceDate,
+                    ],
+                    200,
+                    'Using last pay-later as reference date',
+                    $traceId
+                );
             } else {
-                return $activationDate->format('d_m_Y');
+                $formatted = $activationDate->format('d_m_Y');
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id'     => $customer->id,
+                        'reference_type'  => 'none_found',
+                        'default_return'  => $formatted,
+                    ],
+                    200,
+                    'No payment or pay-later record found, using activation date',
+                    $traceId
+                );
+
+                return $formatted;
             }
 
+            // === Calculate next billing period ===
             $referenceDate = Carbon::parse($referenceDate);
 
             if ($customer->billing_period) {
                 $nextMonth = Carbon::createFromFormat('F Y', $customer->billing_period)
                     ->addMonth()
                     ->format('m.Y');
-                return sprintf('%02d_%s', $day, $nextMonth);
+            } else {
+                $nextMonth = $referenceDate->addMonth()->format('m.Y');
             }
 
-            $nextMonth = $referenceDate->addMonth()->format('m.Y');
-            return sprintf('%02d_%s', $day, $nextMonth);
+            $final = sprintf('%02d_%s', $day, $nextMonth);
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'customer_id'      => $customer->id,
+                    'final_billing_key' => $final,
+                    'day'              => $day,
+                    'next_month'       => $nextMonth,
+                ],
+                200,
+                'Calculated last bill payment successfully',
+                $traceId
+            );
+
+            return $final;
         } catch (\Throwable $e) {
             LogHelper::logError(
                 null,
                 [
                     'exception' => [
                         'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'code'    => $e->getCode(),
+                        'file'    => $e->getFile(),
+                        'line'    => $e->getLine(),
                     ],
-                    'customer_id' => $customer->id,
-                    'activation_date' => $activationDate
+                    'customer_id'     => $customer->id ?? null,
+                    'activation_date' => $activationDate,
                 ],
                 500,
                 'Failed to calculate last bill payment',
                 $traceId
             );
+
             throw $e;
         }
     }
@@ -842,33 +1036,75 @@ class CustomerUpdateService
     private function updateCustomerData(Customer $customer, array $data, string $traceId): void
     {
         try {
+            LogHelper::logInfo(
+                null,
+                [
+                    'customer_id' => $customer->id,
+                    'incoming_data_keys' => array_keys($data),
+                ],
+                200,
+                'Starting customer data update process',
+                $traceId
+            );
+
             $formatter = new FormatReceiver();
+
+            // === Build update payload ===
             $updateData = [
-                'name' => $data['name'],
-                'email' => $data['email'],
-                'address' => $data['address'],
-                'contact' => $formatter->formatReceiver($data['contact'], null, false),
-                'discount' => $data['discount'] ?? 0,
-                'user_id' => $data['user_id'],
+                'name'        => $data['name'] ?? $customer->name,
+                'email'       => $data['email'] ?? $customer->email,
+                'address'     => $data['address'] ?? $customer->address,
+                'contact'     => $formatter->formatReceiver($data['contact'] ?? $customer->contact, null, false),
+                'discount'    => $data['discount'] ?? $customer->discount ?? 0,
+                'user_id'     => $data['user_id'] ?? $customer->user_id,
             ];
 
+            // Password handling
             if (!empty($data['password'])) {
                 $updateData['password'] = Hash::make($data['password']);
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id' => $customer->id,
+                        'note'        => 'Password field will be updated (hashed).',
+                    ],
+                    200,
+                    'Customer password update detected',
+                    $traceId
+                );
             }
 
+            // Member handling
             if (!empty($data['member_id'])) {
                 $updateData['member_id'] = $data['member_id'];
                 $updateData['billing_option'] = $data['billing_option'] ?? null;
-                $updateData['billing_period'] = $data['billing_option'] !== '0' ? $data['periode_billing'] : null;
+                $updateData['billing_period'] = ($data['billing_option'] ?? '0') !== '0'
+                    ? $data['periode_billing'] ?? null
+                    : null;
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id'     => $customer->id,
+                        'member_id'       => $data['member_id'],
+                        'billing_option'  => $data['billing_option'] ?? null,
+                        'billing_period'  => $updateData['billing_period'],
+                    ],
+                    200,
+                    'Member and billing info updated',
+                    $traceId
+                );
             }
 
+            // === Perform update ===
             $customer->update($updateData);
 
             LogHelper::logInfo(
                 null,
                 [
-                    'customer_id' => $customer->id,
-                    'updated_fields' => array_keys($updateData)
+                    'customer_id'     => $customer->id,
+                    'updated_fields'  => array_keys($updateData),
+                    'updated_payload' => $updateData,
                 ],
                 200,
                 'Customer data updated successfully',
@@ -880,47 +1116,90 @@ class CustomerUpdateService
                 [
                     'exception' => [
                         'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'code'    => $e->getCode(),
+                        'file'    => $e->getFile(),
+                        'line'    => $e->getLine(),
                     ],
-                    'customer_id' => $customer->id,
-                    'data' => $data
+                    'customer_id' => $customer->id ?? null,
+                    'data'        => $data,
                 ],
                 500,
                 'Failed to update customer data',
                 $traceId
             );
+
             throw $e;
         }
     }
 
-    private function handleMemberChange(Customer $customer, string $traceId): void
+    private function handleMemberChange(Customer $customer, array $data, string $traceId): void
     {
-        if (!$customer->wasChanged('member_id')) {
-            return;
-        }
-
         try {
-            $customer->load(['paket', 'member']);
+            // === EARLY EXIT CONDITIONS ===
+            if (!$customer->wasChanged('member_id')) {
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id' => $customer->id,
+                        'note'        => 'Member ID not changed, skipping process.',
+                    ],
+                    200,
+                    'Skipped member change (no change detected)',
+                    $traceId
+                );
+                return;
+            }
 
+            if ($customer->billing_period === ($data['periode_billing'] ?? null)) {
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id' => $customer->id,
+                        'periode'     => $customer->billing_period,
+                        'note'        => 'Customer billing periode same as request data.',
+                    ],
+                    200,
+                    'Skipped member change (same billing periode)',
+                    $traceId
+                );
+                return;
+            }
+
+            // Ambil billing periode aktif saat ini
             $currentPeriode = BillingPeriode::latest('created_at')->first();
             if (!$currentPeriode) {
                 throw new \RuntimeException('No billing periode found');
             }
 
-            $subscriptionDuration = SubscriptionDuration::where('customer_id', $customer->id)
-                ->where('paket_id', $customer->paket_id)
-                ->where('status', 'active')
-                ->first();
+            if ($currentPeriode->name === ($data['periode_billing'] ?? null)) {
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id' => $customer->id,
+                        'periode'     => $currentPeriode->name,
+                        'note'        => 'Current periode matches provided periode, skipping update.',
+                    ],
+                    200,
+                    'Skipped member change (periode identical to current)',
+                    $traceId
+                );
+                return;
+            }
 
+            // === LOAD RELASI ===
+            $customer->load(['paket', 'member']);
             if (!$customer->paket) {
                 throw new \RuntimeException("Customer paket not found");
             }
 
+            // === GET DURATION DAN KONFIGURASI ===
+            $subscriptionDuration = SubscriptionDuration::where('paket_id', $customer->paket_id)
+                ->where('is_active', true)
+                ->first();
+
             $websystem = Websystem::where('slug', 'websystem')->firstOrFail();
 
-            // Pastikan casting aman
+            // === DISCOUNT & TAX CALCULATION ===
             $customerDiscount = $this->billingService->calculateCustomerDiscount(
                 $customer,
                 $currentPeriode->name
@@ -941,6 +1220,24 @@ class CustomerUpdateService
 
             $totalAmount = $priceAfterDiscount + $customerTax;
 
+            LogHelper::logInfo(
+                null,
+                [
+                    'customer_id'       => $customer->id,
+                    'periode'           => $currentPeriode->name,
+                    'paket_price'       => $customer->paket->price,
+                    'discount_customer' => $customerDiscount,
+                    'discount_paket'    => $discountPaket,
+                    'discount_total'    => $discountAmount,
+                    'tax_amount'        => $customerTax,
+                    'total_amount'      => $totalAmount,
+                ],
+                200,
+                'Calculated new billing values before update',
+                $traceId
+            );
+
+            // === UPDATE BILLING ===
             $updated = Billing::where('customer_id', $customer->id)
                 ->whereIn('status', ['BL', 'PL'])
                 ->whereHas('billingSubscription', function ($q) use ($currentPeriode) {
@@ -954,21 +1251,16 @@ class CustomerUpdateService
                     'tax_amount'      => $customerTax,
                 ]);
 
-
             if ($updated > 0) {
                 LogHelper::logInfo(
                     null,
                     [
-                        'customer_id'     => $customer->id,
-                        'base_price'      => $customer->paket->price,
-                        'discount_amount' => $discountAmount,
-                        'subtotal'        => $priceAfterDiscount,
-                        'total_amount'    => $totalAmount,
-                        'tax_amount'      => $customerTax,
-                        'periode'         => $currentPeriode->name,
+                        'customer_id' => $customer->id,
+                        'periode'     => $currentPeriode->name,
+                        'updated'     => $updated,
                     ],
                     200,
-                    'Billing price updated after member change',
+                    'Billing updated successfully after member change',
                     $traceId
                 );
             } else {
@@ -993,12 +1285,14 @@ class CustomerUpdateService
                         'file'    => $e->getFile(),
                         'line'    => $e->getLine(),
                     ],
-                    'customer_id' => $customer->id,
+                    'customer_id' => $customer->id ?? null,
+                    'periode'     => $data['periode_billing'] ?? null,
                 ],
                 500,
                 'Failed to handle member change',
                 $traceId
             );
+
             throw $e;
         }
     }

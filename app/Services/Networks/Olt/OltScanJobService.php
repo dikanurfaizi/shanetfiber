@@ -61,7 +61,7 @@ class OltScanJobService
         return self::performOltCheck($oltId, $username, false, 'OLT Health Check', $traceId);
     }
 
-    private function performOltCheck(int $oltId, string $username, bool $includeOnts, string $action, string $traceId): array
+    private static function performOltCheck(int $oltId, string $username, bool $includeOnts, string $action, string $traceId): array
     {
         $startTime = microtime(true);
         $olt = Olt::find($oltId);
