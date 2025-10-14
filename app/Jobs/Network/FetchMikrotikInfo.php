@@ -82,30 +82,63 @@ class FetchMikrotikInfo implements ShouldQueue
                     $this->traceId
                 );
 
-                // Mapping berdasarkan username
                 foreach ($routerCustomers as $customer) {
-                    // Cari interface yang sesuai username (misal name = username)
+                    // Cari interface berdasarkan secret_id
                     $iface = collect($interfaces)->first(fn($i) => ($i['.id'] ?? null) === $customer->secret_id);
-                    // $macAddress = $iface['mac-address'] ?? null;
-                    $interfaceName = $iface['name'] ?? null;
 
-                    // Cari IP address dari PPP active
+                    // Ambil data dari interface dan ppp active
+                    $interfaceName = $iface['name'] ?? null;
                     $ppp = collect($pppActives)->first(fn($p) => ($p['name'] ?? null) === $customer->username);
                     $ipAddress = $ppp['address'] ?? null;
                     $macAddress = $ppp['caller-id'] ?? null;
 
-                    // Update customer
-                    $customer->mac_address = $macAddress ?? '';
-                    $customer->interface = $interfaceName ?? '';
-                    $customer->ip_address = $ipAddress ?? '';
-                    $customer->save();
+                    // --- Validasi agar tidak menimpa data lama dengan NULL ---
+                    $shouldUpdate = false;
 
-                    LogHelper::logInfo(null, [
-                        'customer_id' => $customer->id,
-                        'mac_address' => $macAddress,
-                        'interface' => $interfaceName,
-                        'ip_address' => $ipAddress
-                    ], 200, "Customer updated successfully", $this->traceId);
+                    if (!is_null($macAddress) && $macAddress !== '') {
+                        $customer->mac_address = $macAddress;
+                        $shouldUpdate = true;
+                    }
+                    if (!is_null($interfaceName) && $interfaceName !== '') {
+                        $customer->interface = $interfaceName;
+                        $shouldUpdate = true;
+                    }
+                    if (!is_null($ipAddress) && $ipAddress !== '') {
+                        $customer->ip_address = $ipAddress;
+                        $shouldUpdate = true;
+                    }
+
+                    // Hanya save jika memang ada data baru yang valid
+                    if ($shouldUpdate) {
+                        $customer->save();
+                        LogHelper::logInfo(
+                            null,
+                            [
+                                'customer_id'  => $customer->id,
+                                'customer_name' => $customer->name,
+                                'mac_address'  => $macAddress,
+                                'interface'    => $interfaceName,
+                                'ip_address'   => $ipAddress
+                            ],
+                            200,
+                            "Customer updated successfully",
+                            $this->traceId
+                        );
+                    } else {
+                        LogHelper::logInfo(
+                            null,
+                            [
+                                'customer_id'  => $customer->id,
+                                'customer_name' => $customer->name,
+                                'mac_address'  => $customer->mac_address,
+                                'interface'    => $customer->interface,
+                                'ip_address'   => $customer->ip_address
+                            ],
+                            200,
+                            "Skipped update (response null values)",
+                            $this->traceId
+                        );
+                    }
                 }
             } catch (\Exception $e) {
                 foreach ($routerCustomers as $c) {
