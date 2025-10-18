@@ -249,7 +249,7 @@
                                             @if (!empty($ont->customer_ip))
                                                 {{ $ont->customer_ip }}
                                                 <a class="badge bg-primary text-white ms-2"
-                                                    href="http://{{ $ont->customer_ip_address }}:{{ $ont->port ?? '80' }}"
+                                                    href="http://{{ $ont->customer_ip}}:{{ $ont->port ?? '80' }}"
                                                     target="_blank">
                                                     Remote
                                                 </a>
