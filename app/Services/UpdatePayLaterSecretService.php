@@ -16,7 +16,6 @@ class UpdatePayLaterSecretService
 {
     public function updatePayLaterSecret(string $traceId): void
     {
-        $traceId = (string) Str::uuid();
         $today = Carbon::today();
         $currentDay = $today->format('d');
         $currentMonth = $today->format('m');

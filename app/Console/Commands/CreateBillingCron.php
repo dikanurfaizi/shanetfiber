@@ -21,52 +21,27 @@ class CreateBillingCron extends Command
 
     public function handle(): void
     {
-        $traceId     = (string) Str::uuid();
-        $startedAt   = now('Asia/Jakarta');
+        $traceId   = (string) Str::uuid();
+        $startedAt = now('Asia/Jakarta');
         $this->info("Starting CreateBillingCron at {$startedAt->toDateTimeString()}");
 
         try {
-            $currentPeriod   = $startedAt->format('F Y');
-            $lastPeriodName  = BillingPeriode::latest('created_at')->value('name');
+            $currentPeriod  = $startedAt->format('F Y');
+            $lastPeriodName = BillingPeriode::latest('created_at')->value('name');
+            $cfg            = Websystem::firstOrFail();
 
             if ($currentPeriod === $lastPeriodName) {
-                LogHelper::logInfo(
-                    null,
-                    [],
-                    202,
-                    "Billing period '{$currentPeriod}' already exists. Process stopped.",
-                    $traceId
-                );
+                LogHelper::logInfo(null, [], 202, "Billing period '{$currentPeriod}' already exists.", $traceId);
                 return;
             }
-
-            $cfg = Websystem::firstOrFail();
 
             if (!$cfg->billing_auto_generate) {
-                LogHelper::logInfo(
-                    null,
-                    [],
-                    202,
-                    "Billing auto-generation is disabled in configuration.",
-                    $traceId
-                );
+                LogHelper::logInfo(null, [], 202, "Billing auto-generation is disabled.", $traceId);
                 return;
             }
 
-            if ((int) $startedAt->day !== (int) $cfg->billing_auto_day) {
-                LogHelper::logInfo(
-                    null,
-                    [],
-                    202,
-                    "Today ({$startedAt->day}) is not the scheduled billing day ({$cfg->billing_auto_day}).",
-                    $traceId
-                );
-                return;
-            }
-
-            // ========= CALL JOB =========
+            // ===== CALL JOB =====
             CreateInitialBillingJob::dispatch($currentPeriod, null)->onQueue('default');
-
             $this->info("✅ Billing for {$currentPeriod} has been successfully dispatched.");
         } catch (\Throwable $e) {
             LogHelper::logError(

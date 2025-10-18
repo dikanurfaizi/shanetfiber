@@ -23,6 +23,18 @@ class SystemService
     {
         try {
             $client = MikrotikConnectionService::getClient($router, $traceId);
+
+            if (!$client) {
+                LogHelper::logWarning(
+                    null,
+                    ['router' => $router->host ?? 'unknown'],
+                    503,
+                    'Mikrotik client is null — connection failed',
+                    $traceId
+                );
+                return []; // atau lempar exception baru
+            }
+
             $query = new Query('/system/resource/print');
             $resources = $client->query($query)->read();
 
@@ -56,6 +68,18 @@ class SystemService
     {
         try {
             $client = MikrotikConnectionService::getClient($router, $traceId);
+
+            if (!$client) {
+                LogHelper::logWarning(
+                    null,
+                    ['router' => $router->host ?? 'unknown'],
+                    503,
+                    'Mikrotik client is null — connection failed',
+                    $traceId
+                );
+                return []; // atau lempar exception baru
+            }
+
             $query = new Query('/system/clock/print');
             $time = $client->query($query)->read();
 
@@ -90,6 +114,18 @@ class SystemService
         try {
             $interface = request()->interface;
             $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+
+            if (!$client) {
+                LogHelper::logWarning(
+                    null,
+                    ['router' => $router->host ?? 'unknown'],
+                    503,
+                    'Mikrotik client is null — connection failed',
+                    $traceId
+                );
+                return response()->json([], 503); // atau lempar exception baru
+            }
+
             $eth = (new Query('/interface/monitor-traffic'))
                 ->equal('interface', $interface)
                 ->equal('once');
@@ -195,6 +231,18 @@ class SystemService
     {
         try {
             $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+
+            if (!$client) {
+                LogHelper::logWarning(
+                    null,
+                    ['router' => $router->host ?? 'unknown'],
+                    503,
+                    'Mikrotik client is null — connection failed',
+                    $traceId
+                );
+                return []; // atau lempar exception baru
+            }
+
             $query = new Query('/interface/print');
             $query->where('type', 'ether');
             $query->where('type', 'vlan');
@@ -241,6 +289,18 @@ class SystemService
     {
         try {
             $client = MikrotikConnectionService::getClient($router, $traceId);
+
+            if (!$client) {
+                LogHelper::logWarning(
+                    null,
+                    ['router' => $router->host ?? 'unknown'],
+                    503,
+                    'Mikrotik client is null — connection failed',
+                    $traceId
+                );
+                return []; // atau lempar exception baru
+            }
+
             $inf = new Query('/interface/print');
             $inf->where('name', $username);
             $interface = $client->query($inf)->read();

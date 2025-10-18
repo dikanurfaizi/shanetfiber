@@ -150,7 +150,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::post('server/cek-online', [TestConnectionController::class, 'checkOnline'])->name('check-online');
         Route::get('/server/{mikrotik:slug}', [MikrotikController::class, 'show'])->name('mikrotiks.show');
         Route::post('/server/{mikrotik}/update-cache', [SystemController::class, 'updateCache'])->name('router.update.cache');
-        Route::get('/server/{mikrotik}/resources', [SystemController::class, 'routerResource'])->name('router.resources');
+        Route::get('/server/{mikrotik}/resources', [SystemController::class, 'routerResource'])->name('mikrotik.resources');
         Route::get('/server/{mikrotik:slug}/time', [SystemController::class, 'getTimeRouter'])->name('mikrotik.time');
         Route::get('/server/traffic/{mikrotik:slug}/get-monitoring', [SystemController::class, 'mikrotikTrafficInterface'])->name('mikrotik.traffic_interface');
 
@@ -383,7 +383,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('network/oltmanagements/{jobId}/clear', [OLTManagementController::class, 'clearCache'])->name('olts.clear.cache');
 
         // ==================== ONU MANAGEMENT ====================
-        Route::resource('network/onumanagements', ONTManagementController::class)->names('onts');
+        Route::resource('network/ontmanagements', ONTManagementController::class)->names('onts');
     });
 });
 

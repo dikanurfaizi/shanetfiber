@@ -37,7 +37,7 @@ class UpdatePLSecret extends Command
         $this->info("Starting " . $this->descriptionEn . " at {$formattedDate}");
         try {
             LogHelper::logInfo(null, [], 200, $this->descriptionEn . " dimulai", $traceId);
-            app(UpdatePayLaterSecretService::class)->updatePayLaterSecret();
+            app(UpdatePayLaterSecretService::class)->updatePayLaterSecret($traceId);
             $dispatchTime = Carbon::now()->format('Y-m-d H:i:s');
             LogHelper::logInfo(null, [], 200, $this->descriptionEn . " selesai", $traceId);
             $this->info("Successfully " . $this->descriptionEn . " at {$dispatchTime}");

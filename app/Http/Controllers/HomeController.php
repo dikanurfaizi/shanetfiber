@@ -348,7 +348,6 @@ class HomeController extends Controller
         LogHelper::logInfo(null, [
             'duration' => $duration, // durasi eksekusi dalam detik
             'billingPeriode' => $billingPeriode,
-            'lastBillings' => $lastBillings,
             'userId' => $userId,
         ], 200, "Details getLastBillingData", $traceId, $duration);
 

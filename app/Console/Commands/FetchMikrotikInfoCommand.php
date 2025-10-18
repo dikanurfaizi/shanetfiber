@@ -5,32 +5,37 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 use App\Jobs\Network\FetchMikrotikInfo;
-use App\Jobs\Network\ScanOltsJob;
+use App\Helpers\LogHelper;
 
 class FetchMikrotikInfoCommand extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'app:fetch-mikrotik-info-command';
+    protected $signature = 'network:fetch-mikrotik-info';
+    protected $description = 'Fetch Mikrotik interface, DHCP, and PPPoE information from all registered routers.';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Command description';
-
-    /**
-     * Execute the console command.
-     */
-    public function handle()
+    public function handle(): int
     {
-        $username = 'scheduler system';
-        $jobId = Str::uuid()->toString();
-        FetchMikrotikInfo::dispatch($jobId)->onQueue('mikrotik-heavy');
-        ScanOltsJob::dispatch($jobId, $username)->onQueue('mikrotik-heavy');
+        $traceId = Str::uuid()->toString();
+        $this->info("=== Fetch Mikrotik Info Job started (Trace: {$traceId}) ===");
+
+        try {
+            FetchMikrotikInfo::dispatch($traceId)->onQueue('mikrotik-heavy');
+
+            LogHelper::logInfo('FetchMikrotikInfoCommand', [
+                'trace_id' => $traceId,
+            ], 200, 'Fetch Mikrotik Info job dispatched', $traceId);
+
+            $this->info("✅ Dispatched FetchMikrotikInfo to queue mikrotik-heavy");
+            return Command::SUCCESS;
+
+        } catch (\Throwable $e) {
+            $this->error("❌ Failed to dispatch FetchMikrotikInfo: " . $e->getMessage());
+            LogHelper::logError('FetchMikrotikInfoCommand', [
+                'trace_id' => $traceId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ], 500, 'Fetch Mikrotik Info failed', $traceId);
+
+            return Command::FAILURE;
+        }
     }
 }

@@ -169,17 +169,6 @@ class ServerController extends Controller
             }
         }
 
-        $pakets = Paket::where('mikrotik_id', $server->id)->get();
-        if ($pakets != NULL) {
-            foreach ($pakets as $paket) {
-                $paket->update([
-                    'disabled' => 'true',
-                ]);
-            }
-        }
-
-
-
         $server->update([
             'disabled' => 'true'
         ]);
@@ -258,7 +247,7 @@ class ServerController extends Controller
 
         try {
             LogHelper::logInfo(null, [], 200, $message . " started with mikrotik id: " . $mikrotik->id, $traceId);
-            dispatch(new MigrateCustomerToRouter($mikrotik, $mikrotik))->onQueue('default');
+            dispatch(new MigrateCustomerToRouter($mikrotik, $mikrotik, $traceId))->onQueue('default');
             LogHelper::logInfo(null, [], 200, $message . " finish with mikrotik id: " . $mikrotik->id, $traceId);
 
             return response()->json(['message' => 'Import customer successfully started']);

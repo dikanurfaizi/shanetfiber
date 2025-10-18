@@ -775,7 +775,7 @@ class WhatsappMessageService
                 'users.contact',
             ])
             ->orderBy('customers.name')
-            ->limit(20)
+            ->limit(10)
             ->get();
     }
 

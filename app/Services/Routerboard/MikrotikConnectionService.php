@@ -15,6 +15,17 @@ class MikrotikConnectionService
      */
     public static function getClient($routerboard, string $traceId): ?Client
     {
+        LogHelper::logInfo(
+            null,
+            [
+                'routerboard_type' => gettype($routerboard),
+                'routerboard_class' => is_object($routerboard) ? get_class($routerboard) : null,
+                'routerboard_keys' => is_array($routerboard) ? array_keys($routerboard) : null
+            ],
+            200,
+            "DEBUG Routerboard Input Type",
+            $traceId
+        );
         $mikrotik = $routerboard;
         $ip = self::resolveIp($mikrotik->host, $traceId);
 

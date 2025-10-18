@@ -148,7 +148,9 @@ class OntDataService
                 c.id AS customer_id,
                 c.slug AS slug,
                 s.name as signal_class,
-                s.label as signal_label
+                s.label as signal_label,
+                c.ip_address AS customer_ip,
+                c.slug AS customer_slug
             ")
             ->orderBy('customer_name', 'asc')
             ->paginate($perPage);

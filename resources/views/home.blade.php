@@ -635,7 +635,7 @@
                 // getPppSecrets: @json(route('get.ppp.secrets', ['mikrotik' => '__ROUTER__'])),
                 // getPppActive: @json(route('get.ppp.active', ['mikrotik' => '__ROUTER__'])),
                 updateCache: @json(route('router.update.cache', ['mikrotik' => '__ROUTER__'])),
-                getResource: @json(route('router.resources', ['mikrotik' => '__ROUTER__']))
+                getResource: @json(route('mikrotik.resources', ['mikrotik' => '__ROUTER__']))
             };
         </script>
         <script src="{{ asset('assets/apexcharts/apexcharts.js') }}"></script>

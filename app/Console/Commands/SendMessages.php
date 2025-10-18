@@ -2,86 +2,55 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
 use Illuminate\Console\Command;
-use App\Helpers\LogHelper;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Illuminate\Support\Carbon;
+use App\Helpers\LogHelper;
 use App\DataTransferObjects\WhatsappJobDto;
 use App\Enums\WhatsAppAction;
+use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
 
 class SendMessages extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'reminder:messages-send';
+    protected $signature   = 'reminder:messages-send';
+    protected $description = 'Send WhatsApp reminder messages on the 15th between 08:00-22:00 WIB every 15 minutes';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Send messages at every 15 minutes in 10th and 15th of each month for reminder';
-
-    /**
-     * Execute the console command.
-     */
-    public function handle()
+    public function handle(): int
     {
-        $traceId = (string) Str::uuid();
+        $traceId   = (string) Str::uuid();
         $startTime = microtime(true);
-        $currentDateTime = Carbon::now()->setTimezone('Asia/Jakarta');
-        $formattedDate = $currentDateTime->format('Y-m-d H:i:s');
-        $dayOfMonth = $currentDateTime->day;
+        $now       = Carbon::now('Asia/Jakarta');
 
-        $this->info("Starting reminder messages job at {$formattedDate}");
+        $allowedDays  = [15];
+        $allowedHours = range(8, 21); // 08:00–21:59
+
+        $this->info("=== Reminder Message Job Started @ {$now->toDateTimeString()} (Trace: {$traceId}) ===");
 
         try {
-            // Validate if today is an allowed date
-            $allowedDates = [15];
-            if (!in_array($dayOfMonth, $allowedDates)) {
-                $message = "Today ({$dayOfMonth}) is not an allowed date for sending reminders. Allowed dates: " . implode(', ', $allowedDates);
-
-                LogHelper::logWarning(
-                    'SendMessagesCommand',
-                    [
-                        'current_day' => $dayOfMonth,
-                        'allowed_days' => $allowedDates
-                    ],
-                    422,
-                    $message,
-                    $traceId
-                );
-
-                $this->warn($message);
-                return 0;
+            // ---- 1. Validasi tanggal ----
+            if (!in_array($now->day, $allowedDays)) {
+                $this->warn("Skipped: today ({$now->day}) not in allowed days [10,15].");
+                LogHelper::logInfo('SendMessages', [
+                    'trace_id' => $traceId,
+                    'day' => $now->day,
+                ], 200, 'Skipped — not allowed date', $traceId);
+                return Command::SUCCESS;
             }
 
-            $currentHour = $currentDateTime->hour;
-            if ($currentHour < 8 || $currentHour >= 22) {
-                $message = "Current time ({$currentHour}:00 WIB) is outside the allowed range (08:00 - 22:00 WIB). Command will not proceed.";
-
-                LogHelper::logWarning(
-                    'SendMessagesCommand',
-                    [
-                        'current_hour' => $currentHour,
-                        'allowed_range' => '08:00 - 22:00'
-                    ],
-                    422,
-                    $message,
-                    $traceId
-                );
-
-                $this->warn($message);
-                return 0;
+            // ---- 2. Validasi jam ----
+            if (!in_array($now->hour, $allowedHours)) {
+                $this->warn("Skipped: current hour {$now->hour}:00 outside allowed range (08-22 WIB).");
+                LogHelper::logInfo('SendMessages', [
+                    'trace_id' => $traceId,
+                    'hour' => $now->hour,
+                ], 200, 'Skipped — outside allowed hour range', $traceId);
+                return Command::SUCCESS;
             }
 
-            $whatsappJobData = new WhatsappJobDto(
+            // ---- 3. Siapkan payload WhatsApp Job ----
+            $jobData = new WhatsappJobDto(
                 customerId: null,
-                action: WhatsappAction::SEND_INFO_BILLING->value,
+                action: WhatsAppAction::SEND_INFO_BILLING->value,
                 traceId: $traceId,
                 billingId: null,
                 receiptId: null,
@@ -93,47 +62,31 @@ class SendMessages extends Command
                 oldPaketPrice: null
             );
 
+            // ---- 4. Dispatch ke queue WhatsApp ----
+            ProcessWhatsappMessageJob::dispatch($jobData)->onQueue('whatsapp_broadcast');
 
-            ProcessWhatsappMessageJob::dispatch($whatsappJobData)->onQueue('whatsapp_broadcast');
-
-            // Log successful dispatch
-            $dispatchTime = Carbon::now()->format('Y-m-d H:i:s');
             $executionTime = round(microtime(true) - $startTime, 2);
+            $dispatchTime  = now('Asia/Jakarta')->format('Y-m-d H:i:s');
 
-            LogHelper::logInfo(
-                'SendMessagesCommand',
-                [
-                    'dispatch_time' => $dispatchTime,
-                    'execution_seconds' => $executionTime
-                ],
-                200,
-                "Successfully dispatched {$this->description}",
-                $traceId
-            );
+            $this->info("✅ Reminder message dispatched successfully at {$dispatchTime} ({$executionTime}s)");
 
-            $this->info("Successfully dispatched reminder job at {$dispatchTime}");
-            $this->info("Total execution time: {$executionTime} seconds");
+            LogHelper::logInfo('SendMessages', [
+                'trace_id' => $traceId,
+                'dispatch_time' => $dispatchTime,
+                'execution_seconds' => $executionTime,
+            ], 200, 'Reminder message job dispatched', $traceId);
 
-            return 0;
-        } catch (\Exception $e) {
-            $errorTime = Carbon::now()->format('Y-m-d H:i:s');
-            $errorMessage = "Failed to dispatch reminder job: " . $e->getMessage();
+            return Command::SUCCESS;
+        } catch (\Throwable $e) {
+            $this->error("❌ Error: {$e->getMessage()}");
+            LogHelper::logError('SendMessages', [
+                'trace_id' => $traceId,
+                'exception' => get_class($e),
+                'error_message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ], 500, 'Reminder message job failed', $traceId);
 
-            LogHelper::logError(
-                'SendMessagesCommand',
-                [
-                    'error_time' => $errorTime,
-                    'exception' => get_class($e),
-                    'error_message' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ],
-                500,
-                $errorMessage,
-                $traceId
-            );
-
-            $this->error($errorTime . " - " . $errorMessage);
-            return 1;
+            return Command::FAILURE;
         }
     }
 }

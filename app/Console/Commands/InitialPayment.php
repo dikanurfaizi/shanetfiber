@@ -13,96 +13,61 @@ use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
 
 class InitialPayment extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'initial-payment:messages-send';
-
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Send messages every 15 minutes on the 1st, 2nd, and 3rd of each month for initial payment';
+    protected $signature   = 'initial-payment:messages-send';
+    protected $description = 'Send WhatsApp messages on 1-3 each month between 08:00-22:00 WIB for initial payment reminders';
 
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(): int
     {
         $traceId = (string) Str::uuid();
         $startTime = microtime(true);
-        $now = Carbon::now()->setTimezone('Asia/Jakarta');
-        $formattedDate = $now->format('Y-m-d H:i:s');
-        $dayOfMonth = $now->day;
+        $now = Carbon::now('Asia/Jakarta');
 
-        LogHelper::logInfo('InitialPaymentCommand', [
-            'trace_id' => $traceId,
-            'start_time' => $formattedDate,
-            'current_day' => $dayOfMonth
-        ], 200, 'Initial payment messages job started', $traceId);
+        $allowedDays = [1, 2, 3];
+        $allowedHours = range(8, 21); // 08:00-21:59
+
+        $this->info("=== Initial Payment Job Started @ {$now->toDateTimeString()} (Trace: {$traceId}) ===");
 
         try {
-            // Allowed dates check
-            $allowedDates = [1, 2, 3];
-            [$startDate, $endDate] = $this->getAllowedDateRange($allowedDates);
-            if (!in_array($dayOfMonth, $allowedDates)) {
-                $message = "Today ({$dayOfMonth}) is not an allowed date. Allowed dates: " . implode(', ', $allowedDates);
-
-                LogHelper::logWarning('InitialPaymentCommand', [
+            // ---- 1. Validasi tanggal ----
+            if (!in_array($now->day, $allowedDays)) {
+                $this->warn("Skipped: today ({$now->day}) not in allowed days [1,2,3].");
+                LogHelper::logInfo('InitialPayment', [
                     'trace_id' => $traceId,
-                    'current_day' => $dayOfMonth,
-                    'allowed_days' => $allowedDates
-                ], 422, $message, $traceId);
-
-                $this->warn($message);
-                return 0;
+                    'day' => $now->day
+                ], 200, 'Skipped — not an allowed date', $traceId);
+                return Command::SUCCESS;
             }
 
-            // Allowed hour check
-            $currentHour = $now->hour;
-            if ($currentHour < 8 || $currentHour >= 22) {
-                $message = "Current time ({$currentHour}:00 WIB) is outside the allowed range (08:00 - 22:00 WIB). Command will not proceed.";
-
-                LogHelper::logWarning('InitialPaymentCommand', [
+            // ---- 2. Validasi jam ----
+            if (!in_array($now->hour, $allowedHours)) {
+                $this->warn("Skipped: current hour {$now->hour}:00 outside range 08-22 WIB.");
+                LogHelper::logInfo('InitialPayment', [
                     'trace_id' => $traceId,
-                    'current_hour' => $currentHour,
-                    'allowed_range' => '08:00 - 22:00'
-                ], 422, $message, $traceId);
-
-                $this->warn($message);
-                return 0;
+                    'hour' => $now->hour
+                ], 200, 'Skipped — outside allowed hour range', $traceId);
+                return Command::SUCCESS;
             }
 
-            // Billing periode check
+            // ---- 3. Cek periode billing ----
             $currentPeriod = $now->format('F Y');
-            $lastPeriode = BillingPeriode::where('name', $currentPeriod)->first();
+            $billing = BillingPeriode::where('name', $currentPeriod)->first();
 
-            if (!$lastPeriode) {
-                LogHelper::logError('InitialPaymentCommand', [
+            if (!$billing) {
+                $this->error("No billing period found for {$currentPeriod} — job aborted.");
+                LogHelper::logError('InitialPayment', [
                     'trace_id' => $traceId,
-                    'current_period' => $currentPeriod
-                ], 404, 'No billing periode found', $traceId);
-
-                $this->error("No billing periode found.");
-                return 1;
+                    'period' => $currentPeriod
+                ], 404, 'Billing period not found', $traceId);
+                return Command::FAILURE;
             }
 
-            if ($lastPeriode->name !== $currentPeriod) {
-                $msg = "Current period ($currentPeriod) is not equal to last billing periode ({$lastPeriode->name}). Skipping...";
-                LogHelper::logWarning('InitialPaymentCommand', [
-                    'trace_id' => $traceId,
-                    'current_period' => $currentPeriod,
-                    'last_periode' => $lastPeriode->name
-                ], 422, $msg, $traceId);
+            // ---- 4. Siapkan rentang tanggal (1–3) ----
+            [$startDate, $endDate] = $this->getAllowedDateRange($allowedDays);
 
-                $this->warn($msg);
-                return 0;
-            }
-
-            // Prepare and dispatch WhatsApp job
+            // ---- 5. Dispatch WhatsApp Job ----
             $jobData = new WhatsappJobDto(
                 customerId: null,
                 action: WhatsAppAction::CREATE_NEW_BILL->value,
@@ -118,49 +83,36 @@ class InitialPayment extends Command
             );
 
             ProcessWhatsappMessageJob::dispatch($jobData)->onQueue('whatsapp_broadcast');
-            $dispatchTime = now()->format('Y-m-d H:i:s');
 
-            // Execution time
-            $executionTime = round(microtime(true) - $startTime, 2);
+            $execTime = round(microtime(true) - $startTime, 2);
+            $this->info("✅ WhatsApp broadcast dispatched successfully in {$execTime}s");
 
-            LogHelper::logInfo('InitialPaymentCommand', [
+            LogHelper::logInfo('InitialPayment', [
                 'trace_id' => $traceId,
-                'dispatch_time' => $dispatchTime,
-                'execution_seconds' => $executionTime,
-                'billing_period' => $currentPeriod,
-                'start_date_range' => $startDate->format('Y-m-d H:i:s'),
-                'end_date_range' => $endDate->format('Y-m-d H:i:s')
-            ], 200, "Successfully dispatched {$this->description}", $traceId);
+                'period' => $currentPeriod,
+                'execution_time' => $execTime,
+                'start_range' => $startDate->toDateTimeString(),
+                'end_range' => $endDate->toDateTimeString()
+            ], 200, 'Initial payment broadcast dispatched', $traceId);
 
-            $this->info("Successfully dispatched initial payment message at {$dispatchTime}");
-            $this->info("Total execution time: {$executionTime} seconds");
-
-            return 0;
+            return Command::SUCCESS;
         } catch (\Throwable $e) {
-            $errorTime = now()->format('Y-m-d H:i:s');
-            $errorMessage = "Failed to dispatch initial payment message: " . $e->getMessage();
-
-            LogHelper::logError('InitialPaymentCommand', [
+            $this->error("❌ Error: {$e->getMessage()}");
+            LogHelper::logError('InitialPayment', [
                 'trace_id' => $traceId,
-                'error_time' => $errorTime,
-                'exception' => get_class($e),
-                'error_message' => $e->getMessage(),
+                'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
-            ], 500, $errorMessage, $traceId);
+            ], 500, 'Initial payment job failed', $traceId);
 
-            $this->error($errorTime . " - " . $errorMessage);
-            return 1;
+            return Command::FAILURE;
         }
     }
 
-    private function getAllowedDateRange(array $allowedDates): array
+    private function getAllowedDateRange(array $allowedDays): array
     {
-        $startDay = min($allowedDates);
-        $endDay   = max($allowedDates);
-
-        $startDate = Carbon::now()->startOfMonth()->setDay($startDay)->startOfDay();
-        $endDate   = Carbon::now()->startOfMonth()->setDay($endDay)->addDay()->startOfDay();
-
-        return [$startDate, $endDate];
+        $month = Carbon::now('Asia/Jakarta')->startOfMonth();
+        $start = $month->copy()->day(min($allowedDays))->startOfDay();
+        $end   = $month->copy()->day(max($allowedDays))->addDay()->startOfDay();
+        return [$start, $end];
     }
 }

@@ -27,7 +27,6 @@ class MikrotikController extends Controller
             $interfaces = $this->systemService->mikrotikInterface($mikrotik, $traceId);
             LogHelper::logInfo(null, [
                 'mikrotik' => $mikrotik->toArray(),
-                'interface' => $interfaces
             ], 200, 'Successfully to get mikrotik interface', $traceId);
             return view('mikrotiks.show', compact('mikrotik', 'interfaces'));
         } catch (\Exception $e) {

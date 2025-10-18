@@ -203,6 +203,9 @@
                                         colspan="1" aria-label="ONU Name: activate to sort column ascending"
                                         style="width: 261.125px;">ONU Name</th>
                                     <th class="sorting" tabindex="0" aria-controls="onu-table" rowspan="1"
+                                        colspan="1" aria-label="IP Address: activate to sort column ascending"
+                                        style="width: 261.125px;">IP Address</th>
+                                    <th class="sorting" tabindex="0" aria-controls="onu-table" rowspan="1"
                                         colspan="1" aria-label="State: activate to sort column ascending"
                                         style="width: 86.225px;">State</th>
                                     <th class="sorting" tabindex="0" aria-controls="onu-table" rowspan="1"
@@ -211,6 +214,9 @@
                                     <th class="sorting" tabindex="0" aria-controls="onu-table" rowspan="1"
                                         colspan="1" aria-label="Physical ID: activate to sort column ascending"
                                         style="width: 205.462px;">Physical ID</th>
+                                    <th class="sorting" tabindex="0" aria-controls="onu-table" rowspan="1"
+                                        colspan="1" aria-label="Reboot: activate to sort column ascending"
+                                        style="width: 5px;">Reboot</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -225,7 +231,32 @@
 
                                         <td data-label="Index">{{ $ont->ont_index }}</td>
 
-                                        <td data-label="ONU Name" class="fw-medium">{{ $ont->customer_name }}</td>
+                                        <td data-label="ONU Name" class="fw-medium">
+                                            @if (!empty($ont->customer_slug))
+                                                <a href="{{ route('customers.show', $ont->slug) }}">
+                                                    {{ $ont->customer_name }}
+                                                </a>
+                                            @elseif(!empty($ont->customer_id))
+                                                <a href="{{ route('customers.show', $ont->customer_id) }}">
+                                                    {{ $ont->customer_name }}
+                                                </a>
+                                            @else
+                                                {{ $ont->customer_name ?? 'Unknown Customer' }}
+                                            @endif
+                                        </td>
+
+                                        <td data-label="IP Address" class="fw-medium">
+                                            @if (!empty($ont->customer_ip))
+                                                {{ $ont->customer_ip }}
+                                                <a class="badge bg-primary text-white ms-2"
+                                                    href="http://{{ $ont->customer_ip_address }}:{{ $ont->port ?? '80' }}"
+                                                    target="_blank">
+                                                    Remote
+                                                </a>
+                                            @else
+                                                N/A
+                                            @endif
+                                        </td>
 
                                         <td data-label="State">
                                             @if ($ont->ont_status === 'Up')
@@ -240,8 +271,8 @@
                                         </td>
 
                                         <td data-label="Rx Power">
-                                            <div class="d-flex align-items-center {{ $ont->signal_class }}">
-                                                <i class="fas fa-signal me-2"></i>
+                                            <div class="{{ $ont->signal_class }}">
+                                                <i class="fas fa-signal"></i>
                                                 <span>{{ $ont->ont_rx_power }} dBm</span>
                                             </div>
                                         </td>
@@ -249,13 +280,16 @@
                                         <td data-label="Physical ID">
                                             <div class="d-flex align-items-center justify-content-between">
                                                 <span class="font-monospace">{{ $ont->customer_mac }}</span>
-                                                <button class="btn btn-outline-warning btn-refresh update-onu-btn"
-                                                    data-olt-id="{{ $ont->olt_id }}"
-                                                    data-onu-index="{{ $ont->ont_index }}"
-                                                    title="Reboot {{ $ont->customer_name ?? $ont->ont_index }}">
-                                                    <i class="fas fa-sync-alt"></i>
-                                                </button>
                                             </div>
+                                        </td>
+
+                                        <td data-label="Reboot">
+                                            <button class="btn btn-danger btn-reboot reboot-onu-btn"
+                                                data-olt-id="{{ $ont->olt_id }}"
+                                                data-onu-index="{{ $ont->ont_index }}"
+                                                title="Reboot {{ $ont->customer_name ?? $ont->ont_index }}">
+                                                <i class="fas fa-power-off"></i>
+                                            </button>
                                         </td>
                                     </tr>
                                 @endforeach
