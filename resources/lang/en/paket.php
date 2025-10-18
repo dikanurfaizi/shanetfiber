@@ -11,6 +11,7 @@ return [
         'description' => 'Description',
         'action' => 'Action',
         'status' => 'Status',
+        'display' => 'Display',
     ],
     'title' => [
         'index' => 'Paket Management',

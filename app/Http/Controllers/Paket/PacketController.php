@@ -31,7 +31,6 @@ class PacketController extends Controller
         $pakets = Paket::orderBy('name', 'ASC')->paginate(20);
         $allPaketsCount = count($pakets);
         LogHelper::logInfo(null, [
-            'pakets' => $pakets,
             'all_paket_count' => $allPaketsCount
         ], 200, 'Successfully get Index data', $traceId);
         return view('packets.index', [
@@ -242,6 +241,7 @@ class PacketController extends Controller
     {
         return view('packets.delete', compact('packet'));
     }
+
     public function destroy(Paket $packet)
     {
         $traceId = (string) Str::uuid();
@@ -251,5 +251,23 @@ class PacketController extends Controller
         ], 200, 'Successfully destroy paket', $traceId);
         return redirect()->route('packets.index')
             ->with('success', 'Packet ' . $packet->name . ' deleted successfully.');
+    }
+
+    public function toggleDisplay(Request $request, $id)
+    {
+        $paket = Paket::findOrFail($id);
+        $paket->display_to_customer = $request->boolean('display_to_customer');
+        $paket->save();
+
+        LogHelper::logInfo(null, [
+            'paket_id' => $paket->id,
+            'display_to_customer' => $paket->display_to_customer
+        ], 200, 'Successfully toggled display status for paket', (string) Str::uuid());
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Display status updated.',
+            'value'   => $paket->display_to_customer
+        ]);
     }
 }

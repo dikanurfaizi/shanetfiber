@@ -188,6 +188,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::put('/packets/{packet:slug}/disabled/true', [PacketController::class, 'disable'])->name('disable.package');
         Route::put('/packets/{packet:slug}/disabled/false', [PacketController::class, 'enable'])->name('enable.package');
         Route::get('/packets/{packet:slug}/delete', [PacketController::class, 'delete'])->name('paket.delete');
+        Route::put('/packets/{packet:slug}/toggle-display', [PacketController::class, 'toggleDisplay'])->name('paket.toggle-display');
 
         // ==================== PACKAGE CATEGORIES ====================
         Route::resource('package-categories', PaketCategoriesController::class)->names('categories');

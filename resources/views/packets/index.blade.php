@@ -18,6 +18,7 @@
                         <th>{{ __('paket.table.profile') }}</th>
                         <th>{{ __('paket.table.status') }}</th>
                         <th>{{ __('paket.table.description') }}</th>
+                        <th>{{ __('paket.table.display') }}</th>
                         <th class="text-end">{{ __('paket.table.action') }}</th>
                     </tr>
                 </thead>
@@ -55,6 +56,14 @@
                             </td>
                             <td><span class="badge bg-blue-soft">{{ $paket->description ?? 'No Description' }}</span>
                             </td>
+                            <td>
+                                <div class="form-check form-switch d-flex justify-content-center">
+                                    <input class="form-check-input toggle-display" type="checkbox" role="switch"
+                                        data-id="{{ $paket->id }}"
+                                        {{ $paket->display_to_customer ? 'checked' : '' }}>
+                                </div>
+                            </td>
+
                             <td class="d-flex items-center justify-content-end">
                                 <x-drop-down-action>
                                     @can('packet-list')
@@ -116,4 +125,40 @@
         </div>
         {{ $pakets->links() }}
     </div>
+
+    @section('custom_scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('.toggle-display').forEach(toggle => {
+                    toggle.addEventListener('change', function() {
+                        const paketId = this.dataset.id;
+                        const isChecked = this.checked ? 1 : 0;
+
+                        fetch(`/cpanel/packets/${paketId}/toggle-display`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector(
+                                        'meta[name="csrf-token"]').content
+                                },
+                                body: JSON.stringify({
+                                    display_to_customer: isChecked
+                                })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.status !== 'success') {
+                                    alert('Gagal memperbarui status!');
+                                    this.checked = !isChecked; // rollback kalau gagal
+                                }
+                            })
+                            .catch(() => {
+                                alert('Terjadi kesalahan koneksi!');
+                                this.checked = !isChecked;
+                            });
+                    });
+                });
+            });
+        </script>
+    @endsection
 </x-layouts.app-layout>
