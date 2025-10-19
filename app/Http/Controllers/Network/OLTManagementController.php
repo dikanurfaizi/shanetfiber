@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Jenssegers\Agent\Agent;
 use Throwable;
+use Carbon\Carbon;
 
 class OLTManagementController extends Controller
 {
@@ -106,8 +107,41 @@ class OLTManagementController extends Controller
 
     public function show($oltId, Request $request)
     {
+        // dd($oltId, $request->all());
         $data = OltDataService::getOltDetails($request, $oltId);
         return view('networks.olt_managements.show', $data);
+    }
+
+    public function refreshData($oltId)
+    {
+        $traceId = Str::uuid()->toString();
+        LogHelper::logInfo(null, ['olt_id' => $oltId], 200, '[START] Refresh OLT Data', $traceId);
+
+        try {
+            $data = OltDataService::getOltDetails(new Request(), $oltId);
+
+            $lastScan = $data['lastUpdateOnts']
+            ? Carbon::parse($data['lastUpdateOnts'])->format('Y-m-d H:i:s')
+            : '-';
+
+            LogHelper::logInfo(null, ['olt_id' => $oltId], 200, '[SUCCESS] OLT Data Refreshed', $traceId);
+
+            return response()->json([
+                'success' => true,
+                'html' => view('networks.partials.olts_details', $data)->render(),
+                'last_scan' => $lastScan,
+            ]);
+        } catch (Throwable $e) {
+            LogHelper::logError(null, [
+                'olt_id' => $oltId,
+                'error' => $e->getMessage(),
+            ], 500, '[FAILED] Refresh OLT Data', $traceId);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to refresh OLT data: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function edit($oltId)

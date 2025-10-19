@@ -64,7 +64,7 @@ return [
             'index' => 'OLT Management',
         ],
         'onu-managements' => [
-            'index' => 'ONU Management'
+            'index' => 'ONT Management'
         ]
     ]
 ];

@@ -27,13 +27,15 @@
                         <a href="{{ route('olts.index') }}" class="btn btn-outline-secondary btn-sm">
                             <i class="fas fa-arrow-left"></i> Back to Dashboard
                         </a>
-                        <button id="refresh-data-btn" class="btn btn-outline-primary btn-sm">
+                        <button id="refresh-data-btn" data-olt-id="{{ $olt->id }}"
+                            class="btn btn-outline-primary btn-sm">
                             <i class="fas fa-sync-alt"></i> Refresh Data
                         </button>
                         <a href="{{ route('olts.edit', $olt->id) }}" class="btn btn-outline-primary btn-sm">
                             <i class="fas fa-edit"></i> Edit OLT
                         </a>
-                        <a href="/scan_olt/1228" class="btn btn-primary btn-sm scan-button">
+                        <a href="{{ route('olts.scanSingle', $olt->id) }}" class="btn btn-primary btn-sm scan-button"
+                            data-olt-id="{{ $olt->id }}">
                             <i class="fas fa-sync-alt"></i> Scan OLT
                         </a>
                     </div>
@@ -56,272 +58,25 @@
             </div>
         </div>
 
-        <!-- ONT Summary Cards -->
-        <div class="row summary-cards">
-            <div class="col-lg-3 col-md-6 mb-3">
-                <div class="summary-card" data-status="total">
-                    <div class="summary-icon border text-primary">
-                        <i class="fas fa-network-wired"></i>
-                    </div>
-                    <div class="summary-content">
-                        <div class="summary-value" id="summary-total">{{ $totalOnts }}</div>
-                        <div class="summary-label">Total ONTs</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6 mb-3">
-                <div class="summary-card" data-status="online">
-                    <div class="summary-icon border text-success">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <div class="summary-content">
-                        <div class="summary-value" id="summary-online">{{ $onlineOnts }}</div>
-                        <div class="summary-label">Online</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6 mb-3">
-                <div class="summary-card" data-status="offline">
-                    <div class="summary-icon border text-danger">
-                        <i class="fas fa-times-circle"></i>
-                    </div>
-                    <div class="summary-content">
-                        <div class="summary-value" id="summary-offline">{{ $offlineOnts }}</div>
-                        <div class="summary-label">Offline</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6 mb-3">
-                <div class="summary-card" data-status="other">
-                    <div class="summary-icon border text-warning">
-                        <i class="fas fa-question-circle"></i>
-                    </div>
-                    <div class="summary-content">
-                        <div class="summary-value" id="summary-other">0</div>
-                        <div class="summary-label">Other State</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        @php
+            $currentStatus = request('status', 'total');
+        @endphp
 
-        <!-- ONT Data Table -->
-        <div class="data-card">
-            <div class="data-card-header">
-                <h2 class="data-card-title">
-                    <i class="fas fa-microchip"></i> ONT Devices
-                </h2>
-                <div class="timestamp-display">
-                    <i class="fas fa-clock"></i> Last updated: {{ $lastUpdateOnts }}
-                </div>
-            </div>
-            <div class="data-card-body">
-                <div class="table-controls d-flex justify-content-between align-items-center mb-3">
-                    <div class="show-entries">
-                        <label>
-                            Show
-                            <select class="form-control form-select-sm d-inline-block mx-1" style="width: 70px;"
-                                onchange="location = this.options[this.selectedIndex].dataset.url;">
-                                @foreach ([64, 128, 192] as $size)
-                                    <option
-                                        data-url="{{ request()->fullUrlWithQuery(['perPage' => $size, 'page' => 1]) }}"
-                                        value="{{ $size }}"
-                                        {{ request('perPage', 64) == $size ? 'selected' : '' }}>
-                                        {{ $size }}
-                                    </option>
-                                @endforeach
-                            </select> entries
-                        </label>
-                    </div>
-                    <div class="search-box">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input type="text" class="form-control" placeholder="Search...">
-                        </div>
-                    </div>
-                </div>
-
-                {{-- PON Group Buttons --}}
-                @if ($ponGroups && count($ponGroups) > 0)
-                    <div class="pon-group-buttons mb-3 d-flex flex-wrap gap-2">
-                        @foreach ($ponGroups as $group)
-                            @php
-                                $isActive = request('pon_group', $selectedPon ?? 1) == $group;
-                            @endphp
-                            <a href="{{ request()->fullUrlWithQuery(['pon_group' => $group]) }}"
-                                class="mr-2 btn btn-sm {{ $isActive ? 'btn-primary' : 'btn-outline-primary' }}">
-                                <i class="fas fa-network-wired me-1"></i> PON {{ $group }}
-                            </a>
-                        @endforeach
-                    </div>
-                @endif
-
-                <div class="table-responsive ont-table-wrapper">
-                    <table class="table table-hover ont-table">
-                        <thead>
-                            <tr>
-                                <th>INDEX</th>
-                                <th>ONT NAME</th>
-                                <th>STATE</th>
-                                <th>RX POWER</th>
-                                <th>TEMPERATURE</th>
-                                <th>MAC ADDRESS</th>
-                                <th>IP ADDRESS</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($onts as $ont)
-                                <tr>
-                                    {{-- ONT Index --}}
-                                    <td class="text-primary">{{ $ont->ont_index }}</td>
-                                    {{-- ONT Name --}}
-                                    <td>
-                                        @if (!empty($ont->slug))
-                                            <a href="{{ route('customers.show', $ont->slug) }}">
-                                                {{ $ont->customer_name }}
-                                            </a>
-                                        @elseif(!empty($ont->customer_id))
-                                            <a href="{{ route('customers.show', $ont->customer_id) }}">
-                                                {{ $ont->customer_name }}
-                                            </a>
-                                        @else
-                                            <span class="text-muted">
-                                                {{ $ont->customer_name ?? 'Unknown Customer' }}
-                                            </span>
-                                        @endif
-                                    </td>
-                                    {{-- Status --}}
-                                    <td>
-                                        @if ($ont->ont_status === 'Up')
-                                            <span class="status-badge badge-online">
-                                                <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i> Online
-                                            </span>
-                                        @else
-                                            <span class="status-badge badge-offline">
-                                                <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i> Offline
-                                            </span>
-                                        @endif
-                                    </td>
-                                    {{-- RX Power --}}
-                                    <td>
-                                        <div class="d-flex align-items-center {{ $ont->signal_class }}">
-                                            <div class="signal-indicator me-2" data-bs-toggle="tooltip"
-                                                data-bs-placement="top" title="{{ $ont->signal_label }}">
-                                                <i class="fas fa-signal"></i>
-                                            </div>
-                                            <span data-bs-toggle="tooltip" data-bs-placement="top"
-                                                title="{{ $ont->signal_label }}">
-                                                {{ $ont->ont_rx_power }} dBm
-                                            </span>
-                                        </div>
-                                    </td>
-                                    {{-- Temp --}}
-                                    <td class="font-monospace text-primary">{{ $ont->ont_temp }}</td>
-                                    {{-- MAC --}}
-                                    <td class="font-monospace text-primary">{{ $ont->ont_mac }}</td>
-                                    {{-- IP --}}
-                                    <td class="font-monospace text-primary">
-                                        @if (!empty($ont->customer_ip_address))
-                                            {{ $ont->customer_ip_address }}
-                                            <a class="badge bg-primary text-white ms-2"
-                                                href="http://{{ $ont->customer_ip_address }}:{{ $ont->port ?? '80' }}"
-                                                target="_blank">
-                                                Remote
-                                            </a>
-                                        @else
-                                            <span class="text-muted">N/A</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-refresh ms-2" title="Refresh ONT data">
-                                            <i class="fas fa-sync-alt"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-
-                    {{-- Mobile Card View --}}
-                    <div class="ont-cards d-md-none">
-                        @foreach ($onts as $ont)
-                            <div class="ont-card">
-                                <div class="ont-card-header d-flex justify-content-between align-items-center">
-                                    <strong class="text-primary">#{{ $ont->ont_index }}</strong>
-
-                                    <div class="d-flex align-items-center gap-1">
-                                        @if ($ont->ont_status === 'Up')
-                                            <span class="status-badge badge-online">
-                                                <i class="fas fa-circle me-1 mr-1"></i> Online
-                                            </span>
-                                        @else
-                                            <span class="status-badge badge-offline">
-                                                <i class="fas fa-circle me-1 mr-1"></i> Offline
-                                            </span>
-                                        @endif
-
-                                        <button class="btn btn-refresh p-0 border-0 bg-transparent text-primary ms-1"
-                                            title="Refresh ONT data">
-                                            <i class="fas fa-sync-alt"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="ont-card-body">
-                                    <div>
-                                        @if (!empty($ont->slug))
-                                            <a href="{{ route('customers.show', $ont->slug) }}">
-                                                {{ $ont->customer_name }}
-                                            </a>
-                                        @elseif(!empty($ont->customer_id))
-                                            <a href="{{ route('customers.show', $ont->customer_id) }}">
-                                                {{ $ont->customer_name }}
-                                            </a>
-                                        @else
-                                            <span class="text-muted" title="Customer record not linked">
-                                                {{ $ont->customer_name ?? 'Unknown Customer' }}
-                                            </span>
-                                        @endif
-                                    </div>
-                                    <div
-                                        class="
-                        @if ($ont->ont_rx_power >= -15 && $ont->ont_rx_power <= -1) signal-too-strong
-                        @elseif($ont->ont_rx_power > -24 && $ont->ont_rx_power < -15)
-                            signal-good
-                        @elseif($ont->ont_rx_power > -25 && $ont->ont_rx_power <= -24)
-                            signal-low
-                        @elseif($ont->ont_rx_power >= -30 && $ont->ont_rx_power <= -25)
-                            signal-too-low @endif">
-                                        <i class="fas fa-signal me-1"></i>
-                                        <strong>RX Power:</strong> {{ $ont->ont_rx_power }} dBm
-                                    </div>
-                                    <div><strong>Temp:</strong> {{ $ont->ont_temp }}</div>
-                                    <div><strong>MAC:</strong> {{ $ont->ont_mac }}</div>
-                                    <div>
-                                        <strong>IP:</strong>
-                                        @if (!empty($ont->customer_ip_address))
-                                            {{ $ont->customer_ip_address }}
-                                            <a class="badge bg-primary text-white ms-2"
-                                                href="http://{{ $ont->customer_ip_address }}:{{ $ont->port ?? '80' }}"
-                                                target="_blank" title="Open ONU Web Management">
-                                                Remote
-                                            </a>
-                                        @else
-                                            <span class="text-muted">N/A</span>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-                <div class="table-footer d-flex justify-content-between align-items-center mt-3">
-                    <div class="showing-entries">
-                        Showing {{ $onts->firstItem() }} to {{ $onts->lastItem() }} of {{ $onts->total() }} entries
-                    </div>
-                    <nav>
-                        {{ $onts->links('pagination::default') }}
-                    </nav>
-                </div>
-            </div>
+        <!-- ========================= -->
+        <!-- OLT DETAIL DYNAMIC SECTION -->
+        <!-- ========================= -->
+        <div id="olt-details-container">
+            @include('networks.partials.olts_details', [
+                'currentStatus' => $currentStatus,
+                'totalOnts' => $totalOnts,
+                'onlineOnts' => $onlineOnts,
+                'offlineOnts' => $offlineOnts,
+                'otherOnts' => $otherOnts ?? 0,
+                'lastUpdateOnts' => $lastUpdateOnts,
+                'onts' => $onts,
+                'ponGroups' => $ponGroups,
+                'selectedPon' => $selectedPon,
+            ])
         </div>
 
         <!-- Scan History -->
@@ -386,6 +141,13 @@
     </div>
 
     @section('custom_scripts')
+        <script>
+            window.currentFilters = {
+                pon_group: "{{ request('pon_group', $selectedPon ?? '') }}",
+                perPage: "{{ request('perPage', 64) }}",
+                status: "{{ request('status', 'total') }}"
+            };
+        </script>
         <script src="{{ asset('js/network-mgmt/data-show.js') }}"></script>
     @endsection
 </x-layouts.app-layout>

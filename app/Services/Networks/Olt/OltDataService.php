@@ -52,8 +52,10 @@ class OltDataService
 
     public static function getOltDetails(Request $request, int $oltId): array
     {
-        $perPageOnts = $request->get('perPage', 64);
-        $selectedPon = $request->get('pon_group', 1);
+        $perPageOnts   = $request->get('perPage', 64);
+        $selectedPon   = $request->get('pon_group', 1);
+        $statusMapping = $request->get('status', 'total');
+        $page          = $request->get('page', 1);
 
         $olt = self::findOltWithDetails($oltId);
 
@@ -66,13 +68,26 @@ class OltDataService
                 $join->on('o.olt_id', '=', 'ol.id')
                     ->whereNull('ol.deleted_at');
             })
-            // ✅ join dinamis ke tabel signal_thresholds berdasarkan range Rx Power
             ->leftJoin('signal_thresholds as s', function ($join) {
                 $join->whereColumn('o.rx_power', '>=', 's.min_value')
                     ->whereColumn('o.rx_power', '<=', 's.max_value');
             })
             ->where('o.olt_id', $oltId)
             ->where('o.pon_group', $selectedPon);
+
+        // ---------- Filter status dinamis ----------
+        if ($statusMapping !== 'total') {
+            $listQuery->where(function ($query) use ($statusMapping) {
+                if ($statusMapping === 'online') {
+                    $query->where('o.status', '=', 'Up');
+                } elseif ($statusMapping === 'offline') {
+                    $query->where('o.status', '=', 'Down');
+                } elseif ($statusMapping === 'other') {
+                    $query->whereNull('o.status')
+                        ->orWhereNotIn('o.status', ['Up', 'Down']);
+                }
+            });
+        }
 
         $onts = (clone $listQuery)
             ->select([
