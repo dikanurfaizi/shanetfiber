@@ -52,4 +52,20 @@ class User extends Authenticatable
     {
         return $this->hasMany(Customer::class);
     }
+
+    // Investor → melihat admin yang ia pantau
+    public function linkedAdmins()
+    {
+        return $this->belongsToMany(User::class, 'investor_admins', 'investor_id', 'admin_id')
+            ->withPivot('linked_at', 'created_by')
+            ->withTimestamps();
+    }
+
+    // Admin → bisa diketahui siapa saja investornya
+    public function linkedInvestors()
+    {
+        return $this->belongsToMany(User::class, 'investor_admins', 'admin_id', 'investor_id')
+            ->withPivot('linked_at', 'created_by')
+            ->withTimestamps();
+    }
 }

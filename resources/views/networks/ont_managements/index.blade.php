@@ -214,9 +214,11 @@
                                     <th class="sorting" tabindex="0" aria-controls="onu-table" rowspan="1"
                                         colspan="1" aria-label="Physical ID: activate to sort column ascending"
                                         style="width: 205.462px;">Physical ID</th>
-                                    <th class="sorting" tabindex="0" aria-controls="onu-table" rowspan="1"
-                                        colspan="1" aria-label="Reboot: activate to sort column ascending"
-                                        style="width: 5px;">Reboot</th>
+                                    @canany('ont-reboot')
+                                        <th class="sorting" tabindex="0" aria-controls="onu-table" rowspan="1"
+                                            colspan="1" aria-label="Reboot: activate to sort column ascending"
+                                            style="width: 5px;">Reboot</th>
+                                    @endcan
                                 </tr>
                             </thead>
                             <tbody>
@@ -249,7 +251,7 @@
                                             @if (!empty($ont->customer_ip))
                                                 {{ $ont->customer_ip }}
                                                 <a class="badge bg-primary text-white ms-2"
-                                                    href="http://{{ $ont->customer_ip}}:{{ $ont->port ?? '80' }}"
+                                                    href="http://{{ $ont->customer_ip }}:{{ $ont->port ?? '80' }}"
                                                     target="_blank">
                                                     Remote
                                                 </a>
@@ -283,14 +285,16 @@
                                             </div>
                                         </td>
 
-                                        <td data-label="Reboot">
-                                            <button class="btn btn-danger btn-reboot reboot-onu-btn"
-                                                data-olt-id="{{ $ont->olt_id }}"
-                                                data-onu-index="{{ $ont->ont_index }}"
-                                                title="Reboot {{ $ont->customer_name ?? $ont->ont_index }}">
-                                                <i class="fas fa-power-off"></i>
-                                            </button>
-                                        </td>
+                                        @canany('ont-reboot')
+                                            <td data-label="Reboot">
+                                                <button class="btn btn-danger btn-reboot reboot-onu-btn"
+                                                    data-olt-id="{{ $ont->olt_id }}"
+                                                    data-onu-index="{{ $ont->ont_index }}"
+                                                    title="Reboot {{ $ont->customer_name ?? $ont->ont_index }}">
+                                                    <i class="fas fa-power-off"></i>
+                                                </button>
+                                            </td>
+                                        @endcanany
                                     </tr>
                                 @endforeach
                             </tbody>

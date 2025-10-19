@@ -8,9 +8,11 @@
         <h5 class="m-0 font-weight-bold text-primary mb-2">
             {{ __('networks.header.olt-index') }}
         </h5>
-        <a href="{{ route('olts.create') }}" class="btn btn-primary btn-sm">
-            <i class="fas fa-plus-circle me-1"></i> {{ __('networks.header.add-olt') }}
-        </a>
+        @canany('olt-create')
+            <a href="{{ route('olts.create') }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus-circle me-1"></i> {{ __('networks.header.add-olt') }}
+            </a>
+        @endcanany
     </div>
 
     <div class="container-fluid py-4">
@@ -30,12 +32,16 @@
                         <small class="text-muted" id="last-check">
                             {{ $lastStatusCheck }}</small>
                     </div>
-                    <button id="batch-status-check" class="btn btn-sm btn-outline-primary me-2 mb-2 mb-md-0">
-                        <i class="fas fa-sync-alt me-1"></i> {{ __('networks.button.check-all-status') }}
-                    </button>
-                    <button id="batch-scan" class="btn btn-sm btn-outline-success me-3 mb-2 mb-md-0">
-                        <i class="fas fa-search me-1"></i> {{ __('networks.button.scan-all-olt') }}
-                    </button>
+                    @canany('olt-check-health')
+                        <button id="batch-status-check" class="btn btn-sm btn-outline-primary me-2 mb-2 mb-md-0">
+                            <i class="fas fa-sync-alt me-1"></i> {{ __('networks.button.check-all-status') }}
+                        </button>
+                    @endcanany
+                    @canany('olt-scan')
+                        <button id="batch-scan" class="btn btn-sm btn-outline-success me-3 mb-2 mb-md-0">
+                            <i class="fas fa-search me-1"></i> {{ __('networks.button.scan-all-olt') }}
+                        </button>
+                    @endcanany
                     <div
                         class="last-update-badge d-inline-flex align-items-center px-3 py-1 rounded-pill bg-primary-light text-primary small">
                         <i class="fas fa-clock mr-1"></i>

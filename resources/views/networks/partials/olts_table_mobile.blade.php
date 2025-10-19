@@ -59,24 +59,34 @@
                             {{ __('networks.table.actions') }}
                         </button>
                         <ul class="dropdown-menu w-100">
-                            <li><a class="dropdown-item"
-                                    href="{{ route('olts.show', $olt->id) }}">{{ __('networks.table.view') }}</a></li>
-                            <li><a class="dropdown-item scan-olt-btn"
-                                    href="{{ route('olts.scanSingle', $olt->id) }}">{{ __('networks.table.scan') }}</a>
-                            </li>
-                            <li><a class="dropdown-item check-snmp-status"
-                                    href="{{ route('olts.healtCheckSingle', $olt->id) }}">{{ __('networks.table.health-check') }}</a>
-                            </li>
-                            <li>
-                                <hr class="dropdown-divider">
-                            </li>
-                            <li><a class="dropdown-item"
-                                    href="{{ route('olts.edit', $olt->id) }}">{{ __('networks.table.edit') }}</a></li>
-                            <li>
-                                <button class="dropdown-item text-danger"
-                                    onclick="confirmDelete({{ $olt->id }}, '{{ $olt->name }}', '{{ route('olts.destroy', $olt->id) }}')">{{ __('networks.table.delete') }}
-                                </button>
-                            </li>
+                            @canany(['olt-view'])
+                                <li><a class="dropdown-item"
+                                        href="{{ route('olts.show', $olt->id) }}">{{ __('networks.table.view') }}</a></li>
+                            @endcanany
+                            @canany(['olt-scan'])
+                                <li><a class="dropdown-item scan-olt-btn"
+                                        href="{{ route('olts.scanSingle', $olt->id) }}">{{ __('networks.table.scan') }}</a>
+                                </li>
+                            @endcanany
+                            @canany(['olt-check-health'])
+                                <li><a class="dropdown-item check-snmp-status"
+                                        href="{{ route('olts.healtCheckSingle', $olt->id) }}">{{ __('networks.table.health-check') }}</a>
+                                </li>
+                            @endcanany
+                            @canany('olt-edit')
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li><a class="dropdown-item"
+                                        href="{{ route('olts.edit', $olt->id) }}">{{ __('networks.table.edit') }}</a></li>
+                            @endcanany
+                            @canany('olt-delete')
+                                <li>
+                                    <button class="dropdown-item text-danger"
+                                        onclick="confirmDelete({{ $olt->id }}, '{{ $olt->name }}', '{{ route('olts.destroy', $olt->id) }}')">{{ __('networks.table.delete') }}
+                                    </button>
+                                </li>
+                            @endcanany
                         </ul>
                     </div>
 

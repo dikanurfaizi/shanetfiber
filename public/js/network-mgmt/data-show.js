@@ -152,6 +152,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (lastScanEl) {
                     lastScanEl.innerHTML = `<i class="fas fa-history"></i> Last scan: ${refreshData.last_scan}`;
                 }
+
+                const lastScanTime = document.querySelector(".timestamp-display");
+                if (lastScanTime) {
+                    lastScanTime.innerHTML = `<i class="fas fa-clock"></i> Last updated: ${refreshData.last_scan}`;
+                }
             }
 
             new Notify({

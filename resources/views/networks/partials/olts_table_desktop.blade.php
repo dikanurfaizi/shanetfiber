@@ -42,10 +42,12 @@
             @endif
         </td>
         <td class="text-center">
+            @canany(['olt-view'])
             <!-- Tombol View di luar dropdown -->
             <a class="btn btn-sm btn-primary me-1" href="{{ route('olts.show', $olt->id) }}">
                 <i class="fas fa-eye"></i> {{ __('networks.table.view') }}
             </a>
+            @endcanany
 
             <!-- Dropdown action -->
             <div class="dropdown d-inline">
@@ -53,30 +55,38 @@
                     <i class="fas fa-cog me-1"></i> {{ __('networks.table.actions') }}
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
+                    @canany(['olt-scan'])
                     <li>
                         <a href="{{ route('olts.scanSingle', $olt->id) }}" class="dropdown-item scan-olt-btn"
                             data-olt-id="{{ $olt->id }}">
                             <i class="fas fa-sync-alt text-success"></i> {{ __('networks.table.scan') }}
                         </a>
                     </li>
+                    @endcanany
+                    @canany(['olt-check-health'])
                     <li>
                         <a href="{{ route('olts.healtCheckSingle', $olt->id) }}" class="dropdown-item check-snmp-status"
                             data-olt-id="{{ $olt->id }}">
                             <i class="fas fa-heartbeat text-info"></i> {{ __('networks.table.health-check') }}
                         </a>
                     </li>
+                    @endcanany
+                    @canany('olt-edit')
                     <hr class="dropdown-divider">
                     <li>
                         <a class="dropdown-item" href="{{ route('olts.edit', $olt->id) }}">
                             <i class="fas fa-edit text-warning"></i> {{ __('networks.table.edit') }}
                         </a>
                     </li>
+                    @endcanany
+                    @canany('olt-delete')
                     <li>
                         <button class="dropdown-item text-danger"
                             onclick="confirmDelete({{ $olt->id }}, '{{ $olt->name }}', '{{ route('olts.destroy', $olt->id) }}')">
                             <i class="fas fa-trash"></i> {{ __('networks.table.delete') }}
                         </button>
                     </li>
+                    @endcanany
                 </ul>
             </div>
         </td>

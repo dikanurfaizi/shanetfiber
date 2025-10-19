@@ -141,7 +141,7 @@
     @endcanany
 
     <!-- Network Management -->
-    @canany(['olt-management', 'onu-management'])
+    @canany(['olt-list', 'olt-create', 'olt-delete', 'olt-check-health', 'olt-scan', 'ont-list'])
         <li class="nav-item @if (request()->routeIs('olts*') || request()->routeIs('onus*')) active @endif">
             <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseNetworks"
                 aria-expanded="true" aria-controls="collapseNetworks" style="padding-top: inherit;">
@@ -151,14 +151,14 @@
 
             <div id="collapseNetworks" class="collapse collapse @if (request()->routeIs('olts*') || request()->routeIs('onus*'))  @endif"
                 aria-labelledby="headingNetwork" data-parent="#accordionSidebar">
-                @canany(['olt-management'])
+                @canany(['olt-list', 'olt-create', 'olt-delete', 'olt-check-health', 'olt-scan'])
                     <div class="bg-white py-2 collapse-inner rounded">
                         <a class="collapse-item @if (request()->routeIs('olts.index')) active @endif"
                             href="{{ route('olts.index') }}">{{ __('navigation.network.olt-managements.index') }}</a>
                     </div>
                 @endcanany
 
-                @canany(['onu-management'])
+                @canany(['ont-list', 'ont-reboot'])
                     <div class="bg-white py-2 collapse-inner rounded">
                         <a class="collapse-item @if (request()->routeIs('onts.index')) active @endif"
                             href="{{ route('onts.index') }}">{{ __('navigation.network.onu-managements.index') }}</a>
