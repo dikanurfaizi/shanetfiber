@@ -76,7 +76,7 @@ class FetchMikrotikInfo implements ShouldQueue
 
                 LogHelper::logInfo(
                     null,
-                    ['router_id' => $router->id, 'pppActives' => $pppActives],
+                    ['router_id' => $router->id],
                     200,
                     "Debug: full pppActives response from router",
                     $this->traceId

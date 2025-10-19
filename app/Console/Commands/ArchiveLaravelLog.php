@@ -24,19 +24,30 @@ class ArchiveLaravelLog extends Command
 
         // --- 1. Arsipkan log hari ini ---
         if (file_exists($logFile) && filesize($logFile) > 0) {
+
+            // simpan owner & group lama jika ada
+            $owner = fileowner($logFile);
+            $group = filegroup($logFile);
+
             $date        = date('Y-m-d');
             $timestamp   = date('Y-m-d_H-i-s');
             $archiveDir  = "{$archiveBase}/{$date}";
             $archivedLog = "{$archiveDir}/laravel_{$timestamp}.log";
 
             if (!File::isDirectory($archiveDir)) {
-                File::makeDirectory($archiveDir, 0755, true);
+                File::makeDirectory($archiveDir, 0775, true);
+                @chgrp($archiveDir, $group ?: 'www');
+                @chmod($archiveDir, 0775);
             }
 
             if (rename($logFile, $archivedLog)) {
                 $this->info("✅ Log archived to {$archivedLog}");
                 touch($logFile);
-                chmod($logFile, 0644);
+                chmod($logFile, 0664);
+
+                // wariskan owner & group lama (fallback ke 'www')
+                @chown($logFile, $owner ?: 'www');
+                @chgrp($logFile, $group ?: 'www');
             } else {
                 $this->error("❌ Failed to move log to {$archivedLog}");
                 return Command::FAILURE;
