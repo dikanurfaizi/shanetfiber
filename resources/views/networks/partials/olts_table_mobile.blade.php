@@ -59,7 +59,7 @@
                             {{ __('networks.table.actions') }}
                         </button>
                         <ul class="dropdown-menu w-100">
-                            @canany(['olt-view'])
+                            @canany(['olt-list'])
                                 <li><a class="dropdown-item"
                                         href="{{ route('olts.show', $olt->id) }}">{{ __('networks.table.view') }}</a></li>
                             @endcanany

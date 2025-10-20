@@ -42,7 +42,7 @@
             @endif
         </td>
         <td class="text-center">
-            @canany(['olt-view'])
+            @canany(['olt-list'])
             <!-- Tombol View di luar dropdown -->
             <a class="btn btn-sm btn-primary me-1" href="{{ route('olts.show', $olt->id) }}">
                 <i class="fas fa-eye"></i> {{ __('networks.table.view') }}

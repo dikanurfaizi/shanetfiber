@@ -78,12 +78,12 @@ class Kernel extends ConsoleKernel
         | Dijalankan setiap hari pukul 00:15 untuk sinkronisasi secret ke Mikrotik.
         | Tidak tergantung pada tanggal tertentu, hanya validasi logikanya internal.
         */
-        $schedule->command('billing:update-paylater-secret')
-            ->dailyAt('00:15')
-            ->timezone($defaultTimezone)
-            ->withoutOverlapping(30)
-            ->appendOutputTo(storage_path('logs/scheduler-update_paylater_secret.log'))
-            ->evenInMaintenanceMode();
+        // $schedule->command('billing:update-paylater-secret')
+        //     ->dailyAt('00:15')
+        //     ->timezone($defaultTimezone)
+        //     ->withoutOverlapping(30)
+        //     ->appendOutputTo(storage_path('logs/scheduler-update_paylater_secret.log'))
+        //     ->evenInMaintenanceMode();
 
         /*
         |--------------------------------------------------------------------------
