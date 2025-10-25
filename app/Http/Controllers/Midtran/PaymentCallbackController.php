@@ -4,15 +4,11 @@ namespace App\Http\Controllers\Midtran;
 
 use Exception;
 use App\Models\Order;
-use App\Models\Paket\Paket;
-use App\Models\PppType;
+use App\Models\Packages\Package;
 use App\Models\Customer;
-
 use App\Models\Mikrotik;
 use App\Models\AutoIsolir;
-use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use App\Jobs\TestConnectionJob;
 use App\Models\Billing\Billing;
 use App\Http\Controllers\Controller;
 use App\Models\Billing\BillingPeriode;
@@ -22,6 +18,7 @@ use App\Services\Midtrans\CallbackService;
 use App\Http\Resources\Pppoe\SecretResource;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Routerboard\TestConnectionService;
+use Illuminate\Support\Str;
 
 class PaymentCallbackController extends Controller
 {
@@ -35,6 +32,7 @@ class PaymentCallbackController extends Controller
 
     public function receive()
     {
+        $traceId = (string) Str::uuid();
         $callback = new CallbackService;
 
         if ($callback->isSignatureKeyVerified()) {
@@ -71,8 +69,8 @@ class PaymentCallbackController extends Controller
 
 
                 //Pembayaran Bulanan memperpanjang aktivasi router
-                $customerPaketId = $customer->paket_id;
-                $customerProfile = Paket::where('id', $customerPaketId)->value('profile');
+                $customerPackageId = $customer->package_id;
+                $customerProfile = Package::where('id', $customerPackageId)->value('profile');
                 $customerSecretId = $customer->secret_id;
                 $customerUsername = $customer->username;
                 $day = Carbon::now()->format('d');
@@ -91,7 +89,7 @@ class PaymentCallbackController extends Controller
                     if ($router->disabled == 'false') {
                         try {
                             //dispatch(new TestConnectionJob($router))->onQueue('default');
-                            $this->testConnectionService->checkOnline($router);
+                            $this->testConnectionService->checkOnline($router, $traceId);
                             $serverOnline = 'true';
                         } catch (\Exception $e) {
                             // anywhere
@@ -99,15 +97,15 @@ class PaymentCallbackController extends Controller
                         }
                         if ($serverOnline == 'true') {
                             if ($day <= $dueDate) {
-                                $customerSecret = $this->secretService->getSecretById($router, $customerSecretId);
+                                $customerSecret = $this->secretService->getSecretById($router, $customerSecretId, $traceId);
                                 $secretProfiles = SecretResource::collection($customerSecret)->value('profile');
                                 if ($secretProfiles == $customerProfile) {
-                                    dispatch(new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerSecretId))->onQueue('default');
+                                    dispatch(new AddPaymentBeforeDueDateJob($router, $comment_payment, $customerSecretId, $traceId))->onQueue('default');
                                 } else {
-                                    dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername))->onQueue('default');
+                                    dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername, $traceId))->onQueue('default');
                                 }
                             } else {
-                                dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername))->onQueue('default');
+                                dispatch(new AddPaymentAfterDueDateJob($router, $customerProfile, $comment_payment, $customerSecretId, $customerUsername, $traceId))->onQueue('default');
                             }
                         }
                     }

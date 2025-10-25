@@ -37,8 +37,8 @@ class PaymentDashboardService
             ->get();
         LogHelper::logInfo(null, ['banks_count' => $banks->count()], 200, 'Bank aktif diambil', $traceId);
 
-        // Harga dasar paket dan diskon member
-        $basePrice = $customer->paket->price;
+        // Harga dasar package dan diskon member
+        $basePrice = $customer->package->price;
         $discountMember = null;
         $discountNominal = 0;
 
@@ -57,7 +57,7 @@ class PaymentDashboardService
         $periodEn = null;
         $periodIn = null;
 
-        if ($subDuration = SubscriptionDuration::where('paket_id', $customer->paket_id)->first()) {
+        if ($subDuration = SubscriptionDuration::where('package_id', $customer->package_id)->first()) {
             $periodEn = $subDuration->name_en;
             $periodIn = $subDuration->name_id;
 

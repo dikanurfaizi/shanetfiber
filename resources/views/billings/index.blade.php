@@ -100,13 +100,15 @@
                     ]) !!}
                 </form>
 
-                {{-- Export Selected --}}
-                <form action="{{ route('billings.export.selected') }}" method="GET"
-                    style="margin-bottom:10px; margin-right:10px;">
-                    <input type="hidden" name="status" value="{{ request('status') }}">
-                    <input type="hidden" name="periode" value="{{ $periode }}">
-                    <button type="submit" class="btn btn-sm btn-success">Export Data</button>
-                </form>
+                @can('billing-export')
+                    {{-- Export Selected --}}
+                    <form action="{{ route('billings.export.selected') }}" method="GET"
+                        style="margin-bottom:10px; margin-right:10px;">
+                        <input type="hidden" name="status" value="{{ request('status') }}">
+                        <input type="hidden" name="periode" value="{{ $periode }}">
+                        <button type="submit" class="btn btn-sm btn-success">Export Data</button>
+                    </form>
+                @endcan
             </div>
         </div>
 
@@ -129,7 +131,9 @@
                             <th class="text-center align-middle">{{ __('billing.table.bill') }}</th>
                             <th class="text-center align-middle">{{ __('billing.table.bill-state') }}</th>
                             <th class="text-center align-middle">{{ __('billing.table.payment-methode') }}</th>
-                            <th class="text-center align-middle">{{ __('customer.table.action') }}</th>
+                            @can('billing-edit')
+                                <th class="text-center align-middle">{{ __('billing.table.action') }}</th>
+                            @endcan
                         </tr>
                     </thead>
                     <tbody>
@@ -172,7 +176,9 @@
                                     </span></td>
                                 <td>{!! \App\Helpers\BillingHelper::getBillingStatusBadge($billing, $data) !!}</td>
                                 <td>{!! \App\Helpers\BillingHelper::getBillingPaymentSection($billing, $bank) !!}</td>
-                                <td>{!! \App\Helpers\BillingHelper::getBillingActionButton($billing) !!}</td>
+                                @can('billing-edit')
+                                    <td>{!! \App\Helpers\BillingHelper::getBillingActionButton($billing) !!}</td>
+                                @endcan
                             </tr>
 
                             {{-- ✅ Mobile View: Parent Row --}}
@@ -205,10 +211,12 @@
                                                 <strong>{{ __('billing.table.payment-methode') }}:</strong><br>
                                                 {!! \App\Helpers\BillingHelper::getBillingPaymentSection($billing, $bank) !!}
                                             </div>
-                                            <div style="flex: 1;">
-                                                <strong>{{ __('customer.table.action') }}:</strong><br>
-                                                {!! \App\Helpers\BillingHelper::getBillingActionButton($billing) !!}
-                                            </div>
+                                            @can('billing-edit')
+                                                <div style="flex: 1;">
+                                                    <strong>{{ __('customer.table.action') }}:</strong><br>
+                                                    {!! \App\Helpers\BillingHelper::getBillingActionButton($billing) !!}
+                                                </div>
+                                            @endcan
                                         </div>
                                     </div>
                                 </td>

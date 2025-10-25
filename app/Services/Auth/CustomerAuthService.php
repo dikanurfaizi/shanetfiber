@@ -3,7 +3,7 @@
 namespace App\Services\Auth;
 
 use App\Models\Customer;
-use App\Models\Paket\Paket;
+use App\Models\Packages\Package;
 use App\Models\Websystem;
 use App\Helpers\LogHelper;
 use App\Helpers\FormatReceiver;
@@ -14,31 +14,31 @@ class CustomerAuthService
 {
     public function getLoginData()
     {
-        $pakets = Paket::select([
-            'pakets.*',
+        $packages = Package::select([
+            'packages.*',
             'pc.name as category_name',
             'sd.name_en as duration_name'
         ])
-            ->leftJoin('subscription_durations as sd', 'pakets.id', '=', 'sd.paket_id')
-            ->join('paket_categories as pc', 'pakets.paket_category_id', '=', 'pc.id')
-            ->where('pakets.display_to_customer', true)
-            ->where('pakets.price', '>', 0)
+            ->leftJoin('subscription_durations as sd', 'packages.id', '=', 'sd.package_id')
+            ->join('package_categories as pc', 'packages.package_category_id', '=', 'pc.id')
+            ->where('packages.display_to_customer', true)
+            ->where('packages.price', '>', 0)
             ->with(['category', 'subscriptionDurations'])
             ->get()
-            ->map(function ($paket) {
+            ->map(function ($package) {
                 return (object) [
-                    'category' => $paket->category_name ?? $paket->category->name ?? 'Uncategorized',
-                    'package_name' => $paket->name,
-                    'speed_up_to' => $paket->speed_up_to,
-                    'speed_unit' => $paket->speed_unit,
-                    'price' => $paket->price,
-                    'name_en' => $paket->duration_name ?? $paket->subscriptionDurations->first()->name_en ?? 'Monthly',
-                    'recommended_device_min' => $paket->recommended_device_min,
-                    'recommended_device_max' => $paket->recommended_device_max,
-                    'quota' => $paket->quota,
-                    'include_modem' => $paket->include_modem,
-                    'installation_fee' => $paket->installation_fee,
-                    'is_installation_free' => $paket->is_installation_free
+                    'category' => $package->category_name ?? $package->category->name ?? 'Uncategorized',
+                    'package_name' => $package->name,
+                    'speed_up_to' => $package->speed_up_to,
+                    'speed_unit' => $package->speed_unit,
+                    'price' => $package->price,
+                    'name_en' => $package->duration_name ?? $package->subscriptionDurations->first()->name_en ?? 'Monthly',
+                    'recommended_device_min' => $package->recommended_device_min,
+                    'recommended_device_max' => $package->recommended_device_max,
+                    'quota' => $package->quota,
+                    'include_modem' => $package->include_modem,
+                    'installation_fee' => $package->installation_fee,
+                    'is_installation_free' => $package->is_installation_free
                 ];
             });
 
@@ -47,19 +47,19 @@ class CustomerAuthService
 
         $phoneNumber = $formatter->formatReceiver($websystem->phone, null, false);
         $whatsappCall = $formatter->formatReceiver($websystem->phone, 'homepage', false);
-        $generalMessage = urlencode('Halo, saya tertarik dengan paket internet yang tersedia. Bisa dibantu informasinya?');
+        $generalMessage = urlencode('Halo, saya tertarik dengan package internet yang tersedia. Bisa dibantu informasinya?');
 
         $formatPackage = new FormatPackage();
-        $pakets = $pakets->map(function ($paket) use ($formatPackage) {
-            $paket->formatted_name = $formatPackage->formatPackageName($paket->package_name);
-            $paket->wa_message = urlencode("Halo, saya tertarik dengan paket {$paket->formatted_name}. Bisa dibantu informasinya?");
-            $paket->formatted_price = 'Rp ' . number_format($paket->price, 0, ',', '.') . '/' . $paket->name_en;
-            return $paket;
+        $packages = $packages->map(function ($package) use ($formatPackage) {
+            $package->formatted_name = $formatPackage->formatPackageName($package->package_name);
+            $package->wa_message = urlencode("Halo, saya tertarik dengan paket {$package->formatted_name}. Bisa dibantu informasinya?");
+            $package->formatted_price = 'Rp ' . number_format($package->price, 0, ',', '.') . '/' . $package->name_en;
+            return $package;
         });
 
-        $categories = $pakets->pluck('category')->unique()->toArray();
+        $categories = $packages->pluck('category')->unique()->toArray();
 
-        return compact('pakets', 'websystem', 'phoneNumber', 'generalMessage', 'categories', 'whatsappCall');
+        return compact('packages', 'websystem', 'phoneNumber', 'generalMessage', 'categories', 'whatsappCall');
     }
 
     public function attemptLogin(string $input, string $password)

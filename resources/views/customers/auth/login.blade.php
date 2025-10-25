@@ -124,37 +124,37 @@
             @foreach ($categories as $index => $category)
                 <div class="category-packages {{ $index === 0 ? '' : 'd-none' }}" id="{{ $category }}Packages">
                     <div class="position-relative py-4">
-                        <div class="paket-slider swiper">
+                        <div class="package-slider swiper">
                             <div class="swiper-wrapper pb-4">
-                                @foreach ($pakets->where('category', $category) as $package)
+                                @foreach ($packages->where('category', $category) as $package)
                                     <div class="swiper-slide">
-                                        <div class="paket-internet">
+                                        <div class="package-internet">
                                             <!-- Header with dynamic class -->
                                             <div
                                                 class="internet-card
                                                     @if ($category == 'Internet Only') internet-only
                                                     @elseif($category == 'Internet Stream') internet-stream
                                                     @else internet-tv @endif">
-                                                <h3 class="paket-title">{{ $package->formatted_name }}</h3>
+                                                <h3 class="package-title">{{ $package->formatted_name }}</h3>
                                             </div>
 
-                                            <div class="paket-price">
-                                                <div class="paket-price-value">
+                                            <div class="package-price">
+                                                <div class="package-price-value">
                                                     <p>{{ $package->formatted_price }}
                                                     </p>
                                                 </div>
-                                                <p class="paket-price-note">Harga Sudah Termasuk PPN</p>
+                                                <p class="package-price-note">Harga Sudah Termasuk PPN</p>
                                             </div>
 
-                                            <hr class="paket-divider" />
+                                            <hr class="package-divider" />
 
                                             <!-- Features List -->
-                                            <div class="list-paket-point">
-                                                <div class="list-paket-item">
-                                                    <div class="list-paket-icon">
+                                            <div class="list-package-point">
+                                                <div class="list-package-item">
+                                                    <div class="list-package-icon">
                                                         <i class="fas fa-laptop"></i>
                                                     </div>
-                                                    <p class="list-paket-text">
+                                                    <p class="list-package-text">
                                                         Ideal untuk
                                                         {{ $package->recommended_device_min }}-{{ $package->recommended_device_max }}
                                                         perangkat
@@ -162,31 +162,31 @@
                                                 </div>
 
                                                 <!-- Quota -->
-                                                <div class="list-paket-item">
-                                                    <div class="list-paket-icon">
+                                                <div class="list-package-item">
+                                                    <div class="list-package-icon">
                                                         <i class="fas fa-database text-sm"></i>
                                                     </div>
-                                                    <p class="list-paket-text">
+                                                    <p class="list-package-text">
                                                         {{ $package->quota ?? 'Unlimited' }} kuota
                                                     </p>
                                                 </div>
 
                                                 <!-- Modem -->
-                                                <div class="list-paket-item">
-                                                    <div class="list-paket-icon">
+                                                <div class="list-package-item">
+                                                    <div class="list-package-icon">
                                                         <i class="fas fa-wifi text-sm"></i>
                                                     </div>
-                                                    <p class="list-paket-text">
+                                                    <p class="list-package-text">
                                                         Modem {{ $package->include_modem ? 'Termasuk' : 'Tidak termasuk' }}
                                                     </p>
                                                 </div>
 
                                                 <!-- Installation -->
-                                                <div class="list-paket-item">
-                                                    <div class="list-paket-icon">
+                                                <div class="list-package-item">
+                                                    <div class="list-package-icon">
                                                         <i class="fas fa-tools text-sm"></i>
                                                     </div>
-                                                    <p class="list-paket-text">
+                                                    <p class="list-package-text">
                                                         Instalasi <span class="font-semibold">
                                                             {{ $package->is_installation_free ? 'Gratis' : 'Rp ' . number_format($package->installation_fee, 0, ',', '.') }}
                                                         </span>
@@ -194,11 +194,11 @@
                                                 </div>
                                             </div>
 
-                                            <hr class="paket-divider" />
+                                            <hr class="package-divider" />
 
                                             <!-- CTA Buttons -->
                                             <div
-                                                class="cta-paket-buttons
+                                                class="cta-package-buttons
                                                     @if ($category == 'Internet Only') internet-only
                                                     @elseif($category == 'Internet Stream') internet-stream
                                                     @else internet-tv @endif">

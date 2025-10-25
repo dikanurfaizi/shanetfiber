@@ -45,15 +45,15 @@
                 </div>
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
-                        {!! Form::select('paket_id', $pppprofiles, null, [
-                            'placeholder' => 'Select Paket',
+                        {!! Form::select('package_id', $pppprofiles, null, [
+                            'placeholder' => 'Select package',
                             'class' => 'form-control d-none', // awalnya disembunyikan
-                            'id' => 'paket-dropdown',
+                            'id' => 'package-dropdown',
                             'onchange' => 'updateMemberDropdown(this.value); calculateDiscount();',
                         ]) !!}
 
-                        @if ($errors->has('paket_id'))
-                            <span class="text-danger">{{ $errors->first('paket_id') }}</span>
+                        @if ($errors->has('package_id'))
+                            <span class="text-danger">{{ $errors->first('package_id') }}</span>
                         @endif
                     </div>
                 </div>
@@ -328,137 +328,186 @@
             {!! Form::close() !!}
         </div>
     </div>
+
+    @section('custom_scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const packageDropdown = document.getElementById('package-dropdown');
+                const memberDropdown = document.getElementById('member-dropdown');
+                const discountInput = document.getElementById('discount_nominal');
+
+                packageDropdown.addEventListener('change', () => {
+                    updateMemberDropdown();
+                    calculateDiscount();
+                });
+
+                memberDropdown.addEventListener('change', () => {
+                    toggleDiscountField();
+                    calculateDiscount();
+                });
+
+                discountInput.addEventListener('input', () => {
+                    formatRupiah(discountInput);
+                    calculateDiscount();
+                });
+
+                // Trigger awal saat load
+                updateMemberDropdown();
+                toggleDiscountField();
+                calculateDiscount();
+
+                $('#server-dropdown').on('change', function() {
+                    const idServer = this.value;
+
+                    if (idServer) {
+                        $('#package-dropdown').removeClass('d-none');
+                    } else {
+                        $('#package-dropdown').addClass('d-none');
+                    }
+                });
+
+                $('#service-dropdown').on('change', function() {
+                    var idService = this.value;
+                    if (idService == 'ppp') {
+                        $("#input-ppp").removeClass('d-none');
+                        $("#input-ip-static").addClass('d-none');
+                    } else if (idService == 'ip_static') {
+                        $("#input-ppp").addClass('d-none');
+                        $("#input-ip-static").removeClass('d-none');
+
+                        $("#interface-dropdown").html('');
+                        const url_interface = "{{ route('fetch.interface') }}";
+                        $.ajax({
+
+                            url: url_interface,
+                            type: "POST",
+                            data: {
+                                mikrotik_id: idServer,
+                                _token: '{{ csrf_token() }}'
+                            },
+                            dataType: 'json',
+                            success: function(result_server) {
+                                $('#interface-dropdown').html(
+                                    '<option value="">Select Interface</option>');
+                                $.each(result_server, function(key, value) {
+                                    $("#interface-dropdown").append('<option value="' +
+                                        value.name + '">' + value.name + '</option>');
+                                });
+                            }
+
+                        });
+
+                    } else {
+                        $("#input-ppp").addClass('d-none');
+                        $("#input-ip-static").addClass('d-none');
+                    }
+                });
+            });
+
+            function getPackagePrice() {
+                const packageDropdown = document.getElementById('package-dropdown');
+                const selectedOption = packageDropdown.options[packageDropdown.selectedIndex];
+                return selectedOption && selectedOption.value ? getCleanPrice(selectedOption.text) : 0;
+            }
+
+            function getCleanPrice(text) {
+                const match = text.match(/Rp\.?\s?([\d.,]+)/i);
+                return match ? Number(match[1].replace(/[.,]/g, '')) : 0;
+            }
+
+            function formatRupiah(input) {
+                let value = input.value.replace(/[^,\d]/g, '');
+                let packagePrice = getPackagePrice();
+
+                if (packagePrice === 0) {
+                    input.value = '0';
+                    return;
+                }
+
+                let numericValue = parseFloat(value.replace(/\./g, ''));
+                if (numericValue > packagePrice) {
+                    numericValue = packagePrice;
+                }
+
+                input.value = new Intl.NumberFormat('id-ID').format(numericValue);
+            }
+
+            function toggleDiscountField() {
+                const memberDropdown = document.getElementById('member-dropdown');
+                const discountNominalField = document.getElementById('discount_nominal');
+                const billingOptions = document.getElementById('billing-options');
+                const monthlyOption = document.getElementById('monthly');
+                const oneTimeOption = document.getElementById('one-time');
+                const hiddenMemberInput = document.getElementById('hidden_member_id');
+
+                const selectedMember = memberDropdown.options[memberDropdown.selectedIndex];
+                const isNonMember = selectedMember.value === 'non-member';
+
+                if (!hiddenMemberInput) return;
+
+                if (isNonMember) {
+                    discountNominalField.removeAttribute('readonly');
+                    discountNominalField.removeAttribute('disabled');
+                    discountNominalField.value = '';
+                    billingOptions.style.display = 'none';
+                    monthlyOption.checked = false;
+                    oneTimeOption.checked = false;
+                    hiddenMemberInput.value = '';
+                } else {
+                    discountNominalField.setAttribute('readonly', true);
+                    discountNominalField.setAttribute('disabled', true);
+                    const discount = parseFloat(selectedMember.getAttribute('data-discount')) || 0;
+                    discountNominalField.value = discount.toLocaleString('id-ID');
+                    billingOptions.style.display = 'block';
+                    hiddenMemberInput.value = selectedMember.value;
+                }
+            }
+
+            function calculateDiscount() {
+                let packagePrice = getPackagePrice();
+                const memberDropdown = document.getElementById('member-dropdown');
+                const selectedMember = memberDropdown.options[memberDropdown.selectedIndex];
+                const isNonMember = selectedMember.value === 'non-member';
+                const discountNominalField = document.getElementById('discount_nominal');
+                const discountField = document.getElementById('discount');
+
+                if (!isNonMember) {
+                    const memberDiscount = parseFloat(selectedMember.getAttribute('data-discount')) || 0;
+                    discountNominalField.value = memberDiscount.toLocaleString('id-ID');
+                }
+
+                const discountNominal = parseFloat(discountNominalField.value.replace(/\./g, '').replace(',', '.')) || 0;
+                const discountPercentage = packagePrice > 0 ? (discountNominal / packagePrice) * 100 : 0;
+                discountField.value = discountPercentage.toFixed(2);
+            }
+
+            function updateMemberDropdown() {
+                const packagePrice = getPackagePrice();
+                const memberDropdown = document.getElementById('member-dropdown');
+                const members = memberDropdown.options;
+
+                const discountField = document.getElementById('discount');
+                const discountNominalField = document.getElementById('discount_nominal');
+
+                // Selalu pastikan non-member (index 0) enabled
+                members[0].disabled = false;
+
+                for (let i = 1; i < members.length; i++) {
+                    const discount = +members[i].getAttribute('data-discount') || 0;
+                    members[i].disabled = discount > packagePrice;
+                }
+
+                // Reset ke non-member tapi tidak mengganti selectedIndex jika user sudah pilih
+                // Jadi, kita **tidak** mengubah memberDropdown.selectedIndex di sini
+
+                // Reset input diskon
+                discountNominalField.value = 0;
+                discountNominalField.readOnly = true;
+                discountField.value = 0;
+
+                toggleDiscountField();
+                calculateDiscount();
+            }
+        </script>
+    @endsection
 </x-layouts.cpanel.customers.app-layout>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const paketDropdown = document.getElementById('paket-dropdown');
-        const memberDropdown = document.getElementById('member-dropdown');
-        const discountInput = document.getElementById('discount_nominal');
-
-        paketDropdown.addEventListener('change', () => {
-            updateMemberDropdown();
-            calculateDiscount();
-        });
-
-        memberDropdown.addEventListener('change', () => {
-            toggleDiscountField();
-            calculateDiscount();
-        });
-
-        discountInput.addEventListener('input', () => {
-            formatRupiah(discountInput);
-            calculateDiscount();
-        });
-
-        // Trigger awal saat load
-        updateMemberDropdown();
-        toggleDiscountField();
-        calculateDiscount();
-    });
-
-    function getPaketPrice() {
-        const paketDropdown = document.getElementById('paket-dropdown');
-        const selectedOption = paketDropdown.options[paketDropdown.selectedIndex];
-        return selectedOption && selectedOption.value ? getCleanPrice(selectedOption.text) : 0;
-    }
-
-    function getCleanPrice(text) {
-        const match = text.match(/Rp\.?\s?([\d.,]+)/i);
-        return match ? Number(match[1].replace(/[.,]/g, '')) : 0;
-    }
-
-    function formatRupiah(input) {
-        let value = input.value.replace(/[^,\d]/g, '');
-        let paketPrice = getPaketPrice();
-
-        if (paketPrice === 0) {
-            input.value = '0';
-            return;
-        }
-
-        let numericValue = parseFloat(value.replace(/\./g, ''));
-        if (numericValue > paketPrice) {
-            numericValue = paketPrice;
-        }
-
-        input.value = new Intl.NumberFormat('id-ID').format(numericValue);
-    }
-
-    function toggleDiscountField() {
-        const memberDropdown = document.getElementById('member-dropdown');
-        const discountNominalField = document.getElementById('discount_nominal');
-        const billingOptions = document.getElementById('billing-options');
-        const monthlyOption = document.getElementById('monthly');
-        const oneTimeOption = document.getElementById('one-time');
-        const hiddenMemberInput = document.getElementById('hidden_member_id');
-
-        const selectedMember = memberDropdown.options[memberDropdown.selectedIndex];
-        const isNonMember = selectedMember.value === 'non-member';
-
-        if (!hiddenMemberInput) return;
-
-        if (isNonMember) {
-            discountNominalField.removeAttribute('readonly');
-            discountNominalField.removeAttribute('disabled');
-            discountNominalField.value = '';
-            billingOptions.style.display = 'none';
-            monthlyOption.checked = false;
-            oneTimeOption.checked = false;
-            hiddenMemberInput.value = '';
-        } else {
-            discountNominalField.setAttribute('readonly', true);
-            discountNominalField.setAttribute('disabled', true);
-            const discount = parseFloat(selectedMember.getAttribute('data-discount')) || 0;
-            discountNominalField.value = discount.toLocaleString('id-ID');
-            billingOptions.style.display = 'block';
-            hiddenMemberInput.value = selectedMember.value;
-        }
-    }
-
-    function calculateDiscount() {
-        let paketPrice = getPaketPrice();
-        const memberDropdown = document.getElementById('member-dropdown');
-        const selectedMember = memberDropdown.options[memberDropdown.selectedIndex];
-        const isNonMember = selectedMember.value === 'non-member';
-        const discountNominalField = document.getElementById('discount_nominal');
-        const discountField = document.getElementById('discount');
-
-        if (!isNonMember) {
-            const memberDiscount = parseFloat(selectedMember.getAttribute('data-discount')) || 0;
-            discountNominalField.value = memberDiscount.toLocaleString('id-ID');
-        }
-
-        const discountNominal = parseFloat(discountNominalField.value.replace(/\./g, '').replace(',', '.')) || 0;
-        const discountPercentage = paketPrice > 0 ? (discountNominal / paketPrice) * 100 : 0;
-        discountField.value = discountPercentage.toFixed(2);
-    }
-
-    function updateMemberDropdown() {
-        const paketPrice = getPaketPrice();
-        const memberDropdown = document.getElementById('member-dropdown');
-        const members = memberDropdown.options;
-
-        const discountField = document.getElementById('discount');
-        const discountNominalField = document.getElementById('discount_nominal');
-
-        // Selalu pastikan non-member (index 0) enabled
-        members[0].disabled = false;
-
-        for (let i = 1; i < members.length; i++) {
-            const discount = +members[i].getAttribute('data-discount') || 0;
-            members[i].disabled = discount > paketPrice;
-        }
-
-        // Reset ke non-member tapi tidak mengganti selectedIndex jika user sudah pilih
-        // Jadi, kita **tidak** mengubah memberDropdown.selectedIndex di sini
-
-        // Reset input diskon
-        discountNominalField.value = 0;
-        discountNominalField.readOnly = true;
-        discountField.value = 0;
-
-        toggleDiscountField();
-        calculateDiscount();
-    }
-</script>

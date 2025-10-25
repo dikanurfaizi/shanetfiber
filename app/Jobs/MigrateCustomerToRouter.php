@@ -51,7 +51,7 @@ class MigrateCustomerToRouter implements ShouldQueue
 
         foreach ($customers as $customer) {
             $service = optional($customer->pppType)->name;
-            $profile = optional($customer->paket)->profile;
+            $profile = optional($customer->package)->profile;
 
             $comment = optional(
                 AutoIsolir::where('mikrotik_id', $this->target->id)->first()

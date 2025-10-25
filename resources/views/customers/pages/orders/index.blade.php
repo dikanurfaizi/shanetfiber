@@ -21,7 +21,7 @@
 
     <div class="card-body">
         <div style="overflow-x: auto;">
-            <table id="paketsTable" cellspacing="0" width="100%"
+            <table id="packagesTable" cellspacing="0" width="100%"
                 class="table datatable-loading no-footer sortable searchable">
                 <thead class="thead-light">
                     <th scope="col">#</th>

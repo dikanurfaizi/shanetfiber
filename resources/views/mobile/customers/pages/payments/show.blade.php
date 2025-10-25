@@ -11,23 +11,23 @@
                 <td><b>#{{ $billing->billing_number }}</b></td>
             </tr>
             <tr>
-                <td>Nama</td>
+                <td>Name</td>
                 <td><b>{{ $billing->customer_name }}</b></td>
             </tr>
             <tr>
-                <td>Periode</td>
+                <td>Period</td>
                 <td><b>{{ $billing->billing_periode->name }}</b></td>
             </tr>
             <tr>
-                <td>Paket</td>
-                <td><b>{{ $billing->paket_name }}</b></td>
+                <td>Package</td>
+                <td><b>{{ $billing->billingSubscription->customerSubscription->package->name }}</b></td>
             </tr>
             <tr>
-                <td>Total Harga</td>
-                <td><b>@moneyIDR($billing->paket_price)</b></td>
+                <td>Total Price</td>
+                <td><b>@moneyIDR($billing->subtotal)</b></td>
             </tr>
             <tr>
-                <td>Status Pembayaran</td>
+                <td>Bill Status</td>
                 <td><b>
                         @if ($billing->status == 'BL')
                         {{ __('billing.state.belum-lunas') }}
@@ -37,7 +37,7 @@
                     </b></td>
             </tr>
             <tr>
-                <td>Tanggal</td>
+                <td>Date</td>
                 <td><b>{{ $billing->created_at->format('d M Y H:i') }}</b></td>
             </tr>
         </table>

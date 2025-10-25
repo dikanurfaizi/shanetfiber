@@ -10,7 +10,7 @@ class CustomerSubscriptionController extends Controller
 {
     public function index()
     {
-        $subscriptions = CustomerSubscription::with(['customer', 'paket', 'subscriptionDuration'])
+        $subscriptions = CustomerSubscription::with(['customer', 'package', 'subscriptionDuration'])
             ->paginate(15);
         return view('customerSubscriptions.index', compact('subscriptions'));
     }
@@ -25,7 +25,7 @@ class CustomerSubscriptionController extends Controller
         // validasi data
         $validated = $request->validate([
             'customer_id' => 'required|exists:customers,id',
-            'paket_id' => 'required|exists:pakets,id',
+            'package_id' => 'required|exists:packages,id',
             'subscription_duration_id' => 'required|exists:subscription_durations,id',
             'status' => 'required|in:active,paused,cancelled,terminated',
             'start_date' => 'required|date',
@@ -55,7 +55,7 @@ class CustomerSubscriptionController extends Controller
     {
         $validated = $request->validate([
             'customer_id' => 'required|exists:customers,id',
-            'paket_id' => 'required|exists:pakets,id',
+            'package_id' => 'required|exists:packages,id',
             'subscription_duration_id' => 'required|exists:subscription_durations,id',
             'status' => 'required|in:active,paused,cancelled,terminated',
             'start_date' => 'required|date',

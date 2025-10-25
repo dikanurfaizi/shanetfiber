@@ -26,6 +26,7 @@ class TopBar extends Component
         $auth = UserAuth::getUserDetails();
         $user = $auth['user'];
 
+        // Ambil semua billing dengan relasi customer & user
         $billings = Billing::with([
             'customer' => fn($q) => $q->whereNull('deleted_at'),
             'customer.user'
@@ -34,11 +35,28 @@ class TopBar extends Component
             ->get();
 
         if ($user->can('view-bill-top-bar-total')) {
+            // Admin global: lihat semua billing kecuali LS & NP
+            $billingsToShow = $billings->filter(
+                fn($billing) => !in_array($billing->status, ['LS', 'NP'])
+            );
+        } elseif ($user->can('investor-billing-total')) {
+            // Investor: ambil semua admin yang berelasi dengan investor ini
+            $linkedAdminIds = \App\Models\InvestorAdmin::where('investor_id', $user->id)
+                ->pluck('admin_id')
+                ->toArray();
+
+            // Termasuk dirinya sendiri
+            $visibleUserIds = array_merge([$user->id], $linkedAdminIds);
+
+            // Filter billing berdasarkan user_id customer yang visible
             $billingsToShow = $billings->filter(
                 fn($billing) =>
-                !in_array($billing->status, ['LS', 'NP'])
+                $billing->customer &&
+                    in_array($billing->customer->user_id, $visibleUserIds) &&
+                    !in_array($billing->status, ['LS', 'NP'])
             );
         } else {
+            // Default: user biasa, hanya billing miliknya sendiri
             $billingsToShow = $billings->filter(
                 fn($billing) =>
                 $billing->customer &&

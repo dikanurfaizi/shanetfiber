@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Tripay;
 
 use Exception;
 use App\Models\Order;
-use App\Models\Paket\Paket;
+use App\Models\Packages\Package;
 use App\Models\PppType;
 use App\Models\Customer;
 
@@ -73,8 +73,8 @@ class PaymentCallbackController extends Controller
 
 
                 //Pembayaran Bulanan memperpanjang aktivasi router
-                $customerPaketId = $customer->paket_id;
-                $customerProfile = Paket::where('id', $customerPaketId)->value('profile');
+                $customerPackageId = $customer->package_id;
+                $customerProfile = Package::where('id', $customerPackageId)->value('profile');
                 $customerSecretId = $customer->secret_id;
                 $customerUsername = $customer->username;
                 $day = Carbon::now()->format('d');

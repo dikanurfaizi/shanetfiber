@@ -34,11 +34,11 @@
             <div class="col-sm-7 ">
                 : @if ($data->disabled == false)
                     <span class="badge text-white bg-success">
-                        <i class="fas fa-lock-open"></i> {{ __('paket.info.enabled') }}
+                        <i class="fas fa-lock-open"></i> {{ __('package.info.enabled') }}
                     </span>
                 @else
                     <span class="badge text-white bg-secondary">
-                        <i class="fas fa-lock"></i> {{ __('paket.info.disabled') }}
+                        <i class="fas fa-lock"></i> {{ __('package.info.disabled') }}
                     </span>
                 @endif
             </div>

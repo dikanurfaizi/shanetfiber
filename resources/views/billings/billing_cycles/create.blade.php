@@ -1,6 +1,6 @@
-<x-layouts.app-layout title="Crate Paket">
+<x-layouts.app-layout title="Crate Package">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary"> {{ __('paket.header.create') }}</h5>
+        <h5 class="m-0 font-weight-bold text-primary"> {{ __('package.header.create') }}</h5>
     </div>
 
     <div class="row">
@@ -12,9 +12,9 @@
 
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
-                        <label for="name"><strong>{{ __('paket.label.name') }}</strong></label>
+                        <label for="name"><strong>{{ __('package.label.name') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('name', null, ['placeholder' => __('paket.placeholder.name'), 'class' => 'form-control']) !!}
+                            {!! Form::text('name', null, ['placeholder' => __('package.placeholder.name'), 'class' => 'form-control']) !!}
                         </div>
                         @if ($errors->has('name'))
                             <span class="text-danger">{{ $errors->first('name') }}</span>
@@ -40,7 +40,7 @@
 
                 {{-- <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
-                        <label for="profile"><strong>{{ __('paket.label.profile') }}</strong></label>
+                        <label for="profile"><strong>{{ __('package.label.profile') }}</strong></label>
                         <div class="input-group">
                             <select id="profile-dropdown" name="profile" class="form-control">
                                 <option value="">Select Profile</option>
@@ -56,7 +56,7 @@
 
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
-                        <label for="profile"><strong>{{ __('paket.label.profile') }}</strong></label>
+                        <label for="profile"><strong>{{ __('package.label.profile') }}</strong></label>
                         <div class="input-group">
                             <select id="profile-dropdown" name="profile" class="form-control">
                                 <option value="">Select Profile</option>
@@ -73,9 +73,9 @@
 
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
-                        <label for="price"><strong>{{ __('paket.label.price') }}</strong></label>
+                        <label for="price"><strong>{{ __('package.label.price') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('price', null, ['placeholder' => __('paket.placeholder.price'), 'class' => 'form-control']) !!}
+                            {!! Form::text('price', null, ['placeholder' => __('package.placeholder.price'), 'class' => 'form-control']) !!}
                         </div>
                         @if ($errors->has('price'))
                             <span class="text-danger">{{ $errors->first('price') }}</span>
@@ -85,10 +85,10 @@
 
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
-                        <label for="description"><strong>{{ __('paket.label.description') }}</strong></label>
+                        <label for="description"><strong>{{ __('package.label.description') }}</strong></label>
                         <div class="input-group">
                             {!! Form::text('description', null, [
-                                'placeholder' => __('paket.placeholder.description'),
+                                'placeholder' => __('package.placeholder.description'),
                                 'class' => 'form-control',
                             ]) !!}
                         </div>
@@ -100,7 +100,7 @@
             </div>
             <div class="card-footer">
                 <button type="submit" class="btn btn-sm btn-success"><i class="fa fa-save"></i> &nbsp
-                    {{ __('paket.button.save') }}</button>
+                    {{ __('package.button.save') }}</button>
             </div>
             {!! Form::close() !!}
         </div>

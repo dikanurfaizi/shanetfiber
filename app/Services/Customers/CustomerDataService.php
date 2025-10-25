@@ -35,7 +35,7 @@ class CustomerDataService
                 })
                 ->when($filters['status'] ?? null, fn($query, $status) => $this->applyStatusFilter($query, $status, $traceId))
                 ->when($filters['server_search'] ?? null, fn($query, $server) => $query->where('mikrotik_id', $server))
-                ->when($filters['search_paket'] ?? null, fn($query, $paket) => $query->where('paket_id', $paket))
+                ->when($filters['search_package'] ?? null, fn($query, $package) => $query->where('package_id', $package))
                 ->orderBy('name');
 
             $result = $query->paginate($perPage);
@@ -81,7 +81,7 @@ class CustomerDataService
                 ->when($filters['search_address'] === 'NULL', fn($c) => $c->whereNull('address'))
                 ->when($filters['search_address'] ?? null, fn($c, $addr) => $c->where('address', $addr))
                 ->when($filters['server_search'] ?? null, fn($c, $server) => $c->where('mikrotik_id', $server))
-                ->when($filters['search_paket'] ?? null, fn($c, $paket) => $c->where('paket_id', $paket))
+                ->when($filters['search_package'] ?? null, fn($c, $package) => $c->where('package_id', $package))
                 ->where('activation', 'true')
                 ->sortBy('name')
                 ->values();

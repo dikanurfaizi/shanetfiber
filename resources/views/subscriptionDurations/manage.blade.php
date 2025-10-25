@@ -1,9 +1,9 @@
-<x-layouts.app-layout title="Manage Durasi - {{ $packet->name }}">
+<x-layouts.app-layout title="Manage Subscription Duration - {{ $package->name }}">
 
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h4>{{ __('duration.title.package_durations') }}: {{ $packet->name }}</h4>
-            <a href="{{ route('subscriptionDurations.create', $packet->slug) }}" class="btn btn-success">
+            <h4>{{ __('duration.title.package_durations') }}: {{ $package->name }}</h4>
+            <a href="{{ route('subscriptionDurations.create', $package->slug) }}" class="btn btn-success">
                 <i class="fa fa-plus"></i> {{ __('duration.button.add_duration') }}
             </a>
         </div>
@@ -39,10 +39,10 @@
                                     </span>
                                 </td>
 
-                                {{-- Harga Paket --}}
+                                {{-- Harga Package --}}
                                 <td>
                                     <i class="fas fa-tags text-muted"></i>
-                                    Rp {{ number_format($duration->paket->price, 0, ',', '.') }}
+                                    Rp {{ number_format($duration->package->price, 0, ',', '.') }}
                                 </td>
 
                                 {{-- Diskon --}}
@@ -96,12 +96,12 @@
 
                                 {{-- Action Buttons --}}
                                 <td>
-                                    <a href="{{ route('subscriptionDurations.edit', [$packet->slug, $duration->id]) }}"
+                                    <a href="{{ route('subscriptionDurations.edit', $duration->id) }}"
                                         class="btn btn-warning btn-sm">
                                         <i class="fa fa-edit"></i>
                                     </a>
                                     <form
-                                        action="{{ route('subscriptionDurations.destroy', [$packet->slug, $duration->id]) }}"
+                                        action="{{ route('subscriptionDurations.destroy', $duration->id) }}"
                                         method="POST" style="display:inline-block">
                                         @csrf
                                         @method('DELETE')

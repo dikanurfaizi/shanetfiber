@@ -33,9 +33,9 @@
                 </tr>
                 <tr class="table-borderless">
                     <td class="py-1"><strong>{{ __('customer.label.package') }}</strong></td>
-                    <td class="py-1">{{ __(':') }} {{ $customer->paket->name ?? 'No Data' }} -
-                        @if (!empty($customer->paket->price))
-                            @moneyIDR($customer->paket->price)
+                    <td class="py-1">{{ __(':') }} {{ $customer->package->name ?? 'No Data' }} -
+                        @if (!empty($customer->package->price))
+                            @moneyIDR($customer->package->price)
                         @else
                             @moneyIDR(0)
                         @endif
@@ -322,7 +322,7 @@
                         <td class="py-1" width="150px"><strong>{{ __('customer.label.profile') }}</strong>
                         </td>
                         <td class="py-1" width="380px">{{ __(':') }}
-                            {{ $customer->paket->profile }}
+                            {{ $customer->package->profile }}
                         </td>
                     </tr>
                     <tr class="table-borderless">

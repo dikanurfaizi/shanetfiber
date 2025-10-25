@@ -115,7 +115,7 @@ class ProcessWhatsappMessageJob implements ShouldQueue
             $payLaterDate
         );
 
-        $whatsappService->payment_paket($billing, $receipt, $this->jobData->action, $this->jobData->traceId);
+        $whatsappService->payment_package($billing, $receipt, $this->jobData->action, $this->jobData->traceId);
 
         $this->logSuccess([
             'billing_id' => $billing->id,
@@ -141,7 +141,7 @@ class ProcessWhatsappMessageJob implements ShouldQueue
             return;
         }
 
-        $whatsappService->payment_paket($billing, $receipt, $this->jobData->action, $this->jobData->traceId);
+        $whatsappService->payment_package($billing, $receipt, $this->jobData->action, $this->jobData->traceId);
         $this->logSuccess([
             'billing_id' => $billing->id,
             'receipt_id' => $receipt->id,
@@ -161,7 +161,7 @@ class ProcessWhatsappMessageJob implements ShouldQueue
             // 2. Jika receipt tetap null, buat dummy receipt
             $receipt = $receipt ?? $this->createDummyReceipt($billing, 'unpayment');;
 
-            $whatsappService->payment_paket($billing, $receipt, $this->jobData->action, $this->jobData->traceId);
+            $whatsappService->payment_package($billing, $receipt, $this->jobData->action, $this->jobData->traceId);
 
             $this->logSuccess([
                 'billing_id' => $billing->id,
@@ -221,8 +221,8 @@ class ProcessWhatsappMessageJob implements ShouldQueue
             'billing_number' => $billing->billing_number,
             'customer_id' => $billing->customer_id,
             'customer_name' => $billing->customer_name,
-            'paket_name' => $billing->paket?->name ?? 'Unknown Package',
-            'paket_price' => $billing->total_amount,
+            'package_name' => $billing->package?->name ?? 'Unknown Package',
+            'package_price' => $billing->total_amount,
             'payment_time' => now(),
             'payment_methode' => $action,
             'created_name' => 'system',
@@ -280,7 +280,7 @@ class ProcessWhatsappMessageJob implements ShouldQueue
 
     private function handleChangesPackage(WhatsappMessageService $whatsappService)
     {
-        $whatsappService->changesPackage($this->jobData->customerId, $this->jobData->oldPaketName, $this->jobData->oldPaketPrice, $this->jobData->traceId);
+        $whatsappService->changesPackage($this->jobData->customerId, $this->jobData->oldPackageName, $this->jobData->oldPackagePrice, $this->jobData->traceId);
         $this->logSuccess([], 'Send changes package information successfully proceed and delivery');
     }
 

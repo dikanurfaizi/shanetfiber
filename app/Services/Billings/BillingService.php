@@ -87,7 +87,7 @@ class BillingService
             }
 
             foreach ($routers as $router) {
-                $customers = Customer::with('user', 'paket')
+                $customers = Customer::with('user', 'package')
                     ->where('disabled', 'false')
                     ->where('activation', 'true')
                     ->where('mikrotik_id', $router->id)
@@ -97,20 +97,20 @@ class BillingService
                     continue;
                 }
 
-                $customerPaketPairs = $customers->map(fn($c) => [
+                $customerPackagePairs = $customers->map(fn($c) => [
                     'customer_id' => $c->id,
-                    'paket_id' => $c->paket_id
+                    'package_id' => $c->package_id
                 ])->toArray();
 
-                $customerSubscriptions = CustomerSubscription::where(function ($query) use ($customerPaketPairs) {
-                    foreach ($customerPaketPairs as $pair) {
+                $customerSubscriptions = CustomerSubscription::where(function ($query) use ($customerPackagePairs) {
+                    foreach ($customerPackagePairs as $pair) {
                         $query->orWhere(
                             fn($q) =>
                             $q->where('customer_id', $pair['customer_id'])
-                                ->where('paket_id', $pair['paket_id'])
+                                ->where('package_id', $pair['package_id'])
                         );
                     }
-                })->get()->keyBy(fn($cs) => $cs->customer_id . '-' . $cs->paket_id);
+                })->get()->keyBy(fn($cs) => $cs->customer_id . '-' . $cs->packge_id);
 
                 $existingBillingSubscriptionIds = BillingSubscriptionPeriode::where('billing_periode_id', $billingPeriode->id)
                     ->pluck('customer_subscription_id')
@@ -124,8 +124,8 @@ class BillingService
                     continue;
                 }
 
-                $paketIds = $customerSubscriptionsUnbilled->pluck('paket_id')->unique()->toArray();
-                $subscriptionDurations = SubscriptionDuration::whereIn('paket_id', $paketIds)->get()->keyBy('paket_id');
+                $packageIds = $customerSubscriptionsUnbilled->pluck('package_id')->unique()->toArray();
+                $subscriptionDurations = SubscriptionDuration::whereIn('package_id', $packageIds)->get()->keyBy('package_id');
                 $customerIdsToBill = $customerSubscriptionsUnbilled->pluck('customer_id')->unique()->toArray();
                 $customersToBill = $customers->whereIn('id', $customerIdsToBill);
 
@@ -204,7 +204,7 @@ class BillingService
             )->pluck('billing_subscription_id')->toArray();
 
             foreach ($customers as $customer) {
-                $key = $customer->id . '-' . $customer->paket_id;
+                $key = $customer->id . '-' . $customer->package_id;
 
                 if (!isset($customerSubscriptions[$key])) {
                     LogHelper::logWarning(null, [
@@ -222,11 +222,11 @@ class BillingService
 
                 // Hitung harga, diskon, dan pajak
                 $customerDiscount = $this->calculateCustomerDiscount($customer, $billingPeriode->name);
-                $subDuration = $subscriptionDurations[$customer->paket_id] ?? null;
+                $subDuration = $subscriptionDurations[$customer->package_id] ?? null;
 
-                $discountPaket = $this->calculatePaketDiscount($subDuration, $customer->paket->price);
-                $discountAmount = $customerDiscount + $discountPaket;
-                $priceAfterDiscount = max(0, $customer->paket->price - $discountAmount);
+                $discountPackage = $this->calculatePackageDiscount($subDuration, $customer->package->price);
+                $discountAmount = $customerDiscount + $discountPackage;
+                $priceAfterDiscount = max(0, $customer->package->price - $discountAmount);
 
                 $customerTax = ($websystem?->enable_tax)
                     ? (int) ceil($priceAfterDiscount * ($websystem->tax_rate / 100))
@@ -265,7 +265,7 @@ class BillingService
                     'customer_name' => $customer->name,
                     'customer_address' => $customer->address,
                     'billing_subscription_id' => $billingSubscriptionPeriode->id,
-                    'base_price' => $customer->paket->price,
+                    'base_price' => $customer->package->price,
                     'discount_amount' => $discountAmount,
                     'subtotal' => $priceAfterDiscount,
                     'total_amount' => $totalAmount,
@@ -320,7 +320,7 @@ class BillingService
     }
 
 
-    public function calculatePaketDiscount($subDuration, float $basePrice): float
+    public function calculatePackageDiscount($subDuration, float $basePrice): float
     {
         if (!$subDuration || $subDuration->discount_type == 'none') {
             return 0;

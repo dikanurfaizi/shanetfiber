@@ -11,23 +11,23 @@
                 <td><b>#{{ $order->number }}</b></td>
             </tr>
             <tr>
-                <td>Nama</td>
+                <td>Name</td>
                 <td><b>{{ $order->billing->customer_name }}</b></td>
             </tr>
             <tr>
-                <td>Periode</td>
+                <td>Period</td>
                 <td><b>{{ $order->billing->billing_periode->name }}</b></td>
             </tr>
             <tr>
-                <td>Paket</td>
-                <td><b>{{ $order->billing->paket_name }}</b></td>
+                <td>Package</td>
+                <td><b>{{ $order->billing->package_name }}</b></td>
             </tr>
             <tr>
-                <td>Harga</td>
+                <td>Price</td>
                 <td><b>@moneyIDR( $order->total_price)</b></td>
             </tr>
             <tr>
-                <td>Status Pembayaran</td>
+                <td>Bill Status</td>
                 <td><b>
                         @if ( $order->payment_status == '1')
                         {{ __('billing.status.waiting-payment') }}
@@ -41,7 +41,7 @@
                     </b></td>
             </tr>
             <tr>
-                <td>Tanggal</td>
+                <td>Date</td>
                 <td><b>{{ $order->created_at->format('d M Y H:i') }}</b></td>
             </tr>
         </table>

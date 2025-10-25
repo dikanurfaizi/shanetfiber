@@ -46,12 +46,12 @@ function changeCategory(category) {
 
     // Reinitialize swiper for the active category
     setTimeout(() => {
-        new Swiper(".paket-slider", {
+        new Swiper(".package-slider", {
             slidesPerView: 1,
             spaceBetween: 20,
             navigation: {
-                nextEl: ".paket-slider .swiper-button-next",
-                prevEl: ".paket-slider .swiper-button-prev",
+                nextEl: ".package-slider .swiper-button-next",
+                prevEl: ".package-slider .swiper-button-prev",
             },
             breakpoints: {
                 640: {

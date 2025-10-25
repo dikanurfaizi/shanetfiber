@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Models\Mikrotik;
-use App\Models\Paket\PppProfile;
+use App\Models\Packages\PppProfile;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

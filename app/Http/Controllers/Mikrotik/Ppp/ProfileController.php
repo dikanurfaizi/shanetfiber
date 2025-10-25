@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Mikrotik\Ppp;
 
-use App\Models\Paket\Paket;
+use App\Models\Packages\Package;
 use App\Models\Mikrotik;
 
 use Illuminate\Http\Request;
@@ -50,19 +50,19 @@ class ProfileController extends Controller
             $profileName = $Profiles->pluck('name')->toArray();
             $profileNames = collect($profileName);
 
-            $pakets = Paket::where('mikrotik_id', $mikrotikId)->pluck('profile')->toArray();
-            $paketsProfileNames = collect($pakets);
+            $packages = Package::where('mikrotik_id', $mikrotikId)->pluck('profile')->toArray();
+            $packagesProfileNames = collect($packages);
 
-            $profileNonPaket = $profileNames->diff($paketsProfileNames);
-            $profileAddPaket = $Profiles->whereIn('name', $profileNonPaket)->toArray();
+            $profileNonPackage = $profileNames->diff($packagesProfileNames);
+            $profileAddPackage = $Profiles->whereIn('name', $profileNonPackage)->toArray();
 
             LogHelper::logInfo(null, [
                 'mikrotik_id' => $mikrotikId,
-                'profile_count' => count($profileAddPaket),
+                'profile_count' => count($profileAddPackage),
             ], 200, 'Starting profile cloning process', $traceId);
 
-            foreach ($profileAddPaket as $profile) {
-                Paket::create([
+            foreach ($profileAddPackage as $profile) {
+                Package::create([
                     'mikrotik_id' => $mikrotikId,
                     'name' => $profile['name'],
                     'profile' => $profile['name'],
@@ -75,16 +75,16 @@ class ProfileController extends Controller
                 LogHelper::logInfo(null, [
                     'mikrotik_id' => $mikrotikId,
                     'profile' => $profile['name'],
-                ], 200, 'Successfully added profile to Paket', $traceId);
+                ], 200, 'Successfully added profile to Package', $traceId);
             }
 
             LogHelper::logInfo(null, [
                 'mikrotik_id' => $mikrotikId,
-                'total_added' => count($profileAddPaket),
-            ], 200, 'Successfully cloned profiles to Paket', $traceId);
+                'total_added' => count($profileAddPackage),
+            ], 200, 'Successfully cloned profiles to Package', $traceId);
 
             return redirect()->route('packets.index')
-                ->with('success', 'Import profile to paket successfully.');
+                ->with('success', 'Import profile to package successfully.');
         } catch (Exception $e) {
             LogHelper::logError(null, [
                 'mikrotik_id' => $mikrotik->id,

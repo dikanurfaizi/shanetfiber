@@ -61,7 +61,7 @@ class BillingHelper
             return '<span class="badge bg-primary text-white">
             <i class="fas fa-times-circle"></i> ' .
                 __('billing.state.confirm-on') . ' ' .
-                \Carbon\Carbon::parse($billing->updated_at)->format('F d, Y') .
+                e(\Carbon\Carbon::parse($billing->updated_at)->format('F d, Y')) .
                 '</span>';
         }
 
@@ -78,10 +78,25 @@ class BillingHelper
                 '</span>';
         }
 
+        // Jika user TIDAK punya permission billing-edit → hanya tampilkan label merah
+        if (!auth()->user() || !auth()->user()->can('billing-edit')) {
+            // Jika belum lunas (status selain NP dan LS)
+            $dueDate = $billing->due_date
+                ? \Carbon\Carbon::parse($billing->due_date)->format('F d, Y')
+                : '-';
+
+            $label = '<span class="badge bg-danger text-white">
+        <i class="fas fa-exclamation-circle"></i> Unpaid, Due Date ' . e($dueDate) . '
+        </span>';
+
+            return $label;
+        }
+
+        // Jika user punya permission billing-edit → tampilkan dropdown payment method
         $html = '<select name="payment_method"
-                class="form-control form-control-sm billing-method-select"
-                data-slug="' . $billing->slug . '"
-                style="min-width: 180px; width: max-content;">';
+            class="form-control form-control-sm billing-method-select mt-1"
+            data-slug="' . e($billing->slug) . '"
+            style="min-width: 180px; width: max-content;">';
 
         $html .= '<option value="cash">Cash</option>';
 

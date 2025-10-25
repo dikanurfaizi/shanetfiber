@@ -17,7 +17,7 @@ class WhatsappJobDto
         public readonly ?Carbon $startDate = null,
         public readonly ?Carbon $endDate = null,
         public readonly ?int $orderId = null,
-        public readonly ?string $oldPaketName = null,
-        public readonly ?int $oldPaketPrice = null,
+        public readonly ?string $oldPackageName = null,
+        public readonly ?int $oldPackagePrice = null,
     ) {}
 }

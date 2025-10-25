@@ -77,6 +77,7 @@ class CustomerController extends Controller
         $this->middleware('permission:customer-delete', ['only' => ['destroy', 'delete']]);
         $this->middleware('permission:secret-disable', ['only' => ['disable', 'enable']]);
         $this->middleware('permission:secret-edit', ['only' => ['editPpp', 'updatePpp', 'activation_all_customer']]);
+        $this->middleware('permission:customer-trashed', ['only' => ['trashed', 'restore', 'forceDelete']]);
     }
 
     // ... [previous methods remain the same until index()]
@@ -105,7 +106,7 @@ class CustomerController extends Controller
             'search_name',
             'search_address',
             'server_search',
-            'search_paket',
+            'search_package',
             'status',
             'search_admin'
         ]);
@@ -167,7 +168,7 @@ class CustomerController extends Controller
     {
         return $customers->sum(
             fn($customer) =>
-            $customer->paket->price * ((100 - $customer->discount) / 100)
+            $customer->package->price * ((100 - $customer->discount) / 100)
         );
     }
 
@@ -201,7 +202,7 @@ class CustomerController extends Controller
                     'name',
                     'email',
                     'discount',
-                    'paket_id',
+                    'package_id',
                     'contact',
                     'address',
                     'member_id',
@@ -593,7 +594,7 @@ class CustomerController extends Controller
             'search_name',
             'search_address',
             'server_search',
-            'search_paket',
+            'search_package',
             'status',
             'search_admin'
         ]);

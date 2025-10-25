@@ -9,7 +9,7 @@
 
 <!-- Nav Item - Tables -->
 
-@canany(['billing-edit', 'billing-delete'])
+@canany(['billing-list', 'billing-create','billing-edit', 'billing-delete'])
     <li class="nav-item @if (request()->routeIs('billings*') || request()->routeIs('receipts*')) active @endif">
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBilling" aria-expanded="false"
             aria-controls="collapseBilling" style="padding-top: inherit;">
@@ -39,7 +39,7 @@
     </li>
 @endcanany
 
-@canany(['billing-list'])
+@canany(['receipt-list'])
     <li class="nav-item @if (request()->routeIs('receipts*') || request()->routeIs('receipts*')) active @endif">
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseReceipt"
             aria-expanded="false" aria-controls="collapseReceipt" style="padding-top: inherit;">

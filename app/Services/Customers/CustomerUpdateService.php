@@ -5,7 +5,7 @@ namespace App\Services\Customers;
 use App\Models\Customer;
 use App\Models\Mikrotik;
 use App\Models\AutoIsolir;
-use App\Models\Paket\Paket;
+use App\Models\Packages\Package;
 use App\Models\Billing\Billing;
 use App\Models\Billing\BillingPeriode;
 use App\Models\CustomerSubscription;
@@ -64,15 +64,15 @@ class CustomerUpdateService
                     null,
                     [
                         'customer_id'     => $customer->id,
-                        'old_package_id'  => $customer->paket_id,
-                        'new_package_id'  => $validatedData['paket_id'] ?? null,
+                        'old_package_id'  => $customer->package_id,
+                        'new_package_id'  => $validatedData['package_id'] ?? null,
                     ],
                     200,
                     'Initiating package change validation',
                     $traceId
                 );
 
-                // Validasi pergantian paket
+                // Validasi pergantian package
                 $result = $this->validatePackageChange($customer, $traceId);
 
                 if (!$result['success']) {
@@ -81,8 +81,8 @@ class CustomerUpdateService
                         [
                             'customer_id'     => $customer->id,
                             'customer_name'   => $customer->name,
-                            'old_package_id'  => $customer->paket_id,
-                            'new_package_id'  => $validatedData['paket_id'] ?? null,
+                            'old_package_id'  => $customer->package_id,
+                            'new_package_id'  => $validatedData['package_id'] ?? null,
                             'reason'          => $result['message'],
                         ],
                         400,
@@ -97,15 +97,15 @@ class CustomerUpdateService
                     [
                         'customer_id'    => $customer->id,
                         'customer_name'  => $customer->name,
-                        'old_package_id' => $customer->paket_id,
-                        'new_package_id' => $validatedData['paket_id'] ?? null,
+                        'old_package_id' => $customer->package_id,
+                        'new_package_id' => $validatedData['package_id'] ?? null,
                     ],
                     200,
                     'Package validation passed, applying change',
                     $traceId
                 );
 
-                // Jalankan perubahan paket
+                // Jalankan perubahan package
                 $changesResult = $this->handlePackageChange($customer, $validatedData, $traceId);
 
                 if (!$changesResult['success']) {
@@ -114,8 +114,8 @@ class CustomerUpdateService
                         [
                             'customer_id'     => $customer->id,
                             'customer_name'   => $customer->name,
-                            'old_package_id'  => $customer->paket_id,
-                            'new_package_id'  => $validatedData['paket_id'] ?? null,
+                            'old_package_id'  => $customer->package_id,
+                            'new_package_id'  => $validatedData['package_id'] ?? null,
                             'reason'          => $changesResult['message'],
                         ],
                         400,
@@ -132,8 +132,8 @@ class CustomerUpdateService
                     [
                         'customer_id'     => $customer->id,
                         'customer_name'   => $customer->name,
-                        'old_package_id'  => $customer->paket_id,
-                        'new_package_id'  => $validatedData['paket_id'] ?? null,
+                        'old_package_id'  => $customer->package_id,
+                        'new_package_id'  => $validatedData['package_id'] ?? null,
                         'package_change'  => true,
                     ],
                     200,
@@ -300,7 +300,7 @@ class CustomerUpdateService
                 ];
             }
 
-            $log('info', 200, 'Validasi billing terpenuhi, lanjut proses ganti paket', [
+            $log('info', 200, 'Validasi billing terpenuhi, lanjut proses ganti package', [
                 'paid_count' => $paidCount
             ]);
 
@@ -320,7 +320,7 @@ class CustomerUpdateService
             ]);
             return [
                 'success' => false,
-                'message' => 'Unexpected error during change paket',
+                'message' => 'Unexpected error during change package',
                 'traceId' => $traceId
             ];
         }
@@ -345,10 +345,10 @@ class CustomerUpdateService
         };
 
         try {
-            if (!isset($data['paket_id'])) {
+            if (!isset($data['package_id'])) {
                 $message = 'Package ID not present in request data';
                 $log('info', 200, $message, [
-                    'message' => 'Data paket_id tidak dikirim dari form'
+                    'message' => 'Data package_id tidak dikirim dari form'
                 ]);
                 return [
                     'success' => false,
@@ -358,14 +358,14 @@ class CustomerUpdateService
             }
 
             $log('info', 200, 'Checking for package change', [
-                'paket_id_from_request' => $data['paket_id'],
-                'paket_id_from_customer' => $customer->paket_id
+                'package_id_from_request' => $data['package_id'],
+                'package_id_from_customer' => $customer->package_id
             ]);
 
-            if ($data['paket_id'] == $customer->paket_id) {
+            if ($data['package_id'] == $customer->package_id) {
                 $message = 'No package change detected';
                 $log('info', 200, $message, [
-                    'paket_id' => $data['paket_id']
+                    'package_id' => $data['package_id']
                 ]);
                 return [
                     'success' => false,
@@ -375,7 +375,7 @@ class CustomerUpdateService
             }
 
             // Load router & auto isolir
-            $customer->loadMissing(['mikrotik', 'autoIsolir', 'paket']);
+            $customer->loadMissing(['mikrotik', 'autoIsolir', 'package']);
 
             if (!$customer->mikrotik) {
                 $message = 'Router not found';
@@ -405,14 +405,14 @@ class CustomerUpdateService
                 ]);
             }
 
-            // Ambil Paket dan Profile
-            $newPackage = Paket::find($data['paket_id']);
+            // Ambil package dan Profile
+            $newPackage = Package::find($data['package_id']);
             $profile = $newPackage?->profile;
 
             if (!$newPackage || !$profile) {
                 $message = 'Profile or Package not found';
                 $log('warning', 404, $message, [
-                    'paket_id' => $data['paket_id']
+                    'package_id' => $data['package_id']
                 ]);
                 return [
                     'success' => false,
@@ -421,8 +421,8 @@ class CustomerUpdateService
                 ];
             }
 
-            $log('info', 200, 'Profile ditemukan dari paket', [
-                'paket_id' => $data['paket_id'],
+            $log('info', 200, 'Profile ditemukan dari package', [
+                'package_id' => $data['package_id'],
                 'profile' => $profile
             ]);
 
@@ -458,7 +458,7 @@ class CustomerUpdateService
                 ];
             }
 
-            $oldPaket = $customer->paket;
+            $oldPackage = $customer->package;
 
             // Update Mikrotik profile
             if ($customer->internet_service === 'ppp') {
@@ -470,13 +470,13 @@ class CustomerUpdateService
                     $traceId
                 );
 
-                $check = $this->ensureProfileUpdate($result, $customer, 'PPP', $oldPaket->name, $newPackage->name, $traceId);
+                $check = $this->ensureProfileUpdate($result, $customer, 'PPP', $oldPackage->name, $newPackage->name, $traceId);
                 if ($check['success'] === false) {
                     return $check;
                 }
 
                 $log('info', 200, 'Send update PPP Package', [
-                    'paket_id' => $data['paket_id'],
+                    'package_id' => $data['package_id'],
                     'profile'  => $result['new_profile']
                 ]);
             } elseif ($customer->internet_service === 'ip_static') {
@@ -487,13 +487,13 @@ class CustomerUpdateService
                     $traceId
                 );
 
-                $check = $this->ensureProfileUpdate($result, $customer, 'IP Static', $oldPaket->name, $newPackage->name, $traceId);
+                $check = $this->ensureProfileUpdate($result, $customer, 'IP Static', $oldPackage->name, $newPackage->name, $traceId);
                 if ($check['success'] === false) {
                     return $check;
                 }
 
                 $log('info', 200, 'Send update IP Static Package', [
-                    'paket_id' => $data['paket_id'],
+                    'package_id' => $data['package_id'],
                     'profile'  => $result['new_profile']
                 ]);
             }
@@ -501,11 +501,11 @@ class CustomerUpdateService
             $switchResult = $this->switchCustomerSubscription($customer, $newPackage->id, $traceId);
             if ($switchResult['success']) {
                 $customer->update([
-                    'paket_id' => $newPackage->id
+                    'package_id' => $newPackage->id
                 ]);
 
-                $log('info', 200, 'Customer paket_id berhasil diperbarui', [
-                    'new_paket_id' => $newPackage->id
+                $log('info', 200, 'Customer package_id berhasil diperbarui', [
+                    'new_package_id' => $newPackage->id
                 ]);
 
                 $whatsappJobData = new WhatsappJobDto(
@@ -518,8 +518,8 @@ class CustomerUpdateService
                     startDate: null,
                     endDate: null,
                     orderId: null,
-                    oldPaketName: $oldPaket->name,
-                    oldPaketPrice: $oldPaket->price
+                    oldPackageName: $oldPackage->name,
+                    oldPackagePrice: $oldPackage->price
                 );
 
                 ProcessWhatsappMessageJob::dispatch($whatsappJobData)->onQueue('whatsapp_single');
@@ -539,7 +539,7 @@ class CustomerUpdateService
                 ];
             }
         } catch (\Throwable $e) {
-            $message = 'Unexpected error during paket changes';
+            $message = 'Unexpected error during package changes';
             $log('error', 500, 'Unexpected error during handlePackageChange', [
                 'exception' => [
                     'message' => $e->getMessage(),
@@ -1187,13 +1187,13 @@ class CustomerUpdateService
             }
 
             // === LOAD RELASI ===
-            $customer->load(['paket', 'member']);
-            if (!$customer->paket) {
-                throw new \RuntimeException("Customer paket not found");
+            $customer->load(['package', 'member']);
+            if (!$customer->package) {
+                throw new \RuntimeException("Customer package not found");
             }
 
             // === GET DURATION DAN KONFIGURASI ===
-            $subscriptionDuration = SubscriptionDuration::where('paket_id', $customer->paket_id)
+            $subscriptionDuration = SubscriptionDuration::where('package_id', $customer->package_id)
                 ->where('is_active', true)
                 ->first();
 
@@ -1205,13 +1205,13 @@ class CustomerUpdateService
                 $currentPeriode->name
             );
 
-            $discountPaket = $this->billingService->calculatePaketDiscount(
+            $discountPackage = $this->billingService->calculatePackageDiscount(
                 $subscriptionDuration,
-                $customer->paket->price
+                $customer->package->price
             );
 
-            $discountAmount = (int) ($customerDiscount + $discountPaket);
-            $priceAfterDiscount = max(0, (int) $customer->paket->price - $discountAmount);
+            $discountAmount = (int) ($customerDiscount + $discountPackage);
+            $priceAfterDiscount = max(0, (int) $customer->package->price - $discountAmount);
 
             $taxRate = (float) ($websystem->tax_rate ?? 0);
             $customerTax = ($websystem->enable_tax)
@@ -1225,9 +1225,9 @@ class CustomerUpdateService
                 [
                     'customer_id'       => $customer->id,
                     'periode'           => $currentPeriode->name,
-                    'paket_price'       => $customer->paket->price,
+                    'package_price'       => $customer->package->price,
                     'discount_customer' => $customerDiscount,
-                    'discount_paket'    => $discountPaket,
+                    'discount_package'    => $discountPackage,
                     'discount_total'    => $discountAmount,
                     'tax_amount'        => $customerTax,
                     'total_amount'      => $totalAmount,
@@ -1244,7 +1244,7 @@ class CustomerUpdateService
                     $q->where('billing_periode_id', $currentPeriode->id);
                 })
                 ->update([
-                    'base_price'      => (int) $customer->paket->price,
+                    'base_price'      => (int) $customer->package->price,
                     'discount_amount' => $discountAmount,
                     'subtotal'        => $priceAfterDiscount,
                     'total_amount'    => $totalAmount,
@@ -1297,7 +1297,7 @@ class CustomerUpdateService
         }
     }
 
-    private function switchCustomerSubscription(Customer $customer, int $newPaketId, string $traceId): array
+    private function switchCustomerSubscription(Customer $customer, int $newPackageId, string $traceId): array
     {
         DB::beginTransaction();
         $startTime = microtime(true);
@@ -1333,7 +1333,7 @@ class CustomerUpdateService
                 ];
             }
 
-            if ($activeSubscription->paket_id == $newPaketId) {
+            if ($activeSubscription->package_id == $newPackageId) {
                 $log('warning', 400, 'New package is the same as the old package');
                 DB::rollBack();
                 return [
@@ -1364,25 +1364,25 @@ class CustomerUpdateService
                 'old_subscription_id' => $activeSubscription->id,
             ]);
 
-            $paket = Paket::find($newPaketId);
-            if (!$paket) {
-                $log('warning', 404, 'Paket not found');
+            $package = Package::find($newPackageId);
+            if (!$package) {
+                $log('warning', 404, 'package not found');
                 DB::rollBack();
                 return [
                     'success' => false,
-                    'message' => 'Paket not found',
+                    'message' => 'package not found',
                     'traceId' => $traceId
                 ];
             }
 
-            $priceFinal = $paket->is_instalation_free ? $paket->price : $paket->price + $paket->installation_fee;
+            $priceFinal = $package->is_instalation_free ? $package->price : $package->price + $package->installation_fee;
 
-            $subscriptionDuration = SubscriptionDuration::where('paket_id', $newPaketId)->first();
+            $subscriptionDuration = SubscriptionDuration::where('package_id', $newPackageId)->first();
 
             // Buat customer_subscriptions baru
             $newSubscription = CustomerSubscription::create([
                 'customer_id' => $customer->id,
-                'paket_id' => $newPaketId,
+                'package_id' => $newPackageId,
                 'subscription_duration_id' => $subscriptionDuration->id,
                 'start_date' => now(),
                 'end_date' => now()->addMonth()->day(15)->startOfDay(),
@@ -1394,14 +1394,14 @@ class CustomerUpdateService
 
             $log('info', 201, 'New subscription created', [
                 'new_subscription_id' => $newSubscription->id,
-                'new_paket_id' => $newPaketId,
+                'new_package_id' => $newPackageId,
             ]);
 
             DB::commit();
 
             return [
                 'success' => true,
-                'message' => 'switch paket done',
+                'message' => 'switch package done',
                 'new_subscription_id' => $newSubscription->id,
                 'traceId' => $traceId
             ];
@@ -1419,7 +1419,7 @@ class CustomerUpdateService
 
             return [
                 'success' => false,
-                'message' => 'switch paket failed',
+                'message' => 'switch package failed',
                 'traceId' => $traceId
             ];
         }

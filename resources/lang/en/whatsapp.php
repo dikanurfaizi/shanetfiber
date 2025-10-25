@@ -277,8 +277,8 @@ return [
 
         'message' => [
             //'notif-lessthan-deadline-payment'      => 'Periode :periode bill :bill deadline :deadline',
-            'notif-admin-deadline-payment-customer-paket'      => ':name :address tagihan :bill jatuh tempo :deadline.',
-            'notif-admin-deadline-paylater-customer-paket'      => ':name :address tagihan :bill jatuh tempo paylater :deadline.',
+            'notif-admin-deadline-payment-customer-package'      => ':name :address tagihan :bill jatuh tempo :deadline.',
+            'notif-admin-deadline-paylater-customer-package'      => ':name :address tagihan :bill jatuh tempo paylater :deadline.',
             'notif-lessthan-deadline-payment'      => 'Periode :periode tagihan :bill batas bayar :deadline.',
             'notif-lessthan-deadline-payment-with-pay-later' => 'Periode :periode tagihan :bill batas bayar :deadline dengan jatuh tempo Paylater :paylater.',
             'enable-message' => 'Are you sure enable [:name] message?',
@@ -286,7 +286,7 @@ return [
             'disable-message' => 'Are you sure disable [:name] message?',
             'error-disable-message' => 'Disable message [:name] failed. Please try again!',
             'delete-message' => 'Are you sure delete :name message?',
-            'detail-paket' => ':no. :paketname Rp. :bill. Batas waktu pembayaran tanggal :deadline.%0a',
+            'detail-package' => ':no. :packagename Rp. :bill. Batas waktu pembayaran tanggal :deadline.%0a',
             'info-detail-billing' => ':no. Periode :start_periode s/d :end_periode Rp. :bill.%0a',
             'info-wifi' => ':no. :ssid_id *:ssid_name*, Lokasi :installation_address %0a%0a   Perangkat yang terhubung saat ini:%0a:device_connected%0a',
             'device-connected' => ':no. :host_name%0a',
@@ -297,8 +297,8 @@ return [
             'days-again' => ':day hari lagi',
         ],
         'help' => [
-            'no-paket' => '[%name% = Customer Name] [%customer_id% = Customer ID] [%address% = Customer Address]',
-            'warning-bill' => '[%name%=Customer Name] [%customer_id%=Customer ID] [%address%=Customer Address] [%day%=Less than day] [%paket-name%=Paket Name] [%count-bill%=Count bill] [%pakets%=All paket customer] [%total-bill%=Total bill]',
+            'no-package' => '[%name% = Customer Name] [%customer_id% = Customer ID] [%address% = Customer Address]',
+            'warning-bill' => '[%name%=Customer Name] [%customer_id%=Customer ID] [%address%=Customer Address] [%day%=Less than day] [%package-name%=Package Name] [%count-bill%=Count bill] [%packages%=All package customer] [%total-bill%=Total bill]',
 
         ],
     ],

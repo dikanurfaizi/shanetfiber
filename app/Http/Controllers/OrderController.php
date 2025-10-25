@@ -319,7 +319,7 @@ class OrderController extends Controller
             'customer_id'     => $billing->customer_id,
             'billing_id'      => $billing->id,
             'number'          => $orderNumber,
-            'package'         => $billing->billingSubscription->customerSubscription->paket->name,
+            'package'         => $billing->billingSubscription->customerSubscription->package->name,
             'total_price'     => (int) $billing->total_amount,
             'payment_status'  => 1,
             'payment_method'  => $request->input('payment_method'),
@@ -389,7 +389,7 @@ class OrderController extends Controller
             'customer_id'     => $billing->customer_id,
             'billing_id'      => $billing->id,
             'number'          => $orderNumber,
-            'package'         => $billing->billingSubscription->customerSubscription->paket->name,
+            'package'         => $billing->billingSubscription->customerSubscription->package->name,
             'total_price'     => $billing->total_amount,
             'payment_status'  => 1,
             'payment_method'  => $request->input('payment_method'),
@@ -423,8 +423,8 @@ class OrderController extends Controller
             startDate: null,
             endDate: null,
             orderId: $getOrder->id,
-            oldPaketName: null,
-            oldPaketPrice: null
+            oldPackageName: null,
+            oldPackagePrice: null
         );
 
         ProcessWhatsappMessageJob::dispatch($jobData)->onQueue('whatsapp_single');

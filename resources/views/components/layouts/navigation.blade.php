@@ -19,7 +19,7 @@
     </li>
 
     <!-- Customers -->
-    @canany(['customer-list', 'customer-edit', 'customer-delete'])
+    @canany(['customer-list', 'customer-edit', 'customer-delete', 'customer-trashed', 'member-list'])
         <li class="nav-item @if (request()->routeIs('customers*')) active @endif">
             <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseCustomer"
                 aria-expanded="true" aria-controls="collapseCustomer">
@@ -33,16 +33,24 @@
                         <a class="collapse-item @if (request()->routeIs('customers.create')) active @endif"
                             href="{{ route('customers.create') }}">{{ __('navigation.customers.create') }}</a>
                     @endcan
-                    <a class="collapse-item @if (request()->routeIs('customers.index')) active @endif"
-                        href="{{ route('customers.index') }}">{{ __('navigation.customers.index') }}</a>
+                    @can('customer-list')
+                        <a class="collapse-item @if (request()->routeIs('customers.index')) active @endif"
+                            href="{{ route('customers.index') }}">{{ __('navigation.customers.index') }}</a>
+                    @endcan
                 </div>
 
-                <div class="bg-white py-2 collapse-inner rounded">
-                    <a class="collapse-item @if (request()->routeIs('members.index')) active @endif"
-                        href="{{ route('members.index') }}">{{ __('navigation.members.index') }}</a>
-                    <a class="collapse-item @if (request()->routeIs('customers.trashed')) active @endif"
-                        href="{{ route('customers.trashed') }}">{{ __('navigation.customers.trashed') }}</a>
-                </div>
+                @canany(['member-list', 'customer-trashed'])
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        @can('member-list')
+                            <a class="collapse-item @if (request()->routeIs('members.index')) active @endif"
+                                href="{{ route('members.index') }}">{{ __('navigation.members.index') }}</a>
+                        @endcan
+                        @can('customer-trashed')
+                            <a class="collapse-item @if (request()->routeIs('customers.trashed')) active @endif"
+                                href="{{ route('customers.trashed') }}">{{ __('navigation.customers.trashed') }}</a>
+                        @endcan
+                    </div>
+                @endcanany
             </div>
         </li>
     @endcanany
@@ -70,7 +78,7 @@
     @endcanany
 
     <!-- Billing -->
-    @canany(['billing-edit', 'billing-delete'])
+    @canany(['billing-list', 'billing-create', 'billing-edit', 'billing-delete'])
         <li class="nav-item @if (request()->routeIs('billings*') || request()->routeIs('billingHistory*')) active @endif">
             <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBilling"
                 aria-expanded="true" aria-controls="collapseBilling">
@@ -101,40 +109,49 @@
         </li>
     @endcanany
 
-    <!-- Paket -->
-    @canany(['packet-list', 'packet-create', 'packet-edit', 'packet-delete'])
+    <!-- Package -->
+    @canany(['package-list', 'package-create', 'package-edit', 'package-delete'])
         <li class="nav-item @if (request()->routeIs('packets*')) active @endif">
             <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePacket"
                 aria-expanded="true" aria-controls="collapsePacket" style="padding-top: inherit;">
                 <i class="fas fa-box"></i>
-                <span>{{ __('navigation.pakets.nav-item') }}</span>
+                <span>{{ __('navigation.packages.nav-item') }}</span>
             </a>
 
             <div id="collapsePacket" class="collapse collapse @if (request()->routeIs('packets*') || request()->routeIs('profiles*'))  @endif"
                 aria-labelledby="headingBilling" data-parent="#accordionSidebar">
-                <div class="bg-white py-2 collapse-inner rounded">
-                    @can('packet-create')
-                        <a class="collapse-item @if (request()->routeIs('packets.create')) active @endif"
-                            href="{{ route('packets.create') }}">{{ __('navigation.pakets.create') }}</a>
-                        <a class="collapse-item @if (request()->routeIs('categories.*')) active @endif"
-                            href="{{ route('categories.index') }}">{{ __('navigation.pakets.package-categories') }}</a>
-                    @endcan
+                @canany(['package-create', 'package-list'])
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        @can('package-create')
+                            <a class="collapse-item @if (request()->routeIs('packages.create')) active @endif"
+                                href="{{ route('packages.create') }}">{{ __('navigation.packages.create') }}</a>
+                        @endcan
 
-                    <a class="collapse-item @if (request()->routeIs('packets.index')) active @endif"
-                        href="{{ route('packets.index') }}">{{ __('navigation.pakets.index') }}</a>
+                        @can('package-category-list')
+                            <a class="collapse-item @if (request()->routeIs('categories.*')) active @endif"
+                                href="{{ route('categories.index') }}">{{ __('navigation.packages.package-categories') }}</a>
+                        @endcan
 
-                </div>
+                        @can('package-list')
+                            <a class="collapse-item @if (request()->routeIs('packages.index')) active @endif"
+                                href="{{ route('packages.index') }}">{{ __('navigation.packages.index') }}</a>
+                        @endcan
 
-                <div class="bg-white py-2 collapse-inner rounded">
-                    @can('packet-create')
-                        <a class="collapse-item @if (request()->routeIs('ppp-profiles.create')) active @endif"
-                            href="{{ route('ppp-profiles.create') }}">{{ __('navigation.pakets.profile.create') }}</a>
-                    @endcan
-                    @canany(['packet-edit', 'packet-delete'])
-                        <a class="collapse-item @if (request()->routeIs('ppp-profiles.index')) active @endif"
-                            href="{{ route('ppp-profiles.index') }}">{{ __('navigation.pakets.profile.index') }}</a>
-                    @endcanany
-                </div>
+                    </div>
+                @endcanany
+
+                @canany(['package-create', 'package-edit', 'package-delete'])
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        @can('package-create')
+                            <a class="collapse-item @if (request()->routeIs('ppp-profiles.create')) active @endif"
+                                href="{{ route('ppp-profiles.create') }}">{{ __('navigation.packages.profile.create') }}</a>
+                        @endcan
+                        @canany(['package-edit', 'package-delete'])
+                            <a class="collapse-item @if (request()->routeIs('ppp-profiles.index')) active @endif"
+                                href="{{ route('ppp-profiles.index') }}">{{ __('navigation.packages.profile.index') }}</a>
+                        @endcanany
+                    </div>
+                @endcanany
             </div>
 
         </li>

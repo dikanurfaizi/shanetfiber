@@ -176,7 +176,7 @@ class PayLaterService
             }
 
             $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
-            $customerProfile = $customer->paket->profile;
+            $customerProfile = $customer->package->profile;
 
             if ($secretProfiles == $customerProfile) {
                 dispatch(new AddPaymentBeforeDueDateJob($router, $commentPayment, $customer->secret_id, $traceId))

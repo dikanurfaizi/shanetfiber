@@ -60,17 +60,17 @@
                     {{ ucfirst($receipt->payment_methode) }} on
                     {{ Carbon\Carbon::parse($receipt->payment_time)->translatedFormat('d M Y H:i:s') }}
                 </td>
-                <td>@moneyIDR($receipt->paket_price)</td>
+                <td>@moneyIDR($receipt->package_price)</td>
             </tr>
 
             <tr class="heading">
-                <td>Paket</td>
+                <td>Package</td>
                 <td>Price</td>
             </tr>
 
             <tr class="item">
-                <td>{{ $receipt->paket_name }} - {{ $receipt->periode }}</td>
-                <td>@moneyIDR($receipt->paket_price)</td>
+                <td>{{ $receipt->package_name }} - {{ $receipt->periode }}</td>
+                <td>@moneyIDR($receipt->package_price)</td>
             </tr>
 
             <tr class="total">

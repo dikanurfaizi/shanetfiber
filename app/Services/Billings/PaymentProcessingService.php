@@ -109,7 +109,7 @@ class PaymentProcessingService
             }
 
             $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
-            $customerProfile = $customer->paket->profile ?? null;
+            $customerProfile = $customer->package->profile ?? null;
 
             if ($secretProfiles === $customerProfile) {
                 dispatch(new AddPaymentBeforeDueDateJob($router, $commentPayment, $customer->secret_id, $traceId))

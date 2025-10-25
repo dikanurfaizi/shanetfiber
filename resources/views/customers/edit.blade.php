@@ -22,24 +22,24 @@
                 </div>
                 <div class="row align-items-end mb-3">
                     <div class="col-md-9">
-                        <label for="paket"><strong>{{ __('customer.label.package') }}</strong></label>
+                        <label for="package"><strong>{{ __('customer.label.package') }}</strong></label>
                         @if ($serverDisconnect === 'false')
-                            <select name="paket_id" class="form-control dynamic" data-dependent="details"
-                                onchange="updateMemberDropdown(this.value)" id="paket-dropdown">
-                                @foreach ($pakets as $paket)
-                                    <option value="{{ $paket->id }}" data-price="{{ $paket->price }}"
-                                        {{ $paket->id == $customer->paket_id ? 'selected' : '' }}>
-                                        {{ $paket->name }} - @moneyIDR($paket->price)
+                            <select name="package_id" class="form-control dynamic" data-dependent="details"
+                                onchange="updateMemberDropdown(this.value)" id="package-dropdown">
+                                @foreach ($packages as $package)
+                                    <option value="{{ $package->id }}" data-price="{{ $package->price }}"
+                                        {{ $package->id == $customer->package_id ? 'selected' : '' }}>
+                                        {{ $package->name }} - @moneyIDR($package->price)
                                     </option>
                                 @endforeach
                             </select>
-                            @if ($errors->has('paket_id'))
-                                <span class="text-danger">{{ $errors->first('paket_id') }}</span>
+                            @if ($errors->has('package_id'))
+                                <span class="text-danger">{{ $errors->first('package_id') }}</span>
                             @endif
                         @else
-                            <select readonly name="paket_id" class="form-control dynamic" data-dependent="details">
-                                <option value="{{ $customer->paket_id }}" selected>{{ $customer->paket->name }} -
-                                    @moneyIDR($customer->paket->price)</option>
+                            <select readonly name="package_id" class="form-control dynamic" data-dependent="details">
+                                <option value="{{ $customer->package_id }}" selected>{{ $customer->package->name }} -
+                                    @moneyIDR($customer->package->price)</option>
                             </select>
                             <span class="text-danger">{{ __('Server ') }} {{ $customer->mikrotik->name }}
                                 {{ __('Offline or Disable!') }}</span>
@@ -63,7 +63,7 @@
                             </option>
                             @foreach ($members as $member)
                                 <option value="{{ $member->id }}" data-discount="{{ $member->discount }}"
-                                    @if ($member->discount > $customer->paket->price) disabled @endif
+                                    @if ($member->discount > $customer->package->price) disabled @endif
                                     {{ $customer->member_id == $member->id ? 'selected' : '' }}>
                                     {{ $member->type }} - @moneyIDR($member->discount)
                                 </option>
@@ -288,12 +288,12 @@
         <script>
             function formatRupiah(input) {
                 let value = input.value.replace(/[^,\d]/g, '');
-                let paketDropdown = document.getElementById('paket-dropdown');
-                let selectedPaket = paketDropdown.options[paketDropdown.selectedIndex];
-                let paketPrice = parseFloat(selectedPaket.getAttribute('data-price')) || 0;
+                let packageDropdown = document.getElementById('package-dropdown');
+                let selectedPackage = packageDropdown.options[packageDropdown.selectedIndex];
+                let packagePrice = parseFloat(selectedPackage.getAttribute('data-price')) || 0;
 
                 let numericValue = parseFloat(value.replace(/\./g, ''));
-                if (numericValue > paketPrice) numericValue = paketPrice;
+                if (numericValue > packagePrice) numericValue = packagePrice;
 
                 input.value = new Intl.NumberFormat('id-ID').format(numericValue);
             }
@@ -343,7 +343,7 @@
                 const discountPercentInput = document.getElementById('discount').value;
                 const discountPercent = parseFloat(discountPercentInput) || 0;
 
-                const dropdown = document.getElementById('paket-dropdown');
+                const dropdown = document.getElementById('package-dropdown');
                 const selectedOption = dropdown.options[dropdown.selectedIndex].text;
                 const match = selectedOption.match(/Rp\.\s*([\d,.]+)/);
 
@@ -356,9 +356,9 @@
             }
 
             function calculateDiscount() {
-                const paketDropdown = document.getElementById('paket-dropdown');
-                const selectedPaket = paketDropdown.options[paketDropdown.selectedIndex];
-                const paketPrice = parseFloat(selectedPaket.getAttribute('data-price'));
+                const packageDropdown = document.getElementById('package-dropdown');
+                const selectedPackage = packageDropdown.options[packageDropdown.selectedIndex];
+                const packagePrice = parseFloat(selectedPackage.getAttribute('data-price'));
 
                 const memberDropdown = document.getElementById('member-dropdown');
                 const selectedMember = memberDropdown.options[memberDropdown.selectedIndex];
@@ -374,14 +374,14 @@
                 const discountField = document.getElementById('discount');
                 const discountNominal = parseFloat(discountNominalField.value.replace(/\./g, '').replace(',', '.')) || 0;
 
-                const discountPercentage = paketPrice > 0 ? (discountNominal / paketPrice) * 100 : 0;
+                const discountPercentage = packagePrice > 0 ? (discountNominal / packagePrice) * 100 : 0;
                 discountField.value = discountPercentage.toFixed(2);
             }
 
-            function updateMemberDropdown(selectedPaketId) {
-                const paketDropdown = document.getElementById('paket-dropdown');
-                const selectedPaket = paketDropdown.options[paketDropdown.selectedIndex];
-                const paketPrice = parseFloat(selectedPaket.getAttribute('data-price'));
+            function updateMemberDropdown(selectedPackageId) {
+                const packageDropdown = document.getElementById('package-dropdown');
+                const selectedPackage = packageDropdown.options[packageDropdown.selectedIndex];
+                const packagePrice = parseFloat(selectedPackage.getAttribute('data-price'));
 
                 const memberDropdown = document.getElementById('member-dropdown');
                 const members = memberDropdown.options;
@@ -395,7 +395,7 @@
                         members[i].disabled = false;
                         continue;
                     }
-                    if (memberDiscount > paketPrice) {
+                    if (memberDiscount > packagePrice) {
                         members[i].disabled = true;
                     } else {
                         members[i].disabled = false;
@@ -406,7 +406,7 @@
                     }
                 }
 
-                if (paketPrice === 0) {
+                if (packagePrice === 0) {
                     memberDropdown.selectedIndex = 0;
                     document.getElementById('discount_nominal').value = 0;
                     document.getElementById('discount_nominal').readOnly = true;
@@ -439,7 +439,7 @@
                 }
             });
 
-            document.getElementById('paket-dropdown').addEventListener('change', () => {
+            document.getElementById('package-dropdown').addEventListener('change', () => {
                 updateMemberDropdown();
             });
 

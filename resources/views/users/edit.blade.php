@@ -115,6 +115,41 @@
                         @endif
                     </div>
                 </div>
+
+                {{-- === Toggle untuk akses data user lain === --}}
+                <div class="row align-items-center">
+                    <div class="col-md-12 mb-3">
+                        <div class="form-check form-switch ps-2">
+                            <input class="form-check-input" type="checkbox" id="toggle-link-user"
+                                name="can_view_related_users" {{ !empty($investorAdmins) ? 'checked' : '' }}>
+                            <label class="form-check-label fw-semibold" for="toggle-link-user">
+                                Can see data managed by other users
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- === Container daftar user === --}}
+                <div id="linked-users-container" class="row align-items-center"
+                    style="{{ !empty($investorAdmins) ? '' : 'display: none;' }}">
+                    <div class="col-md-12 mb-3">
+                        <label><strong>Select which users can be seen:</strong></label>
+
+                        {{-- 🔄 Spinner Loading Indicator --}}
+                        <div id="loading-spinner" class="text-center my-2" style="display: none;">
+                            <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem;">
+                                <span class="visually-hidden"></span>
+                            </div>
+                            <p class="text-muted small mb-0">Loading users...</p>
+                        </div>
+
+                        {{-- 📋 Daftar Checkbox User --}}
+                        <div id="linked-users-checkboxes" class="border p-2 rounded"
+                            style="max-height: 200px; overflow-y: auto;">
+                            <p class="text-muted m-0">There are no users to link.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="card-footer">
                 <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-user-check"></i> &nbsp
@@ -126,20 +161,159 @@
             {!! Form::close() !!}
         </div>
     </div>
+
+    @section('custom_styles')
+        <style>
+            .form-check.form-switch .form-check-input {
+                margin-left: -1.25em !important;
+                width: 2em !important;
+                /* tetap jaga ukuran switch default */
+            }
+
+            .form-check.form-switch .form-check-label {
+                margin-left: 1.5em !important;
+                margin-top: 0.05em !important;
+                /* beri ruang untuk switch */
+            }
+
+            #loading-spinner {
+                min-height: 80px;
+                /* jaga tinggi agar tidak melompat-lompat */
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+        </style>
+    @endsection
+
+    @section('custom_scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', async () => {
+                const toggle = document.getElementById('toggle-link-user');
+                const roleSelect = document.querySelector('select[name="roles[]"]');
+                const container = document.getElementById('linked-users-container');
+                const checkboxes = document.getElementById('linked-users-checkboxes');
+                const existingLinkedAdmins = @json($investorAdmins);
+
+                // Jika toggle sudah aktif (karena sudah ada data di edit mode)
+                if (toggle.checked) {
+                    const selectedRole = roleSelect.options[roleSelect.selectedIndex]?.value;
+
+                    // Pastikan container muncul agar spinner bisa tampil
+                    container.style.display = 'block';
+
+                    await fetchLinkableUsers(selectedRole);
+
+                    // Tunggu sejenak agar DOM checkbox benar-benar ter-render
+                    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+                    // ✅ Setelah data dimuat, tandai checkbox yang sudah linked
+                    existingLinkedAdmins.forEach((adminId) => {
+                        const checkbox = document.querySelector(`#user_${adminId}`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                        }
+                    });
+                }
+
+                // ketika toggle berubah
+                toggle.addEventListener("change", async function() {
+                    checkboxes.innerHTML = "";
+
+                    if (this.checked) {
+                        const selectedRole = roleSelect.options[roleSelect.selectedIndex]?.value;
+
+                        if (!selectedRole) {
+                            container.style.display = 'block';
+                            checkboxes.innerHTML = `
+                <p class="text-danger mb-0">
+                    Please select a role first before linking users.
+                </p>
+            `;
+                            roleSelect.classList.add('border-danger');
+                            setTimeout(() => roleSelect.classList.remove('border-danger'), 1500);
+                            return;
+                        }
+
+                        // ✅ tampilkan container lebih awal (agar spinner muncul segera)
+                        container.style.display = 'block';
+                        await fetchLinkableUsers(selectedRole);
+
+                    } else {
+                        container.style.display = 'none';
+                    }
+                });
+
+                // ketika role berubah
+                roleSelect.addEventListener("change", async function() {
+                    const selectedRole = this.options[this.selectedIndex]?.value;
+                    if (toggle.checked) {
+                        await fetchLinkableUsers(selectedRole);
+                    }
+                });
+
+                async function fetchLinkableUsers(selectedRole) {
+                    if (!selectedRole) {
+                        checkboxes.innerHTML = `<p class="text-danger mb-0">Select a role first.</p>`;
+                        return;
+                    }
+
+                    const spinner = document.getElementById('loading-spinner');
+
+                    container.style.display = 'block';
+                    spinner.style.display = 'block';
+                    checkboxes.style.display = 'none'; // 🔸 sembunyikan dulu kotak checkbox
+
+                    try {
+                        const response = await fetch("{{ route('user.linkable') }}" + "?role=" +
+                            encodeURIComponent(selectedRole));
+                        const data = await response.json();
+
+                        spinner.style.display = 'none';
+                        checkboxes.style.display = 'block'; // 🔹 tampilkan lagi setelah data siap
+                        checkboxes.innerHTML = "";
+
+                        if (!data.length) {
+                            checkboxes.innerHTML = `<p class="text-muted mb-0">No users available to link.</p>`;
+                            return;
+                        }
+
+                        data.forEach((user) => {
+                            const wrapper = document.createElement("div");
+                            wrapper.className = "form-check";
+                            wrapper.innerHTML = `
+                <input class="form-check-input" type="checkbox" name="linked_user_ids[]" value="${user.id}" id="user_${user.id}">
+                <label class="form-check-label" for="user_${user.id}">
+                    ${user.name} <span class="text-muted small">(${user.roleName})</span>
+                </label>
+            `;
+                            checkboxes.appendChild(wrapper);
+                        });
+
+                    } catch (error) {
+                        console.error("Fetch error:", error);
+                        spinner.style.display = 'none';
+                        checkboxes.style.display = 'block'; // pastikan muncul lagi untuk pesan error
+                        checkboxes.innerHTML = `<p class="text-danger mb-0">Failed to fetch users.</p>`;
+                    }
+                }
+
+                function validateContact() {
+                    const contactField = document.getElementById('contact');
+                    const contactValue = contactField.value;
+
+                    // Hanya izinkan angka dan pastikan dimulai dengan angka 8
+                    contactField.value = contactValue.replace(/[^0-9]/g, '');
+
+                    if (!contactField.value.startsWith('8') || contactField.value.length < 8) {
+                        contactField.style.borderColor = 'red';
+                    } else {
+                        contactField.style.borderColor = '';
+                    }
+                }
+            });
+        </script>
+    @endsection
+
 </x-layouts.cpanel.settings.app-layout>
-
-<script>
-    function validateContact() {
-        const contactField = document.getElementById('contact');
-        const contactValue = contactField.value;
-
-        // Hanya izinkan angka dan pastikan dimulai dengan angka 8
-        contactField.value = contactValue.replace(/[^0-9]/g, '');
-
-        if (!contactField.value.startsWith('8') || contactField.value.length < 8) {
-            contactField.style.borderColor = 'red';
-        } else {
-            contactField.style.borderColor = '';
-        }
-    }
-</script>

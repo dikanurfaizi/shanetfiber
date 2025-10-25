@@ -54,10 +54,10 @@
             <td>{{ Carbon\Carbon::parse($billing->due_date)->format('d M Y') }}</td>
             <td>
                 <span class="badge bg-blue-soft text-danger">
-                    @if ($billing->paket_price === 0)
+                    @if ($billing->base_price === 0)
                     {{ __('Free') }}
                     @else
-                    @moneyIDR($billing->paket_price)
+                    @moneyIDR($billing->base_price)
                     @endif
                 </span>
             </td>

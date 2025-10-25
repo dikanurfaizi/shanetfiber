@@ -5,8 +5,8 @@ namespace App\Services\Customers;
 use App\Models\AutoIsolir;
 use App\Models\Customer;
 use App\Models\Mikrotik;
-use App\Jobs\DisablePppSecretJob;
-use App\Jobs\EnablePppSecretJob;
+use App\Jobs\Secrets\DisablePppSecretJob;
+use App\Jobs\Secrets\EnablePppSecretJob;
 use App\Http\Resources\Pppoe\SecretResource;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Helpers\LogHelper;
@@ -163,7 +163,7 @@ class CustomerStatusService
     private function mapSecretsToCustomers(array $secrets, string $traceId): Collection
     {
         return Customer::whereIn('username', $secrets)
-            ->with(['user', 'paket'])
+            ->with(['user', 'package'])
             ->get();
     }
 
@@ -173,7 +173,7 @@ class CustomerStatusService
             ->when($filters['search_address'] === 'NULL', fn($c) => $c->whereNull('address'))
             ->when($filters['search_address'] ?? null, fn($c, $addr) => $c->where('address', $addr))
             ->when($filters['server_search'] ?? null, fn($c, $server) => $c->where('mikrotik_id', $server))
-            ->when($filters['search_paket'] ?? null, fn($c, $paket) => $c->where('paket_id', $paket))
+            ->when($filters['search_package'] ?? null, fn($c, $package) => $c->where('package_id', $package))
             ->where('activation', 'true')
             ->sortBy('name')
             ->values();

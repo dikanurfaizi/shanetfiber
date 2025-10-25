@@ -37,12 +37,12 @@
             </div>
             <table class="table table-margin-top">
                 <tr>
-                    <th>Paket</th>
+                    <th>Package</th>
                     <th>Price (Rp)</th>
                 </tr>
                 <tr>
-                    <td>{{ $receipt->paket_name }} - {{ $receipt->periode }}</td>
-                    <td class="right">@moneyIDR($receipt->paket_price)</td>
+                    <td>{{ $receipt->package_name }} - {{ $receipt->periode }}</td>
+                    <td class="right">@moneyIDR($receipt->package_price)</td>
                 </tr>
             </table>
             <table class="table">

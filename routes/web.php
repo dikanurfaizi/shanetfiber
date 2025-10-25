@@ -7,7 +7,9 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\IsolirController;
-use App\Http\Controllers\Paket\PacketController;
+use App\Http\Controllers\Package\PackageController;
+use App\Http\Controllers\Package\PackageCategoriesController;
+use App\Http\Controllers\Package\PppProfileController;
 use App\Http\Controllers\RouterController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\UpdateController;
@@ -34,7 +36,6 @@ use App\Http\Controllers\BankController;
 use App\Http\Controllers\Mikrotik\Ppp\ProfileController as MikrotikProfileController;
 use App\Http\Controllers\WebsystemController;
 use App\Http\Controllers\ExportController;
-use App\Http\Controllers\Paket\PppProfileController;
 use App\Http\Controllers\WhatsappGatewayController;
 use App\Http\Controllers\WhatsappMessageController;
 use App\Http\Controllers\WhatsappNumberController;
@@ -42,7 +43,6 @@ use App\Http\Controllers\MemberController;
 use App\Http\Controllers\TelegramGatewayController;
 use App\Http\Controllers\TelegramMessageController;
 use App\Http\Controllers\TelegramChatIdController;
-use App\Http\Controllers\Paket\PaketCategoriesController;
 use App\Http\Controllers\Subscription\SubscriptionDurationController;
 use App\Http\Controllers\Subscription\CustomerSubscriptionController;
 use App\Http\Controllers\Billing\BillingHistoryController;
@@ -173,27 +173,27 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::post('/server/{mikrotik:slug}/ppp/profiles/import', [MikrotikProfileController::class, 'clone_profile'])->name('ppp.profiles.clone');
 
         // ==================== PPP PROFILES (NEW SYSTEM) ====================
-        Route::resource('/packets/ppp-profiles', PppProfileController::class)->names('ppp-profiles');
-        Route::get('/packets/ppp-profiles/{ppp_profile}/delete', [PppProfileController::class, 'delete'])->name('ppp-profiles.delete');
-        Route::put('/packets/ppp-profiles/{mikrotik:slug}/disabled/true', [PppProfileController::class, 'disable'])->name('ppp-profiles.disable');
-        Route::put('/packets/ppp-profiles/{mikrotik:slug}/disabled/false', [PppProfileController::class, 'enable'])->name('ppp-profiles.enable');
-        Route::get('/packets/ppp-profiles/{mikrotik}/list', [PppProfileController::class, 'get_mikrotik_profiles'])->name('ppp.profiles.get.mikrotik.profiles');
-        Route::get('/packets/ppp-profiles/import/data', [PppProfileController::class, 'viewServer'])->name('ppp-profiles.import.data');
-        Route::post('/packets/ppp-profiles/export/{mikrotik:slug}', [PppProfileController::class, 'export'])->name('ppp-profiles.export');
-        Route::post('/packets/ppp-profiles/export-one/{mikrotik:id}', [PppProfileController::class, 'export_one'])->name('ppp-profiles.export-one');
-        Route::post('/packets/profiles/import', [PppProfileController::class, 'import'])->name('ppp.profiles.import');
+        Route::resource('/packages/ppp-profiles', PppProfileController::class)->names('ppp-profiles');
+        Route::get('/packages/ppp-profiles/{ppp_profile}/delete', [PppProfileController::class, 'delete'])->name('ppp-profiles.delete');
+        Route::put('/packages/ppp-profiles/{mikrotik:slug}/disabled/true', [PppProfileController::class, 'disable'])->name('ppp-profiles.disable');
+        Route::put('/packages/ppp-profiles/{mikrotik:slug}/disabled/false', [PppProfileController::class, 'enable'])->name('ppp-profiles.enable');
+        Route::get('/packages/ppp-profiles/{mikrotik}/list', [PppProfileController::class, 'get_mikrotik_profiles'])->name('ppp.profiles.get.mikrotik.profiles');
+        Route::get('/packages/ppp-profiles/import/data', [PppProfileController::class, 'viewServer'])->name('ppp-profiles.import.data');
+        Route::post('/packages/ppp-profiles/export/{mikrotik:slug}', [PppProfileController::class, 'export'])->name('ppp-profiles.export');
+        Route::post('/packages/ppp-profiles/export-one/{mikrotik:id}', [PppProfileController::class, 'export_one'])->name('ppp-profiles.export-one');
+        Route::post('/packages/profiles/import', [PppProfileController::class, 'import'])->name('ppp.profiles.import');
 
         // ==================== PACKET MANAGEMENT ====================
-        Route::resource('packets', PacketController::class)->names('packets');
-        Route::put('/packets/{packet:slug}/disabled/true', [PacketController::class, 'disable'])->name('disable.package');
-        Route::put('/packets/{packet:slug}/disabled/false', [PacketController::class, 'enable'])->name('enable.package');
-        Route::get('/packets/{packet:slug}/delete', [PacketController::class, 'delete'])->name('paket.delete');
-        Route::put('/packets/{packet:slug}/toggle-display', [PacketController::class, 'toggleDisplay'])->name('paket.toggle-display');
+        Route::resource('packages', PackageController::class)->names('packages');
+        Route::put('/packages/{packet:slug}/disabled/true', [PackageController::class, 'disable'])->name('disable.package');
+        Route::put('/packages/{packet:slug}/disabled/false', [PackageController::class, 'enable'])->name('enable.package');
+        Route::get('/packages/{packet:slug}/delete', [PackageController::class, 'delete'])->name('package.delete');
+        Route::put('/packages/{packet:slug}/toggle-display', [PackageController::class, 'toggleDisplay'])->name('paket.toggle-display');
 
         // ==================== PACKAGE CATEGORIES ====================
-        Route::resource('package-categories', PaketCategoriesController::class)->names('categories');
-        Route::put('/package-categories/{package_category:slug}/deactivate', [PaketCategoriesController::class, 'deactivate'])->name('deactivate.package.categories');
-        Route::put('/package-categories/{package_category:slug}/activate', [PaketCategoriesController::class, 'activate'])->name('activate.package.categories');
+        Route::resource('package-categories', PackageCategoriesController::class)->names('categories');
+        Route::put('/package-categories/{package_category:slug}/deactivate', [PackageCategoriesController::class, 'deactivate'])->name('deactivate.package.categories');
+        Route::put('/package-categories/{package_category:slug}/activate', [PackageCategoriesController::class, 'activate'])->name('activate.package.categories');
 
         // ==================== CUSTOMER MANAGEMENT ====================
         Route::resource('customers', CustomerController::class);
@@ -266,6 +266,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('settings/users{user:id}/delete', [UserController::class, 'delete'])->name('users.delete');
         Route::put('settings/users/{user:id}/disabled/true', [UserController::class, 'disable'])->name('user.disable');
         Route::put('settings/users/{user:id}/disabled/false', [UserController::class, 'enable'])->name('user.enable');
+        Route::get('settings/users/linkable/another/users', [UserController::class, 'getLinkableUsers'])->name('user.linkable');
 
         // Servers & Routers
         Route::resource('settings/servers', ServerController::class);

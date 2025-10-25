@@ -13,8 +13,8 @@
             <td><b>{{ $billing->billingSubscription->billing_periode }}</b></td>
         </tr>
         <tr>
-            <td>Paket</td>
-            <td><b>{{ $billing->customer->paket->name }}</b></td>
+            <td>Package</td>
+            <td><b>{{ $billing->customer->package->name }}</b></td>
         </tr>
 
         @if ($websystem->enable_tax === 'true')

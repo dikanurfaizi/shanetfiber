@@ -49,7 +49,7 @@ return [
     ],
     'permission' => [
         'role' => 'Role',
-        'paket' => 'Paket',
+        'package' => 'Package',
         'ppp' => 'PPPoE',
         'user' => 'User',
         'customer' => 'Customer',

@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\AddressListResource;
 use App\Http\Resources\InterfaceResource;
-use App\Models\Paket\Paket;
+use App\Models\Packages\Package;
 use App\Models\Mikrotik;
 use App\Models\MerkRouter;
 use App\Models\TypeRouter;
@@ -41,10 +41,10 @@ class DropdownController extends Controller
      *
      * @return response()
      */
-    public function fetchPaket(Request $request)
+    public function fetchPackage(Request $request)
     {
         $traceId = (string) Str::uuid();
-        $data['pakets'] = Paket::where('mikrotik_id', $request->mikrotik_id)
+        $data['packages'] = Package::where('mikrotik_id', $request->mikrotik_id)
             ->where('disabled', 'false')
             ->orderBy('price', 'ASC')
             ->get(["name", "id", "price"]);

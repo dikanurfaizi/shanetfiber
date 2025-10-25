@@ -23,7 +23,7 @@ class CustomerBillingService
 
                 // Step 0: Preload relations
                 $tick = microtime(true);
-                $customer->loadMissing(['paket', 'member', 'user', 'customerSubscriptions']);
+                $customer->loadMissing(['package', 'member', 'user', 'customerSubscriptions']);
                 LogHelper::logInfo(null, [
                     'duration_ms' => (int) round((microtime(true) - $tick) * 1000),
                     'customer_id' => $customer->id,
@@ -34,19 +34,19 @@ class CustomerBillingService
                 // Step 1: Price calculation
                 $tick = microtime(true);
 
-                $basePrice       = (float) ($customer->paket->price ?? 0);
+                $basePrice       = (float) ($customer->package->price ?? 0);
                 $memberDiscount  = (float) ($customer->member->discount ?? 0);
 
-                $subscriptionDuration = SubscriptionDuration::where('paket_id', $customer->paket->id)
+                $subscriptionDuration = SubscriptionDuration::where('package_id', $customer->package->id)
                     ->where('duration_months', 1)
                     ->first();
 
                 if (!$subscriptionDuration) {
                     LogHelper::logError(null, [
-                        'paket_id'   => $customer->paket->id,
+                        'package_id'   => $customer->package->id,
                         'duration'   => 1,
                     ], 422, 'Step 1: SubscriptionDuration not found', $traceId);
-                    throw new \RuntimeException('SubscriptionDuration (1 month) not found for paket.');
+                    throw new \RuntimeException('SubscriptionDuration (1 month) not found for package.');
                 }
 
                 $subscriptionDiscount = match ($subscriptionDuration->discount_type) {
@@ -77,7 +77,7 @@ class CustomerBillingService
                 $tick = microtime(true);
                 $customerSubs = $customer->customerSubscriptions()->create([
                     'customer_id'               => $customer->id,
-                    'paket_id'                  => $customer->paket->id,
+                    'package_id'                  => $customer->package->id,
                     'subscription_duration_id'  => $subscriptionDuration->id,
                     'status'                    => SubscriptionStatus::ACTIVE->value,
                     'terminated_at'             => null,

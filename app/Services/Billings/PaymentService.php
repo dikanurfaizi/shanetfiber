@@ -125,8 +125,8 @@ class PaymentService
                 'customer_id' => $customer->id,
                 'customer_name' => $customer->name,
                 'customer_address' => $customer->address,
-                'paket_name' => $customer->paket->name,
-                'paket_price' => $customer->paket->price,
+                'package_name' => $customer->package->name,
+                'package_price' => $customer->package->price,
                 'discount' => $billing->discount_amount,
                 'price_after_discount' => $billing->total_amount,
                 'member_type' => $discountData['member_type'],
@@ -210,7 +210,7 @@ class PaymentService
     {
         try {
             $discount = 0;
-            $priceAfterDiscount = $customer->paket->price;
+            $priceAfterDiscount = $customer->package->price;
             $memberType = 'Non Member / Tidak Ada';
 
             // Logging awal sebelum hitung
@@ -220,19 +220,19 @@ class PaymentService
                 'billing_id' => $billing->id,
                 'billing_option' => $customer->billing_option,
                 'billing_period' => $customer->billing_period,
-                'paket_price' => $customer->paket->price
+                'package_price' => $customer->package->price
             ], 200, 'Starting discount calculation', $traceId);
 
             if ($customer->billing_option == 1) {
                 $discount = optional($customer->member)->discount ?? 0;
-                $priceAfterDiscount = $customer->paket->price - $discount;
+                $priceAfterDiscount = $customer->package->price - $discount;
                 $memberType = optional($customer->member)->type;
             } elseif (
                 $customer->billing_option == 2 &&
                 $billing->billingSubscription->billing_periode === $customer->billing_period
             ) {
                 $discount = optional($customer->member)->discount ?? 0;
-                $priceAfterDiscount = $customer->paket->price - $discount;
+                $priceAfterDiscount = $customer->package->price - $discount;
                 $memberType = optional($customer->member)->type;
             }
 
@@ -262,7 +262,7 @@ class PaymentService
             // fallback return
             return [
                 'discount' => 0,
-                'price_after_discount' => $customer->paket->price ?? 0,
+                'price_after_discount' => $customer->package->price ?? 0,
                 'member_type' => 'Unknown'
             ];
         }
@@ -318,8 +318,8 @@ class PaymentService
                 startDate: null,
                 endDate: null,
                 orderId: null,
-                oldPaketName: null,
-                oldPaketPrice: null
+                oldPackageName: null,
+                oldPackagePrice: null
             );
 
             ProcessWhatsappMessageJob::dispatch($jobData)->onQueue('whatsapp_single');

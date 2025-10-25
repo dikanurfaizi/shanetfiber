@@ -116,23 +116,23 @@ class WhatsappMessageService
     }
 
     /**
-     * Ambil rincian paket pelanggan
+     * Ambil rincian package pelanggan
      */
     public function getBillingPackages($cust_id)
     {
         try {
             $packages = Billing::query()
                 ->leftJoin('customers', 'billings.customer_id', '=', 'customers.id')
-                ->leftJoin('pakets', 'customers.paket_id', '=', 'pakets.id')
+                ->leftJoin('packages', 'customers.package_id', '=', 'packages.id')
                 ->leftJoin('members', 'customers.member_id', '=', 'members.id')
                 ->leftJoin('billing_subscription_periodes as bsp', 'billings.billing_subscription_id', '=', 'bsp.id')
                 ->where('billings.customer_id', $cust_id)
                 ->whereIn('billings.status', ['BL', 'PL'])
                 ->select([
-                    'pakets.name as paket_name',
+                    'packages.name as package_name',
                     'bsp.billing_periode_id',
-                    'pakets.price',
-                    'billings.base_price as paket_price',
+                    'packages.price',
+                    'billings.base_price as package_price',
                     'billings.discount_amount as discount',
                     'members.type',
                     'billings.status',
@@ -171,31 +171,31 @@ class WhatsappMessageService
     }
 
     /**
-     * Format informasi paket menjadi string
+     * Format informasi package menjadi string
      */
-    public function formatPaketInfo($paket)
+    public function formatPackageInfo($package)
     {
         try {
-            $periode = $paket->periode_name ?? 'Tidak ada periode';
+            $periode = $package->periode_name ?? 'Tidak ada periode';
             $formattedPeriode = $periode !== 'Tidak ada periode'
                 ? Carbon::parse("1 " . $periode)->locale('id')->translatedFormat('F Y')
                 : $periode;
 
-            $member = $paket->type ?? 'Non Member';
-            $discount = isset($paket->discount) ? number_format($paket->discount, 2) : number_format(0, 2);
+            $member = $package->type ?? 'Non Member';
+            $discount = isset($package->discount) ? number_format($package->discount, 2) : number_format(0, 2);
 
             return sprintf(
                 "📦 *Paket:* %s\n📆 *Periode:* %s\n💶 *Harga Paket:* Rp. %s\n\n🔹 *Rincian Tagihan:*\n🌟 *Kategori:* %s\n💸 *Potongan Harga:* Rp. %s",
-                $paket->paket_name ?? 'Tidak ada nama paket',
+                $package->package_name ?? 'Tidak ada nama paket',
                 $formattedPeriode,
-                number_format($paket->price ?? 0, 2),
+                number_format($package->price ?? 0, 2),
                 $member,
                 $discount
             );
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
-                ['paket' => $paket->paket_name ?? null],
+                ['package' => $package->package_name ?? null],
                 500,
                 "Error formatting package info: {$e->getMessage()}"
             );
@@ -238,8 +238,8 @@ class WhatsappMessageService
                 case 'unpayment':
                     return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('unpayment'));
 
-                case 'changes_paket':
-                    return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('changes_paket'));
+                case 'changes_package':
+                    return str_replace(array_keys($replace), array_values($replace), $this->getDefaultMessage('changes_package'));
 
                 default:
                     LogHelper::logWarning(
@@ -337,8 +337,8 @@ class WhatsappMessageService
                 '%customer_service%' => $admin_number,
                 '%customer_id%' => $customer->customer_id,
                 '%admin%' => $admin->name ?? '-',
-                '%paket%' => $customer->paket->name ?? '-',
-                '%bill%' => 'Rp. ' . number_format($customer->paket->price ?? 0, 2, ',', '.'),
+                '%package%' => $customer->package->name ?? '-',
+                '%bill%' => 'Rp. ' . number_format($customer->package->price ?? 0, 2, ',', '.'),
                 '%account_bank%' => $accountBank,
             ];
 
@@ -466,7 +466,7 @@ class WhatsappMessageService
                 '%name%' => $billing->customer->name,
                 '%customer_id%' => $billing->customer->customer_id,
                 '%billing_number%' => $billing->billing_number,
-                '%paket%' => $billing->billingSubscription->customerSubscription->paket->name ?? 'Tidak tersedia informasi paket',
+                '%package%' => $billing->billingSubscription->customerSubscription->package->name ?? 'Tidak tersedia informasi paket',
                 '%admin%' => $billing->customer->user->name,
                 '%customer_service%' => $whatsapp_number,
                 '%payment_details%' => $paymentDetails,
@@ -517,11 +517,11 @@ class WhatsappMessageService
     // ============================================
     // =====          Payment Package         =====
 
-    /**Payment Paket
-     * Unpayment Paket
+    /**Payment package
+     * Unpayment package
      *
      */
-    public function payment_paket($billing, $receipt, $action, $traceId)
+    public function payment_package($billing, $receipt, $action, $traceId)
     {
         try {
             $customer_contact = $billing->customer->contact;
@@ -558,13 +558,13 @@ class WhatsappMessageService
 
                 $price_after_discount = $billing->total_amount;
                 $billing_number = $billing->billing_number;
-                $paket_name = $billing->customer->paket->name;
+                $package_name = $billing->customer->package->name;
             } else {
                 $discount = $receipt?->discount ?? 0;
                 $price_after_discount = $receipt?->price_after_discount ?? $billing->total_amount;
                 $member = $receipt?->member_type ?? 'Non Member / Tidak Ada';
                 $billing_number = $receipt->number;
-                $paket_name = $receipt->paket_name;
+                $package_name = $receipt->package_name;
             }
 
             $replace = [
@@ -572,9 +572,9 @@ class WhatsappMessageService
                 '%address%' => $billing->customer_address,
                 '%customer_id%' => $billing->customer->customer_id,
                 '%billing_number%' => $billing_number,
-                '%paket%' => $paket_name,
+                '%package%' => $package_name,
                 '%periode%' => $billing->billingSubscription->billing_periode,
-                '%bill%' => 'Rp. ' . number_format($receipt->paket_price ?? $billing->base_price, 2),
+                '%bill%' => 'Rp. ' . number_format($receipt->package_price ?? $billing->base_price, 2),
                 '%discount%' => 'Rp. ' . number_format($discount, 2),
                 '%total%' => 'Rp. ' . number_format($price_after_discount, 2),
                 '%member%' => $member,
@@ -637,7 +637,7 @@ class WhatsappMessageService
                     'action' => $action,
                 ],
                 500,
-                "Terjadi kesalahan dalam payment_paket",
+                "Terjadi kesalahan dalam payment_package",
                 $traceId
             );
         }
@@ -784,14 +784,14 @@ class WhatsappMessageService
         try {
             $websystem = Websystem::first();
             $accountBank = $this->getBankInfo($billing->admin_id ?: 1);
-            $pakets = $this->getBillingPackages($billing->customer_id);
-            $firstPaket = is_iterable($pakets) ? $pakets->first() : null;
-            $dueDate = $firstPaket && $firstPaket->due_date
-                ? Carbon::parse($firstPaket->due_date)->timezone('Asia/Jakarta')->locale('id')->isoFormat('D MMMM Y')
+            $packages = $this->getBillingPackages($billing->customer_id);
+            $firstPackage = is_iterable($packages) ? $packages->first() : null;
+            $dueDate = $firstPackage && $firstPackage->due_date
+                ? Carbon::parse($firstPackage->due_date)->timezone('Asia/Jakarta')->locale('id')->isoFormat('D MMMM Y')
                 : 'Tidak ada jatuh tempo';
             $admin_contact = $this->formatter->formatReceiver($billing->admin_contact, null);
 
-            if (empty($pakets) || (method_exists($pakets, 'isEmpty') && $pakets->isEmpty())) {
+            if (empty($packages) || (method_exists($packages, 'isEmpty') && $packages->isEmpty())) {
                 LogHelper::logError(null, [
                     'billing_number'       => $billing->billing_number,
                     'customer_id'      => $billing->customer_id,
@@ -802,7 +802,7 @@ class WhatsappMessageService
                 return false;
             }
 
-            $paketsText = $pakets->map(fn($paket) => $this->formatPaketInfo($paket))->implode("\n---\n");
+            $packagesText = $packages->map(fn($package) => $this->formatPackageInfo($package))->implode("\n---\n");
 
             $replace = [
                 '%name%'            => $billing->customer_name,
@@ -812,7 +812,7 @@ class WhatsappMessageService
                 '%account_bank%'    => $accountBank,
                 '%whatsapp_number%' => $admin_contact,
                 '%total-bill%'      => 'Rp. ' . number_format($billing->total_amount, 2),
-                '%pakets%'          => $paketsText,
+                '%packages%'          => $packagesText,
                 '%company_address%' => $websystem->address . ', ' . $websystem->city . ' ' . $websystem->postal_code,
                 '%deadline%'        => $dueDate,
                 '%admin%'           => $billing->admin_name
@@ -1018,8 +1018,8 @@ class WhatsappMessageService
         }
         $accountBank = $this->getBankInfo($admin_id ?? 1);
 
-        $pakets = $this->getBillingPackages($billing->customer_id);
-        if ($pakets->isEmpty()) {
+        $packages = $this->getBillingPackages($billing->customer_id);
+        if ($packages->isEmpty()) {
             LogHelper::logError(null, [
                 'customer_id' => $billing->customer_id,
                 'customer_name' => $customer_name ?? $billing->customer_name,
@@ -1028,11 +1028,11 @@ class WhatsappMessageService
             return null;
         }
 
-        $totalAmount = $pakets->sum('total_amount');
-        $dueDate = $pakets->pluck('due_date')->filter()->sort()->first();
+        $totalAmount = $packages->sum('total_amount');
+        $dueDate = $packages->pluck('due_date')->filter()->sort()->first();
         $remainingDays = $dueDate ? Carbon::today()->diffInDays(Carbon::parse($dueDate), false) : 0;
 
-        $paketsText = $pakets->map(fn($paket) => $this->formatPaketInfo($paket))->implode("\n---\n");
+        $packagesText = $packages->map(fn($package) => $this->formatPackageInfo($package))->implode("\n---\n");
 
         $replace = [
             '%name%' => $customer_name ?? $billing->customer_name,
@@ -1041,10 +1041,10 @@ class WhatsappMessageService
             '%billing_number%' => $billing->billing_number ?? 'Nomor tidak tersedia',
             '%account_bank%' => $accountBank,
             '%day%' => $remainingDays,
-            '%pakets%' => $paketsText,
+            '%packages%' => $packagesText,
             '%whatsapp_number%' => $admin_contact,
             '%total-bill%' => 'Rp. ' . number_format($totalAmount, 2),
-            '%count-bill%' => $pakets->count()
+            '%count-bill%' => $packages->count()
         ];
 
         $message = $this->getMessageTemplate($action, $replace);
@@ -1060,10 +1060,10 @@ class WhatsappMessageService
 
     // =====  send Billing Reminder Message   =====
     // ============================================
-    // =====            Changes paket         =====
-    public function changesPackage(int $customerId, ?string $oldPaketName, ?int $oldPaketPrice, string $traceId): void
+    // =====            Changes package         =====
+    public function changesPackage(int $customerId, ?string $oldPackageName, ?int $oldPackagePrice, string $traceId): void
     {
-        $action = 'changes_paket';
+        $action = 'changes_package';
         $admin_number = '-';
 
         try {
@@ -1104,10 +1104,10 @@ class WhatsappMessageService
                 '%customer_service%'  => $admin_number,
                 '%customer_id%'       => $customer->customer_id,
                 '%admin%'             => $admin->name ?? '-',
-                '%old_paket%'         => $oldPaketName ?? '-',
-                '%old_bill%'          => 'Rp. ' . number_format($oldPaketPrice ?? 0, 2, ',', '.'),
-                '%new_paket%'         => $customer->paket->name ?? '-',
-                '%new_bill%'          => 'Rp. ' . number_format($customer->paket->price ?? 0, 2, ',', '.'),
+                '%old_package%'         => $oldPackageName ?? '-',
+                '%old_bill%'          => 'Rp. ' . number_format($oldPackagePrice ?? 0, 2, ',', '.'),
+                '%new_package%'         => $customer->package->name ?? '-',
+                '%new_bill%'          => 'Rp. ' . number_format($customer->package->price ?? 0, 2, ',', '.'),
                 '%account_bank%'      => $accountBank,
             ];
 
@@ -1144,7 +1144,7 @@ class WhatsappMessageService
         }
     }
 
-    // =====            Changes paket         =====
+    // =====            Changes package         =====
     // ============================================
     // =====   Test WhatsApp Message Manual   =====
 

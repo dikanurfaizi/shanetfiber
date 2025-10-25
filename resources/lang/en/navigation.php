@@ -28,7 +28,7 @@ return [
     'receipts' => [
         'nav-item' => 'Receipts'
     ],
-    'pakets' => [
+    'packages' => [
         'nav-item' => 'Packages',
         'index' => 'Show All Packages',
         'create' => 'Create New Package',

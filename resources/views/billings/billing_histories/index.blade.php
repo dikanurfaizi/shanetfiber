@@ -47,18 +47,20 @@
                             @endcanany
                         </div>
 
-                        <!-- Additional Options -->
-                        <div class="row gx-3 gy-2 mt-3">
-                            <div class="col-lg-3 col-md-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" value="true" type="checkbox" name="cetak_pdf"
-                                        id="cetakPdfCheckbox">
-                                    <label class="form-check-label" for="cetakPdfCheckbox">
-                                        {{ __('Cetak PDF?') }}
-                                    </label>
+                        @canany(['billing-export-selected', 'billing-export-all'])
+                            <!-- Additional Options -->
+                            <div class="row gx-3 gy-2 mt-3">
+                                <div class="col-lg-3 col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" value="true" type="checkbox" name="cetak_pdf"
+                                            id="cetakPdfCheckbox">
+                                        <label class="form-check-label" for="cetakPdfCheckbox">
+                                            {{ __('Cetak PDF?') }}
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        @endcan
 
                         <!-- Search Button -->
                         <div class="row mt-3">
@@ -82,30 +84,36 @@
                 {{ $data->withQueryString()->links('vendor.pagination.simple-numeric') }}
             </div>
 
-            {{-- Export actions --}}
-            <div class="d-flex" style="gap: 10px;">
-                {{-- Filter Periode --}}
-                <form action="{{ route('billingHistory.index') }}" method="GET" id="periodeForm"
-                    class="d-flex align-items-center">
-                    <label for="periode_id" class="fw-bold text-primary me-2 mb-0 mr-1">Periode</label>
-                    {!! Form::select('periode_id', $periode, request('periode_id'), [
-                        'placeholder' => __('All Periode'),
-                        'class' => 'form-control form-control-sm w-auto',
-                        'onchange' => 'this.form.submit()',
-                        'id' => 'periode_id',
-                    ]) !!}
-                </form>
+            @canany(['billing-export-selected', 'billing-export-all'])
+                {{-- Export actions --}}
+                <div class="d-flex" style="gap: 10px;">
+                    @can('billing-export-selected')
+                        {{-- Filter Periode --}}
+                        <form action="{{ route('billingHistory.index') }}" method="GET" id="periodeForm"
+                            class="d-flex align-items-center">
+                            <label for="periode_id" class="fw-bold text-primary me-2 mb-0 mr-1">Periode</label>
+                            {!! Form::select('periode_id', $periode, request('periode_id'), [
+                                'placeholder' => __('All Periode'),
+                                'class' => 'form-control form-control-sm w-auto',
+                                'onchange' => 'this.form.submit()',
+                                'id' => 'periode_id',
+                            ]) !!}
+                        </form>
 
-                <form action="{{ route('billingHistory.export.selected') }}" method="GET">
-                    <input type="hidden" name="status" value="{{ request('status') }}">
-                    <input type="hidden" name="periode_id" value="{{ request('periode_id') }}">
-                    <button type="submit" class="btn btn-sm btn-success">Export Selected</button>
-                </form>
+                        <form action="{{ route('billingHistory.export.selected') }}" method="GET">
+                            <input type="hidden" name="status" value="{{ request('status') }}">
+                            <input type="hidden" name="periode_id" value="{{ request('periode_id') }}">
+                            <button type="submit" class="btn btn-sm btn-success">Export Selected</button>
+                        </form>
+                    @endcan
 
-                <form action="{{ route('billingHistory.export.all') }}" method="GET">
-                    <button type="submit" class="btn btn-sm btn-dark">Export All</button>
-                </form>
-            </div>
+                    @can('billing-export-all')
+                        <form action="{{ route('billingHistory.export.all') }}" method="GET">
+                            <button type="submit" class="btn btn-sm btn-dark">Export All</button>
+                        </form>
+                    @endcan
+                </div>
+            @endcanany
         </div>
 
         @if ($totalPrice > 0)

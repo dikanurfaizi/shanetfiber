@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Models\Paket\Paket;
+use App\Models\Packages\Package;
 use App\Models\Billing\BillingSubscriptionPeriode;
 
 class CustomerSubscription extends Model
@@ -17,7 +17,7 @@ class CustomerSubscription extends Model
 
     protected $fillable = [
         'customer_id',
-        'paket_id',
+        'package_id',
         'subscription_duration_id',
         'status',
         'start_date',
@@ -41,9 +41,9 @@ class CustomerSubscription extends Model
         return $this->belongsTo(Customer::class, 'customer_id');
     }
 
-    public function paket(): BelongsTo
+    public function package(): BelongsTo
     {
-        return $this->belongsTo(Paket::class, 'paket_id');
+        return $this->belongsTo(Package::class, 'package_id');
     }
 
     public function subscriptionDuration(): BelongsTo

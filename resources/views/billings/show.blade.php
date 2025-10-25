@@ -46,17 +46,17 @@
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
-                <strong>Paket:</strong>
-                {{ $billing->customer->paket->name ?? 'no data' }}
+                <strong>Package:</strong>
+                {{ $billing->customer->package->name ?? 'no data' }}
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>Package Price:</strong>
-                @if ($billing->customer->paket->price === 0)
+                @if ($billing->customer->package->price === 0)
                     {{ __('Free') }}
                 @else
-                    @moneyIDR($billing->customer->paket->price)
+                    @moneyIDR($billing->customer->package->price)
                 @endif
             </div>
         </div>
@@ -94,7 +94,7 @@
                 <div class="form-group">
                     <strong>Total Bill:</strong>
 
-                    @moneyIDR($billing->paket_price + $billing->tax)
+                    @moneyIDR($billing->total_amount)
                 </div>
             </div>
         @endif
@@ -150,7 +150,7 @@
                 </div>
             </div>
         @endif
-        @if ($billing->status === 'LS' && $billing->paket_price > 0)
+        @if ($billing->status === 'LS' && $billing->total_amount > 0)
             <div class="col-xs-12 col-sm-12 col-md-12">
                 <div class="form-group">
                     <strong>Payment Methode:</strong>
@@ -180,32 +180,34 @@
 
     </div>
     <div class="card-footer">
-        @if ($billing->status === 'BL' || $billing->status === 'PL')
-            {!! Form::model($billing, [
-                'method' => 'PATCH',
-                'route' => ['billings.payment', $billing->slug],
-                'style' => 'display:inline',
-            ]) !!}
-            <a href="#" class="btn btn-success btn-sm"
-                onclick="event.preventDefault(); this.closest('form').submit();">
-                <i class="fas fa-money-bill-wave text-white"></i>
-                {{ __('billing.button.pay') }}
-            </a>
-            {!! Form::close() !!}
-        @elseif ($billing->status === 'LS' && $billing->total_amount > 0)
-            {!! Form::model($billing, [
-                'method' => 'PATCH',
-                'route' => ['billings.unpayment', $billing->slug],
-                'style' => 'display:inline',
-            ]) !!}
-            <a href="#" class="btn btn-danger btn-sm"
-                onclick="event.preventDefault(); this.closest('form').submit();">
-                <i class="fas fa-money-bill-wave text-white"></i>
-                {{ __('billing.button.unpay') }}
-            </a>
-            <a class="btn btn-sm btn-primary" href="{{ route('receipts.show', $billing->receipt->slug) }}"><i
-                    class="fa fa-eye"></i> View Receipt</a>
-        @endif
+        @can('billing-edit')
+            @if ($billing->status === 'BL' || $billing->status === 'PL')
+                {!! Form::model($billing, [
+                    'method' => 'PATCH',
+                    'route' => ['billings.payment', $billing->slug],
+                    'style' => 'display:inline',
+                ]) !!}
+                <a href="#" class="btn btn-success btn-sm"
+                    onclick="event.preventDefault(); this.closest('form').submit();">
+                    <i class="fas fa-money-bill-wave text-white"></i>
+                    {{ __('billing.button.pay') }}
+                </a>
+                {!! Form::close() !!}
+            @elseif ($billing->status === 'LS' && $billing->total_amount > 0)
+                {!! Form::model($billing, [
+                    'method' => 'PATCH',
+                    'route' => ['billings.unpayment', $billing->slug],
+                    'style' => 'display:inline',
+                ]) !!}
+                <a href="#" class="btn btn-danger btn-sm"
+                    onclick="event.preventDefault(); this.closest('form').submit();">
+                    <i class="fas fa-money-bill-wave text-white"></i>
+                    {{ __('billing.button.unpay') }}
+                </a>
+                <a class="btn btn-sm btn-primary" href="{{ route('receipts.show', $billing->receipt->slug) }}"><i
+                        class="fa fa-eye"></i> View Receipt</a>
+            @endif
+        @endcan
         <a class="btn btn-sm btn-secondary" href="{{ route('billings.index') }}"><i class="fa fa-arrow-left"></i>
             Back</a>
     </div>
@@ -225,10 +227,12 @@
                     <tr>
                         <th>{{ __('billing.table.no') }}</th>
                         <th>{{ __('billing.table.periode') }}</th>
-                        <th>{{ __('billing.table.paket-name') }}</th>
-                        <th>{{ __('billing.table.paket-price') }}</th>
+                        <th>{{ __('billing.table.package-name') }}</th>
+                        <th>{{ __('billing.table.package-price') }}</th>
                         <th>{{ __('billing.table.bill-state') }}</th>
-                        <th width="120px">{{ __('customer.table.action') }}</th>
+                        @can('billing-edit')
+                            <th width="120px">{{ __('customer.table.action') }}</th>
+                        @endcan
                     </tr>
                     @foreach ($billings as $key => $billing)
                         <tr>
@@ -239,7 +243,7 @@
                                     title="Show Billing">{{ $billing->billingSubscription->billing_periode }}</a></td>
                             <td>
                                 <span class="badge text-success">
-                                    <i class="fas fa-chalkboard"></i> {{ $billing->customer->paket->name }}
+                                    <i class="fas fa-chalkboard"></i> {{ $billing->customer->package->name }}
                                 </span>
                             </td>
                             <td>
@@ -270,15 +274,17 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="d-flex items-center justify-content-end">
-                                {!! Form::model($billing, ['method' => 'PATCH', 'route' => ['billings.payment', $billing->slug]]) !!}
-                                <a href="#" class="btn btn-success btn-sm"
-                                    onclick="event.preventDefault(); this.closest('form').submit();">
-                                    <i class="fas fa-money-bill-wave text-white"></i>
-                                    {{ __('billing.button.pay') }}
-                                </a>
-                                {!! Form::close() !!}
-                            </td>
+                            @can('billing-edit')
+                                <td class="d-flex items-center justify-content-end">
+                                    {!! Form::model($billing, ['method' => 'PATCH', 'route' => ['billings.payment', $billing->slug]]) !!}
+                                    <a href="#" class="btn btn-success btn-sm"
+                                        onclick="event.preventDefault(); this.closest('form').submit();">
+                                        <i class="fas fa-money-bill-wave text-white"></i>
+                                        {{ __('billing.button.pay') }}
+                                    </a>
+                                    {!! Form::close() !!}
+                                </td>
+                            @endcan
                         </tr>
                     @endforeach
                 </table>

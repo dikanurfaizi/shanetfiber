@@ -61,7 +61,7 @@ class OrderController extends Controller
                 'customer_id' => $billing->customer_id,
                 'billing_id' => $billing->id,
                 'number' => rand(10000000, 99999999) . str_pad($billing->customer_id . $billing->id,  5, STR_PAD_LEFT),
-                'total_price' => $billing->paket_price + $billing->tax,
+                'total_price' => $billing->total_amount,
                 'payment_status' => 1,
             ]);
             $getOrder = $order->fresh();

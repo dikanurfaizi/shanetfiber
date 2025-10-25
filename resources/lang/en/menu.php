@@ -7,7 +7,7 @@ return [
         'dashboard' => 'Dashboard',
         'home' => 'Home',
         'customer' => 'Customer',
-        'all_paket' => 'All Paket',
+        'all_package' => 'All Package',
         'manage-customers' => 'Customers',
         'manage-roles' => 'Roles',
         'manage-users' => 'Users',

@@ -7,7 +7,7 @@ use App\Models\PppType;
 use App\Models\User;
 use App\Models\Member;
 use App\Models\Customer;
-use App\Models\Paket\Paket;
+use App\Models\Packages\Package;
 use App\Models\Billing\BillingPeriode;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
@@ -76,14 +76,14 @@ class CustomerFormService
     private function getPackageProfiles(string $traceId): Collection
     {
         try {
-            $profiles = DB::table('pakets')
-                ->join('ppp_profiles', 'pakets.profile', '=', 'ppp_profiles.profile_name')
+            $profiles = DB::table('packages')
+                ->join('ppp_profiles', 'packages.profile', '=', 'ppp_profiles.profile_name')
                 ->where('ppp_profiles.disabled', 'false')
-                ->orderBy('pakets.name')
-                ->select('pakets.id', 'pakets.name', 'pakets.price')
+                ->orderBy('packages.name')
+                ->select('packages.id', 'packages.name', 'packages.price')
                 ->get()
-                ->mapWithKeys(fn($paket) => [
-                    $paket->id => $paket->name . ' - Rp ' . number_format($paket->price, 0, ',', '.')
+                ->mapWithKeys(fn($package) => [
+                    $package->id => $package->name . ' - Rp ' . number_format($package->price, 0, ',', '.')
                 ]);
 
             LogHelper::logInfo(
@@ -127,7 +127,7 @@ class CustomerFormService
                 'customer' => $customer,
                 'customer_number' => $formatter->formatReceiver($customer->contact, null, false),
                 'users' => User::all(),
-                'pakets' => Paket::where('disabled', 'false')->orderBy('price', 'ASC')->get(),
+                'packages' => Package::where('disabled', 'false')->orderBy('price', 'ASC')->get(),
                 'members' => Member::all(),
                 'serverDisconnect' => $serverDisconnect,
                 'availablePeriodes' => $this->getAvailablePeriodes($traceId)
@@ -138,7 +138,7 @@ class CustomerFormService
                 [
                     'customer_id' => $customer->id,
                     'users_count' => $data['users']->count(),
-                    'pakets_count' => $data['pakets']->count(),
+                    'packages_count' => $data['packages']->count(),
                     'members_count' => $data['members']->count(),
                     'periodes_count' => $data['availablePeriodes']->count()
                 ],

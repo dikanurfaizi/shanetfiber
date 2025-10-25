@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use Exception;
+use Illuminate\Http\Request;
 use App\Models\Customer;
 use App\Models\Mikrotik;
-use Illuminate\Http\Request;
 use App\Models\Billing\Billing;
 use App\Models\Billing\BillingPeriode;
 use App\Models\Websystem;
 use App\Models\User;
+use App\Models\InvestorAdmin;
 use App\Services\Dashboard\DashboardService;
 use Illuminate\Support\Facades\Log;
 use App\Helpers\LogHelper;
@@ -56,21 +57,38 @@ class HomeController extends Controller
         $user = $auth['user'];
         $userId = $auth['userId'];
 
+        // ====== Versi Check ======
         if ($this->version != $this->newVersion) {
-            Log::warning('Version mismatch', ['current_version' => $this->version, 'required_version' => $this->newVersion]);
-            return redirect()->route('settings.update.index')->with('error', 'Please update first!');
+            Log::warning('Version mismatch', [
+                'trace_id' => $traceId,
+                'current_version' => $this->version,
+                'required_version' => $this->newVersion
+            ]);
+            return redirect()->route('settings.update.index')
+                ->with('error', 'Please update first!');
         }
 
-        // Base query sesuai permission
+        // ====== Investor Override Logic ======
+        if ($user->can('investor-customer-list')) {
+            // Ambil semua admin_id yang berelasi dengan investor
+            $linkedAdminIds = InvestorAdmin::where('investor_id', $userId)->pluck('admin_id')->toArray();
+
+            // Jika mau investor juga melihat datanya sendiri:
+            $userIds = array_merge([$userId], $linkedAdminIds);
+        } else {
+            $userIds = [$userId];
+        }
+
+        // ====== Base Query sesuai permission ======
         $baseQuery = $user->can('view-customers-widget-total')
             ? Mikrotik::query()
-            : Mikrotik::whereIn('id', Customer::where('user_id', $userId)->pluck('mikrotik_id'));
+            : Mikrotik::whereIn('id', Customer::whereIn('user_id', $userIds)->pluck('mikrotik_id'));
 
-        // Ambil semua routers (aktif + disabled)
+        // ====== Ambil semua routers (aktif + disabled) ======
         $mikrotiks = $baseQuery->orderBy('name')->get();
 
-        // Hitungan
-        $totalRouters  = $mikrotiks->count();
+        // ====== Hitungan ======
+        $totalRouters   = $mikrotiks->count();
         $routerEnabled  = $mikrotiks->where('disabled', 'false')->count();
         $routerDisabled = $totalRouters - $routerEnabled;
 
@@ -89,9 +107,13 @@ class HomeController extends Controller
         // Initialize admin billing summary
         $adminBillingSummary = null;
 
-        if ($user && $user->can('view-billings-widget-total') && $lastBillingPeriode) {
-            $adminBillingSummary = $this->getOwnerBillingSummary($lastBillingPeriode->id);
-        } else if (!$lastBillingPeriode) {
+        if ($user && $lastBillingPeriode) {
+            if ($user->can('investor-billing-widget')) {
+                $adminBillingSummary = $this->getOwnerBillingSummary($lastBillingPeriode->id, $user->id);
+            } elseif ($user->can('view-billings-widget-total')) {
+                $adminBillingSummary = $this->getOwnerBillingSummary($lastBillingPeriode->id);
+            }
+        } elseif (!$lastBillingPeriode) {
             LogHelper::logWarning(null, ['user_id' => $user->id], 404, 'No last billing period found for admin summary', $traceId);
         }
 
@@ -117,85 +139,9 @@ class HomeController extends Controller
         ), $summaryTotals, $customerSummary));
     }
 
-    // private function processRouters($routersEnable, $traceId): void
-    // {
-    //     $auth = $this->getUserAuthData();
-    //     $user = $auth['user'];
-    //     $userId = $auth['userId'];
-
-    //     $cacheKey = "dashboard:routers:summary:user:{$userId}";
-
-    //     $countRouterOnline = $countRouterOffline = $sumCustomersOnline = $sumCustomersOffline = $sumCustomersIsolir = 0;
-    //     $onlineRouters = collect();
-
-    //     $isolirProfiles = AutoIsolir::whereIn('mikrotik_id', $routersEnable->pluck('id'))->pluck('profile_id', 'mikrotik_id');
-
-    //     foreach ($routersEnable as $router) {
-    //         $profileIsolir = $isolirProfiles->get($router->id);
-
-    //         try {
-    //             $response = $this->testConnectionService->checkOnline($router, $traceId);
-
-    //             if ($response['status']) {
-    //                 $onlineRouters->push([
-    //                     'id' => $router->id,
-    //                     'host' => $router->host,
-    //                     'data' => $response['data'],
-    //                 ]);
-    //                 $countRouterOnline++;
-
-    //                 // Tentukan query berdasarkan permission
-    //                 $customerQuery = Customer::query();
-    //                 if ($user->can('view-customers-widget-total')) {
-    //                     $customerQuery->where('mikrotik_id', $router->id)->where('disabled', 'false');
-    //                 } else {
-    //                     $customerQuery->where('user_id', $userId)->where('mikrotik_id', $router->id);
-    //                 }
-
-    //                 $usernames = $customerQuery->pluck('username');
-    //                 $activeSecrets = collect($this->secretService->getPppActive($router, $traceId))->pluck('name');
-    //                 $activeSecretsForUser = $activeSecrets->intersect($usernames);
-
-    //                 $sumCustomersOnline += $activeSecretsForUser->count();
-    //                 $sumCustomersOffline += $usernames->diff($activeSecretsForUser)->count();
-
-    //                 $countIsolir = 0;
-    //                 if ($profileIsolir) {
-    //                     $secrets = $this->secretService->getSecretByProfile($router, $profileIsolir, $traceId);
-    //                     if ($secrets !== 'error' && !empty($secrets)) {
-    //                         $countIsolir = collect($secrets)
-    //                             ->filter(fn($secret) => $usernames->contains($secret['name']) && $secret['disabled'] === 'false')
-    //                             ->count();
-    //                     }
-    //                 }
-
-    //                 $sumCustomersIsolir += $countIsolir;
-    //             } else {
-    //                 $countRouterOffline++;
-    //             }
-    //         } catch (\Exception $e) {
-    //             $countRouterOffline++;
-    //             LogHelper::logError(null, [
-    //                 'mikrotik_id' => $router->id,
-    //                 'error_message' => $e->getMessage(),
-    //             ], 500, 'Router connection failed', $traceId);
-    //         }
-    //     }
-
-    //     // simpan ke cache langsung, nggak perlu return
-    //     Cache::put($cacheKey, [
-    //         'onlineRouters' => $onlineRouters,
-    //         'countRouterOnline' => $countRouterOnline,
-    //         'countRouterOffline' => $countRouterOffline,
-    //         'sumCustomersOnline' => $sumCustomersOnline,
-    //         'sumCustomersOffline' => $sumCustomersOffline,
-    //         'sumCustomersIsolir' => $sumCustomersIsolir,
-    //     ], now()->addMinutes(10));
-    // }
-
-    private function getOwnerBillingSummary(int $billingPeriodeId)
+    private function getOwnerBillingSummary(int $billingPeriodeId, ?int $investorId = null)
     {
-        // Subquery ambil billing terbaru per customer untuk periode tertentu
+        // Subquery: billing terbaru per customer untuk periode tertentu
         $latestBillingsSub = DB::table('billings as b2')
             ->join('billing_subscription_periodes as bsp2', 'b2.billing_subscription_id', '=', 'bsp2.id')
             ->where('bsp2.billing_periode_id', $billingPeriodeId)
@@ -206,7 +152,7 @@ class HomeController extends Controller
             where b3.customer_id = b2.customer_id
         )');
 
-        // Query utama join users, customers, billing terbaru dan periode
+        // Base query user + customer + billing
         $users = DB::table('users as u')
             ->leftJoin('customers as c', function ($join) {
                 $join->on('c.user_id', '=', 'u.id')
@@ -215,27 +161,33 @@ class HomeController extends Controller
             ->leftJoinSub($latestBillingsSub, 'b', function ($join) {
                 $join->on('b.customer_id', '=', 'c.id');
             })
-            ->leftJoin('billing_periodes as bp', 'bp.id', '=', 'b.billing_periode_id')
-            ->select(
-                'u.id as admin_id',
-                'u.name as admin_name',
-                'b.billing_periode_id',
-                'bp.name as periode_name',
-                DB::raw('COUNT(DISTINCT b.customer_id) as total_customers'),
-                DB::raw('COALESCE(SUM(b.total_amount), 0) as total_billing'),
-                DB::raw('COALESCE(SUM(CASE WHEN b.status = "LS" THEN b.total_amount ELSE 0 END), 0) as total_paid'),
-                DB::raw('COALESCE(SUM(CASE WHEN b.status = "PL" THEN b.total_amount ELSE 0 END), 0) as total_paylater'),
-                DB::raw('COALESCE(SUM(CASE WHEN b.status IN ("BL", "NP") THEN b.total_amount ELSE 0 END), 0) as total_unpaid'),
-                DB::raw('COUNT(DISTINCT CASE WHEN b.status = "LS" THEN b.customer_id END) as total_paid_customers'),
-                DB::raw('COUNT(DISTINCT CASE WHEN b.status = "PL" THEN b.customer_id END) as total_paylater_customers'),
-                DB::raw('COUNT(DISTINCT CASE WHEN b.status IN ("BL", "NP") THEN b.customer_id END) as total_unpaid_customers')
-            )
+            ->leftJoin('billing_periodes as bp', 'bp.id', '=', 'b.billing_periode_id');
+
+        // 🔹 Jika ada investor_id, batasi user yang terlihat
+        if ($investorId) {
+            $users->join('investor_admins as ia', 'ia.admin_id', '=', 'u.id')
+                ->where('ia.investor_id', $investorId);
+        }
+
+        $users->select(
+            'u.id as admin_id',
+            'u.name as admin_name',
+            'b.billing_periode_id',
+            'bp.name as periode_name',
+            DB::raw('COUNT(DISTINCT b.customer_id) as total_customers'),
+            DB::raw('COALESCE(SUM(b.total_amount), 0) as total_billing'),
+            DB::raw('COALESCE(SUM(CASE WHEN b.status = "LS" THEN b.total_amount ELSE 0 END), 0) as total_paid'),
+            DB::raw('COALESCE(SUM(CASE WHEN b.status = "PL" THEN b.total_amount ELSE 0 END), 0) as total_paylater'),
+            DB::raw('COALESCE(SUM(CASE WHEN b.status IN ("BL", "NP") THEN b.total_amount ELSE 0 END), 0) as total_unpaid'),
+            DB::raw('COUNT(DISTINCT CASE WHEN b.status = "LS" THEN b.customer_id END) as total_paid_customers'),
+            DB::raw('COUNT(DISTINCT CASE WHEN b.status = "PL" THEN b.customer_id END) as total_paylater_customers'),
+            DB::raw('COUNT(DISTINCT CASE WHEN b.status IN ("BL", "NP") THEN b.customer_id END) as total_unpaid_customers')
+        )
             ->groupBy('u.id', 'u.name', 'b.billing_periode_id', 'bp.name')
             ->havingRaw('COUNT(DISTINCT b.customer_id) > 0')
-            ->orderByDesc('total_customers')
-            ->get();
+            ->orderByDesc('total_customers');
 
-        return $users;
+        return $users->get();
     }
 
     private function getMonthlyBillingSummaryTotal()
@@ -261,26 +213,40 @@ class HomeController extends Controller
             ->toArray();
     }
 
-    private function getMonthlyBillingSummaryRelated(int $userId)
+    private function getMonthlyBillingSummaryRelated(int $userId, bool $isInvestor = false)
     {
+        $visibleUserIds = [$userId];
+
+        if ($isInvestor) {
+            $linkedAdminIds = DB::table('investor_admins')
+                ->where('investor_id', $userId)
+                ->pluck('admin_id')
+                ->toArray();
+
+            $visibleUserIds = array_unique(array_merge($visibleUserIds, $linkedAdminIds));
+        }
+
         return DB::table('billings as b')
             ->join('billing_subscription_periodes as bsp', 'b.billing_subscription_id', '=', 'bsp.id')
             ->join('billing_periodes as bp', 'bp.id', '=', 'bsp.billing_periode_id')
             ->join('customers as c', 'c.id', '=', 'b.customer_id')
-            ->where('c.user_id', $userId)
+            ->join('users as u', 'u.id', '=', 'c.user_id') // 🔹 Tambahkan join ke users
+            ->whereIn('c.user_id', $visibleUserIds)
             ->whereBetween('bp.created_at', [
-                DB::raw("STR_TO_DATE(CONCAT(YEAR(CURDATE()), '-01-01'), '%Y-%m-%d')"), // Januari tahun ini
-                now() // hari ini
+                DB::raw("STR_TO_DATE(CONCAT(YEAR(CURDATE()), '-01-01'), '%Y-%m-%d')"),
+                now()
             ])
             ->select(
                 'bsp.billing_periode_id',
                 'bp.name as month_name',
+                'u.id as admin_id',           // 🔹 Tambahkan ID admin
+                'u.name as admin_name',       // 🔹 Tambahkan nama admin
                 DB::raw('COUNT(DISTINCT b.customer_id) as total_customers'),
                 DB::raw("SUM(CASE WHEN b.status IN ('LS', 'BL', 'PL') THEN b.total_amount ELSE 0 END) as total_nominal"),
                 DB::raw("SUM(CASE WHEN b.status = 'LS' THEN b.total_amount ELSE 0 END) as total_paid"),
-                DB::raw("SUM(CASE WHEN b.status IN ('BL', 'PL', 'NP') THEN b.total_amount ELSE 0 END) as total_unpaid")
+                DB::raw("SUM(CASE WHEN b.status IN ('BL', 'PL', 'NP') THEN b.total_amount ELSE 0 END) as total_unpaid"),
             )
-            ->groupBy('bsp.billing_periode_id', 'bp.name')
+            ->groupBy('bsp.billing_periode_id', 'bp.name', 'u.id', 'u.name')
             ->orderBy('bsp.billing_periode_id')
             ->get()
             ->toArray();
@@ -334,6 +300,14 @@ class HomeController extends Controller
 
         if ($user->can('view-billings-widget-total') || $user->can('view-billings-widget-customer-count')) {
             // akses luas, tanpa filter tambahan
+        } elseif ($user->can('investor-billing-widget')) {
+            // akses investor: hanya billings terkait admin yang berelasi
+            $linkedAdminIds = InvestorAdmin::where('investor_id', $userId)->pluck('admin_id')->toArray();
+            $visibleUserIds = array_merge([$userId], $linkedAdminIds);
+
+            $billingQuery->whereHas('customer.user', function ($query) use ($visibleUserIds) {
+                $query->whereIn('id', $visibleUserIds);
+            });
         } else {
             // akses terbatas: hanya billings terkait user
             $billingQuery->whereHas('customer.user', function ($query) use ($userId) {
@@ -356,24 +330,43 @@ class HomeController extends Controller
 
     private function calculateCustomerSummary()
     {
-        $startTime = microtime(true); // start time
+        $startTime = microtime(true);
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
         $userId = $auth['userId'];
 
+        // 🔹 Bangun base query
         $customerQuery = Customer::withTrashed()->newQuery();
 
-        if (!($user->can('view-billings-widget-total') || $user->can('view-billings-widget-customer-count'))) {
-            $customerQuery->where('user_id', $userId);
+        // 🔹 Tentukan user scope
+        if ($user->can('view-billings-widget-total') || $user->can('view-billings-widget-customer-count')) {
+            // Admin global: bisa lihat semua
+            $scope = 'global';
+            $visibleUserIds = null; // tanpa filter user_id
+        } elseif ($user->can('investor-billing-widget')) {
+            // Investor: lihat admin yang berelasi
+            $scope = 'investor';
+            $visibleUserIds = array_merge(
+                [$userId],
+                InvestorAdmin::where('investor_id', $userId)->pluck('admin_id')->toArray()
+            );
+        } else {
+            // User biasa: hanya miliknya
+            $scope = 'self';
+            $visibleUserIds = [$userId];
         }
 
-        // Ringkasan total keseluruhan
+        if ($scope !== 'global') {
+            $customerQuery->whereIn('user_id', $visibleUserIds);
+        }
+
+        // 🔹 Hitung ringkasan total
         $total = (clone $customerQuery)->selectRaw('
-            COUNT(*) as totalCustomers,
-            SUM(CASE WHEN disabled = "false" AND activation = "true" AND deleted_at IS NULL THEN 1 ELSE 0 END) as totalEnabled,
-            SUM(CASE WHEN disabled = "true" AND activation = "false" AND deleted_at IS NULL THEN 1 ELSE 0 END) as totalDisabled,
-            SUM(CASE WHEN disabled = "true" AND activation = "false" AND deleted_at IS NOT NULL THEN 1 ELSE 0 END) as totalNonActiveDisabled
-        ')->first();
+        COUNT(*) as totalCustomers,
+        SUM(CASE WHEN disabled = "false" AND activation = "true" AND deleted_at IS NULL THEN 1 ELSE 0 END) as totalEnabled,
+        SUM(CASE WHEN disabled = "true" AND activation = "false" AND deleted_at IS NULL THEN 1 ELSE 0 END) as totalDisabled,
+        SUM(CASE WHEN disabled = "true" AND activation = "false" AND deleted_at IS NOT NULL THEN 1 ELSE 0 END) as totalNonActiveDisabled
+    ')->first();
 
         $totalActiveCustomers = (clone $customerQuery)
             ->where('disabled', 'false')
@@ -381,19 +374,24 @@ class HomeController extends Controller
             ->whereNull('deleted_at')
             ->count();
 
+        // 🔹 Group per Mikrotik
         $perMikrotik = DB::table('mikrotiks')
-            ->leftJoin('customers', function ($join) use ($user, $userId) {
+            ->leftJoin('customers', function ($join) use ($user, $visibleUserIds) {
                 $join->on('customers.mikrotik_id', '=', 'mikrotiks.id')
                     ->where('customers.disabled', 'false')
                     ->where('customers.activation', 'true')
                     ->whereNull('customers.deleted_at');
 
-                // Filter user jika bukan admin
+                // Filter user scope jika tidak punya izin total view
                 if (!($user->can('view-billings-widget-total') || $user->can('view-billings-widget-customer-count'))) {
-                    $join->where('customers.user_id', $userId);
+                    $join->whereIn('customers.user_id', $visibleUserIds);
                 }
             })
-            ->select('mikrotiks.id', 'mikrotiks.name as mikrotik_name', DB::raw('COUNT(customers.id) as total_customers'))
+            ->select(
+                'mikrotiks.id',
+                'mikrotiks.name as mikrotik_name',
+                DB::raw('COUNT(customers.id) as total_customers')
+            )
             ->groupBy('mikrotiks.id', 'mikrotiks.name')
             ->orderBy('mikrotiks.id')
             ->get();
@@ -404,7 +402,7 @@ class HomeController extends Controller
             'totalEnabled' => (int) $total->totalEnabled,
             'totalDisabled' => (int) $total->totalDisabled,
             'totalNonActiveDisabled' => (int) $total->totalNonActiveDisabled,
-            'perMikrotik' => $perMikrotik, // bisa jadi array atau collection
+            'perMikrotik' => $perMikrotik,
         ];
     }
 
@@ -415,12 +413,12 @@ class HomeController extends Controller
         $user = $auth['user'];
         $userId = $auth['userId'];
 
-        // Base query untuk menghitung jumlah customer per paket
+        // Base query untuk menghitung jumlah customer per package
         $query = Customer::query()
-            ->select('pakets.id', 'pakets.name as paket_name', DB::raw('COUNT(customers.id) as total_customers'))
-            ->join('pakets', 'customers.paket_id', '=', 'pakets.id')
+            ->select('packages.id', 'packages.name as package_name', DB::raw('COUNT(customers.id) as total_customers'))
+            ->join('packages', 'customers.package_id', '=', 'packages.id')
             ->whereNull('customers.deleted_at')
-            ->groupBy('pakets.id', 'pakets.name')
+            ->groupBy('packages.id', 'packages.name')
             ->orderByDesc('total_customers');
 
         // Filter berdasarkan role/permission
@@ -428,6 +426,10 @@ class HomeController extends Controller
             // Superadmin: tidak ada filter tambahan
         } elseif ($user->can('view-customer-churn-chart')) {
             $query->where('customers.user_id', $userId);
+        } elseif ($user->can('investor-billing-chart')) {
+            $linkedAdminIds = InvestorAdmin::where('investor_id', $userId)->pluck('admin_id')->toArray();
+            $visibleUserIds = array_merge([$userId], $linkedAdminIds);
+            $query->whereIn('customers.user_id', $visibleUserIds);
         } else {
             // Tidak punya akses
             return collect();
@@ -438,13 +440,14 @@ class HomeController extends Controller
 
     private function calculateCustomerRegistrationChurnData($request, $traceId): array
     {
-        $startTime = microtime(true); // start time
+        $startTime = microtime(true);
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
         $userId = $auth['userId'];
         $userName = $auth['userName'];
 
         $isSuperAdmin = $user->can('view-customer-registration-chart');
+        $isInvestor = $user->can('investor-customer-registration');
         $months = collect();
         $registrationData = [];
         $churnData = [];
@@ -452,52 +455,54 @@ class HomeController extends Controller
         $startDate = now()->subMonths(11)->startOfMonth();
         $endDate = now()->endOfMonth();
 
+        // Bangun list bulan
         $current = $startDate->copy();
         while ($current <= $endDate) {
             $months->push($current->format('M Y'));
             $current->addMonth();
         }
 
+        // 🔹 CASE 1: Super Admin => semua admin
         if ($isSuperAdmin) {
             $admins = User::where('disabled', 'false')->get();
-            foreach ($admins as $admin) {
-                $adminId = $admin->id;
-                $registrationData[$adminId] = [
-                    'adminName' => $admin->name,
-                    'counts' => []
-                ];
-                $churnData[$adminId] = ['counts' => []];
+        }
+        // 🔹 CASE 2: Investor => admin yang berelasi dengan investor
+        elseif ($isInvestor) {
+            $linkedAdminIds = DB::table('investor_admins')
+                ->where('investor_id', $userId)
+                ->pluck('admin_id')
+                ->toArray();
 
-                $current = $startDate->copy();
-                while ($current <= $endDate) {
-                    $monthStart = $current->startOfMonth();
-                    $monthEnd = $current->copy()->endOfMonth();
+            // Kalau investor juga ingin melihat data dirinya sendiri (opsional)
+            $admins = User::whereIn('id', array_merge([$userId], $linkedAdminIds))
+                ->where('disabled', 'false')
+                ->get();
 
-                    $registrationCount = Customer::where('user_id', $adminId)
-                        ->whereBetween('created_at', [$monthStart, $monthEnd])
-                        ->count();
+            LogHelper::logInfo(null, [
+                'investor_id' => $userId,
+                'linked_admin_ids' => $linkedAdminIds,
+                'total_admins' => $admins->count(),
+            ], 200, 'Investor related admins for registration/churn data', $traceId);
+        }
+        // 🔹 CASE 3: Admin biasa => hanya dirinya sendiri
+        else {
+            $admins = User::where('id', $userId)
+                ->where('disabled', 'false')
+                ->get();
+        }
 
-                    $churnCount = Customer::where('user_id', $adminId)
-                        ->where(function ($q) {
-                            $q->where('disabled', true)
-                                ->orWhereNotNull('deleted_at');
-                        })
-                        ->whereBetween('deleted_at', [$monthStart, $monthEnd])
-                        ->count();
-
-                    $registrationData[$adminId]['counts'][] = $registrationCount;
-                    $churnData[$adminId]['counts'][] = $churnCount;
-                    $current->addMonth();
-                }
-            }
-        } else {
-            $adminId = $userId;
-            $registrationData[$adminId] = ['adminName' => $userName, 'counts' => []];
+        // 🔹 Loop setiap admin untuk hitung data bulanan
+        foreach ($admins as $admin) {
+            $adminId = $admin->id;
+            $registrationData[$adminId] = [
+                'adminName' => $admin->name,
+                'counts' => []
+            ];
             $churnData[$adminId] = ['counts' => []];
 
             $current = $startDate->copy();
             while ($current <= $endDate) {
-                $monthStart = $current->startOfMonth();
+                $monthStart = $current->copy()->startOfMonth();
                 $monthEnd = $current->copy()->endOfMonth();
 
                 $registrationCount = Customer::where('user_id', $adminId)
@@ -523,6 +528,7 @@ class HomeController extends Controller
             'registrationData' => $registrationData,
             'churnData' => $churnData,
             'isSuperAdmin' => $isSuperAdmin,
+            'isInvestor' => $isInvestor,
         ];
     }
 
@@ -574,8 +580,9 @@ class HomeController extends Controller
         // Menentukan billing summary berdasarkan permission
         $billingSummary = match (true) {
             $user->can('view-billings-chart-nominal-total')   => $this->getMonthlyBillingSummaryTotal($billingPeriode->id),
-            $user->can('view-billings-chart-nominal-related') => $this->getMonthlyBillingSummaryRelated($userId),
+            $user->can('view-billings-chart-nominal-related') => $this->getMonthlyBillingSummaryRelated($userId, false),
             $user->can('view-billings-chart-customer-count')  => $this->getMonthlyCustomerCountForCashier(),
+            $user->can('investor-billing-chart')              => $this->getMonthlyBillingSummaryRelated($userId, true),
             default => collect(),
         };
 
@@ -589,6 +596,9 @@ class HomeController extends Controller
         }
         if ($user->can('view-billings-chart-customer-count')) {
             $permissions[] = 'view-billings-chart-customer-count';
+        }
+        if ($user->can('investor-billing-chart')) {
+            $permissions[] = 'investor-billing-chart';
         }
 
         return response()->json([

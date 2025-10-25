@@ -420,8 +420,8 @@ class PaymentCancellationService
                 startDate: null,
                 endDate: null,
                 orderId: null,
-                oldPaketName: null,
-                oldPaketPrice: null
+                oldPackageName: null,
+                oldPackagePrice: null
             );
 
             ProcessWhatsappMessageJob::dispatch($jobData)->onQueue('whatsapp_single');

@@ -135,8 +135,8 @@
                         ]) !!}
                     </div>
                     <div class="row align-items-center mb-1">
-                        <select name="search_paket" id="paket-dropdown" class="form-control d-none">
-                            <option value="">All Paket</option>
+                        <select name="search_package" id="package-dropdown" class="form-control d-none">
+                            <option value="">All package</option>
                         </select>
                     </div>
 
@@ -154,107 +154,3 @@
 <div class="text-center d-none d-md-inline pt-4">
     <button class="rounded-circle border-0" id="sidebarToggle"></button>
 </div> --}}
-
-
-@section('custom_scripts')
-    <script type="text/javascript">
-        $(document).ready(function() {
-
-            /*==================================================
-                Server Dropdown Change Event
-            ====================================================*/
-            // let idServer;
-            // $('#server-dropdown').on('change', function() {
-            //     // var idServer = this.value;
-            //     idServer = this.value;
-            //     const url = "{{ route('fetch.paket') }}";
-            //     $("#paket-dropdown").html('');
-            //     if (idServer) {
-            //         $('#paket-dropdown').removeClass('d-none');
-            //     } else {
-            //         $('#paket-dropdown').addClass('d-none');
-            //     }
-            //     $.ajax({
-
-            //         url: url,
-            //         type: "POST",
-            //         data: {
-            //             mikrotik_id: idServer,
-            //             _token: '{{ csrf_token() }}'
-            //         },
-            //         dataType: 'json',
-            //         success: function(result_server) {
-            //             $('#paket-dropdown').html('<option value="">Select Paket</option>');
-            //             $.each(result_server.pakets, function(key, value) {
-            //                 $("#paket-dropdown").append('<option value="' + value.id +
-            //                     '">' + value.name + ' - ' + 'Rp. ' + new Intl
-            //                     .NumberFormat().format(value.price) + ',00' +
-            //                     '</option>');
-            //             });
-            //             // $("#paket-dropdown").append('<option value="free">Free</option>');
-            //         }
-
-            //     });
-            // });
-            $('#server-dropdown').on('change', function() {
-                const idServer = this.value;
-
-                if (idServer) {
-                    $('#paket-dropdown').removeClass('d-none');
-                } else {
-                    $('#paket-dropdown').addClass('d-none');
-                }
-            });
-
-            // $('#paket-dropdown').on('change', function() {
-            //     var service = this.value;
-            //     $("#ppp_types_id").html('');
-            //     if (service) {
-            //          $('#ppp_types_id').removeClass('d-none');
-            //      } else {
-            //         $('#ppp_types_id').addClass('d-none');
-            //      }
-
-            //   });
-
-            $('#service-dropdown').on('change', function() {
-                var idService = this.value;
-                if (idService == 'ppp') {
-                    $("#input-ppp").removeClass('d-none');
-                    $("#input-ip-static").addClass('d-none');
-                } else if (idService == 'ip_static') {
-                    $("#input-ppp").addClass('d-none');
-                    $("#input-ip-static").removeClass('d-none');
-
-                    $("#interface-dropdown").html('');
-                    const url_interface = "{{ route('fetch.interface') }}";
-                    $.ajax({
-
-                        url: url_interface,
-                        type: "POST",
-                        data: {
-                            mikrotik_id: idServer,
-                            _token: '{{ csrf_token() }}'
-                        },
-                        dataType: 'json',
-                        success: function(result_server) {
-                            $('#interface-dropdown').html(
-                                '<option value="">Select Interface</option>');
-                            $.each(result_server, function(key, value) {
-                                $("#interface-dropdown").append('<option value="' +
-                                    value.name + '">' + value.name + '</option>');
-                            });
-                        }
-
-                    });
-
-                } else {
-                    $("#input-ppp").addClass('d-none');
-                    $("#input-ip-static").addClass('d-none');
-                }
-
-            });
-        });
-    </script>
-@endsection
-<!-- End of Sidebar -->

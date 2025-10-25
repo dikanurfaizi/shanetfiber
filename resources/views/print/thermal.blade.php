@@ -70,21 +70,21 @@
                         </td>
 
                         <td>
-                            @moneyIDR($receipt->paket_price)
+                            @moneyIDR($receipt->base_price)
                         </td>
 
                     </tr>
 
 
                     <tr class="heading">
-                        <td>Paket</td>
+                        <td>Package</td>
                         <td>Price</td>
                     </tr>
 
                     <tr class="item">
-                        <td>{{$receipt->paket_name}} - {{ $receipt->periode }}</td>
+                        <td>{{$receipt->package_name}} - {{ $receipt->periode }}</td>
                         <td>
-                            @moneyIDR($receipt->paket_price)
+                            @moneyIDR($receipt->package_price)
                         </td>
                     </tr>
 
@@ -99,7 +99,7 @@
                                         Sub Total:
                                     </td>
                                     <td>
-                                        @moneyIDR($receipt->paket_price)
+                                        @moneyIDR($receipt->package_price)
                                     </td>
                                 </tr>
                                 <tr>
@@ -115,7 +115,7 @@
                                         Total:
                                     </td>
                                     <td>
-                                        @moneyIDR($receipt->paket_price + $receipt->tax)
+                                        @moneyIDR($receipt->package_price + $receipt->tax)
                                     </td>
                                 </tr>
                             </table>

@@ -21,7 +21,7 @@
 
     <div class="card-body">
         <div style="overflow-x: auto;">
-            <table id="paketsTable" cellspacing="0" width="100%"
+            <table id="packagesTable" cellspacing="0" width="100%"
                 class="table datatable-loading no-footer sortable searchable">
                 <thead class="thead-light">
                     <th scope="col">#</th>
@@ -35,7 +35,7 @@
                         <tr>
                             <td>{{ ++$i }}</td>
                             <td>#{{ $order->number }}</td>
-                            <td>@moneyIDR($order->billing->paket_price)</td>
+                            <td>@moneyIDR($order->billing->base_price)</td>
                             <td>
                                 @if ($order->payment_status == 1)
                                     {{ __('billing.status.waiting-payment') }}

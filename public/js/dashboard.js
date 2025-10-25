@@ -19,76 +19,92 @@ async function fetchMonthlySummary() {
         const data = (await response.json()) || {};
         const { billingSummary = [], permissions = [] } = data ?? {};
 
-        if (!permissions.length) {
+        if (!permissions.length || !billingSummary.length) {
             document.querySelector("#chartWrapper1").innerHTML =
                 "<div class='text-center p-4 text-muted'>No data available</div>";
             return;
         }
 
-        const months = billingSummary.map((item) => item.month_name || "");
-        const totalPaid = billingSummary.map((item) => item.total_paid || 0);
-        const totalUnpaid = billingSummary.map(
-            (item) => item.total_unpaid || 0
-        );
-        const totalPaylater = billingSummary.map(
-            (item) => item.total_paylater || 0
-        );
-        const totalCustomers = billingSummary.map(
-            (item) => item.total_customers || 0
-        );
+        const months = [...new Set(billingSummary.map((item) => item.month_name || ""))];
+        const isInvestor = permissions.includes("investor-billing-chart");
 
         let series = [];
 
-        if (
+        // === INVESTOR VIEW (Paid & Unpaid saja) ===
+        if (isInvestor) {
+            const grouped = billingSummary.reduce((acc, item) => {
+                const admin = item.admin_name || "Unknown";
+                if (!acc[admin]) acc[admin] = [];
+                acc[admin].push({
+                    month: item.month_name,
+                    totalPaid: item.total_paid || 0,
+                    totalUnpaid: item.total_unpaid || 0,
+                });
+                return acc;
+            }, {});
+
+            Object.keys(grouped).forEach((admin) => {
+                const paidSeries = {
+                    name: `${admin} - Paid`,
+                    data: months.map((m) => {
+                        const found = grouped[admin].find((x) => x.month === m);
+                        return found ? found.totalPaid : 0;
+                    }),
+                    color: "#28a745", // ✅ Hijau
+                };
+
+                const unpaidSeries = {
+                    name: `${admin} - Unpaid`,
+                    data: months.map((m) => {
+                        const found = grouped[admin].find((x) => x.month === m);
+                        return found ? found.totalUnpaid : 0;
+                    }),
+                    color: "#dc3545", // ✅ Merah
+                };
+
+                series.push(paidSeries, unpaidSeries);
+            });
+        }
+        // === ADMIN / SUPERADMIN VIEW ===
+        else if (
             permissions.includes("view-billings-chart-nominal-total") ||
             permissions.includes("view-billings-chart-nominal-related")
         ) {
+            const totalPaid = billingSummary.map((i) => i.total_paid || 0);
+            const totalUnpaid = billingSummary.map((i) => i.total_unpaid || 0);
+
             series = [
-                {
-                    name: "Unpaid (Rp)",
-                    data: totalUnpaid,
-                    color: "#dc3545",
-                },
-                {
-                    name: "Paid (Rp)",
-                    data: totalPaid,
-                    color: "#28a745",
-                },
+                { name: "Paid (Rp)", data: totalPaid, color: "#28a745" },
+                { name: "Unpaid (Rp)", data: totalUnpaid, color: "#dc3545" },
             ];
         } else if (permissions.includes("view-billings-chart-customer-count")) {
+            const totalPaid = billingSummary.map((i) => i.total_paid || 0);
+            const totalUnpaid = billingSummary.map((i) => i.total_unpaid || 0);
+
             series = [
-                {
-                    name: "Unpaid",
-                    data: totalUnpaid,
-                    color: "#dc3545",
-                },
-                {
-                    name: "Paylater",
-                    data: totalPaylater,
-                    color: "#ffc107",
-                },
-                {
-                    name: "Paid",
-                    data: totalPaid,
-                    color: "#28a745",
-                },
+                { name: "Paid", data: totalPaid, color: "#28a745" },
+                { name: "Unpaid", data: totalUnpaid, color: "#dc3545" },
             ];
         }
 
-        const yAxisMax =
-            Math.max(...totalPaid, ...totalUnpaid, ...totalCustomers) * 1.25;
+        const maxValue = Math.max(
+            ...billingSummary.map((x) =>
+                Math.max(x.total_paid || 0, x.total_unpaid || 0)
+            )
+        );
+        const yAxisMax = maxValue * 1.25;
 
         const options = {
             chart: {
                 type: "bar",
-                height: 350,
+                height: 400,
                 stacked: true,
-                toolbar: {
-                    show: false,
-                },
+                toolbar: { show: false },
             },
             title: {
-                text: "Monthly Customer Summary",
+                text: isInvestor
+                    ? "Monthly Billing Summary (Investor View)"
+                    : "Monthly Customer Summary",
                 align: "center",
                 style: {
                     fontSize: "18px",
@@ -99,20 +115,19 @@ async function fetchMonthlySummary() {
             series,
             xaxis: {
                 categories: months,
-                labels: {
-                    rotate: -45,
-                },
+                labels: { rotate: -45 },
             },
             yaxis: {
                 min: 0,
                 max: yAxisMax,
                 labels: {
                     formatter: (value) =>
-                        permissions.includes(
-                            "view-billings-chart-nominal-total"
-                        ) ||
-                        permissions.includes(
-                            "view-billings-chart-nominal-related"
+                        permissions.some((p) =>
+                            [
+                                "view-billings-chart-nominal-total",
+                                "view-billings-chart-nominal-related",
+                                "investor-billing-chart",
+                            ].includes(p)
                         )
                             ? "Rp " + value.toLocaleString()
                             : `${Math.round(value)} customers`,
@@ -121,19 +136,18 @@ async function fetchMonthlySummary() {
             tooltip: {
                 y: {
                     formatter: (value) =>
-                        permissions.includes(
-                            "view-billings-chart-nominal-total"
-                        ) ||
-                        permissions.includes(
-                            "view-billings-chart-nominal-related"
+                        permissions.some((p) =>
+                            [
+                                "view-billings-chart-nominal-total",
+                                "view-billings-chart-nominal-related",
+                                "investor-billing-chart",
+                            ].includes(p)
                         )
                             ? "Rp " + value.toLocaleString()
                             : `${Math.round(value)} customers`,
                 },
             },
-            dataLabels: {
-                enabled: false,
-            },
+            dataLabels: { enabled: false },
             legend: {
                 position: "top",
                 horizontalAlign: "center",
@@ -141,10 +155,7 @@ async function fetchMonthlySummary() {
         };
 
         if (chart) chart.destroy();
-        chart = new ApexCharts(
-            document.querySelector("#chartWrapper1"),
-            options
-        );
+        chart = new ApexCharts(document.querySelector("#chartWrapper1"), options);
         chart.render();
     } catch (error) {
         console.error("Error fetching data: ", error);
@@ -225,219 +236,6 @@ window.mikrotiks.forEach((router) => {
     pollResource(router.slug); // rutin ambil cache tiap 10 detik
 });
 
-// // Fungsi untuk Router Status
-// function initializeRouterStatus() {
-//     $.ajaxSetup({
-//         headers: {
-//             "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content"),
-//         },
-//     });
-
-//     // Event click check online
-//     $(document).on("click", "#check-online", function (e) {
-//         e.preventDefault();
-//         const selectedRouterId = $(this).data("id");
-
-//         const url = window.routes.checkOnline.replace(
-//             "__ID__",
-//             selectedRouterId
-//         );
-
-//         console.log(
-//             "[CHECK ONLINE] Triggered for router:",
-//             selectedRouterId,
-//             "URL:",
-//             url
-//         );
-
-//         $.ajax({
-//             url: url,
-//             method: "POST",
-//             data: { id: selectedRouterId },
-//             success: function (response) {
-//                 console.log("[CHECK ONLINE SUCCESS]", response);
-
-//                 new Notify({
-//                     status: response.status,
-//                     title: response.title,
-//                     text: response.message,
-//                     effect: "slide",
-//                     speed: 500,
-//                     showCloseButton: true,
-//                     autotimeout: 5000,
-//                     autoclose: true,
-//                 });
-//             },
-//             error: function (data) {
-//                 console.error("[CHECK ONLINE ERROR]", data);
-//                 new Notify({
-//                     status: "error",
-//                     title: "Connection failed!",
-//                     text: data.responseJSON?.message || "An error occurred",
-//                     effect: "slide",
-//                     speed: 500,
-//                     showCloseButton: true,
-//                     autotimeout: 5000,
-//                     autoclose: true,
-//                 });
-//             },
-//         });
-//     });
-
-//     // Router status update
-//     function updateRouterData(routerSlug) {
-//         console.log("[INIT ROUTER DATA]", routerSlug);
-
-//         $("#loading_ppp_secret-" + routerSlug).removeClass("d-none");
-//         $("#loading_ppp_non_active-" + routerSlug).removeClass("d-none");
-//         $("#loading_ppp_active-" + routerSlug).removeClass("d-none");
-
-//         let allPppSecretsCount = 0;
-//         let allPppActiveCount = 0;
-
-//         function updateCountPppSecret() {
-//             console.log(`[REQ] Get PPP Secrets for ${routerSlug}`);
-//             return $.ajax({
-//                 url: window.routes.getPppSecrets.replace(
-//                     "__ROUTER__",
-//                     routerSlug
-//                 ),
-//                 method: "GET",
-//                 success: function (response) {
-//                     console.log(
-//                         `[RES] PPP Secrets for ${routerSlug}`,
-//                         response
-//                     );
-//                     allPppSecretsCount = response.allPppSecretsCount;
-//                     $("#ppp-secrets-count-" + routerSlug).text(
-//                         allPppSecretsCount
-//                     );
-//                 },
-//                 error: function (err) {
-//                     console.error(`[ERR] PPP Secrets for ${routerSlug}`, err);
-//                 },
-//             });
-//         }
-
-//         function updateCountPppActive() {
-//             console.log(`[REQ] Get PPP Active for ${routerSlug}`);
-//             return $.ajax({
-//                 url: window.routes.getPppActive.replace(
-//                     "__ROUTER__",
-//                     routerSlug
-//                 ),
-//                 method: "GET",
-//                 success: function (response) {
-//                     console.log(`[RES] PPP Active for ${routerSlug}`, response);
-//                     allPppActiveCount = response.allPppActiveCount;
-//                     $("#ppp-secrets-active-count-" + routerSlug).text(
-//                         allPppActiveCount
-//                     );
-//                 },
-//                 error: function (err) {
-//                     console.error(`[ERR] PPP Active for ${routerSlug}`, err);
-//                 },
-//             });
-//         }
-
-//         function updateCountPppNonActive() {
-//             const total = allPppSecretsCount - allPppActiveCount;
-//             console.log(`[CALC] Non Active for ${routerSlug} = ${total}`);
-//             $("#ppp-secrets-non-active-count-" + routerSlug).text(total);
-//         }
-
-//         function updateSystemResources() {
-//             console.log(`[REQ] Get Resources for ${routerSlug}`);
-//             return $.ajax({
-//                 url: window.routes.mikrotikResources.replace(
-//                     "__ROUTER__",
-//                     routerSlug
-//                 ),
-//                 method: "GET",
-//                 success: function (response) {
-//                     console.log(`[RES] Resources for ${routerSlug}`, response);
-
-//                     if (response.resources?.length > 0) {
-//                         const r = response.resources[0];
-//                         const memoryUse = r.totalMemory - r.freeMemory;
-//                         const memoryPercent = Math.round(
-//                             (memoryUse / r.totalMemory) * 100
-//                         );
-//                         const hddUse = r.totalHdd - r.freeHdd;
-//                         const hddPercent = Math.round(
-//                             (hddUse / r.totalHdd) * 100
-//                         );
-
-//                         $("#cpu-bar-" + routerSlug).css(
-//                             "width",
-//                             r.cpuLoad + "%"
-//                         );
-//                         $("#cpu-" + routerSlug).text(r.cpuLoad + "%");
-
-//                         $("#ram-bar-" + routerSlug).css(
-//                             "width",
-//                             memoryPercent + "%"
-//                         );
-//                         $("#memory-" + routerSlug).text(
-//                             r.memoryUsage + "/" + r.totalMemorySpace
-//                         );
-
-//                         $("#hdd-bar-" + routerSlug).css(
-//                             "width",
-//                             hddPercent + "%"
-//                         );
-//                         $("#hdd-" + routerSlug).text(
-//                             r.hddUsage + "/" + r.totalHddSpace
-//                         );
-
-//                         $("#boardname-" + routerSlug).text(r.boardName);
-//                         $("#uptime-" + routerSlug).text(r.uptime);
-//                         $("#status-" + routerSlug)
-//                             .removeClass("text-danger")
-//                             .addClass("text-success");
-//                     }
-//                 },
-//                 error: function (err) {
-//                     console.error(`[ERR] Resources for ${routerSlug}`, err);
-//                 },
-//             });
-//         }
-
-//         async function updateData() {
-//             console.log(`[START UPDATE DATA] ${routerSlug}`);
-//             await updateCountPppActive();
-//             await updateCountPppSecret();
-//             updateCountPppNonActive();
-//             await updateSystemResources();
-//             console.log(`[DONE UPDATE DATA] ${routerSlug}`);
-//         }
-
-//         updateData().catch(console.error);
-
-//         setInterval(updateSystemResources, 10000);
-//         setInterval(updateCountPppNonActive, 5000);
-//         setInterval(() => {
-//             updateCountPppSecret();
-//             updateCountPppActive();
-//         }, 10000);
-
-//         $(document).ajaxStop(function () {
-//             console.log(`[AJAX COMPLETE] ${routerSlug}`);
-//             $("#loading_ppp_secret-" + routerSlug).addClass("d-none");
-//             $("#loading_ppp_non_active-" + routerSlug).addClass("d-none");
-//             $("#loading_ppp_active-" + routerSlug).addClass("d-none");
-//         });
-//     }
-
-//     // Init routers
-//     if (window.mikrotiks && window.mikrotiks.length > 0) {
-//         console.log("[INIT ONLINE ROUTERS]", window.mikrotiks);
-//         window.mikrotiks.forEach(function (router) {
-//             updateRouterData(router.slug);
-//         });
-//     }
-// }
-
 // Fungsi untuk Customer Registration & Churn Chart
 let customerChart;
 let resizeTimer;
@@ -486,7 +284,7 @@ async function fetchCustomerRegistrationChurnData() {
 
 function renderCustomerRegistrationChurnChart(data) {
     try {
-        const { months, registrationData, churnData, isSuperAdmin } = data;
+        const { months, registrationData, churnData, isSuperAdmin, isInvestor } = data;
 
         if (!months || !registrationData) {
             console.error("Invalid chart data:", { months, registrationData });
@@ -496,7 +294,7 @@ function renderCustomerRegistrationChurnChart(data) {
         const series = [];
         const colors = [];
 
-        if (isSuperAdmin) {
+        if (isSuperAdmin || isInvestor) {
             Object.keys(registrationData).forEach((adminId, index) => {
                 const adminName =
                     registrationData[adminId]?.adminName || `Admin ${adminId}`;

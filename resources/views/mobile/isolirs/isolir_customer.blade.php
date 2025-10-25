@@ -21,10 +21,10 @@
                                     @foreach ($billings as $billing)
                                     <div class="text-primary">
                                         {{$loop->iteration}}. {{ $billing->billing_periode->name }}
-                                        <span class="text-danger">@moneyIDR($billing->paket_price)</span>
+                                        <span class="text-danger">@moneyIDR($billing->base_price)</span>
                                     </div>
                                     @endforeach
-                                    <br><br>Jumlah tagihan yang harus di bayar <i class="badge bg-danger-soft text-danger">@moneyIDR($billings->sum('paket_price'))</i>
+                                    <br><br>Jumlah tagihan yang harus di bayar <i class="badge bg-danger-soft text-danger">@moneyIDR($billings->sum('base_price'))</i>
                                 </div>
 
                                 <div class="card-body col-lg-6">

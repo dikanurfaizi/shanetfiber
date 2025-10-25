@@ -41,13 +41,13 @@ class BillingHistoryController extends Controller
 
         // PDF export
         if ($request->cetak_pdf === 'selected') {
-            $pdf = $this->billingReportService->generatePdf($billingsQuery, $searchParams);
+            $pdf = $this->billingReportService->generatePdf($billingsQuery, $searchParams, $traceId);
             return $pdf->download("Tagihan_{$searchParams['name']}_{$searchParams['address']}_{$searchParams['status']}_{$searchParams['month']}_{$searchParams['year']}.pdf");
         }
 
         if ($request->cetak_pdf) {
             $allQuery = Billing::with(['billingSubscription', 'customer']);
-            $pdf = $this->billingReportService->generatePdf($allQuery, $searchParams);
+            $pdf = $this->billingReportService->generatePdf($allQuery, $searchParams, $traceId);
             return $pdf->download("All_Billing.pdf");
         }
 

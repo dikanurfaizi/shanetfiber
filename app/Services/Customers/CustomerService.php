@@ -5,7 +5,7 @@ namespace App\Services\Customers;
 use App\Models\Customer;
 use App\Models\Billing\Billing;
 use App\Models\Billing\BillingPeriode;
-use App\Models\Paket\Paket;
+use App\Models\Packages\Package;
 use App\Models\DeletedCustomer;
 use App\Models\Receipt;
 use App\Models\Websystem;
@@ -135,9 +135,9 @@ class CustomerService
         try {
             $month = Carbon::parse($periodeName)->format('m');
             $year = Carbon::parse($periodeName)->format('Y');
-            $paket_price = $customer->paket->price;
+            $package_price = $customer->package->price;
             $discount = optional($customer->member)->discount ?? 0;
-            $total_price = $paket_price;
+            $total_price = $package_price;
 
             if ($customer->billing_option == 2 && $customer->billing_period === $periodeName) {
                 $total_price -= $discount;
@@ -151,8 +151,8 @@ class CustomerService
                 'billing_number' => str($customer->id . '-' . Str::random(4) . '-' . $month . '-' . $year)->slug(),
                 'customer_id' => $customer->id,
                 'customer_name' => $customer->name,
-                'paket_name' => $customer->paket->name,
-                'paket_price' => $total_price,
+                'package_name' => $customer->package->name,
+                'package_price' => $total_price,
                 'created_name' => auth()->user()->name,
                 'status' => 'BL',
             ]);
@@ -203,8 +203,8 @@ class CustomerService
                 'customer_id' => $customer->id,
                 'customer_name' => $customer->name,
                 'customer_address' => $customer->address,
-                'paket_name' => $customer->paket->name,
-                'paket_price' => $customer->paket->price * ((100 - $customer->discount) / 100),
+                'package_name' => $customer->package->name,
+                'package_price' => $customer->package->price * ((100 - $customer->discount) / 100),
                 'payment_methode' => 'cash',
                 'created_name' => auth()->user()->name,
                 'teller_name' => auth()->user()->name,
@@ -216,7 +216,7 @@ class CustomerService
                 [
                     'customer_id' => $customer->id,
                     'receipt_id' => $receipt->id,
-                    'amount' => $receipt->paket_price
+                    'amount' => $receipt->package_price
                 ],
                 200,
                 'Successfully created receipt',
@@ -254,7 +254,7 @@ class CustomerService
                 'slug' => $customer->slug,
                 'password' => $customer->password,
                 'email' => $customer->email,
-                'paket_id' => $customer->paket_id,
+                'package_id' => $customer->package_id,
                 'mikrotik_id' => $customer->mikrotik_id,
                 'internet_service' => $customer->internet_service,
                 'secret_id' => $customer->secret_id,
@@ -419,7 +419,7 @@ class CustomerService
             'primary_server' => $data['mikrotik_id'],
             'discount' => $data['discount'] ?? 0,
             'mikrotik_id' => $data['mikrotik_id'],
-            'paket_id' => Paket::findOrFail($data['paket_id'])->id,
+            'package_id' => Package::findOrFail($data['package_id'])->id,
             'username' => $creds['username'],
             'user_id' => $data['user_id'],
             'member_id' => $data['member_id'],
@@ -576,7 +576,7 @@ class CustomerService
                 $traceId
             );
 
-            $query = Customer::onlyTrashed()->with(['user', 'paket', 'member']);
+            $query = Customer::onlyTrashed()->with(['user', 'package', 'member']);
 
             // Apply all filters in one go
             $query->when(true, function ($query) use ($searchParams) {
@@ -600,8 +600,8 @@ class CustomerService
                     $query->where('mikrotik_id', $searchParams['server_search']);
                 }
 
-                if (!empty($searchParams['search_paket'])) {
-                    $query->where('paket_id', $searchParams['search_paket']);
+                if (!empty($searchParams['search_package'])) {
+                    $query->where('package_id', $searchParams['search_package']);
                 }
             })->orderBy('name');
 

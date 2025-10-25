@@ -30,8 +30,8 @@
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
-                <strong>Paket:</strong>
-                {{ $billing->customer->paket->name ?? 'no data' }}
+                <strong>Package:</strong>
+                {{ $billing->customer->package->name ?? 'no data' }}
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">

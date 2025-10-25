@@ -353,7 +353,7 @@
 
         <!-- Charts Section -->
         @canany(['view-billings-chart-nominal-total', 'view-billings-chart-nominal-related',
-            'view-billings-chart-customer-count'])
+            'view-billings-chart-customer-count', 'investor-billing-chart'])
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
@@ -366,7 +366,7 @@
         @endcanany
 
         <!-- Customer Registration/Churn Section -->
-        @canany(['view-customer-registration-chart', 'view-customer-churn-chart'])
+        @canany(['view-customer-registration-chart', 'view-customer-churn-chart', 'investor-billing-chart'])
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
@@ -494,13 +494,13 @@
                                             );
                                         @endphp
 
-                                        @foreach ($packageSummary as $index => $paket)
+                                        @foreach ($packageSummary as $index => $package)
                                             @php
                                                 $percentage =
                                                     $maxCustomers > 0
-                                                        ? ($paket->total_customers / $maxCustomers) * 100
+                                                        ? ($package->total_customers / $maxCustomers) * 100
                                                         : 0;
-                                                $totalCustomers += $paket->total_customers;
+                                                $totalCustomers += $package->total_customers;
                                             @endphp
                                             <tr>
                                                 <td class="ps-4">{{ $index + 1 }}</td>
@@ -513,11 +513,11 @@
                                                                 aria-valuemax="100">
                                                             </div>
                                                         </div>
-                                                        <span>{{ $paket->paket_name }}</span>
+                                                        <span>{{ $package->package_name }}</span>
                                                     </div>
                                                 </td>
                                                 <td class="text-end pe-4">
-                                                    <span class="fw-bold">{{ $paket->total_customers }}</span>
+                                                    <span class="fw-bold">{{ $package->total_customers }}</span>
                                                     <small class="text-muted ms-1">customers</small>
                                                 </td>
                                             </tr>

@@ -31,17 +31,17 @@
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
-                <strong>Paket:</strong>
-                {{ $receipt->paket_name ?? 'no data' }}
+                <strong>Package:</strong>
+                {{ $receipt->package_name ?? 'no data' }}
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>Package Price:</strong>
-                @if ($receipt->paket_price === 0)
+                @if ($receipt->package_price === 0)
                     {{ __('Free') }}
                 @else
-                    @moneyIDR($receipt->paket_price)
+                    @moneyIDR($receipt->package_price)
                 @endif
             </div>
         </div>
@@ -70,7 +70,7 @@
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>Total Price:</strong>
-                @moneyIDR($receipt->price_after_discount ?: $receipt->paket_price)
+                @moneyIDR($receipt->price_after_discount ?: $receipt->package_price)
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">

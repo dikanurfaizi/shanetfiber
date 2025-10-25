@@ -31,7 +31,7 @@ return [
     ],
     'info' => [
         'are_you_sure_to_delete_server' => 'Are you sure to delete server :server ?',
-        'warning-delete' => 'Warning!!! Deleting a server :server will delete their all member and all pakets on server :server',
+        'warning-delete' => 'Warning!!! Deleting a server :server will delete their all member and all packages on server :server',
         'after-delete' => 'After delete, it cannot be recovered.',
         'press-button' => 'Press :button-delete button to delete server :server and press :button-cancel to cancel this operation.'
     ]

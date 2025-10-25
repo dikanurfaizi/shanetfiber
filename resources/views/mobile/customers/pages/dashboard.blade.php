@@ -24,8 +24,8 @@
                                 <td>: {{ $customer->customer_id ?? 'No ID' }}</td>
                             </tr>
                             <tr>
-                                <td><strong>{{ __('customer.label.paket') }}</strong></td>
-                                <td>: {{ $customer->paket->name ?? 'No Data' }}</td>
+                                <td><strong>{{ __('customer.label.package') }}</strong></td>
+                                <td>: {{ $customer->package->name ?? 'No Data' }}</td>
                             </tr>
                             <tr>
                                 <td><strong>{{ __('customer.label.price') }}</strong></td>
@@ -89,7 +89,7 @@
                                     <tr>
                                         <th>{{ __('customer.table.no') }}</th>
                                         <th>{{ __('billing.table.periode') }}</th>
-                                        <th class="text-right">{{ __('billing.table.paket-price') }}</th>
+                                        <th class="text-right">{{ __('billing.table.package-price') }}</th>
                                         @if ($websystem->payment_gateway === 'enable')
                                             <th class="text-center">{{ __('billing.table.action') }}</th>
                                         @endif

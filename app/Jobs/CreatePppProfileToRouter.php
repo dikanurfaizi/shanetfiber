@@ -8,7 +8,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Mikrotik;
-use App\Models\Paket\PppProfile;
+use App\Models\Packages\PppProfile;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Helpers\LogHelper;
 use Illuminate\Bus\Batchable;

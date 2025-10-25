@@ -5,7 +5,7 @@ namespace App\Services\Customers;
 use App\Enums\WhatsAppAction;
 use App\Models\Customer;
 use App\Models\Mikrotik;
-use App\Models\Paket\Paket;
+use App\Models\Packages\Package;
 use App\Models\AutoIsolir;
 use App\Models\Billing\Billing;
 use App\Models\Receipt;
@@ -123,7 +123,7 @@ class CustomerActivationService
                 return ['error' => $error];
             }
 
-            $profile = Paket::where('id', $customer->paket_id)->value('profile');
+            $profile = Package::where('id', $customer->package_id)->value('profile');
             $comment_payment = $this->getCommentPayment($mikrotikId);
 
             if ($internet_service == 'ppp') {
@@ -370,8 +370,8 @@ class CustomerActivationService
                 'customer_id' => $customer->id,
                 'customer_name' => $customer->name,
                 'customer_address' => $customer->address,
-                'paket_name' => $customer->paket->name,
-                'paket_price' => $customer->paket->price * ((100 - $customer->discount) / 100),
+                'package_name' => $customer->package->name,
+                'package_price' => $customer->package->price * ((100 - $customer->discount) / 100),
                 'payment_methode' => 'cash',
                 'created_name' => auth()->user()->name ?? 'System',
                 'teller_name' => auth()->user()->name ?? 'System',
@@ -472,8 +472,8 @@ class CustomerActivationService
                 startDate: null,
                 endDate: null,
                 orderId: null,
-                oldPaketName: null,
-                oldPaketPrice: null
+                oldPackageName: null,
+                oldPackagePrice: null
             );
 
             $telegramJobData = new TelegramJobDto(
@@ -517,7 +517,7 @@ class CustomerActivationService
                 return ['error' => $error];
             }
 
-            $profile = Paket::where('id', $customer->paket_id)->value('profile');
+            $profile = Package::where('id', $customer->package_id)->value('profile');
             $comment_payment = $this->getCommentPayment($mikrotikId);
 
             if ($customer->internet_service == 'ppp') {

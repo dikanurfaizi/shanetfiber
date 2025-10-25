@@ -17,30 +17,30 @@
                     <td><b>#{{ $billing->billing_number }}</b></td>
                 </tr>
                 <tr>
-                    <td>Nama</td>
+                    <td>Name</td>
                     <td><b>{{ $billing->customer_name }}</b></td>
                 </tr>
                 <tr>
-                    <td>Periode</td>
+                    <td>Period</td>
                     <td><b>{{ $billing->billingSubscription->billing_periode }}</b></td>
                 </tr>
                 <tr>
-                    <td>Paket</td>
-                    <td><b>{{ $billing->paket_name }}</b></td>
+                    <td>Package</td>
+                    <td><b>{{ $billing->billingSubscription->customerSubscription->package->name }}</b></td>
                 </tr>
                 @if ($websystem->enable_tax === 'true')
                     <tr>
-                        <td>Harga</td>
-                        <td><b>@moneyIDR($billing->paket_price)</b></td>
+                        <td>Price</td>
+                        <td><b>@moneyIDR($billing->base_price)</b></td>
                     </tr>
                     <tr>
-                        <td>PPN </td>
-                        <td><b>@moneyIDR($billing->tax)</b></td>
+                        <td>Tax </td>
+                        <td><b>@moneyIDR($billing->tax_amount)</b></td>
                     </tr>
                 @endif
                 <tr>
                     <td>Total Price </td>
-                    <td><b>@moneyIDR($billing->paket_price + $billing->tax)</b></td>
+                    <td><b>@moneyIDR($billing->subtotal)</b></td>
                 </tr>
 
                 <tr>
@@ -54,7 +54,7 @@
                         </b></td>
                 </tr>
                 <tr>
-                    <td>Tanggal</td>
+                    <td>Date</td>
                     <td><b>{{ $billing->created_at->format('d M Y H:i') }}</b></td>
                 </tr>
             </table>

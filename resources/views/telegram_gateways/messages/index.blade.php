@@ -9,7 +9,7 @@
 
     <div class="card-body">
         <div style="overflow-x: auto;">
-            <table id="paketsTable" cellspacing="0" width="100%"
+            <table id="packagesTable" cellspacing="0" width="100%"
                 class="table datatable-loading no-footer sortable searchable">
                 <thead>
                     <tr>
@@ -39,11 +39,11 @@
                             <td>
                                 @if ($data->disabled == false)
                                     <span class="badge text-white bg-success">
-                                        <i class="fas fa-lock-open"></i> {{ __('paket.info.enabled') }}
+                                        <i class="fas fa-lock-open"></i> {{ __('package.info.enabled') }}
                                     </span>
                                 @else
                                     <span class="badge text-white bg-secondary">
-                                        <i class="fas fa-lock"></i> {{ __('paket.info.disabled') }}
+                                        <i class="fas fa-lock"></i> {{ __('package.info.disabled') }}
                                     </span>
                                 @endif
 

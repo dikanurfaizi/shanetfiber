@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Mikrotik\Ppp;
 
 use Carbon\Carbon;
-use App\Models\Paket\Paket;
+use App\Models\Packages\Package;
 use App\Models\PppType;
 use App\Models\Customer;
 use App\Models\Mikrotik;
@@ -424,13 +424,13 @@ class SecretController extends Controller
                 'username' => $username
             ], 200, 'Starting to disable PPP secret', $traceId);
 
-            $customerId = Customer::where('username', $username)->first();
-            dispatch(new DisablePppSecretJob($mikrotik, $username, $customerId, $traceId))->onQueue('ppp');
+            $customer = Customer::where('username', $username)->first();
+            dispatch(new DisablePppSecretJob($mikrotik, $username, $customer->id, $traceId))->onQueue('ppp');
 
             LogHelper::logInfo(null, [
                 'mikrotik_id' => $mikrotik->id,
                 'username' => $username,
-                'customer_id' => $customerId?->id
+                'customer_id' => $customer?->id
             ], 200, 'PPP secret disable job queued successfully', $traceId);
 
             return back()->with('success', 'Secret disable request queued.');
@@ -458,13 +458,13 @@ class SecretController extends Controller
                 'username' => $username
             ], 200, 'Starting to enable PPP secret', $traceId);
 
-            $customerId = Customer::where('username', $username)->first();
-            dispatch(new EnablePppSecretJob($mikrotik, $username, $customerId, $traceId))->onQueue('ppp');
+            $customer = Customer::where('username', $username)->first();
+            dispatch(new EnablePppSecretJob($mikrotik, $username, $customer->id, $traceId))->onQueue('ppp');
 
             LogHelper::logInfo(null, [
                 'mikrotik_id' => $mikrotik->id,
                 'username' => $username,
-                'customer_id' => $customerId?->id
+                'customer_id' => $customer?->id
             ], 200, 'PPP secret enable job queued successfully', $traceId);
 
             return back()->with('success', 'Secret enable request queued.');
@@ -514,11 +514,11 @@ class SecretController extends Controller
                     continue;
                 }
 
-                $paketId = Paket::where('mikrotik_id', $mikrotikId)
+                $packageId = Package::where('mikrotik_id', $mikrotikId)
                     ->where('profile', $secret['profile'])
                     ->value('id');
 
-                if (!$paketId) {
+                if (!$packageId) {
                     LogHelper::logWarning(null, [
                         'profile_name' => $secret['profile'],
                         'secret_name' => $secret['name']
@@ -531,7 +531,7 @@ class SecretController extends Controller
                     'name' => $secret['name'],
                     'password' => Hash::make($secret['password']),
                     'mikrotik_id' => $mikrotikId,
-                    'paket_id' => $paketId,
+                    'package_id' => $packageId,
                     'secret_id' => $secret['.id'],
                     'username' => $secret['name'],
                     'password_ppp' => $secret['password'],

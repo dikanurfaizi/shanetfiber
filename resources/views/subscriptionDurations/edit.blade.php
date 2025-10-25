@@ -1,35 +1,37 @@
-<x-layouts.app-layout title="Manage Durasi - {{ $packet->name }}">
+<x-layouts.app-layout title="Manage Subscription Duration - {{ $package->name }}">
 
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h4>Durasi Paket: {{ $packet->name }}</h4>
-            {{-- <a href="{{ route('packets.durations.create', $packet->slug) }}" class="btn btn-success">
+            <h4>Package Duration: {{ $package->name }}</h4>
+            {{-- <a href="{{ route('packets.durations.create', $package->slug) }}" class="btn btn-success">
                 <i class="fa fa-plus"></i> Tambah Durasi
             </a> --}}
         </div>
 
         <div class="card-body">
-            @if ($durations->count())
+            @if ($subscriptionDurations->count() > 0)
                 <table class="table table-bordered">
                     <thead>
                         <tr>
-                            <th>Durasi (Bulan)</th>
-                            <th>Harga</th>
-                            <th>Aksi</th>
+                            <th>Duration (in Months)</th>
+                            <th>Price</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($durations as $duration)
+                        @foreach ($subscriptionDurations as $duration)
                             <tr>
                                 <td>{{ $duration->duration_months }} bulan</td>
                                 <td>Rp {{ number_format($duration->price, 0, ',', '.') }}</td>
                                 <td>
-                                    <a href="{{ route('packets.durations.edit', [$packet->slug, $duration->id]) }}"
+                                    {{-- <a href="{{ route('packages.durations.edit', [$package->slug, $duration->id]) }}" --}}
+                                        <a href=""
                                         class="btn btn-warning btn-sm">
                                         <i class="fa fa-edit"></i>
                                     </a>
                                     <form
-                                        action="{{ route('packets.durations.destroy', [$packet->slug, $duration->id]) }}"
+                                        {{-- action="{{ route('packages.durations.destroy', [$package->slug, $duration->id]) }}" --}}
+                                        action=""
                                         method="POST" style="display:inline-block">
                                         @csrf
                                         @method('DELETE')

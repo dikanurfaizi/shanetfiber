@@ -68,4 +68,9 @@ class User extends Authenticatable
             ->withPivot('linked_at', 'created_by')
             ->withTimestamps();
     }
+
+    public function investorAdmins()
+    {
+        return $this->hasMany(InvestorAdmin::class, 'investor_id');
+    }
 }

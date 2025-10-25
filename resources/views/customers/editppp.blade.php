@@ -12,7 +12,7 @@
 
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
-                        <label for="paket"><strong>{{ __('customer.label.server') }}</strong>
+                        <label for="package"><strong>{{ __('customer.label.server') }}</strong>
                             <span class="badge bg-danger-soft text-danger">
                                 <i class="fas fa-server"></i> {{ $customer->mikrotik->name }}
                             </span>
@@ -22,7 +22,7 @@
                 @if ($customer->internet_service == 'ppp')
                     <div class="row align-items-center">
                         <div class="col-md-12 mb-3">
-                            <label for="paket"><strong>{{ __('pppoe.secret.service') }}</strong>
+                            <label for="package"><strong>{{ __('pppoe.secret.service') }}</strong>
                             </label>
                             {!! Form::select('ppp_type_id', $services, null, [
                                 'placeholder' => 'Select Service',

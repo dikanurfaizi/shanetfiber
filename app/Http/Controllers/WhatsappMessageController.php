@@ -75,7 +75,7 @@ class WhatsappMessageController extends Controller
             '%customer_id%' => 'WND-101',
             '%address%' => 'Ciseureuh, Purwakarta',
             '%day%' => 2,
-            '%pakets%' => 'Paket',
+            '%packages%' => 'Package',
             '%customer_service%' => Auth::user()->name,
             '%email%' => Auth::user()->email,
 

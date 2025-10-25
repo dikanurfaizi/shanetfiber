@@ -30,7 +30,7 @@
         </div>
 
         <div class="table-responsive">
-            <table id="paketsTable" class="table table-hover">
+            <table id="packagesTable" class="table table-hover">
                 <thead class="thead-dark">
                     <tr>
                         <th scope="col" class="text-center">#</th>
@@ -131,7 +131,7 @@
 
         <script>
             $(document).ready(function() {
-                $('#paketsTable').DataTable({
+                $('#packagesTable').DataTable({
                     responsive: true,
                     searching: false,
                     paging: false, // Disable DataTables pagination
@@ -149,7 +149,7 @@
                     ],
                     initComplete: function() {
                         // Move Laravel pagination into DataTables wrapper
-                        $('.pagination-container').appendTo($('#paketsTable_wrapper'));
+                        $('.pagination-container').appendTo($('#packagesTable_wrapper'));
                     }
                 });
             });
@@ -212,12 +212,12 @@
                 margin-bottom: 0;
             }
 
-            #paketsTable_wrapper {
+            #packagesTable_wrapper {
                 display: flex;
                 flex-direction: column;
             }
 
-            #paketsTable_wrapper .pagination-container {
+            #packagesTable_wrapper .pagination-container {
                 order: 2;
             }
         </style>

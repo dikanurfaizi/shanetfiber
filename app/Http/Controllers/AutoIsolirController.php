@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Mikrotik;
 use App\Models\AutoIsolir;
 use Illuminate\Http\Request;
-use App\Models\Paket\PppProfile;
+use App\Models\Packages\PppProfile;
 use App\Jobs\DisabledScheduleJob;
 use App\Services\Routerboard\ScriptService;
 use App\Services\Routerboard\FirewallService;
@@ -262,7 +262,7 @@ class AutoIsolirController extends Controller
 
         $scheduleId = $autoisolir->schedule_id;
         $disabledStatus = 'true';
-        dispatch(new DisabledScheduleJob($router, $scheduleId, $disabledStatus))->onQueue('default');
+        dispatch(new DisabledScheduleJob($router, $scheduleId, $disabledStatus, $traceId))->onQueue('default');
         $autoisolir->update([
             'disabled' => $disabledStatus,
         ]);
@@ -285,7 +285,7 @@ class AutoIsolirController extends Controller
         }
         $scheduleId = $autoisolir->schedule_id;
 
-        dispatch(new DisabledScheduleJob($router, $scheduleId, $disabledStatus))->onQueue('default');
+        dispatch(new DisabledScheduleJob($router, $scheduleId, $disabledStatus, $traceId))->onQueue('default');
         $autoisolir->update([
             'disabled' => $disabledStatus,
         ]);
@@ -303,7 +303,7 @@ class AutoIsolirController extends Controller
         }
         $scheduleId = $autoisolir->schedule_id;
         $disabledStatus = 'false';
-        dispatch(new DisabledScheduleJob($router[0], $scheduleId, $disabledStatus))->onQueue('default');
+        dispatch(new DisabledScheduleJob($router[0], $scheduleId, $disabledStatus, $traceId))->onQueue('default');
         $autoisolir->update([
             'disabled' => $disabledStatus,
         ]);

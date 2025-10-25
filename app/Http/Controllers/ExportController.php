@@ -9,11 +9,12 @@ use RouterOS\Exceptions\ClientException;
 use RouterOS\Exceptions\ConfigException;
 use RouterOS\Exceptions\ConnectException;
 use RouterOS\Exceptions\BadCredentialsException;
-use App\Models\Paket\PppProfile;
+use App\Models\Packages\PppProfile;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Facades\Bus;
 use App\Jobs\CreatePppProfileToRouter;
 use App\Jobs\MigrateCustomerToRouter;
+use Illuminate\Support\Str;
 
 class ExportController extends Controller
 {
@@ -39,6 +40,7 @@ class ExportController extends Controller
 
     public function exportToRouter(Request $request)
     {
+        $traceId = (string) Str::uuid();
         $uri = request()->path();
         $this->validate($request, [
             'source_server' => ['required'],
@@ -58,7 +60,7 @@ class ExportController extends Controller
         try {
             Bus::chain(array_merge(
                 $profileJobs,
-                [new MigrateCustomerToRouter($sourceMikrotik, $targetMikrotik)]
+                [new MigrateCustomerToRouter($sourceMikrotik, $targetMikrotik, $traceId)]
             ))->dispatch();
         } catch (\Throwable $e) {
             LogHelper::logWarning(

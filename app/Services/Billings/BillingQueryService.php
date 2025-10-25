@@ -5,6 +5,7 @@ namespace App\Services\Billings;
 use App\Models\Billing\Billing;
 use App\Models\Billing\BillingPeriode;
 use App\Models\User;
+use App\Models\InvestorAdmin;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Helpers\UserAuth;
@@ -97,6 +98,30 @@ class BillingQueryService
                 } else {
                     $q->where('user_id', $userId);
                 }
+            });
+        }
+
+        // === 🔒 Role-based visibility ===
+        $auth = $this->getUserAuthData();
+        $user = $auth['user'];
+
+        if ($user->can('view-bill-top-bar-total')) {
+            // Global admin → bisa lihat semua billing
+        } elseif ($user->can('investor-billing-total')) {
+            // Investor → billing milik dirinya dan admin yang terhubung
+            $linkedAdminIds = InvestorAdmin::where('investor_id', $user->id)
+                ->pluck('admin_id')
+                ->toArray();
+
+            $visibleUserIds = array_merge([$user->id], $linkedAdminIds);
+
+            $query->whereHas('customer', function ($q) use ($visibleUserIds) {
+                $q->whereIn('user_id', $visibleUserIds);
+            });
+        } else {
+            // Default user → hanya billing miliknya sendiri
+            $query->whereHas('customer', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
             });
         }
 

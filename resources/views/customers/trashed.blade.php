@@ -75,10 +75,10 @@
                                     'id' => 'server-dropdown',
                                 ]) !!}
                             </div>
-                            <!-- Kolom Paket -->
+                            <!-- Kolom Package -->
                             <div class="col-md-2 col-12 mb-2">
-                                <select name="search_paket" id="paket-dropdown" class="form-control d-none">
-                                    <option value="">All Paket</option>
+                                <select name="search_package" id="package-dropdown" class="form-control d-none">
+                                    <option value="">All Package</option>
                                 </select>
                             </div>
                         </div>
@@ -216,15 +216,15 @@
                             </span>
                             <td>
                                 <span class="badge bg-danger-soft">
-                                    <i class="fas fa-chalkboard"></i> {{ $customer->paket->name }}
+                                    <i class="fas fa-chalkboard"></i> {{ $customer->package->name }}
                                 </span>
                             </td>
                             <td>
                                 <span class="badge bg-danger-soft">
                                     @if ($customer->billing_option === 1 || ($customer->billing_option === 2 && $customer->billing_period === $periodeName))
-                                        @moneyIDR(optional($customer->paket)->price - optional($customer->member)->discount)
+                                        @moneyIDR(optional($customer->package)->price - optional($customer->member)->discount)
                                     @else
-                                        @moneyIDR(optional($customer->paket)->price)
+                                        @moneyIDR(optional($customer->package)->price)
                                     @endif
                                 </span>
                             </td>
@@ -317,7 +317,7 @@
                             @endif
                         </div>
 
-                        {{-- Baris 2: Nama + Nama Paket --}}
+                        {{-- Baris 2: Nama + Nama Package --}}
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <h6 class="mb-0" style="max-width: 60%">
                                 @can('customer-list')
@@ -330,8 +330,8 @@
                                 @endcan
                             </h6>
                             <span class="custom-badge text-truncate bg-turquoise-soft text-turquoise"
-                                style="max-width: 50%;" title="{{ $customer->paket->name }}">
-                                {{ $customer->paket->name }}
+                                style="max-width: 50%;" title="{{ $customer->package->name }}">
+                                {{ $customer->package->name }}
                             </span>
                         </div>
 
@@ -345,8 +345,8 @@
                                     $harga =
                                         $customer->billing_option === 1 ||
                                         ($customer->billing_option === 2 && $customer->billing_period === $periodeName)
-                                            ? optional($customer->paket)->price - optional($customer->member)->discount
-                                            : optional($customer->paket)->price;
+                                            ? optional($customer->package)->price - optional($customer->member)->discount
+                                            : optional($customer->package)->price;
                                 @endphp
                                 @moneyIDR($harga)
                             </small>

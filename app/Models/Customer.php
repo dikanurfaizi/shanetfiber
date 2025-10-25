@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Models\Billing\Billing;
-use App\Models\Paket\Paket;
+use App\Models\Packages\Package;
 use App\Models\PppType;
 use App\Models\Mikrotik;
 use App\Models\User;
@@ -45,9 +45,9 @@ class Customer extends Authenticatable
     }
 
     // Tetap pertahankan relasi ke paket utama
-    public function paket(): BelongsTo
+    public function package(): BelongsTo
     {
-        return $this->belongsTo(Paket::class)->withDefault([
+        return $this->belongsTo(Package::class)->withDefault([
             'name' => 'No Package',
             'price' => 0
         ]);

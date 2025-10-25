@@ -73,10 +73,10 @@
                                     'id' => 'server-dropdown',
                                 ]) !!}
                             </div>
-                            <!-- Kolom Paket -->
+                            <!-- Kolom Package -->
                             <div class="col-md-2 col-12 mb-2">
-                                <select name="search_paket" id="paket-dropdown" class="form-control d-none">
-                                    <option value="">All Paket</option>
+                                <select name="search_package" id="package-dropdown" class="form-control d-none">
+                                    <option value="">All Package</option>
                                 </select>
                             </div>
                         </div>
@@ -93,15 +93,6 @@
             </div>
         </span>
     </div>
-
-
-    {{-- <div class="card-header py-3">
-        @can('customer-create')
-            <span><a class="btn btn-sm btn-success mt-2" href="{{ route('customers.create') }}"><i class="fa fa-plus"></i>
-                    Add New Customer </a></span>
-        @endcan
-    </div> --}}
-
 
     <div class="card-body">
         {{-- {{ $data->withQueryString()->links() }} --}}
@@ -123,11 +114,13 @@
                     </select>
                 </div>
 
-                <!-- Export Button -->
-                <a href="{{ route('customers.export') }}" class="btn btn-success btn-sm d-flex align-items-center"
-                    style="height: 35px;">
-                    <i class="fas fa-file-excel" style="margin-right: 5px;"></i> Export to Excel
-                </a>
+                @canany(['customer-export'])
+                    <!-- Export Button -->
+                    <a href="{{ route('customers.export') }}" class="btn btn-success btn-sm d-flex align-items-center"
+                        style="height: 35px;">
+                        <i class="fas fa-file-excel" style="margin-right: 5px;"></i> Export to Excel
+                    </a>
+                @endcanany
             </form>
         </div>
         <div class="d-none d-md-block">
@@ -180,11 +173,13 @@
                                 {{ __('customer.table.state') }}
                             </span>
                         </th>
-                        <th width="80px">
-                            <span class="badge bg-danger-soft text-primary">
-                                {{ __('customer.table.action') }}
-                            </span>
-                        </th>
+                        @canany(['secret-disable', 'customer-edit', 'secret-edit', 'customer-delete'])
+                            <th width="80px">
+                                <span class="badge bg-danger-soft text-primary">
+                                    {{ __('customer.table.action') }}
+                                </span>
+                            </th>
+                        @endcanany
                     </tr>
                     @foreach ($data as $key => $customer)
                         <tr class="@if ($customer->disabled === 'true') text-secondary @else text-primary @endif">
@@ -222,15 +217,15 @@
                             </span>
                             <td>
                                 <span class="badge bg-danger-soft">
-                                    <i class="fas fa-chalkboard"></i> {{ $customer->paket->name }}
+                                    <i class="fas fa-chalkboard"></i> {{ $customer->package->name }}
                                 </span>
                             </td>
                             <td>
                                 <span class="badge bg-danger-soft">
                                     @if ($customer->billing_option === 1 || ($customer->billing_option === 2 && $customer->billing_period === $periodeName))
-                                        @moneyIDR(optional($customer->paket)->price - optional($customer->member)->discount)
+                                        @moneyIDR(optional($customer->package)->price - optional($customer->member)->discount)
                                     @else
-                                        @moneyIDR(optional($customer->paket)->price)
+                                        @moneyIDR(optional($customer->package)->price)
                                     @endif
                                 </span>
                             </td>
@@ -263,8 +258,8 @@
                                     @endif
                             </td>
                     @endif
-                    <td class="items-center justify-content-end">
-                        @canany(['secret-disable', 'customer-edit', 'secret-edit', 'customer-delete'])
+                    @canany(['secret-disable', 'customer-edit', 'secret-edit', 'customer-delete'])
+                        <td class="items-center justify-content-end">
                             <x-drop-down-action>
                                 @can('customer-edit')
                                     <li>
@@ -352,8 +347,8 @@
                                     </li>
                                 @endcan
                             </x-drop-down-action>
-                        @endcanany
-                    </td>
+                        </td>
+                    @endcanany
                     </tr>
                     @endforeach
                 </table>
@@ -394,7 +389,7 @@
                             @endif
                         </div>
 
-                        {{-- Baris 2: Nama + Nama Paket --}}
+                        {{-- Baris 2: Nama + Nama Package --}}
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <h6 class="mb-0" style="max-width: 60%">
                                 @can('customer-list')
@@ -407,8 +402,8 @@
                                 @endcan
                             </h6>
                             <span class="custom-badge text-truncate bg-turquoise-soft text-turquoise"
-                                style="max-width: 50%;" title="{{ $customer->paket->name }}">
-                                {{ $customer->paket->name }}
+                                style="max-width: 50%;" title="{{ $customer->package->name }}">
+                                {{ $customer->package->name }}
                             </span>
                         </div>
 
@@ -422,8 +417,8 @@
                                     $harga =
                                         $customer->billing_option === 1 ||
                                         ($customer->billing_option === 2 && $customer->billing_period === $periodeName)
-                                            ? optional($customer->paket)->price - optional($customer->member)->discount
-                                            : optional($customer->paket)->price;
+                                            ? optional($customer->package)->price - optional($customer->member)->discount
+                                            : optional($customer->package)->price;
                                 @endphp
                                 @moneyIDR($harga)
                             </small>
