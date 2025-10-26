@@ -17,7 +17,7 @@ class CustomerUpdateRequest extends FormRequest
             'password' => ['nullable', 'string', 'confirmed', 'min:8'],
             'discount' => ['numeric'],
             'email' => ['nullable', 'email', 'string', 'max:255', Rule::unique('customers')->ignore($customer->slug, 'slug')],
-            'paket_id' => 'required',
+            'package_id' => 'required',
             'contact' => 'digits_between:10,15|nullable',
             'address' => ['nullable', 'string'],
             'member_id' => ['nullable', 'exists:members,id'],

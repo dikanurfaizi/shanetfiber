@@ -23,7 +23,7 @@ class StorePackageCategoryRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:255', 'unique:paket_categories,slug'],
+            'slug' => ['nullable', 'string', 'max:255', 'unique:package_categories,slug'],
             'description' => ['nullable', 'string', 'max:500'],
             'is_active' => ['nullable', 'boolean'],
         ];

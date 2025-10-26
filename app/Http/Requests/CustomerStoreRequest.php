@@ -18,7 +18,7 @@ class CustomerStoreRequest extends FormRequest
 
         $rules = [
             'mikrotik_id' => 'required',
-            'paket_id' => 'required|exists:pakets,id',
+            'package_id' => 'required|exists:packages,id',
             'internet_service' => 'required|in:ppp,ip_static',
             'discount' => ['numeric', 'nullable'],
             'contact' => 'nullable|digits_between:10,15',
@@ -52,7 +52,7 @@ class CustomerStoreRequest extends FormRequest
             'name.required' => 'Name is required',
             // 'password.confirmed' => 'The password field must match confirm password.',
             'mikrotik_id.required' => 'Server is required',
-            'paket_id.required' => 'Paket is required',
+            'package_id.required' => 'Package is required',
             'ppp_type_id.required' => 'PPP type is required',
             'ip_static.required' => 'IP Address Static is required',
             'mac_address.required' => 'MAC Address is required',

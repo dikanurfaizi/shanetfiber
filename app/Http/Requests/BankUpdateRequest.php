@@ -16,7 +16,7 @@ class BankUpdateRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'bank' => 'required',
             //'account_number' => 'required|unique:banks,name,' . $bank->id . ',id,bank,' . $bank->bank,
-            //'name' => 'required|unique:pakets,name,' . $packet->id . ',id,mikrotik_id,' . $packet->mikrotik_id
+            //'name' => 'required|unique:packages,name,' . $packet->id . ',id,mikrotik_id,' . $packet->mikrotik_id
             'account_number' => ['required', 'string', 'max:255', Rule::unique('banks')->ignore($bank->slug, 'slug')],
         ];
     }

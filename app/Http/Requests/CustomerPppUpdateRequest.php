@@ -47,7 +47,7 @@ class CustomerPppUpdateRequest extends FormRequest
     {
         return [
             'password_ppp.required' => 'Password PPP is required',
-            'paket_id.required' => 'Paket is required',
+            'package_id.required' => 'Package is required',
 
         ];
     }

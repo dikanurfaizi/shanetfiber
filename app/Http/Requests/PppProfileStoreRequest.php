@@ -22,7 +22,7 @@ class PppProfileStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|unique:pakets|max:25|min:5',
+            'name' => 'required|unique:packages|max:25|min:5',
             'profile' => 'required',
             'price' => ['numeric', 'required'],
         ];
