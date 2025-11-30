@@ -4,10 +4,10 @@ namespace App\Services\WhatsappWebhook\Handlers;
 
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
-use App\Models\WhatsApp\WhatsAppMessage;
+use App\Models\Whatsapp\WhatsappMessage;
 use App\Models\Customer;
-use App\Services\WhatsAppWebhook\DTO\WebhookPayload;
-use App\Services\WhatsApp\KeywordProcessor;
+use App\Services\WhatsappWebhook\DTO\WebhookPayload;
+use App\Services\Whatsapp\KeywordProcessor;
 use App\Services\Whatsapp\OptOutService;
 use App\Services\Messaging\MessageDispatcher;
 use App\Services\Messaging\Handlers\WebhookReplyHandler;
@@ -31,7 +31,7 @@ class TextMessageHandler extends BaseHandler
 
         if (!$keyword) {
             // fallback
-            $keyword = WhatsAppMessage::where('slug', 'unknown_keyword')->first();
+            $keyword = WhatsappMessage::where('slug', 'unknown_keyword')->first();
         }
 
         // 2. If STOP → update DB

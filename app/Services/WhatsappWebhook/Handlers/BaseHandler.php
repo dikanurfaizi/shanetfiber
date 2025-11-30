@@ -2,7 +2,7 @@
 
 namespace App\Services\WhatsappWebhook\Handlers;
 
-use App\Services\WhatsAppWebhook\DTO\WebhookPayload;
+use App\Services\WhatsappWebhook\DTO\WebhookPayload;
 
 abstract class BaseHandler
 {

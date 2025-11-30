@@ -3,8 +3,8 @@
 namespace App\Services\WhatsappWebhook\Handlers;
 
 use App\Helpers\LogHelper;
-use App\Jobs\WhatsApp\ProcessIncomingMediaMessageJob;
-use App\Services\WhatsAppWebhook\DTO\WebhookPayload;
+use App\Jobs\Whatsapp\ProcessIncomingMediaMessageJob;
+use App\Services\WhatsappWebhook\DTO\WebhookPayload;
 
 class MediaMessageHandler extends BaseHandler
 {

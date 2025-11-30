@@ -3,11 +3,11 @@
 namespace App\Services\WhatsappWebhook;
 
 use App\Helpers\LogHelper;
-use App\Services\WhatsAppWebhook\DTO\WebhookPayload;
-use App\Services\WhatsAppWebhook\Handlers\MessageAckHandler;
-use App\Services\WhatsAppWebhook\Handlers\GroupHandler;
-use App\Services\WhatsAppWebhook\Handlers\TextMessageHandler;
-use App\Services\WhatsAppWebhook\Handlers\MediaMessageHandler;
+use App\Services\WhatsappWebhook\DTO\WebhookPayload;
+use App\Services\WhatsappWebhook\Handlers\MessageAckHandler;
+use App\Services\WhatsappWebhook\Handlers\GroupHandler;
+use App\Services\WhatsappWebhook\Handlers\TextMessageHandler;
+use App\Services\WhatsappWebhook\Handlers\MediaMessageHandler;
 
 class WebhookEventRouter
 {
