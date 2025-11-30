@@ -19,7 +19,7 @@ class ScriptService
     public function getAllScript($routerboard, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $query = new Query('/system/script/print');
             $scripts = $client->query($query)->read();
 
@@ -52,7 +52,7 @@ class ScriptService
     public function getScriptByName($routerboard, $scheduleName, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $query = (new Query('/system/script/print'))
                 ->where('name', $scheduleName);
             $script = $client->query($query)->read();
@@ -87,7 +87,7 @@ class ScriptService
     public function getScriptById($routerboard, $id, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $query = (new Query('/system/script/print'))
                 ->where('.id', $id);
             $script = $client->query($query)->read();
@@ -122,7 +122,7 @@ class ScriptService
     public function addScript($routerboard, $nameScript, $sourceScript, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $query = (new Query('/system/script/add'))
                 ->equal('name', $nameScript)
                 ->equal('source', $sourceScript)
@@ -201,7 +201,7 @@ class ScriptService
                 $comment = 'create_by_customer_management_mikrotik_>=7.10';
             }
 
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $query = (new Query('/system/script/add'))
                 ->equal('name', $nameScript)
                 ->equal('source', $sourceScript)
@@ -296,7 +296,7 @@ class ScriptService
                 $comment = 'create_by_customer_management_mikrotik_>=7.10';
             }
 
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $query = (new Query('/system/script/add'))
                 ->equal('name', $nameScript)
                 ->equal('source', $sourceScript)
@@ -338,7 +338,7 @@ class ScriptService
     public function setSourceScript($routerboard, $scriptId, $sourceScript, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $scripts = new Query('/system/script/print');
             $scripts->where('.id', $scriptId);
             $resultScripts = $client->query($scripts)->read();
@@ -431,7 +431,7 @@ class ScriptService
                 }}';
             }
 
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $scripts = new Query('/system/script/print');
             $scripts->where('.id', $scriptId);
             $resultScripts = $client->query($scripts)->read();
@@ -541,7 +541,7 @@ class ScriptService
                 }}';
             }
 
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $scripts = new Query('/system/script/print');
             $scripts->where('.id', $scriptId);
             $resultScripts = $client->query($scripts)->read();
@@ -600,7 +600,7 @@ class ScriptService
     public function removeScript($routerboard, $scriptId, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $scripts = new Query('/system/script/print');
             $scripts->where('.id', $scriptId);
             $resultScripts = $client->query($scripts)->read();

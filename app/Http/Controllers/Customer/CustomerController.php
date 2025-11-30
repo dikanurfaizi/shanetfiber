@@ -2,48 +2,57 @@
 
 namespace App\Http\Controllers\Customer;
 
+use App\Exports\CustomersExport;
+use App\Helpers\LogHelper;
+use App\Helpers\UserAuth;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\CustomerPppUpdateRequest;
+use App\Http\Requests\CustomerRouterUpdateRequest;
+use App\Http\Requests\CustomerStoreRequest;
+use App\Http\Requests\CustomerUpdateRequest;
 use App\Models\Customer;
 use App\Models\Mikrotik;
-
-use App\Services\Routerboard\Ppp\SecretService;
-use App\Services\Customers\CustomerService;
+use App\Services\Customers\CustomerActivationService;
 use App\Services\Customers\CustomerDataService;
-use App\Services\Customers\CustomerStatusService;
+use App\Services\Customers\CustomerDeletionService;
 use App\Services\Customers\CustomerFormService;
 use App\Services\Customers\CustomerPppService;
 use App\Services\Customers\CustomerRouterService;
-use App\Services\Customers\CustomerViewService;
+use App\Services\Customers\CustomerService;
+use App\Services\Customers\CustomerStatusService;
 use App\Services\Customers\CustomerUpdateService;
-use App\Services\Customers\CustomerActivationService;
-use App\Services\Customers\CustomerDeletionService;
-
+use App\Services\Customers\CustomerViewService;
+use App\Services\Routerboard\Ppp\SecretService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use App\Http\Requests\CustomerStoreRequest;
-use App\Http\Requests\CustomerUpdateRequest;
-use App\Http\Requests\CustomerPppUpdateRequest;
-use App\Http\Requests\CustomerRouterUpdateRequest;
-use App\Helpers\UserAuth;
-use App\Helpers\LogHelper;
+use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
 use RouterOS\Exceptions\ClientException;
 use RouterOS\Exceptions\ConnectException;
-use Illuminate\Support\Str;
-use Illuminate\Http\RedirectResponse;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\CustomersExport;
-use App\Http\Controllers\Controller;
+use App\Events\CustomerActivated;
 
 class CustomerController extends Controller
 {
     private SecretService $secretService;
+
     private CustomerService $customerService;
+
     private CustomerDataService $customerDataService;
+
     private CustomerStatusService $customerStatusService;
+
     private CustomerFormService $customerFormService;
+
     private CustomerPppService $customerPppService;
+
     private CustomerRouterService $customerRouterService;
+
     private CustomerViewService $customerViewService;
+
     private CustomerUpdateService $customerUpdateService;
+
     private CustomerActivationService $customerActivationService;
+
     private CustomerDeletionService $customerDeletionService;
 
     public function __construct(
@@ -108,7 +117,7 @@ class CustomerController extends Controller
             'server_search',
             'search_package',
             'status',
-            'search_admin'
+            'search_admin',
         ]);
 
         // Auto-set admin filter if user has permission
@@ -135,7 +144,7 @@ class CustomerController extends Controller
             'allServers' => $this->customerDataService->getActiveServers($traceId),
             'allAdmin' => $this->customerDataService->getActiveAdmins($traceId),
             'periodeName' => $this->customerDataService->getCurrentBillingPeriod($traceId),
-            'perPage' => $perPage
+            'perPage' => $perPage,
         ])->with('i', (request()->input('page', 1) - 1) * $perPage);
     }
 
@@ -167,8 +176,7 @@ class CustomerController extends Controller
     private function calculateTotalIncoming($customers, $traceId): float
     {
         return $customers->sum(
-            fn($customer) =>
-            $customer->package->price * ((100 - $customer->discount) / 100)
+            fn($customer) => $customer->package->price * ((100 - $customer->discount) / 100)
         );
     }
 
@@ -176,15 +184,16 @@ class CustomerController extends Controller
     {
         return match (true) {
             $e instanceof \RuntimeException => $e->getMessage(),
-            $e instanceof ClientException => "Server configuration error",
-            $e instanceof ConnectException => "Cannot connect to server",
-            default => "Operation failed. Please try again"
+            $e instanceof ClientException => 'Server configuration error',
+            $e instanceof ConnectException => 'Cannot connect to server',
+            default => 'Operation failed. Please try again'
         };
     }
 
     public function create()
     {
         $traceId = (string) Str::uuid();
+
         return view(
             'customers.create',
             $this->customerFormService->getCreateFormData($traceId)
@@ -209,9 +218,9 @@ class CustomerController extends Controller
                     'user_id',
                     'billing_option',
                     'periode_billing',
-                    'activation_date'
+                    'activation_date',
                 ]),
-                'customer' => $customer
+                'customer' => $customer,
             ], 200, 'Successfully created customer', $traceId);
 
             return redirect()->route('customers.index')
@@ -235,9 +244,7 @@ class CustomerController extends Controller
     public function show(Customer $customer)
     {
         $traceId = (string) Str::uuid();
-        LogHelper::logInfo(null, [
-            'customer' => $customer
-        ], 200, 'Successfuly fetch data customer', $traceId);
+
         return view('customers.show', $this->customerViewService->getCustomerViewData($customer, $traceId));
     }
 
@@ -245,8 +252,9 @@ class CustomerController extends Controller
     {
         $traceId = (string) Str::uuid();
         LogHelper::logInfo(null, [
-            'customer' => $customer
+            'customer' => $customer,
         ], 200, 'Successfuly fetch data customer', $traceId);
+
         return view(
             'customers.edit',
             $this->customerFormService->getEditFormData($customer, $traceId)
@@ -259,8 +267,9 @@ class CustomerController extends Controller
         $traceId = (string) Str::uuid();
         try {
             LogHelper::logInfo(null, [
-                'customer' => $customer
+                'customer' => $customer,
             ], 200, 'Successfuly fetch data customer', $traceId);
+
             return view(
                 'customers.editppp',
                 array_merge(
@@ -287,8 +296,9 @@ class CustomerController extends Controller
         $traceId = (string) Str::uuid();
         try {
             LogHelper::logInfo(null, [
-                'customer' => $customer
+                'customer' => $customer,
             ], 200, 'Successfuly fetch data customer', $traceId);
+
             return view(
                 'customers.edit_router',
                 array_merge(
@@ -378,7 +388,7 @@ class CustomerController extends Controller
                     'customer' => $customer,
                     'code' => $e->getCode(),
                     'message' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
+                    'trace' => $e->getTraceAsString(),
                 ],
                 500,
                 'Failed to update PPP/IP Static (RuntimeException)',
@@ -401,7 +411,7 @@ class CustomerController extends Controller
                     'customer' => $customer,
                     'code' => $e->getCode(),
                     'message' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
+                    'trace' => $e->getTraceAsString(),
                 ],
                 500,
                 'Failed to update PPP/IP Static (Exception)',
@@ -425,7 +435,7 @@ class CustomerController extends Controller
                     'merk_ont',
                     'port',
                 ]),
-                'customer' => $customer
+                'customer' => $customer,
             ], 200, 'Successfuly Update Router Customer', $traceId);
 
             return redirect()->back()
@@ -440,7 +450,7 @@ class CustomerController extends Controller
                 'customer' => $customer,
                 'code' => $e->getCode(),
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ], 500, 'Failed to update router (RuntimeException)', $traceId);
 
             return redirect()->back()
@@ -455,7 +465,7 @@ class CustomerController extends Controller
                 'customer' => $customer,
                 'code' => $e->getCode(),
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ], 500, 'Failed to update router (Exception)', $traceId);
 
             return redirect()->back()
@@ -472,19 +482,31 @@ class CustomerController extends Controller
         if (isset($result['error'])) {
             LogHelper::logError(null, [
                 'customer' => $customer,
-                'error' => Str::limit($result['error'], 250)
+                'error' => Str::limit($result['error'], 250),
             ], 400, 'Failed to activate customer', $traceId);
 
             return redirect()->back()->withErrors(['msg' => $result['error']]);
         }
 
+        if (isset($result['success'])) {
+            event(
+                new CustomerActivated(
+                    $result['customer'],
+                    $result['billing'],
+                    $result['receipt'],
+                    $result['traceId']
+                )
+            );
+        }
+
         LogHelper::logInfo(null, [
-            'customer' => $customer
+            'customerId' => $customer->id,
+            'customerName' => $customer->name,
+            'customerAddress' => $customer->address,
         ], 200, 'Successfully activated customer', $traceId);
 
-        return redirect()->back()->with('success', $result['success']);
+        return redirect()->back()->with('success', 'Successfully activated customer');
     }
-
 
     public function activation_all_customer(Request $request): RedirectResponse
     {
@@ -557,7 +579,7 @@ class CustomerController extends Controller
         $traceId = (string) Str::uuid();
         $result = $this->customerService->checkCustomerDeletionEligibility($customer, $traceId);
 
-        if (!$result['eligible']) {
+        if (! $result['eligible']) {
             return redirect()->route('billings.index', $result['redirect_data'])
                 ->with('warning', $result['message']);
         }
@@ -590,13 +612,14 @@ class CustomerController extends Controller
     {
         $traceId = (string) Str::uuid();
         $perPage = $request->input('perPage', 25);
+        LogHelper::logInfo(null, ['request' => $request->all(), 'perPage' => $perPage], 200, 'Start Trashed', $traceId);
         $searchParams = $request->only([
             'search_name',
             'search_address',
             'server_search',
             'search_package',
             'status',
-            'search_admin'
+            'search_admin',
         ]);
 
         $data = $this->customerService->getTrashedCustomers($searchParams, $perPage, $traceId);
@@ -607,7 +630,7 @@ class CustomerController extends Controller
             'allServers' => $data['servers'],
             'allAdmin' => $data['admins'],
             'periodeName' => $data['periodeName'],
-            'perPage' => $data['perPage']
+            'perPage' => $data['perPage'],
         ])->with('i', ($request->input('page', 1) - 1) * $perPage);
     }
 
@@ -627,7 +650,7 @@ class CustomerController extends Controller
         $traceId = (string) Str::uuid();
         $result = $this->customerService->forceDeleteCustomer($slug, $traceId);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             LogHelper::logError(
                 null,
                 ['slug' => $slug, 'error' => $result['error'] ?? null],
@@ -677,6 +700,7 @@ class CustomerController extends Controller
         $traceId = (string) Str::uuid();
         try {
             $this->customerDeletionService->deleteCustomer($customer, $traceId);
+
             return redirect()->route('customers.index')
                 ->with('success', 'Customer deleted successfully');
         } catch (\Exception $e) {

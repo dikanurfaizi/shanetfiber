@@ -7,7 +7,7 @@ use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvi
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
-use App\Models\Paket\PppProfile;
+use App\Models\Packages\PppProfile;
 
 class RouteServiceProvider extends ServiceProvider
 {

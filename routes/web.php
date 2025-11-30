@@ -1,57 +1,58 @@
 <?php
 
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\RoleController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\BrandController;
-use App\Http\Controllers\IsolirController;
-use App\Http\Controllers\Package\PackageController;
-use App\Http\Controllers\Package\PackageCategoriesController;
-use App\Http\Controllers\Package\PppProfileController;
-use App\Http\Controllers\RouterController;
-use App\Http\Controllers\ServerController;
-use App\Http\Controllers\UpdateController;
-use App\Http\Controllers\Billing\BillingController;
-use App\Http\Controllers\InstallController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Customer\CustomerController;
-use App\Http\Controllers\DropdownController;
-use App\Http\Controllers\AutoIsolirController;
-use App\Http\Controllers\OrderController;
-use App\Http\Controllers\TestConnectionController;
-use App\Http\Controllers\Mikrotik\SystemController;
-use App\Http\Controllers\Customer\PaymentController;
-use App\Http\Controllers\Mikrotik\MikrotikController;
 use App\Http\Controllers\Auth\CustomerLoginController;
-use App\Http\Controllers\Mikrotik\Ppp\SecretController;
-use App\Http\Controllers\PaymentGateway\MidtranController;
-use App\Http\Controllers\PaymentGateway\TripayController;
-use App\Http\Controllers\Midtran\PaymentCallbackController;
-use App\Http\Controllers\PaymentGateway\PaymentGatewayController;
-use App\Http\Controllers\Customer\ProfileController as CustomerProfileController;
-use App\Http\Controllers\ReceiptController;
+use App\Http\Controllers\AutoIsolirController;
 use App\Http\Controllers\BankController;
-use App\Http\Controllers\Mikrotik\Ppp\ProfileController as MikrotikProfileController;
-use App\Http\Controllers\WebsystemController;
-use App\Http\Controllers\ExportController;
-use App\Http\Controllers\WhatsappGatewayController;
-use App\Http\Controllers\WhatsappMessageController;
-use App\Http\Controllers\WhatsappNumberController;
-use App\Http\Controllers\MemberController;
-use App\Http\Controllers\TelegramGatewayController;
-use App\Http\Controllers\TelegramMessageController;
-use App\Http\Controllers\TelegramChatIdController;
-use App\Http\Controllers\Subscription\SubscriptionDurationController;
-use App\Http\Controllers\Subscription\CustomerSubscriptionController;
+use App\Http\Controllers\Billing\BillingController;
 use App\Http\Controllers\Billing\BillingHistoryController;
+use App\Http\Controllers\BrandController;
+use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Customer\DeviceController;
 use App\Http\Controllers\Customer\ForgotPasswordController;
-use App\Http\Controllers\Customer\ResetPasswordController;
-use Illuminate\Support\Facades\Mail;
+use App\Http\Controllers\Customer\PaymentController;
+use App\Http\Controllers\Customer\ProfileController as CustomerProfileController;
+use App\Http\Controllers\DropdownController;
+use App\Http\Controllers\ExportController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\InstallController;
+use App\Http\Controllers\IsolirController;
+use App\Http\Controllers\MemberController;
+use App\Http\Controllers\Midtran\PaymentCallbackController;
+use App\Http\Controllers\Mikrotik\MikrotikController;
+use App\Http\Controllers\Mikrotik\Ppp\ProfileController as MikrotikProfileController;
+use App\Http\Controllers\Mikrotik\Ppp\SecretController;
+use App\Http\Controllers\Mikrotik\SystemController;
 use App\Http\Controllers\Network\OLTManagementController;
 use App\Http\Controllers\Network\ONTManagementController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\Package\PackageCategoriesController;
+use App\Http\Controllers\Package\PackageController;
+use App\Http\Controllers\Package\PppProfileController;
+use App\Http\Controllers\PaymentGateway\MidtranController;
+use App\Http\Controllers\PaymentGateway\PaymentGatewayController;
+use App\Http\Controllers\PaymentGateway\TripayController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReceiptController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\RouterController;
+use App\Http\Controllers\ServerController;
+use App\Http\Controllers\Subscription\CustomerSubscriptionController;
+use App\Http\Controllers\Subscription\SubscriptionDurationController;
+use App\Http\Controllers\TelegramChatIdController;
+use App\Http\Controllers\TelegramGatewayController;
+use App\Http\Controllers\TelegramMessageController;
+use App\Http\Controllers\TestConnectionController;
+use App\Http\Controllers\UpdateController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\WebsystemController;
+use App\Http\Controllers\Whatsapp\WhatsappGatewayAccountController;
+use App\Http\Controllers\Whatsapp\WhatsappGatewayController;
+use App\Http\Controllers\Whatsapp\WhatsappMessageController;
+use App\Http\Controllers\Whatsapp\WhatsappNumberController;
+use App\Http\Controllers\Whatsapp\WhatsappTemplateController;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -64,7 +65,7 @@ use App\Http\Controllers\Network\ONTManagementController;
 |
 */
 
-//Silahkan dihapus setelah melakukan instalasi
+// Silahkan dihapus setelah melakukan instalasi
 // Route::get('install', [InstallController::class, 'install'])->name('install');
 // Route::get('install/start', [InstallController::class, 'start'])->name('installStart');
 // Route::get('install/seeder', [InstallController::class, 'seeder'])->name('installSeeder');
@@ -72,10 +73,9 @@ use App\Http\Controllers\Network\ONTManagementController;
 // Route::get('install/create', [InstallController::class, 'create_admin'])->name('installCreateAdmin');
 // Route::post('install/store', [InstallController::class, 'store_admin'])->name('installStoreAdmin');
 // Route::get('install/finish', [InstallController::class, 'finish'])->name('installFinish');
-//Batas akhir hapus setelah instalasi
+// Batas akhir hapus setelah instalasi
 
-
-//Route::resource('test-command', TestCommandController::class);
+// Route::resource('test-command', TestCommandController::class);
 Route::get('/isolir', [IsolirController::class, 'index'])->name('isolir');
 Route::redirect('/', '/customer/login');
 Route::post('payments/midtrans-notification', [PaymentCallbackController::class, 'receive']);
@@ -105,12 +105,12 @@ Route::group(['prefix' => 'customer', 'namespace' => 'Customer'], function () {
     });
     Route::group(['middleware' => 'customerauth'], function () {
         Route::get('/', [CustomerProfileController::class, 'index'])->name('customer.dashboard');
-        //===============================PROFILE==================================================================================
+        // ===============================PROFILE==================================================================================
         Route::get('/profile', [CustomerProfileController::class, 'show'])->name('customer.profile');
         Route::put('/profile/update', [CustomerProfileController::class, 'update'])->name('customer.profile.update');
         Route::put('/password/update', [CustomerProfileController::class, 'updatePassword'])->name('customer.password.update');
         Route::post('/logout', [CustomerLoginController::class, 'customerLogout'])->name('customerLogout');
-        //===============================BILLINGS=================================================================================
+        // ===============================BILLINGS=================================================================================
         Route::get('billings/payments', [PaymentController::class, 'index'])->name('customer.payment.index');
         Route::get('billings/payments/{status}/show', [PaymentController::class, 'index'])->name('customer.payment.state');
         Route::get('billings/payments/{billing:id}/view', [PaymentController::class, 'show'])->name('customer.payment.show');
@@ -118,14 +118,14 @@ Route::group(['prefix' => 'customer', 'namespace' => 'Customer'], function () {
         Route::get('billings/orders/{status}/show', [OrderController::class, 'index'])->name('customer.order.state');
         Route::post('billings/orders/{order:id}/update', [OrderController::class, 'update'])->name('customer.order.update');
         Route::get('billings/orders/{billing:id}/create', [OrderController::class, 'create'])->name('customer.order.create');
-        //================================TRIPAY==================================================================================
+        // ================================TRIPAY==================================================================================
         Route::post('billings/orders/create/{billing:id}', [OrderController::class, 'tripayCreate'])->name('customer.tripays.order.create');
         Route::get('billings/orders/{order:id}/view', [OrderController::class, 'tripayShow'])->name('customer.pages.order.tripays.show');
         Route::get('billings/orders/{order:id}/instruction', [OrderController::class, 'paymentInstruction'])->name('customer.tripay.instruction');
         Route::get('billings/orders/{order:id}/detail', [OrderController::class, 'show'])->name('customer.order.show');
         Route::patch('billings/orders/cancel/payment/{order:id}', [OrderController::class, 'cancelPayment'])->name('customer.order.tripays.cancel');
         Route::get('billings/orders/{order:id}/status', [OrderController::class, 'checkStatus'])->name('customer.order.tripays.status');
-        //=================================DEVICE INFORMATION=====================================================================
+        // =================================DEVICE INFORMATION=====================================================================
         Route::get('device/information', [DeviceController::class, 'manageDevice'])->name('customer.device.index');
         Route::get('device/traffic/get-monitoring', [DeviceController::class, 'mikrotikTrafficInterface'])->name('customer.device.traffic_interface');
     });
@@ -197,7 +197,7 @@ Route::group(['prefix' => 'cpanel'], function () {
 
         // ==================== CUSTOMER MANAGEMENT ====================
         Route::resource('customers', CustomerController::class);
-        Route::get('/customers/trashed', [CustomerController::class, 'trashed'])->name('customers.trashed');
+        Route::get('/customers/trashed/all', [CustomerController::class, 'trashed'])->name('customers.trashed');
         Route::put('/customers/{customer:slug}/restore', [CustomerController::class, 'restore'])->name('customers.restore');
         Route::delete('/customers/{customer:slug}/force-delete', [CustomerController::class, 'forceDelete'])->name('customers.forceDelete');
         Route::get('/customers/search', [PaymentController::class, 'index'])->name('customers.search');
@@ -315,23 +315,14 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('settings/payment-gateway/2/{tripay:slug}', [TripayController::class, 'edit'])->name('paymentgateway.tripay.edit');
         Route::patch('settings/payment-gateway/2/{tripay:slug}/update', [TripayController::class, 'update'])->name('paymentgateway.tripay.update');
 
-        // ==================== WHATSAPP GATEWAY ====================
-        Route::get('settings/whatsapp-gateway', [WhatsappGatewayController::class, 'index'])->name('whatsapp-gateway.index');
-        Route::get('settings/whatsapp-gateway/create', [WhatsappGatewayController::class, 'create'])->name('whatsapp-gateway.create');
-        Route::post('settings/whatsapp-gateway', [WhatsappGatewayController::class, 'store'])->name('whatsapp-gateway.store');
-        Route::get('settings/whatsapp-gateway/{id}/edit', [WhatsappGatewayController::class, 'edit'])->name('whatsapp-gateway.edit');
-        Route::patch('settings/whatsapp-gateway/{whatsappGateway:slug}', [WhatsappGatewayController::class, 'update'])->name('whatsapp-gateway.update');
-        Route::delete('settings/whatsapp-gateway/{id}', [WhatsappGatewayController::class, 'destroy'])->name('whatsapp-gateway.destroy');
-        Route::get('settings/whatsapp-gateway/get-customers', [WhatsappGatewayController::class, 'getCustomers']);
-
-        // WhatsApp Gateway (Legacy)
-        Route::get('settings/whatsappgateway', [WhatsappGatewayController::class, 'index'])->name('whatsappgateway.index');
-        Route::get('settings/whatsappgateway/{whatsappgateway}/edit_number', [WhatsappGatewayController::class, 'edit_number'])->name('whatsappgateway.edit_number');
-        Route::get('settings/whatsappgateway/{whatsappgateway}/edit_gateway', [WhatsappGatewayController::class, 'edit_gateway'])->name('whatsappgateway.edit_gateway');
+        // ==================== WHATSAPP GATEWAY ===================
+        // WhatsApp Gateway
+        Route::resource('settings/whatsappgateway', WhatsappGatewayController::class)->names('whatsappgateway');
         Route::patch('settings/whatsappgateway/{whatsappgateway}/test_gateway', [WhatsappGatewayController::class, 'test_gateway'])->name('whatsappgateway.test_gateway');
-        Route::patch('settings/whatsappgateway/{whatsappgateway}/update_number', [WhatsappGatewayController::class, 'update_number'])->name('whatsappgateway.update_number');
-        Route::patch('settings/whatsappgateway/{whatsappgateway}/update_gateway', [WhatsappGatewayController::class, 'update_gateway'])->name('whatsappgateway.update_gateway');
-        Route::get('settings/whatsappgateway/trigger-job', [WhatsappGatewayController::class, 'dispatchJob'])->name('trigger-job');
+
+        // WhatsApp Gateway Account
+        Route::resource('whatsappgateway.accounts', WhatsappGatewayAccountController::class);
+        Route::post('/settings/whatsappgateway/{whatsappgateway}/accounts/test', [WhatsappGatewayAccountController::class, 'test'])->name('whatsappgateway.accounts.test');
 
         // WhatsApp Numbers
         Route::resource('settings/whatsappnumber', WhatsappNumberController::class);
@@ -342,6 +333,12 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::resource('settings/whatsappmessage', WhatsappMessageController::class);
         Route::put('settings/whatsappmessage/{whatsappmessage}/disabled', [WhatsappMessageController::class, 'disable_message'])->name('whatsappmessage.disable');
         Route::get('settings/whatsappmessage/{whatsappmessage}/delete', [WhatsappMessageController::class, 'delete'])->name('whatsappmessage.delete');
+
+        // WhatsApp Templates
+        Route::resource('settings/whatsapptemplate', WhatsappTemplateController::class);
+        Route::put('settings/whatsapptemplate/{whatsapptemplate}/disabled', [WhatsappTemplateController::class, 'disable'])->name('whatsapptemplate.disable');
+        Route::get('settings/whatsapptemplate/{whatsapptemplate}/delete', [WhatsappTemplateController::class, 'delete'])->name('whatsapptemplate.delete');
+        Route::post('settings/whatsapptemplate/sync', [WhatsappTemplateController::class, 'sync'])->name('whatsapptemplate.sync');
 
         // ==================== TELEGRAM GATEWAY ====================
         Route::get('settings/telegramgateway', [TelegramGatewayController::class, 'index'])->name('telegramgateway.index');
@@ -370,6 +367,7 @@ Route::group(['prefix' => 'cpanel'], function () {
                 $message->to('dikanurfaizi.rn@gmail.com')
                     ->subject('Test Email SMTP Google');
             });
+
             return 'Email terkirim!';
         });
 

@@ -25,7 +25,7 @@ class FirewallService
     public function getIpAddressList($routerboard, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $query = (new Query('/ip/firewall/address-list/print'))
                 ->where('disabled', 'false');
             $result = $client->query($query)->read();
@@ -65,7 +65,7 @@ class FirewallService
     public function createNatService($routerboard, $dstAddress, $srcAddressList, $dstAddressList, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $query = new Query('/ip/firewall/nat/add');
             $query->equal('chain', 'dstnat');
             $query->equal('action', 'redirect');
@@ -127,13 +127,13 @@ class FirewallService
     public function updateNatService($routerboard, $dstAddress, $srcAddressList, $dstAddressList, $id, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $natService = new Query('/ip/firewall/nat/print');
             $natService->where('.id', $id);
             $results = $client->query($natService)->read();
 
             foreach ($results as $result) {
-                $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+                $client = MikrotikService::getMikrotik($routerboard, $traceId);
                 $query = new Query('/ip/firewall/nat/set');
                 $query->where('.id', $id);
                 $query->equal('.id', $result['.id']);
@@ -190,7 +190,7 @@ class FirewallService
     public function createFilterDropService($routerboard, $srcAddressList, $dstAddress, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $query = new Query('/ip/firewall/filter/add');
             $query->equal('protocol', 'tcp');
             $query->equal('chain', 'forward');
@@ -237,13 +237,13 @@ class FirewallService
     public function updateFilterDropService($routerboard, $srcAddressList, $dstAddress, $id, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $filterService = new Query('/ip/firewall/filter/print');
             $filterService->where('.id', $id);
             $results = $client->query($filterService)->read();
 
             foreach ($results as $result) {
-                $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+                $client = MikrotikService::getMikrotik($routerboard, $traceId);
                 $query = new Query('/ip/firewall/filter/set');
                 $query->where('.id', $id);
                 $query->equal('.id', $result['.id']);
@@ -289,7 +289,7 @@ class FirewallService
     public function getNatService($routerboard, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $query = (new Query('/ip/firewall/nat/print'));
             $result = $client->query($query)->read();
 
@@ -328,13 +328,13 @@ class FirewallService
     public function removeNatService($routerboard, $id, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $natService = new Query('/ip/firewall/nat/print');
             $natService->where('.id', $id);
             $results = $client->query($natService)->read();
 
             foreach ($results as $result) {
-                $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+                $client = MikrotikService::getMikrotik($routerboard, $traceId);
                 $query = (new Query('/ip/firewall/nat/remove'))
                     ->where('.id', $id)
                     ->equal('.id', $result['.id']);
@@ -378,13 +378,13 @@ class FirewallService
     public function removeFilterDropService($routerboard, $id, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $filterService = new Query('/ip/firewall/filter/print');
             $filterService->where('.id', $id);
             $results = $client->query($filterService)->read();
 
             foreach ($results as $result) {
-                $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+                $client = MikrotikService::getMikrotik($routerboard, $traceId);
                 $query = (new Query('/ip/firewall/filter/remove'))
                     ->where('.id', $id)
                     ->equal('.id', $result['.id']);

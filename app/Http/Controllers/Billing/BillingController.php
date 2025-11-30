@@ -2,41 +2,52 @@
 
 namespace App\Http\Controllers\Billing;
 
-use App\Http\Controllers\Controller;
-use App\Services\Billings\BillingService;
-use App\Services\Billings\PaymentService;
-use App\Services\Billings\BillingQueryService;
-use App\Services\Billings\BillingReportService;
-use App\Services\Billings\PayLaterService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Illuminate\Support\Carbon;
-use Carbon\CarbonPeriod;
+use App\Events\PaymentSucceeded;
+use App\Events\PayLaterApplied;
+use App\Exports\BillingsExport;
 use App\Helpers\LogHelper;
+use App\Http\Controllers\Controller;
+use App\Models\Bank;
 use App\Models\Billing\Billing;
 use App\Models\Billing\BillingPeriode;
-use App\Models\Bank;
 use App\Models\Websystem;
-use App\Exports\BillingsExport;
+use App\Services\Billings\BillingQueryService;
+use App\Services\Billings\BillingReportService;
+use App\Services\Billings\BillingService;
+use App\Services\Billings\PayLaterService;
+use App\Services\Billings\PaymentCancellationService;
+use App\Services\Billings\PaymentService;
+use Carbon\CarbonPeriod;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
 class BillingController extends Controller
 {
     private BillingService $billingService;
+
     private PaymentService $paymentService;
+
+    private PaymentCancellationService $paymentCancellationService;
+
     private BillingQueryService $billingQueryService;
+
     private BillingReportService $billingReportService;
+
     private PayLaterService $payLaterService;
 
     public function __construct(
         BillingService $billingService,
         PaymentService $paymentService,
+        PaymentCancellationService $paymentCancellationService,
         BillingQueryService $billingQueryService,
         BillingReportService $billingReportService,
         PayLaterService $payLaterService
     ) {
         $this->billingService = $billingService;
         $this->paymentService = $paymentService;
+        $this->paymentCancellationService = $paymentCancellationService;
         $this->billingQueryService = $billingQueryService;
         $this->billingReportService = $billingReportService;
         $this->payLaterService = $payLaterService;
@@ -63,13 +74,15 @@ class BillingController extends Controller
         // PDF export
         if ($request->cetak_pdf === 'selected') {
             $pdf = $this->billingReportService->generatePdf($billingsQuery, $searchParams, $traceId);
+
             return $pdf->download("Tagihan_{$searchParams['name']}_{$searchParams['address']}_{$searchParams['status']}_{$searchParams['month']}_{$searchParams['year']}.pdf");
         }
 
         if ($request->cetak_pdf) {
             $allQuery = Billing::with(['billingSubscription', 'customer']);
             $pdf = $this->billingReportService->generatePdf($allQuery, $searchParams, $traceId);
-            return $pdf->download("All_Billing.pdf");
+
+            return $pdf->download('All_Billing.pdf');
         }
 
         // total amount
@@ -87,25 +100,25 @@ class BillingController extends Controller
         LogHelper::logInfo(
             null,
             [
-                'searchParams' => array_filter($searchParams, fn($v) => !is_null($v) && $v !== ''),
-                'totalPrice'   => $totalPrice,
-                'totalData'    => $data->total()
+                'searchParams' => array_filter($searchParams, fn($v) => ! is_null($v) && $v !== ''),
+                'totalPrice' => $totalPrice,
+                'totalData' => $data->total(),
             ],
             200,
-            "Successfully retrieved billing data",
+            'Successfully retrieved billing data',
             $traceId
         );
 
         return view('billings.index', array_merge(
             [
-                'data'          => $data,
-                'totalPrice'    => $totalPrice,
-                'searchStatus'  => $searchParams['status'],
-                'searchName'    => $searchParams['name'],
+                'data' => $data,
+                'totalPrice' => $totalPrice,
+                'searchStatus' => $searchParams['status'],
+                'searchName' => $searchParams['name'],
                 'searchAddress' => $searchParams['address'],
-                'statuses'      => $this->billingQueryService->getStatuses(),
+                'statuses' => $this->billingQueryService->getStatuses(),
                 'selectedPeriod' => $request->period,
-                'periode'       => $periode
+                'periode' => $periode,
             ],
             $filterData
         ))->with('i', (request()->input('page', 1) - 1) * $paginate);
@@ -135,6 +148,7 @@ class BillingController extends Controller
     {
         $traceId = (string) Str::uuid();
         $periodes = BillingPeriode::latest()->get();
+
         return view('billings.create_one', compact('periodes'));
     }
 
@@ -150,14 +164,16 @@ class BillingController extends Controller
                 null,
                 ['periode_created' => $billingPeriode->name],
                 200,
-                "Billing have been successfully created.",
+                'Billing have been successfully created.',
                 $traceId
             );
 
             $message = "Periode {$billingPeriode->name} have been successfully created.";
+
             return redirect()->route('billings.create.one')->with('success', $message);
         } catch (\Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, "Failed to create billings", $traceId);
+            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to create billings', $traceId);
+
             return redirect()->route('billings.create')->with('error', 'Terjadi Kesalahan, Silakan Periksa Kembali Inputan Atau Hubungi Tim IT.');
         }
     }
@@ -173,14 +189,16 @@ class BillingController extends Controller
                 null,
                 ['total_billing_created' => $totalBillingCreated],
                 200,
-                "Billing have been successfully created.",
+                'Billing have been successfully created.',
                 $traceId
             );
 
             $message = "{$totalBillingCreated} Billing for {$request->name} have been successfully created.";
+
             return redirect()->route('billings.index')->with('success', $message);
         } catch (\Exception $e) {
-            LogHelper::logError(null, ['error' => $e->getMessage()], 500, "Failed to create billings", $traceId);
+            LogHelper::logError(null, ['error' => $e->getMessage()], 500, 'Failed to create billings', $traceId);
+
             return redirect()->route('billings.index')->with('error', 'Terjadi Kesalahan, Silakan Periksa Kembali Inputan Atau Hubungi Tim IT.');
         }
     }
@@ -191,6 +209,10 @@ class BillingController extends Controller
         $result = $this->payLaterService->processPayLater($request, $billing, $traceId);
 
         if ($result['success']) {
+            event(new PayLaterApplied(
+                billingId: $billing->id,
+                traceId: $traceId
+            ));
             return redirect()->back()->with('success', $result['message']);
         }
 
@@ -211,6 +233,7 @@ class BillingController extends Controller
                 'teller_name' => auth()->user()->name,
                 'status' => 'NP',
             ]);
+
             return redirect()->back()->with('success', 'The billing status for ' . $billing->customer_name . ' has been marked as No Usage for this period.');
         }
 
@@ -218,13 +241,9 @@ class BillingController extends Controller
             $paymentData = $this->preparePaymentData($request);
             $result = $this->paymentService->processPayment($billing, $paymentData, $traceId);
 
-            $this->paymentService->sendPaymentNotification(
-                $billing->customer_id,
-                $paymentData['payment_method'],
-                $result['trace_id'],
-                $billing->id,
-                $result['receipt']->id
-            );
+            if ($result['receipt']) {
+                event(new PaymentSucceeded($result['receipt']->id, $traceId));
+            }
 
             return redirect()->back()->with('success', 'Payment ' . $billing->customer_name . ' successfully.');
         } catch (\Exception $e) {
@@ -266,13 +285,26 @@ class BillingController extends Controller
     public function unpayment(Billing $billing)
     {
         $traceId = (string) Str::uuid();
-        $result = $this->paymentService->cancelPayment($billing, $traceId);
 
-        if ($result['success']) {
-            return redirect()->back()->with('success', $result['message']);
+        try {
+            $result = $this->paymentCancellationService
+                ->cancelPayment($billing, $traceId);
+
+            if ($result['success']) {
+                return redirect()
+                    ->back()
+                    ->with('success', $result['message'] ?? 'Unpayment berhasil.');
+            }
+
+            return redirect()
+                ->back()
+                ->with('error', $result['message'] ?? 'Unpayment gagal.');
+        } catch (\Throwable $e) {
+            // Fallback: kalau ada error tak terduga di service
+            return redirect()
+                ->back()
+                ->with('error', 'Unpayment failed: ' . $e->getMessage());
         }
-
-        return redirect()->back()->with('error', $result['message']);
     }
 
     public function show(Billing $billing)
@@ -287,16 +319,15 @@ class BillingController extends Controller
 
         $websystem = Websystem::firstWhere('slug', 'websystem');
 
-        $customer         = $billing->customer;
-        $currentPeriode   = $billing->billingSubscription?->billing_periode;
+        $customer = $billing->customer;
+        $currentPeriode = $billing->billingSubscription?->billing_periode;
 
         $isValidMember = match (true) {
-            ! $customer                              => false,
-            $customer->billing_option === 1          => true,
+            ! $customer => false,
+            $customer->billing_option === 1 => true,
             $customer->billing_option === 2
-                && $customer->billing_period === $currentPeriode
-            => true,
-            default                                  => false,
+                && $customer->billing_period === $currentPeriode => true,
+            default => false,
         };
 
         $memberDisplay = $isValidMember
@@ -308,12 +339,12 @@ class BillingController extends Controller
             : 0;
 
         return view('billings.show', [
-            'billing'       => $billing,
-            'billings'      => $billings,
-            'totalPrice'    => $totalPrice,
-            'websystem'     => $websystem,
+            'billing' => $billing,
+            'billings' => $billings,
+            'totalPrice' => $totalPrice,
+            'websystem' => $websystem,
             'memberDisplay' => $memberDisplay,
-            'discount'      => $discount,
+            'discount' => $discount,
         ]);
     }
 
@@ -327,6 +358,7 @@ class BillingController extends Controller
         $banks = Bank::orderBy('name', 'ASC')->where('disabled', 'false')->get();
         $billingCustomerId = $billing->customer_id;
         $billings = Billing::where('customer_id', $billingCustomerId)->where('status', 'BL')->get();
+
         return view('billings.transfer', compact('billing', 'banks'), [
             'billings' => $billings,
         ]);
@@ -340,6 +372,7 @@ class BillingController extends Controller
     public function destroyPeriode(BillingPeriode $billingperiode)
     {
         $billingperiode->delete();
+
         return redirect()->route('billings.create')->with('success', 'Periode billing deleted successfully.');
     }
 
@@ -366,13 +399,15 @@ class BillingController extends Controller
     {
         $timestamp = now()->format('Ymd_His');
         $periode = $request->get('periode'); // contoh: "August 2025"
+
         return Excel::download(new BillingsExport(null, $periode), "Billings_{$periode}_{$timestamp}.xlsx");
     }
 
     public function exportSelected(Request $request)
     {
         $timestamp = now()->format('Ymd_His');
-        $status  = $request->get('status');
+        $status = $request->get('status');
+
         $periode = $request->get('periode');
 
         $statusMap = [

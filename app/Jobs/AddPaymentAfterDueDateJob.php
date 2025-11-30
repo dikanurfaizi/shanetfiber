@@ -20,7 +20,6 @@ class AddPaymentAfterDueDateJob implements ShouldQueue
     private string $comment;
     private string $secretId;
     private string $username;
-    private SecretService $SecretService;
     private string $traceId;
 
     /**
@@ -33,17 +32,16 @@ class AddPaymentAfterDueDateJob implements ShouldQueue
         $this->comment = $comment;
         $this->secretId = $secretId;
         $this->username = $username;
-        $this->SecretService = app(SecretService::class);
         $this->traceId = $traceId;
     }
 
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(SecretService $secretService): void
     {
-        $this->SecretService->deleteActiveSecret($this->mikrotik, $this->username, $this->traceId);
-        $this->SecretService->updateProfileSecret($this->mikrotik, $this->profile, $this->secretId, $this->traceId);
-        $this->SecretService->addCommentSecret($this->mikrotik, $this->comment, $this->secretId, $this->traceId);
+        $secretService->deleteActiveSecret($this->mikrotik, $this->username, $this->traceId);
+        $secretService->updateProfileSecret($this->mikrotik, $this->profile, $this->secretId, $this->traceId);
+        $secretService->addCommentSecret($this->mikrotik, $this->comment, $this->secretId, $this->traceId);
     }
 }

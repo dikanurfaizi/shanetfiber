@@ -42,6 +42,7 @@ class CreateBillingCron extends Command
 
             // ===== CALL JOB =====
             CreateInitialBillingJob::dispatch($currentPeriod, null)->onQueue('default');
+            LogHelper::logInfo(null, [], 200, "Create Initial Billing Job for {$currentPeriod}", $traceId);
             $this->info("✅ Billing for {$currentPeriod} has been successfully dispatched.");
         } catch (\Throwable $e) {
             LogHelper::logError(

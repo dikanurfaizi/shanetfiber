@@ -18,7 +18,7 @@ class ProxyService
     public function createAccessServiceV6_49($routerboard, $srcAddress, $natDstAddress, $action, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
 
             $query = new Query('/ip/proxy/access/add');
             $query->equal('src-address', $srcAddress);
@@ -64,7 +64,7 @@ class ProxyService
     public function createAccessServiceV7_10($routerboard, $srcAddress, $natDstAddress, $action, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
 
             $query = new Query('/ip/proxy/access/add');
             $query->equal('src-address', $srcAddress);
@@ -108,7 +108,7 @@ class ProxyService
     public function updateAccessServiceV7_10($routerboard, $srcAddress, $natDstAddress, $id, $action, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $accessService = new Query('/ip/proxy/access/print');
             $accessService->where('.id', $id);
             $results = $client->query($accessService)->read();
@@ -172,7 +172,7 @@ class ProxyService
     public function updateAccessServiceV6_49($routerboard, $srcAddress, $natDstAddress, $id, $action, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $accessService = new Query('/ip/proxy/access/print');
             $accessService->where('.id', $id);
             $results = $client->query($accessService)->read();
@@ -238,7 +238,7 @@ class ProxyService
     public function removeAccessService($routerboard, $id, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $accessService = new Query('/ip/proxy/access/print');
             $accessService->where('.id', $id);
             $results = $client->query($accessService)->read();
@@ -291,7 +291,7 @@ class ProxyService
     public function getAccessService($routerboard, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $accessService = new Query('/ip/proxy/access/print');
             $response = $client->query($accessService)->read();
 
@@ -324,7 +324,7 @@ class ProxyService
     public function enableProxyService($routerboard, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $query = (new query('/ip/proxy/set'))
                 ->equal('enabled', 'true')
                 ->equal('port', '8080');
@@ -358,7 +358,7 @@ class ProxyService
     public function disableProxyService($routerboard, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $query = (new query('/ip/proxy/set'))
                 ->equal('enabled', 'false');
             $response = $client->query($query)->read();

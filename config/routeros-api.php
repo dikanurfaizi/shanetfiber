@@ -97,4 +97,27 @@ return [
 
     'legacy' => false, // Support of legacy login scheme (true - pre 6.43, false - post 6.43)
 
+    'connections' => [
+        'critical' => [
+            'driver' => 'redis',
+            'queue' => 'critical',
+            'retry_after' => 60,
+        ],
+        'normal' => [
+            'driver' => 'redis',
+            'queue' => 'normal',
+            'retry_after' => 90,
+        ],
+        'bulk' => [
+            'driver' => 'redis',
+            'queue' => 'bulk',
+            'retry_after' => 120,
+        ],
+        'wa-dlq' => [
+            'driver' => 'redis',
+            'queue' => 'wa-dlq',
+            'retry_after' => 300,
+        ],
+    ],
+
 ];

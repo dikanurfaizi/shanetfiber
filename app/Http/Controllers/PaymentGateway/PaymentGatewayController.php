@@ -6,7 +6,6 @@ use App\Models\Websystem;
 use Illuminate\Http\Request;
 use App\Models\PaymentGateway;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Log;
 
 class PaymentGatewayController extends Controller
 {

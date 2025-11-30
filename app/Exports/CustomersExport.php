@@ -2,18 +2,19 @@
 
 namespace App\Exports;
 
+use App\Helpers\FormatReceiver;
+use App\Helpers\UserAuth;
 use App\Models\Customer;
+use Illuminate\Support\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use Illuminate\Support\Carbon;
-use App\Helpers\UserAuth;
 
-class CustomersExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting, WithStyles
+class CustomersExport implements FromCollection, WithColumnFormatting, WithHeadings, WithMapping, WithStyles
 {
     private function getUserAuthData()
     {
@@ -29,12 +30,10 @@ class CustomersExport implements FromCollection, WithHeadings, WithMapping, With
         $user = $auth['user'];
 
         if ($user && $user->can('view-customers-widget-related')) {
-            return Customer::withTrashed()
-                ->where('user_id', $user->id)
-                ->get();
+            return Customer::where('user_id', $user->id)->get();
         }
 
-        return Customer::withTrashed()->get();
+        return Customer::get(); // tanpa withTrashed()
     }
 
     /**
@@ -57,13 +56,14 @@ class CustomersExport implements FromCollection, WithHeadings, WithMapping, With
             'Password PPP',
             'PPP Type ID',
             'Package',
-            'Bill',
-            'Discount',
+            'Price',
+            'Discount (%)',
+            'Discount (Nominal)',
+            'Price After Discount',
             'Responsibility',
             'State',
-            'Member',
-            'Discount',
-            'Periode Discount'
+            'Member Type',
+            'Periode Discount',
         ];
     }
 
@@ -74,26 +74,34 @@ class CustomersExport implements FromCollection, WithHeadings, WithMapping, With
     {
         static $number = 1; // Mulai nomor dari 1
 
-        $contact = $customer->contact;
-
-        // Ubah format dari 628xxxx ke 08xxxx
-        if (preg_match('/^628/', $contact)) {
-            $contact = preg_replace('/^628/', '08', $contact);
-        }
+        $formatter = new FormatReceiver;
+        $contact = $formatter->formatReceiver($customer->contact, 'display', false);
 
         // Tambahkan "'" agar tetap dalam format teks di Excel
-        $contact = "'" . $contact;
+        $contact = "'".$contact;
 
-        $price = $customer->billing_option == 1 || ($customer->billing_option == 2 && $customer->billing_period == date('F'))
-            ? optional($customer->paket)->price - optional($customer->member)->discount
-            : optional($customer->paket)->price;
+        $nominalDiscount = optional($customer->member)->discount ?? 0;
+        $packagePrice = optional($customer->package)->price ?? 0;
+
+        $priceAfterDiscount = $customer->billing_option == 1 || ($customer->billing_option == 2 && $customer->billing_period == date('F'))
+            ? $packagePrice - $nominalDiscount
+            : $packagePrice;
+
+        // Prevent division by zero
+        $discountPercentage = $packagePrice > 0
+            ? ($nominalDiscount / $packagePrice)  // 0.2 for 20%
+            : 0;
 
         $activationDate = $customer->activation_date
             ? Carbon::parse($customer->activation_date)->format('d/m/Y')
             : 'No Data';
 
+        $mikrotikName = $customer->mikrotik->name ?? '-';
+        $pppTypeName = $customer->pppType->name ?? '-';
+        $userName = $customer->user->name ?? '-';
+
         return [
-            $number++, // Auto numbering
+            $number++,
             $customer->customer_id,
             $customer->username,
             $customer->name,
@@ -101,19 +109,25 @@ class CustomersExport implements FromCollection, WithHeadings, WithMapping, With
             $contact,
             $customer->address,
             $activationDate,
-            $customer->mikrotik->name,
+            $mikrotikName,
             $customer->internet_service,
             $customer->secret_id,
             $customer->password_ppp,
-            $customer->pppType->name,
-            $customer->paket->name ?? 'No Package',
-            $price ?? 0,
-            $customer->discount . ' %',
-            $customer->user->name ?? 'No Linked User',
-            $customer->activation == 'false' ? 'Not Activated' : ($customer->disabled === 'true' ? 'Disabled' : 'Enabled'),
+            $pppTypeName,
+            $customer->package->name ?? 'No Package',
+
+            // Numeric fields
+            (float) $packagePrice,
+            (float) $discountPercentage,     // <-- NUMBER, NOT STRING
+            (float) $nominalDiscount,
+            (float) $priceAfterDiscount,
+
+            $userName,
+            $customer->activation == 'false'
+                ? 'Not Activated'
+                : ($customer->disabled === 'true' ? 'Disabled' : 'Enabled'),
             $customer->member->type ?? '-',
-            $customer->member->discount ?? 0,
-            $customer->billing_period ?? '-'
+            $customer->billing_period ?? '-',
         ];
     }
 
@@ -123,8 +137,10 @@ class CustomersExport implements FromCollection, WithHeadings, WithMapping, With
     public function columnFormats(): array
     {
         return [
-            'O' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Format angka ribuan (Bill)
-            'T' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Format angka ribuan (Discount Amount)
+            'O' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Price
+            'P' => NumberFormat::FORMAT_PERCENTAGE_00,           // Discount %
+            'Q' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Discount nominal
+            'R' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Price after discount
         ];
     }
 
@@ -133,29 +149,54 @@ class CustomersExport implements FromCollection, WithHeadings, WithMapping, With
      */
     public function styles(Worksheet $sheet)
     {
-        // Bold dan Center untuk Header (baris 1)
-        $sheet->getStyle('A1:U1')->applyFromArray([
-            'font' => ['bold' => true],
-            'alignment' => ['horizontal' => 'center'],
+        // ⭐ Freeze header row
+        $sheet->freezePane('A2');
+
+        // ⭐ Auto-filter untuk seluruh header
+        $sheet->setAutoFilter('A1:V1');
+
+        // ⭐ Styling header
+        $sheet->getStyle('A1:V1')->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF'],
+            ],
+            'alignment' => [
+                'horizontal' => 'center',
+                'vertical' => 'center',
+            ],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'color' => ['rgb' => '4F81BD'], // biru profesional
+            ],
             'borders' => [
                 'allBorders' => [
-                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN
-                ]
-            ]
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000'],
+                ],
+            ],
         ]);
 
-        // Border untuk semua sel yang ada datanya
+        // ⭐ Border untuk seluruh tabel
         $highestRow = $sheet->getHighestRow();
         $highestColumn = $sheet->getHighestColumn();
+
         $sheet->getStyle("A1:{$highestColumn}{$highestRow}")->applyFromArray([
             'borders' => [
                 'allBorders' => [
-                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN
-                ]
-            ]
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                ],
+            ],
         ]);
 
-        // **Atur lebar kolom secara otomatis mengikuti isi terpanjang**
+        // ⭐ Right align untuk kolom angka
+        foreach (['O', 'P', 'Q', 'R'] as $col) {
+            $sheet->getStyle("{$col}2:{$col}{$highestRow}")
+                ->getAlignment()
+                ->setHorizontal('right');
+        }
+
+        // ⭐ Auto-size semua kolom
         foreach (range('A', $highestColumn) as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }

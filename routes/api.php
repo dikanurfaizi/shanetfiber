@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PaymentGateway\TripayCallbackController;
 use App\Http\Controllers\Mikrotik\MikrotikMessageController;
+use App\Http\Controllers\WhatsApp\WhatsAppWebhookController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,3 +23,4 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::post('tripay/callback', [TripayCallbackController::class, 'handle']);
 Route::middleware('mikrotik.auth')->post('/mikrotik/send-message', [MikrotikMessageController::class, 'send']);
+Route::post('/webhook/whatsapp', [WhatsAppWebhookController::class, 'handle']);

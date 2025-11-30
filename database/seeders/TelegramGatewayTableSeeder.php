@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\TelegramGateway\TelegramGateway;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class TelegramGatewayTableSeeder extends Seeder
 {

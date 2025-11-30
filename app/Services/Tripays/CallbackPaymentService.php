@@ -7,25 +7,22 @@ use App\Jobs\{AddPaymentBeforeDueDateJob, AddPaymentAfterDueDateJob, AddPaymentI
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Routerboard\IpStaticService;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
 use App\Http\Resources\Pppoe\SecretResource;
-use App\Services\WhatsappMessageService;
 use App\Enums\WhatsappAction;
 use App\DataTransferObjects\WhatsappJobDto;
 use App\Models\Billing\BillingSubscriptionPeriode;
 use App\Helpers\LogHelper;
+use App\Jobs\WhatsApp\FullPaymentJob;
 
 class CallbackPaymentService
 {
     protected SecretService $secretService;
     protected IpStaticService $ipStaticService;
-    private WhatsappMessageService $messageService;
 
     public function __construct(SecretService $secretService, IpStaticService $ipStaticService)
     {
         $this->secretService = $secretService;
         $this->ipStaticService = $ipStaticService;
-        $this->messageService = app(WhatsappMessageService::class);
     }
 
     public function processPaymentUnpaid($order, $billing, string $traceId): void
@@ -215,10 +212,10 @@ class CallbackPaymentService
                 startDate: null,
                 endDate: null,
                 orderId: null,
-                oldPaketName: null,
-                oldPaketPrice: null
+                oldPackageName: null,
+                oldPackagePrice: null
             );
-            ProcessWhatsappMessageJob::dispatch($whatsappJobData)->onQueue('whatsapp_single');
+            FullPaymentJob::dispatch($whatsappJobData)->onQueue('whatsapp_single');
             LogHelper::logInfo(null, [
                 'customer_id' => $customer->id,
                 'whatsapp_job' => true,

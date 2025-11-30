@@ -21,7 +21,6 @@ class CancelPaymentIpStaticAfterDueDateJob implements ShouldQueue
     private string $ip_address;
     private string $comment;
     private string $simpleque_id;
-    private IpStaticService $IpStaticService;
     private string $traceId;
 
     /**
@@ -34,16 +33,15 @@ class CancelPaymentIpStaticAfterDueDateJob implements ShouldQueue
         $this->ip_address = $ip_address;
         $this->simpleque_id = $simpleque_id;
         $this->comment = $comment;
-        $this->IpStaticService = app(IpStaticService::class);
         $this->traceId = $traceId;
     }
 
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(IpStaticService $IpStaticService): void
     {
-        $this->IpStaticService->addIpToAddressList($this->mikrotik, $this->ip_address, $this->address_list_isolir, $this->comment, $this->traceId);
-        $this->IpStaticService->setCommentSimpleque($this->mikrotik, $this->simpleque_id, $this->comment, $this->traceId);
+        $IpStaticService->addIpToAddressList($this->mikrotik, $this->ip_address, $this->address_list_isolir, $this->comment, $this->traceId);
+        $IpStaticService->setCommentSimpleque($this->mikrotik, $this->simpleque_id, $this->comment, $this->traceId);
     }
 }

@@ -1,5 +1,5 @@
 <?php
 
 return [
-    'api_url' => env('WHATSAPP_API_URL'),
+    'webhook_secret' => env('WHATSAPP_WEBHOOK_SECRET', 'secret'),
 ];

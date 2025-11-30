@@ -66,7 +66,7 @@ class LogHelper
         $method   = request()?->method() ?? 'CLI';
         $url      = request()?->fullUrl() ?? $uri;
 
-        return "[$level] | $traceId | $method | $statusCode | $resTime | $caller | $ip | $userName | $url | $description | $body";
+        return "$traceId | $method | $statusCode | $resTime | $caller | $ip | $userName | $url | $description | $body";
     }
 
     private static function getCaller()

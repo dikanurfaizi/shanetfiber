@@ -2,10 +2,25 @@
 
 namespace App\Providers;
 
+use App\Events\PayLaterApplied;
+use App\Events\PaymentCancelled;
+use App\Events\PaymentSucceeded;
+use App\Events\CustomerActivated;
+use App\Events\OrderCreated;
+use App\Events\PackageChangesApplied;
+use App\Events\BroadcastMidMonthTriggered;
+use App\Events\MonthlyKickoffBroadcastTriggered;
+use App\Listeners\QueueCustomerActivationNotification;
+use App\Listeners\QueueOrderCreatedNotification;
+use App\Listeners\QueuePayLaterNotification;
+use App\Listeners\QueuePaymentCancellationNotification;
+use App\Listeners\QueuePaymentNotification;
+use App\Listeners\QueuePackageChangesNotification;
+use App\Listeners\QueueBroadcastMidMonthProcess;
+use App\Listeners\QueueMonthlyKickoffBroadcast;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
-use Illuminate\Support\Facades\Event;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -17,6 +32,30 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         Registered::class => [
             SendEmailVerificationNotification::class,
+        ],
+        PaymentSucceeded::class => [
+            QueuePaymentNotification::class,
+        ],
+        PaymentCancelled::class => [
+            QueuePaymentCancellationNotification::class,
+        ],
+        PayLaterApplied::class => [
+            QueuePayLaterNotification::class,
+        ],
+        CustomerActivated::class => [
+            QueueCustomerActivationNotification::class,
+        ],
+        PackageChangesApplied::class => [
+            QueuePackageChangesNotification::class,
+        ],
+        OrderCreated::class => [
+            QueueOrderCreatedNotification::class,
+        ],
+        BroadcastMidMonthTriggered::class => [
+            QueueBroadcastMidMonthProcess::class,
+        ],
+        MonthlyKickoffBroadcastTriggered::class => [
+            QueueMonthlyKickoffBroadcast::class,
         ],
     ];
 

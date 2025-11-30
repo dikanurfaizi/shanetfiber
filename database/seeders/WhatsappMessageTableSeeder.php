@@ -129,92 +129,68 @@ Ciseureuh, Purwakarta
 %address%
 Customer ID: %customer_id%
 
-Dalam %day% hari, batas akhir pembayaran paket internet Anda akan tiba. Saat ini, Anda memiliki %count-bill% tagihan yang belum dibayar:
+%day% hari lagi adalah batas akhir pembayaran paket internet anda. Saat ini anda memiliki %count-bill% tagihan yang belum dibayar:
 
 %pakets%
-*💰 Total tagihan:* %total-bill%
+*Jumlah tagihan: %total-bill%*
 
 Lakukan pembayaran sebelum jatuh tempo untuk menghindari isolir otomatis oleh system kami.
 
-💳 Anda dapat melakukan pembayaran melalui:
-🔹 *_Area Purwakarta (a.n Dian Ardiansyah)_*
-    ▫ BCA : 2990407315
-    ▫ Mandiri : 1730012695905
-    ▫ DANA : 085795909904
-
-🔹 *_Area Babakancikao (a.n Budi Kosasih)_*
-    ▫ Mandiri : 1730012656030
-    ▫ DANA : 085710840198
-
-📌 Silakan informasikan kepada kami jika Anda sudah melakukan pembayaran melalui _WhatsApp %whatsapp_number%_
+Anda dapat melakukan pembayaran melalui:
+%account-bank%
 
 Terima kasih telah menggunakan layanan internet kami.
 
 *Shanum Network Fiber*
-📍 Jl. Sukamaju No. 49 RT 009/007, Ciseureuh, Purwakarta
+Jl. Sukamaju No. 49 RT 009/007
+Ciseureuh, Purwakarta
 
-📩 *_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
+*_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
 
         $pesan_peringatan_deadline = 'Yth. Bpk/Ibu %name%,
 %address%
 Customer ID: %customer_id%
 
-Hari ini adalah batas akhir pembayaran paket internet Anda. Anda memiliki %count-bill% tagihan yang belum dibayar:
+Hari ini adalah batas akhir pembayaran paket internet anda. Saat ini anda memiliki %count-bill% tagihan yang belum dibayar:
 
 %pakets%
-*💰 Total tagihan:* %total-bill%
+*✅ Jumlah tagihan: %total-bill%*
 
 Segera lakukan pembayaran sebelum jatuh tempo untuk menghindari isolir otomatis oleh system kami.
 
-💳 Anda dapat melakukan pembayaran melalui rekening Admin:
-🔹 *_Area Purwakarta (a.n Dian Ardiansyah)_*
-    ▫ BCA : 2990407315
-    ▫ Mandiri : 1730012695905
-    ▫ DANA : 085795909904
+Anda dapat melakukan pembayaran melalui:
+%account-bank%
 
-🔹 *_Area Babakancikao (a.n Budi Kosasih)_*
-    ▫ Mandiri : 1730012656030
-    ▫ DANA : 085710840198
-
-📌 Silakan informasikan kepada kami jika Anda sudah melakukan pembayaran melalui _WhatsApp %whatsapp_number%_
-
+Informasikan kepada kami jika anda sudah melakukan pembayaran di nomor *WA 0878-1804-0024*
 Terima kasih telah menggunakan layanan internet kami.
 
 *Shanum Network Fiber*
-📍 Jl. Sukamaju No. 49 RT 009/007, Ciseureuh, Purwakarta
+Jl. Sukamaju No. 49 RT 009/007
+Ciseureuh, Purwakarta
 
-📩 *_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
+*_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
 
         $pesan_lewat_jatuh_tempo = 'Yth. Bpk/Ibu %name%,
 %address%
 Customer ID: %customer_id%
 
-Kami ingin mengingatkan bahwa Anda memiliki %count-bill% tagihan paket internet yang belum dibayar dan telah melewati jatuh tempo.
+Kami ingin mengingatkan bahwa Anda memiliki %count-bill% tagihan paket internet yang belum dibayar hingga melewati jatuh tempo.
 Berikut adalah rincian tagihan Anda:
 
 %pakets%
-*💰 Total tagihan:* %total-bill%
+*✅ Jumlah tagihan keseluruhan : %total-bill%*
 
-Mohon segera melakukan pembayaran untuk menghindari gangguan layanan.
+Pembayaran dapat dilakukan melalui:
+%account-bank%
 
-💳 Anda dapat melakukan pembayaran melalui rekening Admin:
-🔹 *_Area Purwakarta (a.n Dian Ardiansyah)_*
-    ▫ BCA : 2990407315
-    ▫ Mandiri : 1730012695905
-    ▫ DANA : 085795909904
-
-🔹 *_Area Babakancikao (a.n Budi Kosasih)_*
-    ▫ Mandiri : 1730012656030
-    ▫ DANA : 085710840198
-
-📌 Silakan informasikan kepada kami jika Anda sudah melakukan pembayaran melalui _WhatsApp %whatsapp_number%_
-
-Kami berkomitmen untuk memberikan layanan terbaik bagi Anda.
+Informasikan kepada kami jika anda sudah melakukan pembayaran di nomor *WA 0878-1804-0024*
+Kami berkomitmen memberikan layanan terbaik untuk Anda.
 
 *Shanum Network Fiber*
-📍 Jl. Sukamaju No. 49 RT 009/007, Ciseureuh, Purwakarta
+Jl. Sukamaju No. 49 RT 009/007
+Ciseureuh, Purwakarta
 
-📩 *_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
+*_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
 
         $pesan_info_tagihan = 'Yth. Bpk/Ibu %name%,
 %address%
@@ -371,39 +347,29 @@ Ciseureuh, Purwakarta
 
 *_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
 
-        $create_new_bill = '📢 Informasi Tagihan Internet Anda
-
-Yth. Bpk/Ibu %name%,
+        $create_new_bill = 'Yth. Bpk/Ibu %name%,
 %address%
 Customer ID: %customer_id%
 
-Saat ini, anda sudah dapat melakukan pembayaran tagihan internet. Berikut rincian tagihan anda:
+Saat ini anda sudah dapat membayar tagihan internet.
+Berikut rincian tagihan anda:
 
-%pakets%
-*🚨 Jatuh tempo:* %deadline%
-*💰 Total tagihan:* %total-bill%
-*👨🏼‍🔧 Admin:* %admin%
+*📦 Paket:* %paket-name%
+*💶 Tagihan:* %bill%
+*📆 Periode:* %periode%
+*✅ Jatuh tempo:* %deadline%
 
-💳 Anda dapat melakukan pembayaran melalui rekening Admin:
-🔹 *_Area Purwakarta (a.n Dian Ardiansyah)_*
-    ▫ BCA : 2990407315
-    ▫ Mandiri : 1730012695905
-    ▫ DANA : 085795909904
+Anda dapat melakukan pembayaran melalui:
+%account-banks%
 
-🔹 *_Area Babakancikao (a.n Budi Kosasih)_*
-    ▫ Mandiri : 1730012656030
-    ▫ DANA : 085710840198
-
-📌 Setelah melakukan pembayaran, harap konfirmasi ke WhatsApp:  %whatsapp_number%
+Informasikan kepada kami jika anda sudah melakukan pembayaran di nomor *WA 0878-1804-0024*
 Terima kasih telah mempercayakan kebutuhan internet anda kepada kami.
-📢 Cek status tagihan Anda dengan login ke: www.shanetfiber.my.id
-🔑 *username :* _No HP terdaftar_
-🔑 *password :* _12345678_
 
 *Shanum Network Fiber*
-📍 Jl. Sukamaju No. 49 RT 009/007, Ciseureuh, Purwakarta
+Jl. Sukamaju No. 49 RT 009/007
+Ciseureuh, Purwakarta
 
-📩 *_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
+*_Pesan ini dikirim secara otomatis oleh sistem, harap tidak membalas pesan ini._*';
 
         //=================Create Template message============================
         WhatsappMessage::create([

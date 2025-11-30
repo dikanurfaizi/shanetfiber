@@ -174,6 +174,8 @@ return [
         Barryvdh\DomPDF\ServiceProvider::class,
         Jenssegers\Agent\AgentServiceProvider::class,
         Maatwebsite\Excel\ExcelServiceProvider::class,
+        App\Providers\MessagingServiceProvider::class,
+        App\Providers\WhatsAppWebhookServiceProvider::class,
     ])->toArray(),
 
     /*

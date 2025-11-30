@@ -16,23 +16,21 @@ class DisablePppSecretJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    private SecretService $secretService;
     private string $traceId;
 
     public function __construct(private Mikrotik $mikrotik, private string $username, private int $userId, string $traceId)
     {
-        $this->secretService = app(SecretService::class);
         $this->traceId = $traceId;
     }
 
-    public function handle(): void
+    public function handle(SecretService $secretService): void
     {
         try {
             // 1. Hapus session aktif
-            $this->secretService->deleteActiveSecret($this->mikrotik, $this->username, $this->traceId);
+            $secretService->deleteActiveSecret($this->mikrotik, $this->username, $this->traceId);
 
             // 2. Nonaktifkan secret
-            $this->secretService->disableSecret($this->mikrotik, $this->username, $this->traceId);
+            $secretService->disableSecret($this->mikrotik, $this->username, $this->traceId);
 
             // 3. Update status di database
             Customer::where('id', $this->userId)->update(['disabled' => 'true']);

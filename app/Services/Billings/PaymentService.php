@@ -2,100 +2,146 @@
 
 namespace App\Services\Billings;
 
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Throwable;
+use RuntimeException;
+use App\Helpers\LogHelper;
 use App\Models\Billing\Billing;
 use App\Models\Customer;
 use App\Models\Receipt;
-use Carbon\Carbon;
-use App\DataTransferObjects\WhatsappJobDto;
-use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
-use App\Helpers\LogHelper;
-use App\Enums\WhatsAppAction;
 use App\Services\Billings\PaymentProcessingService;
-use App\Services\Billings\PaymentCancellationService;
 
 class PaymentService
 {
     private PaymentProcessingService $paymentProcessingService;
-    private PaymentCancellationService $paymentCancellationService;
 
-    public function __construct(PaymentProcessingService $paymentProcessingService, PaymentCancellationService $paymentCancellationService)
+    public function __construct(PaymentProcessingService $paymentProcessingService)
     {
         $this->paymentProcessingService = $paymentProcessingService;
-        $this->paymentCancellationService = $paymentCancellationService;
     }
 
     public function processPayment(Billing $billing, array $paymentData, string $traceId): array
     {
-        LogHelper::logInfo(null, [
+        LogHelper::logInfo('Payment', [
             'billing_id' => $billing->id,
             'customer_id' => $billing->customer_id,
-            'payment_data' => $paymentData,
             'trace_id' => $traceId,
-        ], 100, 'Start processing payment', $traceId);
+            'payment_method' => $paymentData['payment_method'] ?? null,
+        ], 100, 'START payment processing', $traceId);
 
         try {
-            $this->paymentProcessingService->processPaymentActions($billing, $traceId);
-            LogHelper::logInfo(null, ['billing_id' => $billing->id], 200, 'Payment actions processed', $traceId);
 
-            $payment_time = Carbon::now();
+            DB::beginTransaction();
+
+            // === Step 1 : Update Billing ===
+            LogHelper::logInfo('Payment', [
+                'billing_id' => $billing->id,
+                'step' => 'update_billing'
+            ], 200, 'Step 1 — Update billing', $traceId);
+
+            $payment_time = now();
 
             $billing->update([
                 'payment_time' => $payment_time,
                 'teller_name' => auth()->user()->name ?? $billing?->customer?->user?->name,
                 'status' => 'LS',
             ]);
-            LogHelper::logInfo(null, [
+
+            // === Step 2 : Billing Subscription ===
+            LogHelper::logInfo('Payment', [
                 'billing_id' => $billing->id,
-                'payment_time' => $payment_time,
-                'teller_name' => auth()->user()->name ?? $billing?->customer?->user?->name,
-                'status' => 'LS'
-            ], 200, 'Billing updated with payment info', $traceId);
+                'step' => 'update_subscription'
+            ], 200, 'Step 2 — Update billing subscription', $traceId);
 
             $billing->billingSubscription->update([
                 'is_paid' => true,
                 'paid_at' => $payment_time,
-                'status' => 'paid'
+                'status' => 'paid',
             ]);
-            LogHelper::logInfo(null, [
+
+            // === Step 3 : Create Receipt ===
+            LogHelper::logInfo('Payment', [
                 'billing_id' => $billing->id,
-                'billing_subscription_is_paid' => true,
-                'billing_subscripiton_paid_at' => $payment_time,
-                'billing_subscription_status' => 'paid'
-            ], 200, 'Billing subscription periode updated with payment info', $traceId);
+                'step' => 'create_receipt'
+            ], 200, 'Step 3 — Creating receipt', $traceId);
 
             $receipt = $this->createReceipt($billing, $paymentData, $traceId);
-            LogHelper::logInfo(null, ['receipt_id' => $receipt->id], 200, 'Receipt created', $traceId);
 
-            $billing->update(['receipt_id' => $receipt->id]);
-            LogHelper::logInfo(null, ['billing_id' => $billing->id, 'receipt_id' => $receipt->id], 200, 'Billing updated with receipt id', $traceId);
-
-            if (
-                $billing->customer->billing_option == 2 &&
-                $billing->billingSubscription->billing_periode === $billing->customer->billing_period
-            ) {
-                $this->updateCustomerMembership($billing->customer, $traceId);
+            if (!$receipt) {
+                throw new RuntimeException("Receipt null for billing_id {$billing->id}");
             }
 
-            LogHelper::logInfo(null, [
-                'periode' => $billing->billingSubscription->billing_periode ?? null,
-                'customer_id' => $billing->customer_id,
-                'customer_name' => $billing->customer_name,
+            // === Step 4 : Update Billing with receipt_id ===
+            LogHelper::logInfo('Payment', [
                 'billing_id' => $billing->id,
-                'payment_type' => $paymentData['payment_method'] ?? null,
+                'step' => 'update_billing_receipt'
+            ], 200, 'Step 4 — Update billing.receipt_id', $traceId);
+
+            $billing->update(['receipt_id' => $receipt->id]);
+
+            // === Step 5 : Membership update (conditional) ===
+            $shouldUpdateMembership =
+                $billing->customer->billing_option == 2 &&
+                $billing->billingSubscription->billing_periode === $billing->customer->billing_period;
+
+            if ($shouldUpdateMembership) {
+                LogHelper::logInfo('Payment', [
+                    'billing_id' => $billing->id,
+                    'customer_id' => $billing->customer_id,
+                    'step' => 'update_membership'
+                ], 200, 'Step 5 — Updating membership', $traceId);
+
+                $billing->customer()->update([
+                    'billing_option' => '0',
+                    'billing_period' => null,
+                    'member_id' => null,
+                    'discount' => '0',
+                ]);
+            } else {
+                LogHelper::logInfo('Payment', [
+                    'billing_id' => $billing->id,
+                    'step' => 'update_membership_skip'
+                ], 100, 'Step 5 — Membership update skipped', $traceId);
+            }
+
+            // === Commit ===
+            DB::commit();
+
+            LogHelper::logInfo('Payment', [
+                'billing_id' => $billing->id,
                 'receipt_id' => $receipt->id,
-            ], 200, 'Payment processed successfully', $traceId);
+                'trace_id' => $traceId
+            ], 200, 'COMMIT successful', $traceId);
+
+            // === Step 6 : External Actions ===
+            if (config('services.shanetfiber.allow_mikrotik_actions')) {
+
+                LogHelper::logInfo('Payment', [
+                    'billing_id' => $billing->id,
+                    'step' => 'payment_actions'
+                ], 200, 'Step 6 — Processing external actions', $traceId);
+
+                $this->paymentProcessingService->processPaymentActions($billing, $traceId);
+            }
 
             return [
                 'receipt' => $receipt,
-                'trace_id' => $traceId
+                'trace_id' => $traceId,
             ];
-        } catch (\Exception $e) {
+        } catch (Throwable $e) {
+
+            DB::rollBack();
+
             LogHelper::logError(null, [
                 'billing_id' => $billing->id,
-                'errorCode' => $e->getCode(),
-                'errorMessage' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ], 500, 'Payment processing failed', $traceId);
+                'trace_id' => $traceId,
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ], 500, 'ERROR during payment', $traceId);
+
             throw $e;
         }
     }
@@ -107,10 +153,9 @@ class PaymentService
             $customer = $billing->customer;
 
             LogHelper::logInfo('CreateReceipt', [
-                'trace_id' => $traceId,
                 'billing_id' => $billing->id,
                 'customer_id' => $customer->id,
-                'payment_data' => $paymentData
+                'payment_data' => $paymentData,
             ], 200, 'Starting receipt creation', $traceId);
 
             $discountData = $this->calculateDiscount($customer, $billing, $traceId);
@@ -147,20 +192,18 @@ class PaymentService
             $executionTime = round(microtime(true) - $startTime, 3);
 
             LogHelper::logInfo('CreateReceipt', [
-                'trace_id' => $traceId,
                 'receipt_id' => $receipt->id,
                 'receipt_number' => $receipt->number,
-                'execution_seconds' => $executionTime
+                'execution_seconds' => $executionTime,
             ], 200, 'Receipt created successfully', $traceId);
 
             return $receipt;
         } catch (\Throwable $e) {
             LogHelper::logError('CreateReceipt', [
-                'trace_id' => $traceId,
                 'billing_id' => $billing->id ?? null,
                 'exception' => get_class($e),
                 'error_message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ], 500, 'Failed to create receipt', $traceId);
 
             return null;
@@ -173,32 +216,29 @@ class PaymentService
             $lastReceipt = Receipt::latest('created_at')->value('number');
 
             LogHelper::logInfo('GenerateReceiptNumber', [
-                'trace_id' => $traceId,
-                'last_receipt_number' => $lastReceipt
+                'last_receipt_number' => $lastReceipt,
             ], 200, 'Generating new receipt number', $traceId);
 
             if ($lastReceipt && str_starts_with($lastReceipt, 'KWT-')) {
                 $parts = explode('-', $lastReceipt);
-                $number = (int)$parts[1] + 1;
+                $number = (int) $parts[1] + 1;
             } else {
                 $number = 1;
             }
 
-            $newNumber = 'KWT-' . sprintf("%05d", $number) . '-' .
+            $newNumber = 'KWT-' . sprintf('%05d', $number) . '-' .
                 Carbon::now()->format('F') . '-' . Carbon::now()->format('Y');
 
             LogHelper::logInfo('GenerateReceiptNumber', [
-                'trace_id' => $traceId,
-                'generated_receipt_number' => $newNumber
+                'generated_receipt_number' => $newNumber,
             ], 200, 'Receipt number generated successfully', $traceId);
 
             return $newNumber;
         } catch (\Throwable $e) {
             LogHelper::logError('GenerateReceiptNumber', [
-                'trace_id' => $traceId,
                 'exception' => get_class($e),
                 'error_message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ], 500, 'Failed to generate receipt number', $traceId);
 
             // fallback kalau gagal
@@ -214,13 +254,12 @@ class PaymentService
             $memberType = 'Non Member / Tidak Ada';
 
             // Logging awal sebelum hitung
-            LogHelper::logInfo('CalculateDiscount', [
-                'trace_id' => $traceId,
+            LogHelper::logInfo(null, [
                 'customer_id' => $customer->id,
                 'billing_id' => $billing->id,
                 'billing_option' => $customer->billing_option,
                 'billing_period' => $customer->billing_period,
-                'package_price' => $customer->package->price
+                'package_price' => $customer->package->price,
             ], 200, 'Starting discount calculation', $traceId);
 
             if ($customer->billing_option == 1) {
@@ -239,110 +278,30 @@ class PaymentService
             $result = [
                 'discount' => $discount,
                 'price_after_discount' => $priceAfterDiscount,
-                'member_type' => $memberType
+                'member_type' => $memberType,
             ];
 
             // Logging hasil
-            LogHelper::logInfo('CalculateDiscount', [
-                'trace_id' => $traceId,
-                'result' => $result
+            LogHelper::logInfo(null, [
+                'result' => $result,
             ], 200, 'Discount calculation completed', $traceId);
 
             return $result;
         } catch (\Throwable $e) {
-            LogHelper::logError('CalculateDiscount', [
-                'trace_id' => $traceId,
+            LogHelper::logError(null, [
                 'customer_id' => $customer->id ?? null,
                 'billing_id' => $billing->id ?? null,
                 'exception' => get_class($e),
                 'error_message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ], 500, 'Failed to calculate discount', $traceId);
 
             // fallback return
             return [
                 'discount' => 0,
                 'price_after_discount' => $customer->package->price ?? 0,
-                'member_type' => 'Unknown'
+                'member_type' => 'Unknown',
             ];
-        }
-    }
-
-    private function updateCustomerMembership(Customer $customer, string $traceId): void
-    {
-        $customer->update([
-            'billing_option' => '0',
-            'billing_period' => null,
-            'member_id' => null,
-            'discount' => '0',
-        ]);
-
-        LogHelper::logInfo(null, [
-            'customer_id' => $customer->id,
-            'billing_option' => '0',
-            'billing_period' => null,
-            'member_id' => null,
-            'discount' => '0'
-        ], 200, 'Customer membership updated', $traceId);
-    }
-
-    public function cancelPayment(Billing $billing, string $traceId): array
-    {
-        return $this->paymentCancellationService->cancelPayment($billing, $traceId);
-    }
-
-    public function sendPaymentNotification(
-        int $customerId,
-        string $paymentType,
-        string $traceId,
-        int $billingId,
-        ?int $receiptId = null
-    ): void {
-        try {
-            // Tentukan action berdasarkan tipe pembayaran
-            if ($paymentType === 'transfer') {
-                $action = WhatsAppAction::TRANSFER->value;
-            } elseif ($paymentType === 'cash') {
-                $action = WhatsAppAction::CASH->value;
-            } else {
-                $action = $paymentType;
-            }
-
-            $jobData = new WhatsappJobDto(
-                customerId: (int) $customerId,
-                action: $action,
-                traceId: (string) $traceId,
-                billingId: (int) $billingId,
-                receiptId: $receiptId,
-                receiptData: null,
-                startDate: null,
-                endDate: null,
-                orderId: null,
-                oldPackageName: null,
-                oldPackagePrice: null
-            );
-
-            ProcessWhatsappMessageJob::dispatch($jobData)->onQueue('whatsapp_single');
-
-            LogHelper::logInfo('PaymentNotification', [
-                'trace_id' => $traceId,
-                'customer_id' => $customerId,
-                'billing_id' => $billingId,
-                'receipt_id' => $receiptId,
-                'payment_type' => $paymentType,
-                'action' => $action
-            ], 200, 'Payment notification dispatched successfully', $traceId);
-        } catch (\Throwable $e) {
-            LogHelper::logError('PaymentNotification', [
-                'trace_id' => $traceId,
-                'customer_id' => $customerId,
-                'billing_id' => $billingId,
-                'receipt_id' => $receiptId,
-                'payment_type' => $paymentType,
-                'exception' => get_class($e),
-                'error_message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ], 500, 'Failed to dispatch payment notification', $traceId);
         }
     }
 }

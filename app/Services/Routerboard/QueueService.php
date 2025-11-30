@@ -12,13 +12,14 @@ use RouterOS\Exceptions\ConnectException;
 use RouterOS\Exceptions\QueryException;
 use RouterOS\Query;
 use App\Helpers\LogHelper;
+use App\Services\Routerboard\MikrotikService;
 
 class QueueService
 {
     public function getParentSimpleQueues($mikrotik, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             $query = new Query('/queue/simple/print');
             $query->where('parent', 'none')->where('disabled', 'false');
             $parentSimpleQueue = $client->query($query)->read();
@@ -52,7 +53,7 @@ class QueueService
     public function getQueueTypes($mikrotik, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             $query = new Query('/queue/type/print');
             $queueTypes = $client->query($query)->read();
 
@@ -85,7 +86,7 @@ class QueueService
     public function createSimpleQueue($mikrotik, $name, $target, $parent, $priority, $queuetype, $limitat, $maxlimit, $comment, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             $query = (new Query('/queue/simple/add'))
                 ->equal('name', $name)
                 ->equal('target', $target)
@@ -142,7 +143,7 @@ class QueueService
     public function setLimitSimplequeById($mikrotik, $simpleque_id, $parent, $priority, $queuetype, $limitat, $maxlimit, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             $simpleques = (new Query('/queue/simple/print'))
                 ->where('.id', $simpleque_id);
             $results = $client->query($simpleques)->read();

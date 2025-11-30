@@ -29,14 +29,21 @@ class Billing extends Model
         return $this->belongsTo(Receipt::class);
     }
 
-    // public function billingSubscription(): BelongsTo
-    // {
-    //     return $this->belongsTo(BillingSubscriptionPeriode::class, 'billing_subscription_id');
-    // }
-
     public function billingSubscription(): BelongsTo
     {
         return $this->belongsTo(BillingSubscriptionPeriode::class, 'billing_subscription_id')
             ->withTrashed();
+    }
+
+    public function periode()
+    {
+        return $this->hasOneThrough(
+            BillingPeriode::class,
+            BillingSubscriptionPeriode::class,
+            'id',
+            'id',
+            'billing_subscription_id',
+            'billing_periode_id'
+        );
     }
 }

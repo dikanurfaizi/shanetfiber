@@ -9,7 +9,7 @@ use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use App\Models\TelegramGateway\TelegramMessage;
+use App\Models\Telegram\TelegramMessage;
 
 class TelegramMessageController extends Controller
 {

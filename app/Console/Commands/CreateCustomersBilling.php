@@ -129,7 +129,7 @@ class CreateCustomersBilling extends Command
                 $customerDiscount = $this->billingService->calculateCustomerDiscount($customer, $billingPeriode->name);
                 $subDuration = $subscriptionDurations[$customer->paket_id] ?? null;
 
-                $discountPaket = $this->billingService->calculatePaketDiscount($subDuration, $customer->paket->price);
+                $discountPaket = $this->billingService->calculatePackageDiscount($subDuration, $customer->paket->price);
                 $discountAmount = $customerDiscount + $discountPaket;
                 $priceAfterDiscount = max(0, $customer->paket->price - $discountAmount);
 

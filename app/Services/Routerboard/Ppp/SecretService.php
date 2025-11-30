@@ -11,6 +11,7 @@ use RouterOS\Exceptions\QueryException;
 use RouterOS\Query;
 use App\Helpers\LogHelper;
 use App\Services\Routerboard\MikrotikConnectionService;
+use App\Services\Routerboard\MikrotikService;
 
 class SecretService
 {
@@ -24,7 +25,7 @@ class SecretService
     public function createSecret($mikrotik, $username, $password, $service, $profile, $comment, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -91,7 +92,7 @@ class SecretService
     public function updateSecret($mikrotik, $username, $password, $service, $profile, $id, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -135,7 +136,7 @@ class SecretService
     public function updateUserPasswordServiceSecret($mikrotik, $username, $password, $service, $id, $callerID, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -196,7 +197,7 @@ class SecretService
     public function updateProfileSecret($mikrotik, $profile, $id, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -236,7 +237,7 @@ class SecretService
     public function addCommentSecret($mikrotik, $comment, $secretId, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -277,7 +278,7 @@ class SecretService
     {
         try {
             $toEnable = 'false';
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -318,7 +319,7 @@ class SecretService
     {
         try {
             $toEnable = 'false';
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -358,7 +359,7 @@ class SecretService
     {
         try {
             $toNoDisable = 'true';
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -399,7 +400,7 @@ class SecretService
     {
         try {
             $toNoDisable = 'true';
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -445,7 +446,7 @@ class SecretService
     public function deleteSecretByName($mikrotik, $username, string $traceId): void
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -494,7 +495,7 @@ class SecretService
     public function deleteOneSecret($mikrotik, $secretId, string $traceId): void
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -528,7 +529,7 @@ class SecretService
     public function getAllPppSecrets($mikrotik, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -575,7 +576,7 @@ class SecretService
     private function getSecret($mikrotik, $filters, $filterType, $filterValue, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -624,7 +625,7 @@ class SecretService
     public function deleteActiveSecret($mikrotik, $username, string $traceId): void
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -679,7 +680,7 @@ class SecretService
     public function getPppActive($mikrotik, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
 
             if (!$client) {
                 LogHelper::logError(
@@ -740,7 +741,7 @@ class SecretService
     public function getOnePppSecretActive($mikrotik, $username, $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -769,7 +770,7 @@ class SecretService
     {
         try {
             $name = request()->username;
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -797,7 +798,7 @@ class SecretService
     public function getPppSecretActiveByIp($mikrotik, $ipAddress, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -826,7 +827,7 @@ class SecretService
     public function getPppProfile($mikrotik, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
@@ -853,7 +854,7 @@ class SecretService
     public function getPppProfileByName($mikrotik, $profileName, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new \RuntimeException("Failed to connect to Mikrotik: {$mikrotik->host}");
             }
@@ -904,7 +905,7 @@ class SecretService
     public function updateRateLimitProfileSecret($mikrotik, $rateLimit, $profileName, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             $host = $mikrotik->host ?? 'Unknown Host';
             $name = $mikrotik->name ?? 'Unknown Name';
             if (!$client) {
@@ -959,7 +960,7 @@ class SecretService
     public function createPppProfile($mikrotik, array $data, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }

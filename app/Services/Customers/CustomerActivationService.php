@@ -2,7 +2,6 @@
 
 namespace App\Services\Customers;
 
-use App\Enums\WhatsAppAction;
 use App\Models\Customer;
 use App\Models\Mikrotik;
 use App\Models\Packages\Package;
@@ -10,16 +9,13 @@ use App\Models\AutoIsolir;
 use App\Models\Billing\Billing;
 use App\Models\Receipt;
 use App\Models\PppType;
-use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
-use App\Jobs\Telegram\ProcessTelegramMessageJob;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Routerboard\QueueService;
 use App\Services\Routerboard\IpStaticService;
-use App\DataTransferObjects\WhatsappJobDto;
-use App\DataTransferObjects\TelegramJobDto;
 use App\Helpers\LogHelper;
+use Illuminate\Support\Facades\DB;
 
 class CustomerActivationService
 {
@@ -51,9 +47,11 @@ class CustomerActivationService
             ];
         }
 
+        $activationDate = Carbon::now();
+
         try {
             foreach ($customers as $customer) {
-                $this->activateSingleCustomerWithNotifications($customer, now()->format('d F Y'), $traceId);
+                $result = $this->microtikActivate($customer, $activationDate, $traceId);
             }
 
             LogHelper::logInfo(null, [
@@ -85,16 +83,44 @@ class CustomerActivationService
         }
     }
 
-    private function activateSingleCustomerWithNotifications(Customer $customer, string $activationDate, string $traceId): void
+    private function microtikActivate(Customer $customer, Carbon $activationDate, string $traceId): array
     {
+        $internet_service = $customer->internet_service;
+        $mikrotikId = $customer->mikrotik_id;
         try {
-            $customer->update([
-                'activation_date' => $activationDate,
-                'activation' => 'true',
-                'disabled' => 'false',
-            ]);
+            $router = Mikrotik::findOrFail($mikrotikId);
+            if ($router->disabled == 'true') {
+                $error = 'Server ' . $router->name . ' disable, please enable first.';
+                LogHelper::logError(null, ['server' => $router->name], 400, $error, $traceId);
+                $result = $error;
+            }
 
-            $this->dispatchNotificationJobs($customer, $traceId);
+            $profile = Package::where('id', $customer->package_id)->value('profile');
+            $comment_payment = $this->getCommentPayment($mikrotikId);
+
+            if ($internet_service == 'ppp') {
+                $result = $this->activatePppCustomer($customer, $router, $profile, $comment_payment, $activationDate, $traceId);
+                if (isset($result['error'])) {
+                    LogHelper::logError(null, [
+                        'cust_id' => $customer->id,
+                        'cust_name' => $customer->name,
+                        'server' => $router->name
+                    ], 500, $result['error'], $traceId);
+                }
+            } else if ($internet_service == 'ip_static') {
+                $result = $this->activateIpStaticCustomer($customer, $router, $profile, $comment_payment, $activationDate, $traceId);
+                if (isset($result['error'])) {
+                    LogHelper::logError(null, [
+                        'cust_id' => $customer->id,
+                        'cust_name' => $customer->name,
+                        'server' => $router->name
+                    ], 500, $result['error'], $traceId);
+                }
+            }
+
+            // $this->dispatchNotificationJobs($customer, $traceId);
+
+            return ['result' => $result];
         } catch (\Throwable $e) {
             LogHelper::logError(null, [
                 'exception' => [
@@ -111,54 +137,57 @@ class CustomerActivationService
 
     public function activateCustomer(Customer $customer, string $traceId): array
     {
-        $activationDate = Carbon::now();
-        $internet_service = $customer->internet_service;
-        $mikrotikId = $customer->mikrotik_id;
+        $activationDate = now();
 
         try {
-            $router = Mikrotik::findOrFail($mikrotikId);
-            if ($router->disabled == 'true') {
-                $error = 'Server ' . $router->name . ' disable, please enable first.';
-                LogHelper::logError(null, ['server' => $router->name], 400, $error, $traceId);
-                return ['error' => $error];
+            $result = $this->createReceiptAndUpdateBilling($customer, $traceId, $activationDate);
+
+            if (isset($result['status']) && $result['status'] === 'success') {
+                if (config('services.shanetfiber.allow_mikrotik_actions')) {
+                    $this->microtikActivate($customer, $activationDate, $traceId);
+                }
+
+                $customer->update([
+                    'activation_date' => $activationDate,
+                    'activation' => 'true',
+                    'disabled' => 'false',
+                ]);
             }
 
-            $profile = Package::where('id', $customer->package_id)->value('profile');
-            $comment_payment = $this->getCommentPayment($mikrotikId);
+            $customer->refresh();
 
-            if ($internet_service == 'ppp') {
-                $result = $this->activatePppCustomer($customer, $router, $profile, $comment_payment, $activationDate, $traceId);
-                if (isset($result['error'])) {
-                    return $result;
-                }
-            } else if ($internet_service == 'ip_static') {
-                $result = $this->activateIpStaticCustomer($customer, $router, $profile, $comment_payment, $activationDate, $traceId);
-                if (isset($result['error'])) {
-                    return $result;
-                }
-            }
-
-            $this->createReceiptAndUpdateBilling($customer, $traceId, $activationDate);
-            $this->dispatchNotificationJobs($customer, $traceId);
-
-            LogHelper::logInfo(null, [
-                'customer_id' => $customer->id
+            LogHelper::logInfo('Activation', [
+                'customer_id' => $customer->id,
+                'billing_id' => $result['billing']->id,
+                'receipt_id' => $result['receipt']->id,
             ], 200, 'Customer activated successfully', $traceId);
 
-            return ['success' => 'Customer activated.'];
+            return [
+                'success' => true,
+                'billing' => $result['billing'],
+                'receipt' => $result['receipt'],
+                'customer' => $customer,
+                'traceId' => $traceId,
+            ];
         } catch (\Throwable $e) {
-            LogHelper::logError(null, [
+
+            LogHelper::logError('Activation', [
+                'customer_id' => $customer->id,
                 'exception' => [
                     'message' => $e->getMessage(),
-                    'code' => $e->getCode(),
                     'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ],
-                'customer_id' => $customer->id
-            ], 500, 'Failed to activate customer', $traceId);
-            return ['error' => 'Failed to activate customer: ' . $e->getMessage()];
+                    'line' => $e->getLine(),
+                ]
+            ], 500, 'Customer activation failed', $traceId);
+
+            return [
+                'error' => 'Activation failed: ' . $e->getMessage(),
+                'customer_id' => $customer->id,
+                'trace_id' => $traceId,
+            ];
         }
     }
+
 
     private function getCommentPayment(int $mikrotikId): string
     {
@@ -215,9 +244,6 @@ class CustomerActivationService
 
             $secretId = $createSecret['after']['ret'];
             $customer->update([
-                'activation_date' => $activationDate,
-                'activation' => 'true',
-                'disabled' => 'false',
                 'secret_id' => $secretId,
             ]);
 
@@ -313,9 +339,6 @@ class CustomerActivationService
 
             $arp_id = $createArp['after']['ret'];
             $customer->update([
-                'activation_date' => $activationDate,
-                'activation' => 'true',
-                'disabled' => 'false',
                 'simpleque_id' => $simpleque_id,
                 'arp_id' => $arp_id,
             ]);
@@ -342,30 +365,27 @@ class CustomerActivationService
         }
     }
 
-    private function createReceiptAndUpdateBilling(Customer $customer, string $traceId, Carbon $activationDate): void
+    private function createReceiptAndUpdateBilling(Customer $customer, string $traceId, Carbon $activationDate): array
     {
-        LogHelper::logInfo(null, [
+        LogHelper::logInfo('ActivationBilling', [
             'customer_id' => $customer->id,
             'activation_date' => $activationDate
         ], 200, 'Start createReceiptAndUpdateBilling', $traceId);
 
+        DB::beginTransaction();
+
         try {
+            // Fetch billing
             $billing = Billing::where('customer_id', $customer->id)->firstOrFail();
-            LogHelper::logInfo(null, [
-                'billing_id' => $billing->id
-            ], 200, 'Billing fetched successfully', $traceId);
 
+            // Generate receipt number
             $numberReceipt = $this->generateReceiptNumber($traceId);
-            LogHelper::logInfo(null, [
-                'number_receipt' => $numberReceipt
-            ], 200, 'Generated receipt number', $traceId);
 
+            // Create receipt
             $receipt = Receipt::create([
                 'slug' => str('inv-' . $customer->id . '-' . Str::random(4))->slug(),
                 'periode' => $billing->billingSubscription->billing_periode,
-                'number' => str(
-                    sprintf("%05d", $numberReceipt) . '-KWT-' . Carbon::now()->format('F') . '-' . Carbon::now()->format('Y')
-                ),
+                'number' => sprintf("%05d", $numberReceipt) . '-KWT-' . now()->format('F-Y'),
                 'billing_number' => $billing->billing_number,
                 'customer_id' => $customer->id,
                 'customer_name' => $customer->name,
@@ -377,46 +397,54 @@ class CustomerActivationService
                 'teller_name' => auth()->user()->name ?? 'System',
                 'payment_time' => $activationDate,
             ]);
-            LogHelper::logInfo(null, [
-                'receipt_id' => $receipt->id
-            ], 200, 'Receipt created successfully', $traceId);
 
+            // Update billing
             $billing->update([
                 'payment_time' => $activationDate,
                 'teller_name' => auth()->user()->name ?? 'System',
                 'status' => 'LS',
                 'receipt_id' => $receipt->id,
             ]);
-            LogHelper::logInfo(null, [
-                'billing_id' => $billing->id,
-                'receipt_id' => $receipt->id
-            ], 200, 'Billing updated successfully', $traceId);
 
+            // Update billingSubscription
             $billing->billingSubscription->update([
                 'is_paid' => true,
                 'status' => 'paid',
-                'paid_at' => Carbon::today()
+                'paid_at' => today()
             ]);
-            LogHelper::logInfo(null, [
-                'billing_subscription_id' => $billing->billingSubscription->id
-            ], 200, 'Billing subscription updated successfully', $traceId);
 
-            LogHelper::logInfo(null, [
-                'receipt_id' => $receipt->id,
+            DB::commit();
+
+            $billing = $billing->fresh()->load('billingSubscription');
+            $receipt = $receipt->fresh();
+
+            LogHelper::logInfo('ActivationBilling', [
+                'customer_id' => $customer->id,
                 'billing_id' => $billing->id,
-                'billing_subscription_id' => $billing->billingSubscription->id
-            ], 200, 'Finished createReceiptAndUpdateBilling', $traceId);
+                'receipt_id' => $receipt->id,
+            ], 200, 'createReceiptAndUpdateBilling success', $traceId);
+
+            // === RETURN RESULT ===
+            return [
+                'status' => 'success',
+                'billing' => $billing,
+                'receipt' => $receipt,
+                'billing_subscription' => $billing->billingSubscription
+            ];
         } catch (\Throwable $e) {
-            LogHelper::logError(null, [
+
+            DB::rollBack();
+
+            LogHelper::logError('ActivationBilling', [
+                'customer_id' => $customer->id,
                 'exception' => [
                     'message' => $e->getMessage(),
-                    'code' => $e->getCode(),
                     'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ],
-                'customer_id' => $customer->id
-            ], 500, 'Failed to create receipt and update billing', $traceId);
-            throw $e;
+                    'line' => $e->getLine(),
+                ]
+            ], 500, 'createReceiptAndUpdateBilling failed', $traceId);
+
+            throw $e; // <-- Tetap throw!
         }
     }
 
@@ -456,51 +484,6 @@ class CustomerActivationService
 
             // fallback kalau gagal
             return 'KWT-ERROR-' . Carbon::now()->timestamp;
-        }
-    }
-
-    private function dispatchNotificationJobs(Customer $customer, string $traceId): void
-    {
-        try {
-            $whatsappJobData = new WhatsappJobDto(
-                customerId: $customer->id,
-                action: WhatsappAction::ACTIVATION->value,
-                traceId: $traceId,
-                billingId: null,
-                receiptId: null,
-                receiptData: null,
-                startDate: null,
-                endDate: null,
-                orderId: null,
-                oldPackageName: null,
-                oldPackagePrice: null
-            );
-
-            $telegramJobData = new TelegramJobDto(
-                customerId: $customer->id,
-                action: 'activation_customer',
-                traceId: $traceId,
-                billingId: null,
-                receiptId: null
-            );
-
-            ProcessWhatsappMessageJob::dispatch($whatsappJobData)->onQueue('whatsapp_single');
-            ProcessTelegramMessageJob::dispatch($telegramJobData)->onQueue('telegram');
-
-            LogHelper::logInfo(null, [
-                'customer_id' => $customer->id
-            ], 200, 'Notification jobs dispatched', $traceId);
-        } catch (\Throwable $e) {
-            LogHelper::logError(null, [
-                'exception' => [
-                    'message' => $e->getMessage(),
-                    'code' => $e->getCode(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ],
-                'customer_id' => $customer->id
-            ], 500, 'Failed to dispatch notification jobs', $traceId);
-            throw $e;
         }
     }
 

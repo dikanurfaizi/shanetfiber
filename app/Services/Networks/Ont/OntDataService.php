@@ -2,11 +2,11 @@
 
 namespace App\Services\Networks\Ont;
 
+use App\Helpers\OltHelper;
 use App\Models\Network\Ont;
 use App\Models\Network\SignalThreshold;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use App\Helpers\OltHelper;
 
 class OntDataService
 {
@@ -46,33 +46,62 @@ class OntDataService
     /**
      * Ambil daftar ONT dengan filter dinamis berdasarkan status, olt_id, dan signal_id.
      *
-     * @param int $perPage
-     * @param array $data
      * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
     public static function fetchWithRelationsPaginated(int $perPage = 25, array $data = [])
     {
-        $status   = OltHelper::getStatusFilter($data['status'] ?? null);
-        $oltId    = $data['olt_id'] ?? null;
+        $status = OltHelper::getStatusFilter($data['status'] ?? null);
+        $oltId = $data['olt_id'] ?? null;
         $signalId = $data['signal_id'] ?? null;
-        $search   = $data['search'] ?? null;
+        $search = $data['search'] ?? null;
 
+        // ======== BASE CUSTOMER SUBQUERY =========
+        $resolvedCustomer = DB::table('customers as c')
+            ->select([
+                'c.id',
+                'c.name',
+                'c.username',
+                'c.slug',
+                'c.mac_address',
+                'c.ip_address',
+                DB::raw("REPLACE(c.mac_address, ':', '') AS normalized_mac"),
+            ]);
+
+        // =====================================================
         $query = Ont::query()
             ->from('onts as o')
+
+            // === SMART RESOLVED MATCHING ===
+            ->leftJoinSub($resolvedCustomer, 'c', function ($join) {
+
+                // Conditions:
+                // 1️⃣ Exact MAC match
+                // 2️⃣ Prefix + matching first-name
+
+                $join->whereRaw("
+                REPLACE(c.mac_address, ':', '') = REPLACE(o.mac_address, ':', '')
+                OR (
+                    c.mac_address LIKE CONCAT(LEFT(o.mac_address, 15), '%')
+                    AND LOWER(SUBSTRING_INDEX(c.name, ' ', 1)) = LOWER(SUBSTRING_INDEX(o.name, ' ', 1))
+                )
+            ");
+            })
+
+            // === SIGNAL CLASSIFICATION JOIN ===
             ->leftJoin('signal_thresholds as s', function ($join) {
                 $join->whereColumn('o.rx_power', '>=', 's.min_value')
                     ->whereColumn('o.rx_power', '<=', 's.max_value');
             })
-            ->leftJoin('customers as c', function ($join) {
-                $join->on('c.mac_address', 'like', DB::raw("CONCAT(LEFT(o.mac_address, 15), '%')"));
-            })
+
+            // === VALID OLT ONLY ===
             ->join('olts as ol', function ($join) {
                 $join->on('o.olt_id', '=', 'ol.id')
                     ->whereNull('ol.deleted_at');
             });
 
-        // === APPLY FILTERS ===
-        if (!empty($status)) {
+        // ======================================================
+        // === STATUS FILTER
+        if (! empty($status)) {
             if (strtolower($status) === 'other') {
                 $query->where(function ($q) {
                     $q->whereNotIn('o.status', ['Up', 'Down'])
@@ -83,11 +112,13 @@ class OntDataService
             }
         }
 
-        if (!empty($oltId)) {
+        // === FILTER BY OLT
+        if (! empty($oltId)) {
             $query->where('o.olt_id', '=', $oltId);
         }
 
-        if (!empty($signalId)) {
+        // === SIGNAL RANGE FILTER
+        if (! empty($signalId)) {
             $signal = SignalThreshold::find($signalId);
             if ($signal) {
                 $min = min($signal->min_value, $signal->max_value);
@@ -96,12 +127,14 @@ class OntDataService
             }
         }
 
-        // === SMART SEARCH ===
-        if (!empty($search)) {
+        // ======================================================
+        // === SMART SEARCH (LIKE)
+        if (! empty($search)) {
+
             $search = trim($search);
 
             $query->where(function ($q) use ($search) {
-                // 1️⃣ Text-based search (ONT & Customer names, MAC, username)
+
                 $q->where('o.name', 'like', "%{$search}%")
                     ->orWhere('c.name', 'like', "%{$search}%")
                     ->orWhere('o.mac_address', 'like', "%{$search}%")
@@ -109,13 +142,13 @@ class OntDataService
                     ->orWhere('c.username', 'like', "%{$search}%")
                     ->orWhere('ol.name', 'like', "%{$search}%");
 
-                // 2️⃣ Status keyword detection (Up/Down/Online/Offline/Other)
                 $normalized = strtolower($search);
+
                 $mapped = match ($normalized) {
-                    'up', 'online'   => 'Up',
+                    'up', 'online' => 'Up',
                     'down', 'offline' => 'Down',
-                    'other'          => 'Other',
-                    default           => null
+                    'other' => 'Other',
+                    default => null
                 };
 
                 if ($mapped) {
@@ -129,7 +162,6 @@ class OntDataService
                     }
                 }
 
-                // 3️⃣ Numeric search (for rx_power or ont_index)
                 if (is_numeric($search)) {
                     $q->orWhere('o.rx_power', '=', $search)
                         ->orWhere('o.ont_index', 'like', "%{$search}%");
@@ -137,21 +169,23 @@ class OntDataService
             });
         }
 
-        return $query->selectRaw("
-                ol.id as olt_id,
-                ol.name as olt_name,
-                o.ont_index,
-                COALESCE(c.name, o.name) AS customer_name,
-                o.status AS ont_status,
-                o.rx_power AS ont_rx_power,
-                o.mac_address AS customer_mac,
-                c.id AS customer_id,
-                c.slug AS slug,
-                s.name as signal_class,
-                s.label as signal_label,
-                c.ip_address AS customer_ip,
-                c.slug AS customer_slug
-            ")
+        // ======================================================
+        // === FINAL SELECT
+        return $query->selectRaw('
+        ol.id as olt_id,
+        ol.name as olt_name,
+        o.ont_index,
+        COALESCE(c.name, o.name) AS customer_name,
+        o.status AS ont_status,
+        o.rx_power AS ont_rx_power,
+        c.mac_address AS customer_mac,
+        c.id AS customer_id,
+        c.slug AS slug,
+        s.name as signal_class,
+        s.label as signal_label,
+        c.ip_address AS customer_ip,
+        c.slug AS customer_slug
+    ')
             ->orderBy('customer_name', 'asc')
             ->paginate($perPage);
     }

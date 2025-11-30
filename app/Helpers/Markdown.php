@@ -4,6 +4,9 @@ namespace App\Helpers;
 
 class Markdown
 {
+    /**
+     * Escape karakter Markdown V2 (jarang dipakai jika parse_mode="HTML").
+     */
     public static function escapeMarkdownV2($message)
     {
         $specialChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!', '@'];
@@ -13,16 +16,24 @@ class Markdown
         return $message;
     }
 
+    /**
+     * Convert simple Markdown (*, _) ke HTML untuk Telegram parse_mode="HTML".
+     */
     public static function convertMarkdownToHtml($message)
     {
-        // Bold: *text* → <b>text</b>
-        $message = preg_replace('/\*(.+?)\*/s', '<b>$1</b>', $message);
+        // Step 1 — Bold + Italic: _*text*_  atau *_text_*
+        $message = preg_replace('/\_\*(.+?)\*\_/s', '<i><b>$1</b></i>', $message);
+        $message = preg_replace('/\*\_(.+?)\_\*/s', '<b><i>$1</i></b>', $message);
 
-        // Italic: _text_ → <i>text</i>
-        $message = preg_replace('/_(.+?)_/s', '<i>$1</i>', $message);
+        // Step 2 — Bold: *text*
+        // Pastikan tidak terkena nested italic yg sudah diganti
+        $message = preg_replace('/\*(?!<)(.+?)(?!>)\*/s', '<b>$1</b>', $message);
 
-        // Ganti newline jadi linebreak manual (\n), jangan pakai <br>
-        $message = str_replace("\n", "\n", $message);
+        // Step 3 — Italic: _text_
+        $message = preg_replace('/\_(?!<)(.+?)(?!>)\_/s', '<i>$1</i>', $message);
+
+        // Step 4 — newline => newline (Telegram HTML-supports newline)
+        $message = str_replace(["\r\n", "\r"], "\n", $message);
 
         return $message;
     }

@@ -98,18 +98,22 @@ class AutoIsolirController extends Controller
         $traceId = (string) Str::uuid();
         $router = Mikrotik::where('id', $autoisolir->mikrotik_id)->first();
 
-        try {
-            $this->testConnectionService->checkOnline($router, $traceId);
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['msg' => 'Router offline, please check your router.']);
+        $data = $this->autoIsolirService->showData($router, $autoisolir, $traceId);
+
+        if (!$data['status']) {
+            return back()->withErrors($data['message']);
         }
 
-        $scheduleId = $autoisolir->schedule_id;
-        $schedules = $this->scheduleService->getScheduleById($router, $scheduleId, $traceId);
-        $schedule = $schedules[0];
-        $scriptId = $autoisolir->script_id;
-        $scripts = $this->scriptService->getScriptById($router, $scriptId, $traceId);
-        $script = $scripts[0];
+        if ($data['data_status'] === 'missing') {
+            return back()->withErrors('Schedule and script not found in router.');
+        }
+
+        if ($data['data_status'] === 'partial') {
+            session()->flash('warning', 'Some router configuration missing. Please resync.');
+        }
+
+        $schedule = $data['schedule'];
+        $script = $data['script'];
 
         return view('autoisolirs.show', compact('autoisolir', 'schedule', 'script'));
     }
@@ -308,5 +312,17 @@ class AutoIsolirController extends Controller
             'disabled' => $disabledStatus,
         ]);
         return redirect()->back()->with('success', 'Enable customer successfully');
+    }
+
+    private function validateRequest(Request $request)
+    {
+        $request->validate([
+            'profile_id'         => 'required|exists:ppp_profiles,id',
+            'comment_payment'    => 'nullable|string|max:500',
+            'comment_unpayment'  => 'nullable|string|max:500',
+            'activation_date'    => 'required|string',
+            'due_date'           => 'nullable|string',
+            'address_list_isolir' => 'required|string',
+        ]);
     }
 }

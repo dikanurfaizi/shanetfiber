@@ -8,8 +8,8 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use App\Services\Routerboard\Ppp\SecretService;
+use App\Helpers\LogHelper;
 
 class ActivationCustomerJob implements ShouldQueue
 {
@@ -22,7 +22,6 @@ class ActivationCustomerJob implements ShouldQueue
     private string $serviceName;
     private string $username;
     private string $password;
-    private SecretService $SecretService;
     private string $traceId;
 
     /**
@@ -38,15 +37,15 @@ class ActivationCustomerJob implements ShouldQueue
         $this->serviceName = $serviceName;
         $this->username = $username;
         $this->password = $password;
-        $this->SecretService = app(SecretService::class);
         $this->traceId = $traceId;
     }
 
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(SecretService $SecretService): void
     {
-        $createSecret = $this->SecretService->createSecret($this->mikrotik, $this->username, $this->password, $this->serviceName, $this->profile, $this->comment, $this->traceId);
+        $createSecret = $SecretService->createSecret($this->mikrotik, $this->username, $this->password, $this->serviceName, $this->profile, $this->comment, $this->traceId);
+        LogHelper::logInfo(null, ['secret_created' => $createSecret], 200, "Create Secret Done Execute", $this->traceId);
     }
 }

@@ -2,23 +2,23 @@
 
 namespace App\Services\Customers;
 
-use App\Models\Customer;
+use App\Helpers\LogHelper;
 use App\Models\Billing\Billing;
 use App\Models\Billing\BillingPeriode;
+use App\Models\Customer;
 use App\Models\Mikrotik;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
-use Illuminate\Http\Request;
-use App\Helpers\LogHelper;
 
 class CustomerDataService
 {
-    public function getPaginatedCustomers(array $filters, int $perPage = 25, string $traceId): LengthAwarePaginator
+    public function getPaginatedCustomers(array $filters, int $perPage, string $traceId): LengthAwarePaginator
     {
         try {
             $query = Customer::with(['user'])
-                ->when($filters['search_name'] ?? null, fn($query, $name) => $query->where('name', 'like', "%{$name}%"))
+                ->when($filters['search_name'] ?? null, fn ($query, $name) => $query->where('name', 'like', "%{$name}%"))
                 ->when($filters['search_address'] ?? null, function ($query, $address) {
                     if ($address === 'NULL') {
                         $query->whereNull('address');
@@ -33,9 +33,9 @@ class CustomerDataService
                         $query->where('user_id', $admin);
                     }
                 })
-                ->when($filters['status'] ?? null, fn($query, $status) => $this->applyStatusFilter($query, $status, $traceId))
-                ->when($filters['server_search'] ?? null, fn($query, $server) => $query->where('mikrotik_id', $server))
-                ->when($filters['search_package'] ?? null, fn($query, $package) => $query->where('package_id', $package))
+                ->when($filters['status'] ?? null, fn ($query, $status) => $this->applyStatusFilter($query, $status, $traceId))
+                ->when($filters['server_search'] ?? null, fn ($query, $server) => $query->where('mikrotik_id', $server))
+                ->when($filters['search_package'] ?? null, fn ($query, $package) => $query->where('package_id', $package))
                 ->orderBy('name');
 
             $result = $query->paginate($perPage);
@@ -45,7 +45,7 @@ class CustomerDataService
                 [
                     'total_results' => $result->total(),
                     'current_page' => $result->currentPage(),
-                    'per_page' => $result->perPage()
+                    'per_page' => $result->perPage(),
                 ],
                 200,
                 'Successfully retrieved paginated customers',
@@ -61,10 +61,10 @@ class CustomerDataService
                         'message' => $e->getMessage(),
                         'code' => $e->getCode(),
                         'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'line' => $e->getLine(),
                     ],
                     'filters' => $filters,
-                    'per_page' => $perPage
+                    'per_page' => $perPage,
                 ],
                 500,
                 'Failed to get paginated customers',
@@ -78,10 +78,10 @@ class CustomerDataService
     {
         try {
             $filtered = $customers
-                ->when($filters['search_address'] === 'NULL', fn($c) => $c->whereNull('address'))
-                ->when($filters['search_address'] ?? null, fn($c, $addr) => $c->where('address', $addr))
-                ->when($filters['server_search'] ?? null, fn($c, $server) => $c->where('mikrotik_id', $server))
-                ->when($filters['search_package'] ?? null, fn($c, $package) => $c->where('package_id', $package))
+                ->when($filters['search_address'] === 'NULL', fn ($c) => $c->whereNull('address'))
+                ->when($filters['search_address'] ?? null, fn ($c, $addr) => $c->where('address', $addr))
+                ->when($filters['server_search'] ?? null, fn ($c, $server) => $c->where('mikrotik_id', $server))
+                ->when($filters['search_package'] ?? null, fn ($c, $package) => $c->where('package_id', $package))
                 ->where('activation', 'true')
                 ->sortBy('name')
                 ->values();
@@ -89,7 +89,7 @@ class CustomerDataService
             LogHelper::logInfo(
                 null,
                 [
-                    'filtered_count' => $filtered->count()
+                    'filtered_count' => $filtered->count(),
                 ],
                 200,
                 'Successfully filtered customers by status',
@@ -105,10 +105,10 @@ class CustomerDataService
                         'message' => $e->getMessage(),
                         'code' => $e->getCode(),
                         'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'line' => $e->getLine(),
                     ],
                     'initial_count' => $customers->count(),
-                    'filters' => $filters
+                    'filters' => $filters,
                 ],
                 500,
                 'Failed to filter customers by status',
@@ -136,7 +136,7 @@ class CustomerDataService
                 null,
                 [
                     'total_pages' => $paginator->lastPage(),
-                    'current_page' => $paginator->currentPage()
+                    'current_page' => $paginator->currentPage(),
                 ],
                 200,
                 'Successfully paginated results',
@@ -152,10 +152,10 @@ class CustomerDataService
                         'message' => $e->getMessage(),
                         'code' => $e->getCode(),
                         'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'line' => $e->getLine(),
                     ],
                     'total_results' => $results->count(),
-                    'per_page' => $perPage
+                    'per_page' => $perPage,
                 ],
                 500,
                 'Failed to paginate results',
@@ -181,9 +181,9 @@ class CustomerDataService
                         'message' => $e->getMessage(),
                         'code' => $e->getCode(),
                         'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'line' => $e->getLine(),
                     ],
-                    'status_filter' => $status
+                    'status_filter' => $status,
                 ],
                 500,
                 'Failed to apply status filter',
@@ -223,20 +223,27 @@ class CustomerDataService
 
             $result = [
                 'billingPeriodeActive' => $billingPeriodeActive,
-                'billingLastPayment'   => $billingLastPayment,
-                'lastPayment'          => $lastPayment,
-                'billingPeriods'       => $latestBilling?->billingSubscription?->billingPeriode?->name,
-                'totalAmount'          => $latestBilling?->total_amount,
-                'discount'             => $latestBilling?->discount_amount,
-                'dueDate'              => $latestBilling?->due_date,
-                'notYetPaid'           => $unpaid->sum('total_amount'),
+                'billingLastPayment' => $billingLastPayment,
+                'lastPayment' => $lastPayment,
+                'billingPeriods' => $latestBilling?->billingSubscription?->billingPeriode?->name,
+                'totalAmount' => $latestBilling?->total_amount,
+                'discount' => $latestBilling?->discount_amount,
+                'dueDate' => $latestBilling?->due_date,
+                'notYetPaid' => $unpaid->sum('total_amount'),
             ];
 
             LogHelper::logInfo(
                 null,
                 [
-                    'customer_id'   => $customer->id,
-                    'unpaid_amount' => $result['notYetPaid']
+                    'customer_id' => $customer->id,
+                    'billingPeriodeActive' => $result['billingPeriodeActive'],
+                    'billingLastPayment' => $result['billingLastPayment'],
+                    'lastPayment' => $result['lastPayment'],
+                    'billingPeriods' => $result['billingPeriods'],
+                    'totalAmount' => $result['totalAmount'],
+                    'discount' => $result['discount'],
+                    'dueDate' => $result['dueDate'],
+                    'notYetPaid' => $result['notYetPaid'],
                 ],
                 200,
                 'Successfully retrieved customer details',
@@ -250,11 +257,11 @@ class CustomerDataService
                 [
                     'exception' => [
                         'message' => $e->getMessage(),
-                        'code'    => $e->getCode(),
-                        'file'    => $e->getFile(),
-                        'line'    => $e->getLine()
+                        'code' => $e->getCode(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
                     ],
-                    'customer_id' => $customer->id
+                    'customer_id' => $customer->id,
                 ],
                 500,
                 'Failed to get customer details',
@@ -286,8 +293,8 @@ class CustomerDataService
                         'message' => $e->getMessage(),
                         'code' => $e->getCode(),
                         'file' => $e->getFile(),
-                        'line' => $e->getLine()
-                    ]
+                        'line' => $e->getLine(),
+                    ],
                 ],
                 500,
                 'Failed to get customer addresses',
@@ -319,8 +326,8 @@ class CustomerDataService
                         'message' => $e->getMessage(),
                         'code' => $e->getCode(),
                         'file' => $e->getFile(),
-                        'line' => $e->getLine()
-                    ]
+                        'line' => $e->getLine(),
+                    ],
                 ],
                 500,
                 'Failed to get active servers',
@@ -352,8 +359,8 @@ class CustomerDataService
                         'message' => $e->getMessage(),
                         'code' => $e->getCode(),
                         'file' => $e->getFile(),
-                        'line' => $e->getLine()
-                    ]
+                        'line' => $e->getLine(),
+                    ],
                 ],
                 500,
                 'Failed to get active admins',
@@ -385,8 +392,8 @@ class CustomerDataService
                         'message' => $e->getMessage(),
                         'code' => $e->getCode(),
                         'file' => $e->getFile(),
-                        'line' => $e->getLine()
-                    ]
+                        'line' => $e->getLine(),
+                    ],
                 ],
                 500,
                 'Failed to get current billing period',

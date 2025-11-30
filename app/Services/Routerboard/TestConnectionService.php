@@ -21,19 +21,18 @@ class TestConnectionService
      * @throws BadCredentialsException
      * @throws ConfigException
      */
-    public function testConnection($router, string $traceId)
+    public function testConnection($mikrotik, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($router, $traceId);
+            $client = MikrotikService::testConnection($mikrotik, $traceId);
 
-            $client = new Client($client);
             $query = (new Query('/system/resource/print'));
             $result = $client->query($query)->read();
 
             LogHelper::logInfo(
                 null,
                 [
-                    'host' => $router['host'],
+                    'host' => $mikrotik['host'],
                     'resource_data' => array_keys($result[0] ?? []) // Log only keys for brevity
                 ],
                 200,
@@ -72,15 +71,26 @@ class TestConnectionService
      * @throws BadCredentialsException
      * @throws ConfigException
      */
-    public function checkOnline($router, string $traceId): array
+    public function checkOnline($mikrotik, string $traceId): array
     {
         try {
-            $client = MikrotikConnectionService::getClient($router, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
 
             if (!$client) {
+                LogHelper::LogError(
+                    null,
+                    [
+                        'status' => false,
+                        'message' => "Failed to connect to Mikrotik: {$mikrotik->name}",
+                        'data' => null,
+                    ],
+                    503,
+                    "Mikrotik is offline",
+                    $traceId
+                );
                 return [
                     'status' => false,
-                    'message' => 'Mikrotik client is null. Connection failed.',
+                    'message' => "Failed to connect to Mikrotik: {$mikrotik->name}",
                     'data' => null,
                 ];
             }
@@ -91,7 +101,7 @@ class TestConnectionService
             LogHelper::logInfo(
                 null,
                 [
-                    'host' => $router->host,
+                    'host' => $mikrotik->host,
                     'uptime' => $result[0]['uptime'] ?? 'N/A',
                     'cpu_load' => $result[0]['cpu-load'] ?? 'N/A'
                 ],

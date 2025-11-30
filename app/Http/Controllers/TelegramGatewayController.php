@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\TelegramGateway\TelegramGateway;
-use App\Models\WhatsappGateway\WhatsappGateway;
+use App\Models\Telegram\TelegramGateway;
+use App\Models\WhatsApp\WhatsAppGateway;
 use App\Models\User;
 use App\Helpers\LogHelper;
 use App\Jobs\WhatsApp\SendWhatsappMessageJob;
@@ -126,7 +126,7 @@ class TelegramGatewayController extends Controller
         try {
             // Ambil gateway
             $telegramGateway = TelegramGateway::first();
-            $whatsappGateway = WhatsappGateway::first();
+            $whatsappGateway = WhatsAppGateway::first();
 
             // Validasi gateway aktif
             if ($telegramGateway?->disabled || $whatsappGateway?->disabled) {

@@ -32,6 +32,7 @@ class Customer extends Authenticatable
 
     protected $casts = [
         'password' => 'hashed',
+        'wa_opt_out' => 'boolean',
     ];
 
     public function getRouteKeyName(): string

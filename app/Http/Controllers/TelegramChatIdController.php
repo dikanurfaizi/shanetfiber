@@ -2,26 +2,27 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\TelegramGateway\TelegramGateway;
-use App\Models\Websystem;
 use App\Models\User;
-use App\Models\TelegramGateway\TelegramChatId;
-use App\Services\TelegramMessageService;
+use App\Models\Telegram\TelegramChatId;
+use App\Services\Telegrams\TelegramMessageService;
+use App\Services\Telegrams\TelegramGetUpdateService;
 use App\Helpers\LogHelper;
-use App\Jobs\Telegram\SendTelegramMessageJob;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Enums\TelegramAction;
+use App\DataTransferObjects\TelegramJobDto;
 
 class TelegramChatIdController extends Controller
 {
     private TelegramMessageService $messageService;
+    private TelegramGetUpdateService $telegramGetUpdateService;
 
     public function __construct()
     {
         $this->messageService = app(TelegramMessageService::class);
+        $this->telegramGetUpdateService = app(TelegramGetUpdateService::class);
     }
     /**
      * Display a listing of the resource.
@@ -140,9 +141,9 @@ class TelegramChatIdController extends Controller
     {
         $traceId = (string) Str::uuid();
         try {
-            $chatIds = $this->messageService->findNewChatIds($traceId);
+            $chatIds = $this->telegramGetUpdateService->findNewChatIds($traceId);
 
-            if ($chatIds->isEmpty()) {
+            if (empty($chatIds)) {
                 Log::info('⚠️ Tidak ada chat ID baru.');
                 return response()->json(['message' => 'Tidak ada chat ID baru dari Telegram']);
             }
@@ -168,18 +169,17 @@ class TelegramChatIdController extends Controller
         $chat = TelegramChatId::find($id);
 
         try {
-            $websystem = Websystem::first();
-            $title = $websystem->title ?? 'ShaNet Fiber Management';
-
-            $message = "Hai! Terima kasih telah berinteraksi dengan Official Telegram\n\n" .
-                "Salam,\n{$title}";
-
-
-            SendTelegramMessageJob::dispatch(
-                $chat->chat_id,
-                $message,
-                $traceId
+            $telegramJobData = new TelegramJobDto(
+                customerId: null,
+                action: TelegramAction::TEST_MESSAGE->value,
+                traceId: $traceId,
+                billingId: null,
+                receiptId: null,
+                extra: [],
+                chatId: $chat->chat_id
             );
+
+            $this->messageService->process($telegramJobData, $traceId);
 
             return redirect()->route('telegramgateway.index')
                 ->with('success', trans('whatsapp.gateway.notify.test-success'));

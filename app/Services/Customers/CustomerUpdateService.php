@@ -14,7 +14,6 @@ use App\Models\SubscriptionDuration;
 use App\Models\Websystem;
 use App\Jobs\AddPaymentBeforeDueDateJob;
 use App\Jobs\AddPaymentIpStaticBeforeDueDateJob;
-use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
 use App\Services\Routerboard\Ppp\SecretService;
@@ -25,9 +24,8 @@ use App\Services\Billings\BillingService;
 use App\Http\Resources\Pppoe\SecretResource;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
-use App\DataTransferObjects\WhatsappJobDto;
-use App\Enums\WhatsAppAction;
 use Illuminate\Support\Facades\DB;
+use App\Events\PackageChangesApplied;
 
 class CustomerUpdateService
 {
@@ -45,6 +43,7 @@ class CustomerUpdateService
             LogHelper::logInfo(
                 null,
                 [
+                    'service'         => 'CustomerUpdateService',
                     'customer_id'     => $customer->id,
                     'customer_name'   => $customer->name,
                     'action'          => $action,
@@ -56,34 +55,36 @@ class CustomerUpdateService
             );
 
             $message = '';
-            $result  = ['success' => false, 'message' => ''];
 
             // === CASE 1: Change Package ===
             if ($action === 'change_package') {
                 LogHelper::logInfo(
                     null,
                     [
-                        'customer_id'     => $customer->id,
-                        'old_package_id'  => $customer->package_id,
-                        'new_package_id'  => $validatedData['package_id'] ?? null,
+                        'service'        => 'CustomerUpdateService',
+                        'customer_id'    => $customer->id,
+                        'customer_name'  => $customer->name,
+                        'old_package_id' => $customer->package_id,
+                        'new_package_id' => $validatedData['package_id'] ?? null,
                     ],
                     200,
                     'Initiating package change validation',
                     $traceId
                 );
 
-                // Validasi pergantian package
+                // Validasi pergantian package (murni DB read)
                 $result = $this->validatePackageChange($customer, $traceId);
 
                 if (!$result['success']) {
                     LogHelper::logWarning(
                         null,
                         [
-                            'customer_id'     => $customer->id,
-                            'customer_name'   => $customer->name,
-                            'old_package_id'  => $customer->package_id,
-                            'new_package_id'  => $validatedData['package_id'] ?? null,
-                            'reason'          => $result['message'],
+                            'service'        => 'CustomerUpdateService',
+                            'customer_id'    => $customer->id,
+                            'customer_name'  => $customer->name,
+                            'old_package_id' => $customer->package_id,
+                            'new_package_id' => $validatedData['package_id'] ?? null,
+                            'reason'         => $result['message'],
                         ],
                         400,
                         'Package change validation failed',
@@ -95,6 +96,7 @@ class CustomerUpdateService
                 LogHelper::logInfo(
                     null,
                     [
+                        'service'        => 'CustomerUpdateService',
                         'customer_id'    => $customer->id,
                         'customer_name'  => $customer->name,
                         'old_package_id' => $customer->package_id,
@@ -105,18 +107,21 @@ class CustomerUpdateService
                     $traceId
                 );
 
-                // Jalankan perubahan package
+                // Jalankan perubahan package:
+                // 1) Switch subscription & update DB
+                // 2) Baru kemudian update Mikrotik (dengan env guard)
                 $changesResult = $this->handlePackageChange($customer, $validatedData, $traceId);
 
                 if (!$changesResult['success']) {
                     LogHelper::logError(
                         null,
                         [
-                            'customer_id'     => $customer->id,
-                            'customer_name'   => $customer->name,
-                            'old_package_id'  => $customer->package_id,
-                            'new_package_id'  => $validatedData['package_id'] ?? null,
-                            'reason'          => $changesResult['message'],
+                            'service'        => 'CustomerUpdateService',
+                            'customer_id'    => $customer->id,
+                            'customer_name'  => $customer->name,
+                            'old_package_id' => $customer->package_id,
+                            'new_package_id' => $validatedData['package_id'] ?? null,
+                            'reason'         => $changesResult['message'],
                         ],
                         400,
                         'Package change failed during update',
@@ -130,11 +135,12 @@ class CustomerUpdateService
                 LogHelper::logInfo(
                     null,
                     [
-                        'customer_id'     => $customer->id,
-                        'customer_name'   => $customer->name,
-                        'old_package_id'  => $customer->package_id,
-                        'new_package_id'  => $validatedData['package_id'] ?? null,
-                        'package_change'  => true,
+                        'service'        => 'CustomerUpdateService',
+                        'customer_id'    => $customer->id,
+                        'customer_name'  => $customer->name,
+                        'old_package_id' => $customer->package_id,
+                        'new_package_id' => $validatedData['package_id'] ?? null,
+                        'package_change' => true,
                     ],
                     200,
                     'Customer package updated successfully',
@@ -147,16 +153,19 @@ class CustomerUpdateService
                 LogHelper::logInfo(
                     null,
                     [
-                        'customer_id'    => $customer->id,
-                        'customer_name'  => $customer->name,
-                        'action'         => $action,
+                        'service'       => 'CustomerUpdateService',
+                        'customer_id'   => $customer->id,
+                        'customer_name' => $customer->name,
+                        'action'        => $action,
                     ],
                     200,
                     'Processing standard customer update (activation/member/data)',
                     $traceId
                 );
 
-                // Langkah-langkah update normal
+                // Flow normal: activation date, data, member/billing
+                // Di sini belum dibuat 1 transaksi besar (opsi A = ringan),
+                // tapi semua update DB tetap ter-log rapi.
                 $this->handleActivationDateChange($customer, $validatedData, $traceId);
                 $this->updateCustomerData($customer, $validatedData, $traceId);
                 $this->handleMemberChange($customer, $validatedData, $traceId);
@@ -166,6 +175,7 @@ class CustomerUpdateService
                 LogHelper::logInfo(
                     null,
                     [
+                        'service'        => 'CustomerUpdateService',
                         'customer_id'    => $customer->id,
                         'customer_name'  => $customer->name,
                         'updated_fields' => array_keys($validatedData),
@@ -180,6 +190,7 @@ class CustomerUpdateService
             LogHelper::logInfo(
                 null,
                 [
+                    'service'       => 'CustomerUpdateService',
                     'customer_id'   => $customer->id,
                     'customer_name' => $customer->name,
                     'action'        => $action,
@@ -199,7 +210,8 @@ class CustomerUpdateService
             LogHelper::logError(
                 null,
                 [
-                    'exception' => [
+                    'service'       => 'CustomerUpdateService',
+                    'exception'     => [
                         'message' => $e->getMessage(),
                         'code'    => $e->getCode(),
                         'file'    => $e->getFile(),
@@ -230,16 +242,19 @@ class CustomerUpdateService
         $log = function (string $level, int $status, string $message, array $context = []) use ($traceId, $customer, $startTime) {
             $executionTime = round((microtime(true) - $startTime) * 1000, 2) . ' ms';
             $context = array_merge([
-                'customer_id' => $customer->id,
+                'service'        => 'CustomerUpdateService',
+                'customer_id'    => $customer->id,
+                'customer_name'  => $customer->name,
                 'execution_time' => $executionTime
             ], $context);
 
             match ($level) {
-                'info' => LogHelper::logInfo(null, $context, $status, $message, $traceId),
+                'info'    => LogHelper::logInfo(null, $context, $status, $message, $traceId),
                 'warning' => LogHelper::logWarning(null, $context, $status, $message, $traceId),
-                'error' => LogHelper::logError(null, $context, $status, $message, $traceId),
+                'error'   => LogHelper::logError(null, $context, $status, $message, $traceId),
             };
         };
+
         try {
             // 🔹 Step 1: Ambil periode terakhir
             $lastPeriode = DB::table('billing_subscription_periodes as bsp')
@@ -252,10 +267,7 @@ class CustomerUpdateService
                 ->first();
 
             if (!$lastPeriode) {
-                $log('warning', 404, 'Tidak ada data billing periode', [
-                    'customer_id' => $customer->id,
-                    'customer_name' => $customer->name
-                ]);
+                $log('warning', 404, 'Tidak ada data billing periode');
                 return [
                     'success' => false,
                     'message' => 'Package change failed, there is no billing periode',
@@ -266,8 +278,6 @@ class CustomerUpdateService
             // Cek apakah periode terakhir sudah dibayar
             if (!$lastPeriode->is_paid) {
                 $log('warning', 400, 'Periode terakhir belum dibayar', [
-                    'customer_id' => $customer->id,
-                    'customer_name' => $customer->name,
                     'last_periode' => $lastPeriode
                 ]);
                 return [
@@ -287,10 +297,8 @@ class CustomerUpdateService
                 ->where('bsp.is_paid', true)
                 ->count();
 
-            if ($paidCount < 3) {
-                $log('warning', 400, 'Belum berlangganan minimal 3 periode', [
-                    'customer_id' => $customer->id,
-                    'customer_name' => $customer->name,
+            if ($paidCount <= 1) {
+                $log('warning', 400, 'Belum berlangganan minimal 1 periode', [
                     'paid_count' => $paidCount
                 ]);
                 return [
@@ -313,9 +321,9 @@ class CustomerUpdateService
             $log('error', 500, 'Unexpected error during validatePackageChange', [
                 'exception' => [
                     'message' => $e->getMessage(),
-                    'code' => $e->getCode(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
+                    'code'    => $e->getCode(),
+                    'file'    => $e->getFile(),
+                    'line'    => $e->getLine()
                 ]
             ]);
             return [
@@ -326,6 +334,11 @@ class CustomerUpdateService
         }
     }
 
+    /**
+     * Refactor penting di sini:
+     * - DB (switch subscription + update customer.package_id) dulu.
+     * - Setelah DB OK, baru akses Mikrotik (PPP/IP static) dengan env guard.
+     */
     private function handlePackageChange(Customer $customer, array $data, string $traceId): array
     {
         $startTime = microtime(true);
@@ -333,14 +346,16 @@ class CustomerUpdateService
         $log = function (string $level, int $status, string $message, array $context = []) use ($traceId, $customer, $startTime) {
             $executionTime = round((microtime(true) - $startTime) * 1000, 2) . ' ms';
             $context = array_merge([
-                'customer_id' => $customer->id,
+                'service'        => 'CustomerUpdateService',
+                'customer_id'    => $customer->id,
+                'customer_name'  => $customer->name,
                 'execution_time' => $executionTime
             ], $context);
 
             match ($level) {
-                'info' => LogHelper::logInfo(null, $context, $status, $message, $traceId),
+                'info'    => LogHelper::logInfo(null, $context, $status, $message, $traceId),
                 'warning' => LogHelper::logWarning(null, $context, $status, $message, $traceId),
-                'error' => LogHelper::logError(null, $context, $status, $message, $traceId),
+                'error'   => LogHelper::logError(null, $context, $status, $message, $traceId),
             };
         };
 
@@ -348,7 +363,7 @@ class CustomerUpdateService
             if (!isset($data['package_id'])) {
                 $message = 'Package ID not present in request data';
                 $log('info', 200, $message, [
-                    'message' => 'Data package_id tidak dikirim dari form'
+                    'detail' => 'Data package_id tidak dikirim dari form'
                 ]);
                 return [
                     'success' => false,
@@ -358,11 +373,11 @@ class CustomerUpdateService
             }
 
             $log('info', 200, 'Checking for package change', [
-                'package_id_from_request' => $data['package_id'],
+                'package_id_from_request'  => $data['package_id'],
                 'package_id_from_customer' => $customer->package_id
             ]);
 
-            if ($data['package_id'] == $customer->package_id) {
+            if ((int)$data['package_id'] === (int)$customer->package_id) {
                 $message = 'No package change detected';
                 $log('info', 200, $message, [
                     'package_id' => $data['package_id']
@@ -374,7 +389,7 @@ class CustomerUpdateService
                 ];
             }
 
-            // Load router & auto isolir
+            // Load router & auto isolir & package lama
             $customer->loadMissing(['mikrotik', 'autoIsolir', 'package']);
 
             if (!$customer->mikrotik) {
@@ -394,20 +409,20 @@ class CustomerUpdateService
                 'router_name' => $customer->mikrotik->name ?? null,
             ]);
 
-            if (!$customer->autoIsolir) {
+            if ($customer->autoIsolir) {
+                $log('info', 200, 'AutoIsolir ditemukan', [
+                    'mikrotik_id' => $customer->mikrotik_id,
+                    'autoIsolir'  => $customer->autoIsolir
+                ]);
+            } else {
                 $log('warning', 404, 'AutoIsolir tidak ditemukan', [
                     'mikrotik_id' => $customer->mikrotik_id
                 ]);
-            } else {
-                $log('info', 200, 'AutoIsolir ditemukan', [
-                    'mikrotik_id' => $customer->mikrotik_id,
-                    'autoIsolir' => $customer->autoIsolir
-                ]);
             }
 
-            // Ambil package dan Profile
+            // Ambil package baru dan Profile
             $newPackage = Package::find($data['package_id']);
-            $profile = $newPackage?->profile;
+            $profile    = $newPackage?->profile;
 
             if (!$newPackage || !$profile) {
                 $message = 'Profile or Package not found';
@@ -423,10 +438,10 @@ class CustomerUpdateService
 
             $log('info', 200, 'Profile ditemukan dari package', [
                 'package_id' => $data['package_id'],
-                'profile' => $profile
+                'profile'    => $profile
             ]);
 
-            if ($customer->mikrotik && $customer->mikrotik->disabled == 'true') {
+            if ($customer->mikrotik && $customer->mikrotik->disabled === 'true') {
                 $message = 'Router disabled';
                 $log('warning', 400, $message, [
                     'router_status' => 'disabled'
@@ -438,27 +453,70 @@ class CustomerUpdateService
                 ];
             }
 
+            $oldPackage = $customer->package;
+
+            // === STEP 1: DB — switch subscription + update customer.package_id ===
+            $switchResult = $this->switchCustomerSubscription($customer, $newPackage->id, $traceId);
+
+            if (!$switchResult['success']) {
+                // Di titik ini belum ada perubahan Mikrotik sama sekali.
+                return $switchResult;
+            }
+
+            $customer->update([
+                'package_id' => $newPackage->id
+            ]);
+
+            $log('info', 200, 'Customer package_id berhasil diperbarui (DB updated before Mikrotik)', [
+                'old_package_id' => $oldPackage?->id,
+                'new_package_id' => $newPackage->id
+            ]);
+
+            $customer->refresh();
+
+            // Trigger WhatsApp (bukan Mikrotik, jadi aman di sini)
+            event(new PackageChangesApplied(
+                $customer,
+                $oldPackage->name,
+                $oldPackage->price,
+                $traceId
+            ));
+
+            // === STEP 2: Mikrotik — hanya dijalankan jika diizinkan oleh config ===
+            if (!config('services.shanetfiber.allow_mikrotik_actions')) {
+                $log('info', 200, 'Mikrotik actions skipped by configuration flag', [
+                    'config_key' => 'services.shanetfiber.allow_mikrotik_actions'
+                ]);
+
+                return [
+                    'success' => true,
+                    'message' => 'switch package done (DB only, Mikrotik actions skipped by config)',
+                    'traceId' => $traceId
+                ];
+            }
+
             try {
+                // Pastikan router online sebelum kirim perubahan
                 $this->testConnectionService->checkOnline($customer->mikrotik, $traceId);
             } catch (\Exception $e) {
                 $message = 'Router offline during package change';
-                $log('error', 503, 'Router offline during package change', [
+                $log('error', 503, $message, [
                     'exception' => [
                         'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'code'    => $e->getCode(),
+                        'file'    => $e->getFile(),
+                        'line'    => $e->getLine()
                     ],
                     'router_id' => $customer->mikrotik->id
                 ]);
+
+                // DB sudah terupdate, tapi Mikrotik gagal — sengaja di-signal sebagai error.
                 return [
                     'success' => false,
                     'message' => $message,
                     'traceId' => $traceId
                 ];
             }
-
-            $oldPackage = $customer->package;
 
             // Update Mikrotik profile
             if ($customer->internet_service === 'ppp') {
@@ -470,14 +528,22 @@ class CustomerUpdateService
                     $traceId
                 );
 
-                $check = $this->ensureProfileUpdate($result, $customer, 'PPP', $oldPackage->name, $newPackage->name, $traceId);
+                $check = $this->ensureProfileUpdate(
+                    $result,
+                    $customer,
+                    'PPP',
+                    $oldPackage?->name ?? 'unknown',
+                    $newPackage->name,
+                    $traceId
+                );
+
                 if ($check['success'] === false) {
                     return $check;
                 }
 
                 $log('info', 200, 'Send update PPP Package', [
-                    'package_id' => $data['package_id'],
-                    'profile'  => $result['new_profile']
+                    'package_id'  => $data['package_id'],
+                    'new_profile' => $result['new_profile']
                 ]);
             } elseif ($customer->internet_service === 'ip_static') {
                 $result = $this->updateIpStaticPackage(
@@ -487,65 +553,38 @@ class CustomerUpdateService
                     $traceId
                 );
 
-                $check = $this->ensureProfileUpdate($result, $customer, 'IP Static', $oldPackage->name, $newPackage->name, $traceId);
+                $check = $this->ensureProfileUpdate(
+                    $result,
+                    $customer,
+                    'IP Static',
+                    $oldPackage?->name ?? 'unknown',
+                    $newPackage->name,
+                    $traceId
+                );
+
                 if ($check['success'] === false) {
                     return $check;
                 }
 
                 $log('info', 200, 'Send update IP Static Package', [
-                    'package_id' => $data['package_id'],
-                    'profile'  => $result['new_profile']
+                    'package_id'  => $data['package_id'],
+                    'new_profile' => $result['new_profile']
                 ]);
             }
 
-            $switchResult = $this->switchCustomerSubscription($customer, $newPackage->id, $traceId);
-            if ($switchResult['success']) {
-                $customer->update([
-                    'package_id' => $newPackage->id
-                ]);
-
-                $log('info', 200, 'Customer package_id berhasil diperbarui', [
-                    'new_package_id' => $newPackage->id
-                ]);
-
-                $whatsappJobData = new WhatsappJobDto(
-                    customerId: $customer->id,
-                    action: WhatsappAction::CHANGES_PACKAGE->value,
-                    traceId: $traceId,
-                    billingId: null,
-                    receiptId: null,
-                    receiptData: null,
-                    startDate: null,
-                    endDate: null,
-                    orderId: null,
-                    oldPackageName: $oldPackage->name,
-                    oldPackagePrice: $oldPackage->price
-                );
-
-                ProcessWhatsappMessageJob::dispatch($whatsappJobData)->onQueue('whatsapp_single');
-
-                $successMessage = $switchResult['message'];
-                return [
-                    'success' => true,
-                    'message' => 'Change and ' . $successMessage,
-                    'traceId' => $traceId
-                ];
-            } else {
-                $errorMessage = $switchResult['message'];
-                return [
-                    'success' => false,
-                    'message' => 'Change and ' . $errorMessage,
-                    'traceId' => $traceId
-                ];
-            }
+            return [
+                'success' => true,
+                'message' => 'switch package done',
+                'traceId' => $traceId
+            ];
         } catch (\Throwable $e) {
             $message = 'Unexpected error during package changes';
             $log('error', 500, 'Unexpected error during handlePackageChange', [
                 'exception' => [
                     'message' => $e->getMessage(),
-                    'code' => $e->getCode(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
+                    'code'    => $e->getCode(),
+                    'file'    => $e->getFile(),
+                    'line'    => $e->getLine()
                 ]
             ]);
             return [
@@ -559,14 +598,22 @@ class CustomerUpdateService
     private function ensureProfileUpdate(array $result, Customer $customer, string $service, string $oldPackageName, string $newPackageName, string $traceId): array
     {
         if ($result['success'] === false) {
-            $message = "Failed to update {$service} package from {$oldPackageName} to {$newPackageName}";
-            LogHelper::logError(null, [
-                'customer_id' => $customer->id,
-                'customer_name' => $customer->name,
-                'old_package' => $oldPackageName,
-                'new_package' => $newPackageName,
-                'service' => $service
-            ], 500, $message, $traceId);
+            $message = "Failed to update {$service} package from {$oldPackageName} to {$newPackageName} (DB already updated)";
+            LogHelper::logError(
+                null,
+                [
+                    'service'       => 'CustomerUpdateService',
+                    'customer_id'   => $customer->id,
+                    'customer_name' => $customer->name,
+                    'old_package'   => $oldPackageName,
+                    'new_package'   => $newPackageName,
+                    'router_note'   => 'DB updated, Mikrotik profile not updated',
+                    'network_side'  => $result ?? null,
+                ],
+                500,
+                $message,
+                $traceId
+            );
 
             return [
                 'success' => false,
@@ -578,7 +625,6 @@ class CustomerUpdateService
         return ['success' => true];
     }
 
-
     private function updatePppPackage(
         Customer $customer,
         Mikrotik $router,
@@ -586,8 +632,27 @@ class CustomerUpdateService
         string $profile,
         string $traceId
     ): array {
+        // Guard tambahan: kalau config tidak mengizinkan, jangan sentuh Mikrotik.
+        if (!config('services.shanetfiber.allow_mikrotik_actions')) {
+            LogHelper::logInfo(
+                null,
+                [
+                    'service'     => 'CustomerUpdateService',
+                    'customer_id' => $customer->id,
+                    'router_id'   => $router->id,
+                    'note'        => 'Skipped PPP package update because allow_mikrotik_actions = false',
+                ],
+                200,
+                'PPP package update skipped by configuration',
+                $traceId
+            );
+
+            return $this->makeResponse(true, $customer, $profile);
+        }
+
         try {
             LogHelper::logInfo(null, [
+                'service'     => 'CustomerUpdateService',
                 'customer_id' => $customer->id,
                 'secret_id'   => $customer->secret_id,
                 'router_id'   => $router->id,
@@ -624,6 +689,7 @@ class CustomerUpdateService
             return $this->makeResponse(true, $customer, $profile);
         } catch (\Throwable $e) {
             LogHelper::logError(null, [
+                'service'     => 'CustomerUpdateService',
                 'exception'   => [
                     'message' => $e->getMessage(),
                     'code'    => $e->getCode(),
@@ -640,6 +706,24 @@ class CustomerUpdateService
 
     private function updateIpStaticPackage(Customer $customer, Mikrotik $router, string $profile, string $traceId): array
     {
+        // Guard tambahan: kalau config tidak mengizinkan, jangan sentuh Mikrotik.
+        if (!config('services.shanetfiber.allow_mikrotik_actions')) {
+            LogHelper::logInfo(
+                null,
+                [
+                    'service'     => 'CustomerUpdateService',
+                    'customer_id' => $customer->id,
+                    'router_id'   => $router->id,
+                    'note'        => 'Skipped IP Static package update because allow_mikrotik_actions = false',
+                ],
+                200,
+                'IP Static package update skipped by configuration',
+                $traceId
+            );
+
+            return $this->makeResponse(true, $customer, $profile);
+        }
+
         try {
             $ipAddress = $this->ipStaticService->getIpByArpId($router, $customer->arp_id, $traceId);
 
@@ -648,7 +732,7 @@ class CustomerUpdateService
             }
 
             $profileData = $this->secretService->getPppProfileByName($router, $profile, $traceId)[0];
-            $rateLimit = $profileData['rate-limit'] ?? '';
+            $rateLimit   = $profileData['rate-limit'] ?? '';
 
             if (empty($rateLimit)) {
                 throw new \RuntimeException("Rate limit not configured for profile {$profile}");
@@ -669,9 +753,10 @@ class CustomerUpdateService
             LogHelper::logInfo(
                 null,
                 [
+                    'service'     => 'CustomerUpdateService',
                     'customer_id' => $customer->id,
                     'new_profile' => $profile,
-                    'rate_limit' => $rateLimit
+                    'rate_limit'  => $rateLimit
                 ],
                 200,
                 'IP Static package updated successfully',
@@ -683,14 +768,15 @@ class CustomerUpdateService
             LogHelper::logError(
                 null,
                 [
-                    'exception' => [
+                    'service'     => 'CustomerUpdateService',
+                    'exception'   => [
                         'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'code'    => $e->getCode(),
+                        'file'    => $e->getFile(),
+                        'line'    => $e->getLine()
                     ],
                     'customer_id' => $customer->id,
-                    'router_id' => $router->id
+                    'router_id'   => $router->id
                 ],
                 500,
                 'Failed to update IP Static package',
@@ -710,7 +796,6 @@ class CustomerUpdateService
         ];
     }
 
-
     private function handleActivationDateChange(Customer $customer, array $data, string $traceId): void
     {
         if (empty($data['activation_date'])) {
@@ -723,13 +808,14 @@ class CustomerUpdateService
             LogHelper::logError(
                 null,
                 [
+                    'service'   => 'CustomerUpdateService',
                     'exception' => [
                         'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'code'    => $e->getCode(),
+                        'file'    => $e->getFile(),
+                        'line'    => $e->getLine()
                     ],
-                    'data' => $data,
+                    'data'      => $data,
                 ],
                 500,
                 'Failed to parse activation date',
@@ -737,21 +823,28 @@ class CustomerUpdateService
             );
             return;
         }
+
         $currentActivationDate = Carbon::parse($customer->activation_date)->startOfDay();
 
         if ($inputActivationDate->equalTo($currentActivationDate)) {
             return;
         }
 
-        $router = Mikrotik::find($customer->mikrotik_id);
+        $router    = Mikrotik::find($customer->mikrotik_id);
         $autoIsolir = AutoIsolir::where('mikrotik_id', $customer->mikrotik_id)->first();
 
-        if (!$router || $router->disabled == 'true' || !$autoIsolir || $autoIsolir->disabled == 'true') {
+        if (
+            !$router ||
+            $router->disabled === 'true' ||
+            !$autoIsolir ||
+            $autoIsolir->disabled === 'true'
+        ) {
             LogHelper::logWarning(
                 null,
                 [
-                    'customer_id' => $customer->id,
-                    'router_status' => $router ? ($router->disabled ? 'disabled' : 'enabled') : 'not_found',
+                    'service'           => 'CustomerUpdateService',
+                    'customer_id'       => $customer->id,
+                    'router_status'     => $router ? ($router->disabled ? 'disabled' : 'enabled') : 'not_found',
                     'auto_isolir_status' => $autoIsolir ? ($autoIsolir->disabled ? 'disabled' : 'enabled') : 'not_found'
                 ],
                 400,
@@ -764,12 +857,12 @@ class CustomerUpdateService
         try {
             $lastBillPayment = $this->calculateLastBillPayment($customer, $data['activation_date'], $traceId);
 
-            if ($autoIsolir->activation_date == 'true') {
+            if ($autoIsolir->activation_date === 'true') {
                 $comment = $autoIsolir->comment_unpayment . '_' . $lastBillPayment;
 
                 $success = false;
 
-                if ($customer->internet_service == 'ppp') {
+                if ($customer->internet_service === 'ppp') {
                     $success = $this->handlePppMikrotikUpdate($router, $comment, $customer->secret_id, $traceId);
                 } else {
                     $success = $this->handleIpStaticMikrotikUpdate(
@@ -791,7 +884,8 @@ class CustomerUpdateService
                     LogHelper::logInfo(
                         null,
                         [
-                            'customer_id' => $customer->id,
+                            'service'            => 'CustomerUpdateService',
+                            'customer_id'        => $customer->id,
                             'new_activation_date' => $data['activation_date']
                         ],
                         200,
@@ -804,11 +898,12 @@ class CustomerUpdateService
             LogHelper::logError(
                 null,
                 [
-                    'exception' => [
+                    'service'     => 'CustomerUpdateService',
+                    'exception'   => [
                         'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'code'    => $e->getCode(),
+                        'file'    => $e->getFile(),
+                        'line'    => $e->getLine()
                     ],
                     'customer_id' => $customer->id
                 ],
@@ -822,6 +917,23 @@ class CustomerUpdateService
 
     private function handlePppMikrotikUpdate($router, $comment, $secretId, string $traceId): bool
     {
+        // Env guard di level helper juga, supaya aman kalau dipakai tempat lain.
+        if (!config('services.shanetfiber.allow_mikrotik_actions')) {
+            LogHelper::logInfo(
+                null,
+                [
+                    'service'   => 'CustomerUpdateService',
+                    'router_id' => $router->id ?? null,
+                    'secret_id' => $secretId,
+                    'note'      => 'Skipped PPP Mikrotik update because allow_mikrotik_actions = false',
+                ],
+                200,
+                'PPP Mikrotik update skipped by configuration',
+                $traceId
+            );
+            return true;
+        }
+
         try {
             dispatch(new AddPaymentBeforeDueDateJob($router, $comment, $secretId, $traceId));
             return true;
@@ -829,13 +941,14 @@ class CustomerUpdateService
             LogHelper::logError(
                 null,
                 [
+                    'service'   => 'CustomerUpdateService',
                     'exception' => [
                         'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'code'    => $e->getCode(),
+                        'file'    => $e->getFile(),
+                        'line'    => $e->getLine()
                     ],
-                    'router_id' => $router->id,
+                    'router_id' => $router->id ?? null,
                     'secret_id' => $secretId
                 ],
                 500,
@@ -848,6 +961,23 @@ class CustomerUpdateService
 
     private function handleIpStaticMikrotikUpdate($router, $ipStatic, $queueId, $addressList, $comment, $identity, string $traceId): bool
     {
+        if (!config('services.shanetfiber.allow_mikrotik_actions')) {
+            LogHelper::logInfo(
+                null,
+                [
+                    'service'    => 'CustomerUpdateService',
+                    'router_id'  => $router->id ?? null,
+                    'ip_static'  => $ipStatic,
+                    'queue_id'   => $queueId,
+                    'note'       => 'Skipped IP Static Mikrotik update because allow_mikrotik_actions = false',
+                ],
+                200,
+                'IP Static Mikrotik update skipped by configuration',
+                $traceId
+            );
+            return true;
+        }
+
         try {
             dispatch(new AddPaymentIpStaticBeforeDueDateJob(
                 $router,
@@ -862,13 +992,14 @@ class CustomerUpdateService
             LogHelper::logError(
                 null,
                 [
+                    'service'   => 'CustomerUpdateService',
                     'exception' => [
                         'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'code'    => $e->getCode(),
+                        'file'    => $e->getFile(),
+                        'line'    => $e->getLine()
                     ],
-                    'router_id' => $router->id,
+                    'router_id' => $router->id ?? null,
                     'ip_static' => $ipStatic
                 ],
                 500,
@@ -885,9 +1016,10 @@ class CustomerUpdateService
             LogHelper::logInfo(
                 null,
                 [
-                    'customer_id'      => $customer->id,
-                    'activation_date'  => $activationDate,
-                    'billing_period'   => $customer->billing_period,
+                    'service'         => 'CustomerUpdateService',
+                    'customer_id'     => $customer->id,
+                    'activation_date' => $activationDate,
+                    'billing_period'  => $customer->billing_period,
                 ],
                 200,
                 'Starting last bill payment calculation',
@@ -912,6 +1044,7 @@ class CustomerUpdateService
             LogHelper::logInfo(
                 null,
                 [
+                    'service'       => 'CustomerUpdateService',
                     'customer_id'   => $customer->id,
                     'last_payment'  => $lastPayment?->payment_time,
                     'last_paylater' => $lastPayLater?->pay_later,
@@ -930,6 +1063,7 @@ class CustomerUpdateService
                 LogHelper::logInfo(
                     null,
                     [
+                        'service'        => 'CustomerUpdateService',
                         'customer_id'    => $customer->id,
                         'reference_type' => 'both_found',
                         'reference_date' => $referenceDate,
@@ -944,6 +1078,7 @@ class CustomerUpdateService
                 LogHelper::logInfo(
                     null,
                     [
+                        'service'        => 'CustomerUpdateService',
                         'customer_id'    => $customer->id,
                         'reference_type' => 'payment_only',
                         'reference_date' => $referenceDate,
@@ -958,6 +1093,7 @@ class CustomerUpdateService
                 LogHelper::logInfo(
                     null,
                     [
+                        'service'        => 'CustomerUpdateService',
                         'customer_id'    => $customer->id,
                         'reference_type' => 'paylater_only',
                         'reference_date' => $referenceDate,
@@ -972,9 +1108,10 @@ class CustomerUpdateService
                 LogHelper::logInfo(
                     null,
                     [
-                        'customer_id'     => $customer->id,
-                        'reference_type'  => 'none_found',
-                        'default_return'  => $formatted,
+                        'service'        => 'CustomerUpdateService',
+                        'customer_id'    => $customer->id,
+                        'reference_type' => 'none_found',
+                        'default_return' => $formatted,
                     ],
                     200,
                     'No payment or pay-later record found, using activation date',
@@ -1000,10 +1137,11 @@ class CustomerUpdateService
             LogHelper::logInfo(
                 null,
                 [
-                    'customer_id'      => $customer->id,
+                    'service'           => 'CustomerUpdateService',
+                    'customer_id'       => $customer->id,
                     'final_billing_key' => $final,
-                    'day'              => $day,
-                    'next_month'       => $nextMonth,
+                    'day'               => $day,
+                    'next_month'        => $nextMonth,
                 ],
                 200,
                 'Calculated last bill payment successfully',
@@ -1015,14 +1153,15 @@ class CustomerUpdateService
             LogHelper::logError(
                 null,
                 [
-                    'exception' => [
+                    'service'       => 'CustomerUpdateService',
+                    'exception'     => [
                         'message' => $e->getMessage(),
                         'code'    => $e->getCode(),
                         'file'    => $e->getFile(),
                         'line'    => $e->getLine(),
                     ],
-                    'customer_id'     => $customer->id ?? null,
-                    'activation_date' => $activationDate,
+                    'customer_id'   => $customer->id ?? null,
+                    'activation_date' => $activationDate ?? null,
                 ],
                 500,
                 'Failed to calculate last bill payment',
@@ -1039,7 +1178,8 @@ class CustomerUpdateService
             LogHelper::logInfo(
                 null,
                 [
-                    'customer_id' => $customer->id,
+                    'service'            => 'CustomerUpdateService',
+                    'customer_id'        => $customer->id,
                     'incoming_data_keys' => array_keys($data),
                 ],
                 200,
@@ -1051,12 +1191,12 @@ class CustomerUpdateService
 
             // === Build update payload ===
             $updateData = [
-                'name'        => $data['name'] ?? $customer->name,
-                'email'       => $data['email'] ?? $customer->email,
-                'address'     => $data['address'] ?? $customer->address,
-                'contact'     => $formatter->formatReceiver($data['contact'] ?? $customer->contact, null, false),
-                'discount'    => $data['discount'] ?? $customer->discount ?? 0,
-                'user_id'     => $data['user_id'] ?? $customer->user_id,
+                'name'     => $data['name'] ?? $customer->name,
+                'email'    => $data['email'] ?? $customer->email,
+                'address'  => $data['address'] ?? $customer->address,
+                'contact'  => $formatter->formatReceiver($data['contact'] ?? $customer->contact, null, false),
+                'discount' => $data['discount'] ?? $customer->discount ?? 0,
+                'user_id'  => $data['user_id'] ?? $customer->user_id,
             ];
 
             // Password handling
@@ -1065,6 +1205,7 @@ class CustomerUpdateService
                 LogHelper::logInfo(
                     null,
                     [
+                        'service'     => 'CustomerUpdateService',
                         'customer_id' => $customer->id,
                         'note'        => 'Password field will be updated (hashed).',
                     ],
@@ -1076,7 +1217,7 @@ class CustomerUpdateService
 
             // Member handling
             if (!empty($data['member_id'])) {
-                $updateData['member_id'] = $data['member_id'];
+                $updateData['member_id']      = $data['member_id'];
                 $updateData['billing_option'] = $data['billing_option'] ?? null;
                 $updateData['billing_period'] = ($data['billing_option'] ?? '0') !== '0'
                     ? $data['periode_billing'] ?? null
@@ -1085,10 +1226,11 @@ class CustomerUpdateService
                 LogHelper::logInfo(
                     null,
                     [
-                        'customer_id'     => $customer->id,
-                        'member_id'       => $data['member_id'],
-                        'billing_option'  => $data['billing_option'] ?? null,
-                        'billing_period'  => $updateData['billing_period'],
+                        'service'        => 'CustomerUpdateService',
+                        'customer_id'    => $customer->id,
+                        'member_id'      => $data['member_id'],
+                        'billing_option' => $data['billing_option'] ?? null,
+                        'billing_period' => $updateData['billing_period'],
                     ],
                     200,
                     'Member and billing info updated',
@@ -1102,8 +1244,9 @@ class CustomerUpdateService
             LogHelper::logInfo(
                 null,
                 [
-                    'customer_id'     => $customer->id,
-                    'updated_fields'  => array_keys($updateData),
+                    'service'        => 'CustomerUpdateService',
+                    'customer_id'    => $customer->id,
+                    'updated_fields' => array_keys($updateData),
                     'updated_payload' => $updateData,
                 ],
                 200,
@@ -1114,7 +1257,8 @@ class CustomerUpdateService
             LogHelper::logError(
                 null,
                 [
-                    'exception' => [
+                    'service'     => 'CustomerUpdateService',
+                    'exception'   => [
                         'message' => $e->getMessage(),
                         'code'    => $e->getCode(),
                         'file'    => $e->getFile(),
@@ -1140,6 +1284,7 @@ class CustomerUpdateService
                 LogHelper::logInfo(
                     null,
                     [
+                        'service'     => 'CustomerUpdateService',
                         'customer_id' => $customer->id,
                         'note'        => 'Member ID not changed, skipping process.',
                     ],
@@ -1154,6 +1299,7 @@ class CustomerUpdateService
                 LogHelper::logInfo(
                     null,
                     [
+                        'service'     => 'CustomerUpdateService',
                         'customer_id' => $customer->id,
                         'periode'     => $customer->billing_period,
                         'note'        => 'Customer billing periode same as request data.',
@@ -1175,6 +1321,7 @@ class CustomerUpdateService
                 LogHelper::logInfo(
                     null,
                     [
+                        'service'     => 'CustomerUpdateService',
                         'customer_id' => $customer->id,
                         'periode'     => $currentPeriode->name,
                         'note'        => 'Current periode matches provided periode, skipping update.',
@@ -1210,27 +1357,26 @@ class CustomerUpdateService
                 $customer->package->price
             );
 
-            $discountAmount = (int) ($customerDiscount + $discountPackage);
-            $priceAfterDiscount = max(0, (int) $customer->package->price - $discountAmount);
-
-            $taxRate = (float) ($websystem->tax_rate ?? 0);
-            $customerTax = ($websystem->enable_tax)
+            $discountAmount      = (int) ($customerDiscount + $discountPackage);
+            $priceAfterDiscount  = max(0, (int) $customer->package->price - $discountAmount);
+            $taxRate             = (float) ($websystem->tax_rate ?? 0);
+            $customerTax         = ($websystem->enable_tax)
                 ? (int) ceil($priceAfterDiscount * ($taxRate / 100))
                 : 0;
-
-            $totalAmount = $priceAfterDiscount + $customerTax;
+            $totalAmount         = $priceAfterDiscount + $customerTax;
 
             LogHelper::logInfo(
                 null,
                 [
-                    'customer_id'       => $customer->id,
-                    'periode'           => $currentPeriode->name,
-                    'package_price'       => $customer->package->price,
+                    'service'          => 'CustomerUpdateService',
+                    'customer_id'      => $customer->id,
+                    'periode'          => $currentPeriode->name,
+                    'package_price'    => $customer->package->price,
                     'discount_customer' => $customerDiscount,
-                    'discount_package'    => $discountPackage,
-                    'discount_total'    => $discountAmount,
-                    'tax_amount'        => $customerTax,
-                    'total_amount'      => $totalAmount,
+                    'discount_package' => $discountPackage,
+                    'discount_total'   => $discountAmount,
+                    'tax_amount'       => $customerTax,
+                    'total_amount'     => $totalAmount,
                 ],
                 200,
                 'Calculated new billing values before update',
@@ -1255,6 +1401,7 @@ class CustomerUpdateService
                 LogHelper::logInfo(
                     null,
                     [
+                        'service'     => 'CustomerUpdateService',
                         'customer_id' => $customer->id,
                         'periode'     => $currentPeriode->name,
                         'updated'     => $updated,
@@ -1267,6 +1414,7 @@ class CustomerUpdateService
                 LogHelper::logWarning(
                     null,
                     [
+                        'service'     => 'CustomerUpdateService',
                         'customer_id' => $customer->id,
                         'periode'     => $currentPeriode->name,
                     ],
@@ -1279,7 +1427,8 @@ class CustomerUpdateService
             LogHelper::logError(
                 null,
                 [
-                    'exception' => [
+                    'service'     => 'CustomerUpdateService',
+                    'exception'   => [
                         'message' => $e->getMessage(),
                         'code'    => $e->getCode(),
                         'file'    => $e->getFile(),
@@ -1299,121 +1448,130 @@ class CustomerUpdateService
 
     private function switchCustomerSubscription(Customer $customer, int $newPackageId, string $traceId): array
     {
-        DB::beginTransaction();
         $startTime = microtime(true);
 
         $log = function (string $level, int $status, string $message, array $context = []) use ($traceId, $customer, $startTime) {
             $executionTime = round((microtime(true) - $startTime) * 1000, 2) . ' ms';
             $context = array_merge([
-                'customer_id' => $customer->id,
+                'service'        => 'CustomerUpdateService',
+                'customer_id'    => $customer->id,
+                'customer_name'  => $customer->name,
                 'execution_time' => $executionTime
             ], $context);
 
             match ($level) {
-                'info' => LogHelper::logInfo(null, $context, $status, $message, $traceId),
+                'info'    => LogHelper::logInfo(null, $context, $status, $message, $traceId),
                 'warning' => LogHelper::logWarning(null, $context, $status, $message, $traceId),
-                'error' => LogHelper::logError(null, $context, $status, $message, $traceId),
+                'error'   => LogHelper::logError(null, $context, $status, $message, $traceId),
             };
         };
 
         try {
-            // Ambil customer subscription aktif
-            $activeSubscription = CustomerSubscription::where('customer_id', $customer->id)
-                ->where('status', 'active')
-                ->lockForUpdate()
-                ->first();
+            $result = DB::transaction(function () use ($customer, $newPackageId, $log, $traceId) {
+                // Ambil customer subscription aktif
+                $activeSubscription = CustomerSubscription::where('customer_id', $customer->id)
+                    ->where('status', 'active')
+                    ->lockForUpdate()
+                    ->first();
 
-            if (!$activeSubscription) {
-                $log('warning', 404, 'Active customer subscription not found');
-                DB::rollBack();
-                return [
-                    'success' => false,
-                    'message' => 'Active subscription not found',
-                    'traceId' => $traceId
-                ];
-            }
+                if (!$activeSubscription) {
+                    $log('warning', 404, 'Active customer subscription not found');
+                    return [
+                        'success' => false,
+                        'message' => 'Active subscription not found',
+                    ];
+                }
 
-            if ($activeSubscription->package_id == $newPackageId) {
-                $log('warning', 400, 'New package is the same as the old package');
-                DB::rollBack();
-                return [
-                    'success' => false,
-                    'message' => 'New package is the same as the old package',
-                    'traceId' => $traceId
-                ];
-            }
+                if ((int)$activeSubscription->package_id === (int)$newPackageId) {
+                    $log('warning', 400, 'New package is the same as the old package');
+                    return [
+                        'success' => false,
+                        'message' => 'New package is the same as the old package',
+                    ];
+                }
 
-            // Terminate subscription lama
-            $activeSubscription->update([
-                'status' => 'terminated',
-                'terminated_at' => now(),
-            ]);
-
-            $log('info', 200, 'Old subscription terminated', [
-                'old_subscription_id' => $activeSubscription->id,
-            ]);
-
-            // Update billing_subscription_periodes lama -> is_expired = true, status = 'expired'
-            BillingSubscriptionPeriode::where('customer_subscription_id', $activeSubscription->id)
-                ->update([
-                    'is_expired' => true,
-                    'status' => 'expired',
+                // Terminate subscription lama
+                $activeSubscription->update([
+                    'status'        => 'terminated',
+                    'terminated_at' => now(),
                 ]);
 
-            $log('info', 200, 'Old billing subscription periods marked expired', [
-                'old_subscription_id' => $activeSubscription->id,
-            ]);
+                $log('info', 200, 'Old subscription terminated', [
+                    'old_subscription_id' => $activeSubscription->id,
+                ]);
 
-            $package = Package::find($newPackageId);
-            if (!$package) {
-                $log('warning', 404, 'package not found');
-                DB::rollBack();
+                // Update billing_subscription_periodes lama -> is_expired = true, status = 'expired'
+                BillingSubscriptionPeriode::where('customer_subscription_id', $activeSubscription->id)
+                    ->update([
+                        'is_expired' => true,
+                        'status'     => 'expired',
+                    ]);
+
+                $log('info', 200, 'Old billing subscription periods marked expired', [
+                    'old_subscription_id' => $activeSubscription->id,
+                ]);
+
+                $package = Package::find($newPackageId);
+                if (!$package) {
+                    $log('warning', 404, 'package not found');
+                    return [
+                        'success' => false,
+                        'message' => 'package not found',
+                    ];
+                }
+
+                $priceFinal = $package->is_instalation_free
+                    ? $package->price
+                    : $package->price + $package->installation_fee;
+
+                $subscriptionDuration = SubscriptionDuration::where('package_id', $newPackageId)->first();
+
+                // Buat customer_subscriptions baru
+                $newSubscription = CustomerSubscription::create([
+                    'customer_id'              => $customer->id,
+                    'package_id'               => $newPackageId,
+                    'subscription_duration_id' => $subscriptionDuration?->id,
+                    'start_date'               => now(),
+                    'end_date'                 => now()->addMonth()->day(15)->startOfDay(),
+                    'price_final'              => $priceFinal,
+                    'discount_type'            => 'none',
+                    'discount_value_final'     => 0,
+                    'status'                   => 'active',
+                ]);
+
+                $log('info', 201, 'New subscription created', [
+                    'new_subscription_id' => $newSubscription->id,
+                    'new_package_id'      => $newPackageId,
+                ]);
+
+                return [
+                    'success'             => true,
+                    'message'             => 'switch package done',
+                    'new_subscription_id' => $newSubscription->id,
+                ];
+            });
+
+            if (!$result['success']) {
                 return [
                     'success' => false,
-                    'message' => 'package not found',
+                    'message' => $result['message'],
                     'traceId' => $traceId
                 ];
             }
 
-            $priceFinal = $package->is_instalation_free ? $package->price : $package->price + $package->installation_fee;
-
-            $subscriptionDuration = SubscriptionDuration::where('package_id', $newPackageId)->first();
-
-            // Buat customer_subscriptions baru
-            $newSubscription = CustomerSubscription::create([
-                'customer_id' => $customer->id,
-                'package_id' => $newPackageId,
-                'subscription_duration_id' => $subscriptionDuration->id,
-                'start_date' => now(),
-                'end_date' => now()->addMonth()->day(15)->startOfDay(),
-                'price_final' => $priceFinal,
-                'discount_type' => 'none',
-                'discount_value_final' => 0,
-                'status' => 'active',
-            ]);
-
-            $log('info', 201, 'New subscription created', [
-                'new_subscription_id' => $newSubscription->id,
-                'new_package_id' => $newPackageId,
-            ]);
-
-            DB::commit();
-
             return [
-                'success' => true,
-                'message' => 'switch package done',
-                'new_subscription_id' => $newSubscription->id,
-                'traceId' => $traceId
+                'success'             => true,
+                'message'             => $result['message'],
+                'new_subscription_id' => $result['new_subscription_id'],
+                'traceId'             => $traceId
             ];
         } catch (\Throwable $e) {
-            DB::rollBack();
-
             $log('error', 500, 'Failed to switch subscription', [
                 'exception' => [
                     'message' => $e->getMessage(),
-                    'code' => $e->getCode(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
+                    'code'    => $e->getCode(),
+                    'file'    => $e->getFile(),
+                    'line'    => $e->getLine(),
                 ],
             ]);
 

@@ -2,27 +2,25 @@
 
 namespace App\Services\Billings;
 
+use App\Enums\WhatsAppAction;
+use App\Helpers\LogHelper;
+use App\Http\Resources\Pppoe\SecretResource;
+use App\Jobs\AddPaymentAfterDueDateJob;
+use App\Jobs\AddPaymentBeforeDueDateJob;
+use App\Jobs\AddPaymentIpStaticAfterDueDateJob;
+use App\Models\AutoIsolir;
 use App\Models\Billing\Billing;
 use App\Models\Customer;
 use App\Models\Mikrotik;
-use App\Models\AutoIsolir;
-use App\Jobs\AddPaymentBeforeDueDateJob;
-use App\Jobs\AddPaymentAfterDueDateJob;
-use App\Jobs\AddPaymentIpStaticAfterDueDateJob;
-use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Routerboard\IpStaticService;
-use App\Http\Resources\Pppoe\SecretResource;
+use App\Services\Routerboard\Ppp\SecretService;
 use Carbon\Carbon;
-use Illuminate\Support\Str;
-use App\Helpers\LogHelper;
-use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
 use Illuminate\Http\Request;
-use App\DataTransferObjects\WhatsappJobDto;
-use App\Enums\WhatsAppAction;
 
 class PayLaterService
 {
     private SecretService $secretService;
+
     private IpStaticService $ipStaticService;
 
     public function __construct(SecretService $secretService, IpStaticService $ipStaticService)
@@ -33,63 +31,78 @@ class PayLaterService
 
     public function processPayLater(Request $request, Billing $billing, string $traceId): array
     {
-        $startTime = microtime(true);
+        $start = microtime(true);
 
-        // Context awal biar konsisten di semua log
         $context = [
-            'billing_id' => $billing->id ?? null,
-            'customer_id' => $billing->customer->id ?? null,
-            'pay_later_input' => $request->pay_later ?? null,
-            'action' => 'post_pay_later'
+            'billing_id' => $billing->id,
+            'customer_id' => $billing->customer->id,
+            'pay_later_input' => $request->pay_later,
         ];
 
-        try {
-            LogHelper::logInfo(null, $context, 200, 'Starting processPayLater', $traceId);
+        LogHelper::logInfo('PayLater', $context, 100, 'START pay-later process', $traceId);
 
-            // Validasi input
+        try {
+            // === Step 1: Validate ===
+            LogHelper::logInfo('PayLater', [
+                'billing_id' => $billing->id,
+                'step' => 'validation'
+            ], 200, 'Step 1 — Validating input', $traceId);
+
             $request->validate([
                 'pay_later' => ['required', 'date', 'after_or_equal:' . now()->format('Y-m-d')],
             ]);
 
-            $customer = $billing->customer;
+            // === Step 2: Update Billing ===
+            LogHelper::logInfo('PayLater', [
+                'billing_id' => $billing->id,
+                'step' => 'update_billing',
+            ], 200, 'Step 2 — Update billing pay_later', $traceId);
 
-            // Proses Mikrotik actions
-            $this->processMikrotikActions($customer, $request->pay_later, $traceId);
-
-            // Update billing data
             $billing->update([
                 'pay_later' => Carbon::parse($request->pay_later),
-                'teller_name' => auth()->user()->name ?? ($customer->user->name ?? null),
-                'status' => 'PL'
+                'teller_name' => auth()->user()->name ?? $billing->customer->user->name,
+                'status' => 'PL',
             ]);
 
-            // Kirim notifikasi WhatsApp
-            $this->sendWhatsappNotification($billing, $customer, $traceId);
+            // === Step 3: Mikrotik Actions (Optional) ===
+            if (config('services.shanetfiber.allow_mikrotik_actions')) {
+                LogHelper::logInfo('PayLater', [
+                    'billing_id' => $billing->id,
+                    'step' => 'mikrotik_actions'
+                ], 200, 'Step 3 — Processing Mikrotik actions', $traceId);
 
-            $executionTime = round(microtime(true) - $startTime, 3);
-            LogHelper::logInfo(null, array_merge($context, [
-                'execution_seconds' => $executionTime
-            ]), 200, 'Pay later successfully processed', $traceId);
+                $this->processMikrotikActions($billing->customer, $request->pay_later, $traceId);
+            }
+
+            // === FINISH ===
+            $execution = round(microtime(true) - $start, 3);
+
+            LogHelper::logInfo('PayLater', array_merge($context, [
+                'execution_seconds' => $execution,
+            ]), 300, 'Pay-later processed successfully', $traceId);
 
             return [
                 'success' => true,
                 'message' => 'Pay later successfully.',
-                'trace_id' => $traceId
+                'trace_id' => $traceId,
             ];
         } catch (\Throwable $e) {
-            $executionTime = round(microtime(true) - $startTime, 3);
 
-            LogHelper::logError(null, array_merge($context, [
-                'execution_seconds' => $executionTime,
+            $execution = round(microtime(true) - $start, 3);
+
+            LogHelper::logError('PayLater', array_merge($context, [
+                'execution_seconds' => $execution,
                 'exception' => get_class($e),
                 'error_code' => $e->getCode(),
-                'error_message' => $e->getMessage()
-            ]), 500, 'Error processing pay later', $traceId);
+                'error_message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]), 500, 'ERROR processing pay-later', $traceId);
 
             return [
                 'success' => false,
                 'message' => 'Failed to process pay later: ' . $e->getMessage(),
-                'trace_id' => $traceId
+                'trace_id' => $traceId,
             ];
         }
     }
@@ -100,12 +113,12 @@ class PayLaterService
 
         // Siapkan context untuk semua log
         $context = [
-            'customer_id'       => $customer->id ?? null,
-            'username'          => $customer->username ?? null,
-            'mikrotik_id'       => $customer->mikrotik_id ?? null,
-            'internet_service'  => $customer->internet_service ?? null,
-            'pay_later_date'    => $payLaterDate,
-            'action'            => WhatsAppAction::PAYLATER->value
+            'customer_id' => $customer->id ?? null,
+            'username' => $customer->username ?? null,
+            'mikrotik_id' => $customer->mikrotik_id ?? null,
+            'internet_service' => $customer->internet_service ?? null,
+            'pay_later_date' => $payLaterDate,
+            'action' => WhatsAppAction::PAYLATER->value,
         ];
 
         try {
@@ -114,16 +127,17 @@ class PayLaterService
             $router = Mikrotik::find($customer->mikrotik_id);
             $autoIsolir = AutoIsolir::where('mikrotik_id', $customer->mikrotik_id)->first();
 
-            if (!$router || $router->disabled === 'true' || !$autoIsolir || $autoIsolir->disabled === 'true') {
+            if (! $router || $router->disabled === 'true' || ! $autoIsolir || $autoIsolir->disabled === 'true') {
                 $executionTime = round(microtime(true) - $startTime, 3);
                 LogHelper::logWarning(null, array_merge($context, [
                     'execution_seconds' => $executionTime,
-                    'reason' => 'Router or AutoIsolir not found or disabled'
+                    'reason' => 'Router or AutoIsolir not found or disabled',
                 ]), 200, 'processMikrotikActions skipped', $traceId);
+
                 return;
             }
 
-            $paylaterDate  = Carbon::parse($payLaterDate);
+            $paylaterDate = Carbon::parse($payLaterDate);
             $commentPayment = $this->getCommentPayment($autoIsolir, $paylaterDate);
 
             if ($customer->internet_service === 'ppp') {
@@ -135,15 +149,15 @@ class PayLaterService
             $executionTime = round(microtime(true) - $startTime, 3);
             LogHelper::logInfo(null, array_merge($context, [
                 'execution_seconds' => $executionTime,
-                'comment_payment'   => $commentPayment
+                'comment_payment' => $commentPayment,
             ]), 200, 'processMikrotikActions completed successfully', $traceId);
         } catch (\Throwable $e) {
             $executionTime = round(microtime(true) - $startTime, 3);
             LogHelper::logError(null, array_merge($context, [
                 'execution_seconds' => $executionTime,
-                'exception'         => get_class($e),
-                'error_code'        => $e->getCode(),
-                'error_message'     => $e->getMessage()
+                'exception' => get_class($e),
+                'error_code' => $e->getCode(),
+                'error_message' => $e->getMessage(),
             ]), 500, 'processMikrotikActions failed', $traceId);
 
             throw $e;
@@ -216,7 +230,7 @@ class PayLaterService
                 'comment_payment' => $commentPayment,
                 'execution_seconds' => $executionTime,
                 'exception' => get_class($e),
-                'error_message' => $e->getMessage()
+                'error_message' => $e->getMessage(),
             ];
             LogHelper::logError(null, $context, 500, 'Process PPP Payment Failed', $traceId);
 
@@ -309,51 +323,6 @@ class PayLaterService
             LogHelper::logError(null, $context, 500, 'Process IP Static Payment Failed', $traceId);
 
             throw new \Exception('Cannot connect to Server ' . ($router->name ?? '') . '. ' . $e->getMessage());
-        }
-    }
-
-    private function sendWhatsappNotification(Billing $billing, Customer $customer, string $traceId): void
-    {
-        $context = [
-            'customerId' => $billing->customer_id ?? null,
-            'billingId'  => $billing->id ?? null,
-            'action'     => WhatsAppAction::PAYLATER->value
-        ];
-
-        try {
-            if ($customer->contact) {
-                $jobData = new WhatsappJobDto(
-                    customerId: (int)$billing->customer_id,
-                    action: WhatsAppAction::PAYLATER->value,
-                    traceId: (string)$traceId,
-                    billingId: (int)$billing->id,
-                    receiptId: null,
-                    receiptData: null,
-                    startDate: null,
-                    endDate: null,
-                    orderId: null
-                );
-
-                ProcessWhatsappMessageJob::dispatch($jobData)->onQueue('default');
-                $message = 'The delivery of the paylater payment information message has been successfully scheduled';
-
-                LogHelper::logInfo(null, $context, 200, $message, $traceId);
-            } else {
-                $message = 'Customer contact not found';
-                LogHelper::logWarning(null, $context, 404, $message, $traceId);
-            }
-        } catch (\Throwable $e) {
-            LogHelper::logError(
-                null,
-                array_merge($context, [
-                    'errorCode'    => $e->getCode(),
-                    'errorMessage' => $e->getMessage()
-                ]),
-                500,
-                'Failed to send WhatsApp notification',
-                $traceId
-            );
-            throw $e;
         }
     }
 }

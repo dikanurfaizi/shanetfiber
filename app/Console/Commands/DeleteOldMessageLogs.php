@@ -23,27 +23,18 @@ class DeleteOldMessageLogs extends Command
      */
     public function handle(): void
     {
-        $thresholdDate = Carbon::now()->subDays(15);
+        $thresholdDate = Carbon::now()->subDays(30);
 
-        $this->message_logs_delete($thresholdDate);
-        $this->message_log_errors_delete($thresholdDate);
+        $this->message_events_delete($thresholdDate);
     }
 
-    private function message_logs_delete($thresholdDate)
+    private function message_events_delete($thresholdDate)
     {
-        $deleted = DB::table('message_logs')
+        $deleted = DB::table('message_events')
             ->where('created_at', '<', $thresholdDate)
+            ->where('status', '=','success')
             ->delete();
 
         $this->info("✅ $deleted old message log(s) deleted (before {$thresholdDate->toDateTimeString()})");
-    }
-
-    private function message_log_errors_delete($thresholdDate)
-    {
-        $deleted = DB::table('message_log_errors')
-            ->where('created_at', '<', $thresholdDate)
-            ->delete();
-
-        $this->info("✅ $deleted old message log error(s) deleted (before {$thresholdDate->toDateTimeString()})");
     }
 }

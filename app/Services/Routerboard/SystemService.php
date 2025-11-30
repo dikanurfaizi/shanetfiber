@@ -22,7 +22,7 @@ class SystemService
     public function getAllResources($router, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($router, $traceId);
+            $client = MikrotikService::getMikrotik($router, $traceId);
 
             if (!$client) {
                 LogHelper::logWarning(
@@ -67,7 +67,7 @@ class SystemService
     public function getTime($router, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($router, $traceId);
+            $client = MikrotikService::getMikrotik($router, $traceId);
 
             if (!$client) {
                 LogHelper::logWarning(
@@ -113,7 +113,7 @@ class SystemService
     {
         try {
             $interface = request()->interface;
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
 
             if (!$client) {
                 LogHelper::logWarning(
@@ -174,7 +174,7 @@ class SystemService
     public function mikrotikInterface(Mikrotik $routerboard, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
 
             if (!$client) {
                 LogHelper::logError(
@@ -230,7 +230,7 @@ class SystemService
     public function mikrotikEtherInterface(Mikrotik $routerboard, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
 
             if (!$client) {
                 LogHelper::logWarning(
@@ -288,7 +288,7 @@ class SystemService
     public function getInterfacePppByName($router, $username, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($router, $traceId);
+            $client = MikrotikService::getMikrotik($router, $traceId);
 
             if (!$client) {
                 LogHelper::logWarning(

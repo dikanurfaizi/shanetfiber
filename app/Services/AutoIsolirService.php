@@ -3,13 +3,14 @@
 namespace App\Services;
 
 use App\Models\Mikrotik;
-use App\Models\Paket\PppProfile;
+use App\Models\Packages\PppProfile;
 use App\Models\AutoIsolir;
 use App\Services\Routerboard\ScriptService;
 use App\Services\Routerboard\ScheduleService;
 use App\Services\Routerboard\TestConnectionService;
 use App\Services\Routerboard\FirewallService;
 use App\Services\Routerboard\ProxyService;
+use App\Helpers\LogHelper;
 
 class AutoIsolirService
 {
@@ -126,29 +127,131 @@ class AutoIsolirService
 
     public function updateAutoIsolir(array $data, AutoIsolir $autoisolir, string $traceId)
     {
-        $router = $autoisolir->mikrotik;
-        $this->checkConnection($router, $traceId);
-        $profileName = PppProfile::find($data['profile_id'])?->profile_name;
-        $rosVersion = $router->ros_version_id;
-        $scriptId = $autoisolir->script_id;
-        $dueDate = $data['activation_date'] === 'false' ? $data['due_date'] : null;
+        LogHelper::logInfo(null, [
+            'traceId' => $traceId,
+            'autoisolir_id' => $autoisolir->id,
+            'input' => $data
+        ], 200, 'Start updateAutoIsolir()', $traceId);
 
-        $response = $data['activation_date'] === 'true'
-            ? $data['scriptService']->setAutoisolirActivationDate($router, $rosVersion, $scriptId, $data['comment_unpayment'], $profileName, $data['address_list_isolir'])
-            : $data['scriptService']->setAutoisolirDueDate($router, $rosVersion, $scriptId, $dueDate, $data['comment_unpayment'], $profileName, $data['address_list_isolir']);
+        try {
 
-        if (isset($response['after']['message'])) {
-            throw new \Exception($this->mapScriptError($response['after']['message']));
+            // Snapshot before update
+            LogHelper::logInfo(null, [
+                'traceId' => $traceId,
+                'before_update' => [
+                    'profile_id'         => $autoisolir->profile_id,
+                    'comment_payment'    => $autoisolir->comment_payment,
+                    'comment_unpayment'  => $autoisolir->comment_unpayment,
+                    'due_date'           => $autoisolir->due_date,
+                    'activation_date'    => $autoisolir->activation_date,
+                    'address_list_isolir' => $autoisolir->address_list_isolir,
+                ]
+            ], 200, 'AutoIsolir current state before update', $traceId);
+
+            $router = $autoisolir->mikrotik;
+            $this->checkConnection($router, $traceId);
+
+            $profileName = PppProfile::find($data['profile_id'])?->profile_name;
+            $rosVersion  = $router->ros_version_id;
+            $scriptId    = $autoisolir->script_id;
+            $dueDate     = $data['activation_date'] === 'false' ? $data['due_date'] : null;
+
+            LogHelper::logInfo(null, [
+                'traceId' => $traceId,
+                'router' => [
+                    'id' => $router->id,
+                    'host' => $router->host,
+                    'rosVersion' => $rosVersion
+                ],
+                'script_context' => [
+                    'script_id' => $scriptId,
+                    'mode' => $data['activation_date'] === 'true' ? 'activation' : 'dueDate',
+                    'due_date' => $dueDate,
+                    'profileName' => $profileName
+                ]
+            ], 200, 'Prepared script execution context', $traceId);
+
+            // --- EXECUTE SCRIPT ---
+            LogHelper::logInfo(null, [
+                'traceId' => $traceId,
+                'script_call' => $data['activation_date'] === 'true'
+                    ? 'setAutoisolirActivationDate'
+                    : 'setAutoisolirDueDate',
+                'params' => [
+                    'router_id'      => $router->id,
+                    'script_id'      => $scriptId,
+                    'ros_version'    => $rosVersion,
+                    'due_date'       => $dueDate,
+                    'comment_payment' => $data['comment_payment'] ?? null,
+                    'comment_unpayment' => $data['comment_unpayment'],
+                    'profile_name'   => $profileName,
+                    'address_list'   => $data['address_list_isolir'],
+                ]
+            ], 200, 'Calling Mikrotik ScriptService', $traceId);
+
+            $response = $data['activation_date'] === 'true'
+                ? $data['scriptService']->setAutoisolirActivationDate(
+                    $router,
+                    $rosVersion,
+                    $scriptId,
+                    $data['comment_unpayment'],
+                    $profileName,
+                    $data['address_list_isolir'],
+                    $traceId
+                )
+                : $data['scriptService']->setAutoisolirDueDate(
+                    $router,
+                    $rosVersion,
+                    $scriptId,
+                    $dueDate,
+                    $data['comment_payment'],   // param 5
+                    $data['comment_unpayment'], // param 6
+                    $profileName,               // param 7
+                    $data['address_list_isolir'], // param 8
+                    $traceId
+                );
+
+            LogHelper::logInfo(null, [
+                'traceId' => $traceId,
+                'response' => $response
+            ], 200, 'ScriptService response received', $traceId);
+
+            if (isset($response['after']['message'])) {
+                LogHelper::logError(null, [
+                    'traceId' => $traceId,
+                    'script_error_message' => $response['after']['message']
+                ], 500, 'ScriptService returned error', $traceId);
+
+                throw new \Exception(
+                    $this->mapScriptError($response['after']['message'])
+                );
+            }
+
+            // --- UPDATE DATABASE ---
+            $autoisolir->update([
+                'profile_id'        => $data['profile_id'],
+                'comment_payment'   => $data['comment_payment'],
+                'comment_unpayment' => $data['comment_unpayment'],
+                'due_date'          => $dueDate,
+                'activation_date'   => $data['activation_date'],
+                'address_list_isolir' => $data['address_list_isolir'],
+            ]);
+
+            LogHelper::logInfo(null, [
+                'traceId' => $traceId,
+                'after_update' => $autoisolir->fresh()
+            ], 200, 'AutoIsolir updated successfully in DB', $traceId);
+        } catch (\Exception $e) {
+
+            LogHelper::logError(null, [
+                'traceId' => $traceId,
+                'exception' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ], 500, 'updateAutoIsolir failed', $traceId);
+
+            throw $e;
         }
-
-        $autoisolir->update([
-            'profile_id' => $data['profile_id'],
-            'comment_payment' => $data['comment_payment'],
-            'comment_unpayment' => $data['comment_unpayment'],
-            'due_date' => $dueDate,
-            'activation_date' => $data['activation_date'],
-            'address_list_isolir' => $data['address_list_isolir'],
-        ]);
     }
 
     private function mapScriptError(string $rawMessage): string
@@ -216,5 +319,60 @@ class AutoIsolirService
             'proxy_access_action_data' => $nat_dst_address . '/isolir',
             'proxy_access_action' => $action,
         ]);
+    }
+
+    public function showData(Mikrotik $router, AutoIsolir $autoisolir, string $traceId)
+    {
+        $result = $this->testConnectionService->checkOnline($router, $traceId);
+
+        if (!$result['status']) {
+            return [
+                'status' => false,
+                'message' => $result['message'],
+                'data_status' => 'missing',
+                'autoisolir' => $autoisolir,
+                'schedule' => null,
+                'script' => null
+            ];
+        }
+
+        $schedule = $this->scheduleService
+            ->getScheduleById($router, $autoisolir->schedule_id, $traceId)[0] ?? null;
+
+        if (!$schedule) {
+            $scheduleByName = $this->scheduleService
+                ->getScheduleByName($router, $autoisolir->name, $traceId)[0] ?? null;
+
+            if ($scheduleByName && isset($scheduleByName['.id'])) {
+                $autoisolir->update(['schedule_id' => $scheduleByName['.id']]);
+                $schedule = $scheduleByName;
+            }
+        }
+
+        $script = $this->scriptService
+            ->getScriptById($router, $autoisolir->script_id, $traceId)[0] ?? null;
+
+        if (!$script) {
+            $scriptByName = $this->scriptService
+                ->getScriptByName($router, $autoisolir->name, $traceId)[0] ?? null;
+
+            if ($scriptByName && isset($scriptByName['.id'])) {
+                $autoisolir->update(['script_id' => $scriptByName['.id']]);
+                $script = $scriptByName;
+            }
+        }
+
+        $dataStatus = 'complete';
+        if (!$schedule && !$script) $dataStatus = 'missing';
+        elseif (!$schedule || !$script) $dataStatus = 'partial';
+
+        return [
+            'status' => true,
+            'message' => $result['message'],
+            'data_status' => $dataStatus,
+            'autoisolir' => $autoisolir,
+            'schedule' => $schedule,
+            'script'  => $script
+        ];
     }
 }

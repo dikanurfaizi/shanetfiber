@@ -8,12 +8,12 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Mikrotik;
-use App\Models\TelegramGateway\TelegramGateway;
-use App\Models\TelegramGateway\TelegramChatId;
+use App\Models\Telegram\TelegramGateway;
+use App\Models\Telegram\TelegramChatId;
 use App\Models\User;
 use App\Helpers\LogHelper;
 use App\Services\Routerboard\Ppp\SecretService;
-use App\Services\TelegramMessageService;
+use App\Services\Telegrams\DispatchMessageService;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -78,7 +78,7 @@ class UpdateRateLimitProfileSecretJob implements ShouldQueue
         if ($chat && $telegramGateway && $router) {
             $text = "❗ Gagal update rate limit PPP Profile `{$this->profileName}` di router `{$router->name}`. Error: {$message}";
 
-            app(TelegramMessageService::class)
+            app(DispatchMessageService::class)
                 ->send($chat->chat_id, $text, $this->traceId);
         } else {
             LogHelper::logError(null, [

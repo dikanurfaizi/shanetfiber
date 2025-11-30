@@ -2,26 +2,36 @@
 
 namespace App\Services;
 
-use App\Models\{Customer, Receipt, Order, Mikrotik, AutoIsolir};
-use App\Models\WhatsappGateway\WhatsappGateway;
-use App\Jobs\{AddPaymentBeforeDueDateJob, AddPaymentAfterDueDateJob, AddPaymentIpStaticAfterDueDateJob};
-use App\Services\Routerboard\Ppp\SecretService;
+use App\Http\Resources\Pppoe\SecretResource;
+use App\Jobs\AddPaymentAfterDueDateJob;
+use App\Jobs\AddPaymentBeforeDueDateJob;
+use App\Jobs\AddPaymentIpStaticAfterDueDateJob;
+use App\Jobs\AddPaymentIpStaticBeforeDueDateJob;
+use App\Models\AutoIsolir;
+use App\Models\Customer;
+use App\Models\Mikrotik;
+use App\Models\Order;
+use App\Models\Receipt;
+use App\Models\WhatsApp\WhatsAppGateway;
 use App\Services\Routerboard\IpStaticService;
+use App\Services\Routerboard\Ppp\SecretService;
+use App\Services\WhatsApp\GowaService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
-use App\Http\Resources\Pppoe\SecretResource;
 
 class PaymentService
 {
     protected SecretService $secretService;
+
     protected IpStaticService $ipStaticService;
-    private WhatsappMessageService $messageService;
+
+    private GowaService $messageService;
 
     public function __construct(SecretService $secretService, IpStaticService $ipStaticService)
     {
         $this->secretService = $secretService;
         $this->ipStaticService = $ipStaticService;
-        $this->messageService = app(WhatsappMessageService::class);
+        $this->messageService = app(GowaService::class);
     }
 
     public function processPaymentUnpaid($order, $billing): void
@@ -33,7 +43,7 @@ class PaymentService
                 'billing_option' => '0',
                 'billing_period' => null,
                 'member_id' => null,
-                'discount' => '0'
+                'discount' => '0',
             ]);
         }
 
@@ -48,7 +58,7 @@ class PaymentService
         ]);
     }
 
-    public function processPaymentSuccess($order, $billing, $payment_time = null, string $traceId): Receipt
+    public function processPaymentSuccess($order, $billing, $payment_time, string $traceId): Receipt
     {
         $customer = $order->customer ?? Customer::find($order->customer_id);
         $user = auth()->user() ?? $customer->user;
@@ -56,7 +66,7 @@ class PaymentService
 
         $customerData = $this->mapCustomerData($customer);
 
-        //Validasi bahwa semua data tidak null
+        // Validasi bahwa semua data tidak null
         foreach ($customerData as $key => $value) {
             if (is_null($value)) {
                 throw new \Exception("Data pelanggan tidak lengkap: {$key} bernilai null");
@@ -92,13 +102,12 @@ class PaymentService
 
         $order->update(['payment_time' => $now]);
 
-        if (WhatsappGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
-            $this->messageService->payment_paket($getBilling, $getReceipt, 'payment_gateway', $traceId);
+        if (WhatsAppGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
+            $this->messageService->payment_package($getBilling, $getReceipt, 'payment_gateway', $traceId);
         }
 
         return $receipt;
     }
-
 
     protected function mapCustomerData(Customer $customer): array
     {
@@ -117,7 +126,8 @@ class PaymentService
     protected function generateCommentPayment($autoIsolir, $activationDate, $nextMonth, string $traceId): string
     {
         $adjustedDate = min($activationDate, Carbon::now()->addMonth()->daysInMonth);
-        return $autoIsolir->comment_unpayment . '_' . $adjustedDate . '_' . $nextMonth;
+
+        return $autoIsolir->comment_unpayment.'_'.$adjustedDate.'_'.$nextMonth;
     }
 
     protected function processMikrotikPayment(array $data, string $profile, $router, $autoIsolir, string $comment, string $traceId): void
@@ -125,34 +135,37 @@ class PaymentService
         try {
             if ($data['internet_service'] === 'ppp') {
                 $secret = $this->secretService->getSecretById($router, $data['secret_id'], $traceId);
-                if ($secret === 'error') throw new \Exception("Secret not found");
+                if ($secret === 'error') {
+                    throw new \Exception('Secret not found');
+                }
 
                 $currentProfile = SecretResource::collection($secret)->value('profile');
 
                 $job = $currentProfile === $profile
-                    ? new AddPaymentBeforeDueDateJob($router, $comment, $data['secret_id'])
-                    : new AddPaymentAfterDueDateJob($router, $profile, $comment, $data['secret_id'], $data['username']);
+                    ? new AddPaymentBeforeDueDateJob($router, $comment, $data['secret_id'], $traceId)
+                    : new AddPaymentAfterDueDateJob($router, $profile, $comment, $data['secret_id'], $data['username'], $traceId);
 
                 dispatch($job);
             } elseif ($data['internet_service'] === 'ip_static') {
-                $comment_full = $data['username'] . '_' . $comment;
-                $address = $this->ipStaticService->getAddressListByIpAddress($router, $data['ip_static']);
+                $comment_full = $data['username'].'_'.$comment;
+                $address = $this->ipStaticService->getAddressListByIpAddress($router, $data['ip_static'], $traceId);
 
                 if (isset($address[0]['list']) && $address[0]['list'] !== $autoIsolir->address_list_isolir) {
-                    dispatch(new AddPaymentBeforeDueDateJob($router, $data['simpleque_id'], $comment));
+                    dispatch(new AddPaymentIpStaticBeforeDueDateJob($router, $comment, $data['simpleque_id'], $traceId));
                 } else {
                     dispatch(new AddPaymentIpStaticAfterDueDateJob(
                         $router,
                         $data['ip_static'],
-                        $data['simpleque_id'],
-                        $autoIsolir->address_list_isolir,
                         $comment,
-                        $comment_full
+                        $autoIsolir->address_list_isolir,
+                        $data['simpleque_id'],
+                        $comment_full,
+                        $traceId
                     ));
                 }
             }
         } catch (\Exception $e) {
-            Log::error('Mikrotik payment error: ' . $e->getMessage());
+            Log::error('Mikrotik payment error: '.$e->getMessage());
         }
     }
 
@@ -216,7 +229,8 @@ class PaymentService
     {
         $last = Receipt::latest('created_at')->value('number');
         $number = $last ? (int) explode('-', $last)[1] + 1 : 1;
-        return sprintf("KWT-%05d-%s-%s", $number, Carbon::now()->format('F'), Carbon::now()->format('Y'));
+
+        return sprintf('KWT-%05d-%s-%s', $number, Carbon::now()->format('F'), Carbon::now()->format('Y'));
     }
 
     public function processUpdatePaymentStatus(Order $order, string $status): void

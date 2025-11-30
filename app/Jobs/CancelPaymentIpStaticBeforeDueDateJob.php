@@ -19,7 +19,6 @@ class CancelPaymentIpStaticBeforeDueDateJob implements ShouldQueue
     private Mikrotik $mikrotik;
     private string $comment;
     private string $simpleque_id;
-    private IpStaticService $IpStaticService;
     private string $traceId;
 
     /**
@@ -30,15 +29,14 @@ class CancelPaymentIpStaticBeforeDueDateJob implements ShouldQueue
         $this->mikrotik = $mikrotik;
         $this->simpleque_id = $simpleque_id;
         $this->comment = $comment;
-        $this->IpStaticService = app(IpStaticService::class);
         $this->traceId = $traceId;
     }
 
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(IpStaticService $IpStaticService): void
     {
-        $this->IpStaticService->setCommentSimpleque($this->mikrotik, $this->simpleque_id, $this->comment, $this->traceId);
+        $IpStaticService->setCommentSimpleque($this->mikrotik, $this->simpleque_id, $this->comment, $this->traceId);
     }
 }

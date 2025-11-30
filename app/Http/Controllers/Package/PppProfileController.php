@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Bus\Batch;
 use Illuminate\Support\Facades\Bus;
 use Throwable;
-use App\Jobs\CreatePppProfileToRouter;
+use App\Jobs\ExportMikrotik\CreatePppProfileToRouter;
 use App\Jobs\UpdateRateLimitProfileSecretJob;
 
 class PppProfileController extends Controller
@@ -255,7 +255,7 @@ class PppProfileController extends Controller
      */
     public function show(PppProfile $pppProfiles)
     {
-        dd($pppProfiles);
+        // dd($pppProfiles);
         return view('packages.profiles.show', compact('pppProfiles'));
     }
 

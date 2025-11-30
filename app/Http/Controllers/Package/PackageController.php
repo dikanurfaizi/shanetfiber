@@ -10,7 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Packages\PackageService;
 use App\Services\Packages\PackageQueryService;
 
-class packageController extends Controller
+class PackageController extends Controller
 {
     protected $packageService;
     protected $queryService;

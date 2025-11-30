@@ -18,7 +18,6 @@ class CancelPaymentBeforeDueDateJob implements ShouldQueue
     private Mikrotik $mikrotik;
     private string $comment;
     private string $secretId;
-    private SecretService $SecretService;
     private string $traceId;
 
     /**
@@ -29,15 +28,14 @@ class CancelPaymentBeforeDueDateJob implements ShouldQueue
         $this->mikrotik = $mikrotik;
         $this->comment = $comment;
         $this->secretId = $secretId;
-        $this->SecretService = app(SecretService::class);
         $this->traceId = $traceId;
     }
 
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(SecretService $SecretService): void
     {
-        $this->SecretService->addCommentSecret($this->mikrotik, $this->comment, $this->secretId, $this->traceId);
+        $SecretService->addCommentSecret($this->mikrotik, $this->comment, $this->secretId, $this->traceId);
     }
 }

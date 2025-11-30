@@ -11,9 +11,9 @@ use App\Services\Billings\PaymentProcessingService;
 use App\Services\Billings\PaymentService;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Routerboard\IpStaticService;
-use App\Services\Networks\OltService;
-use App\Services\Networks\OltScanService;
-use App\Services\Networks\OltValidationService;
+use App\Services\Networks\Olt\OltDataService;
+use App\Services\Networks\Olt\OltScanJobService;
+use App\Services\Networks\Olt\OltValidationService;;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -42,12 +42,12 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->singleton(OltService::class, function ($app) {
-            return new OltService();
+        $this->app->singleton(OltDataService::class, function ($app) {
+            return new OltDataService();
         });
 
-        $this->app->singleton(OltScanService::class, function ($app) {
-            return new OltScanService();
+        $this->app->singleton(OltScanJobService::class, function ($app) {
+            return new OltScanJobService();
         });
 
         $this->app->singleton(OltValidationService::class, function ($app) {

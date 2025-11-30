@@ -18,7 +18,7 @@ class ScheduleService
     public function getAllSchedule($routerboard, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $query = new Query('/system/schedule/print');
             $schedules = $client->query($query)->read();
 
@@ -51,7 +51,7 @@ class ScheduleService
     public function getScheduleByName($routerboard, $scheduleName, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $query = (new Query('/system/schedule/print'))
                 ->where('name', $scheduleName);
             $schedule = $client->query($query)->read();
@@ -86,7 +86,7 @@ class ScheduleService
     public function getScheduleById($routerboard, $scheduleId, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $query = (new Query('/system/schedule/print'))
                 ->where('.id', $scheduleId);
             $schedule = $client->query($query)->read();
@@ -122,7 +122,7 @@ class ScheduleService
     {
         try {
             $onEventSchedule = '/system script run ' . $nameScript . '';
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
 
             $query = (new Query('/system/schedule/add'))
                 ->equal('name', $nameSchedule)
@@ -165,7 +165,7 @@ class ScheduleService
     public function disabledSchedule($routerboard, $scheduleName, $disabledStatus, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $schedules = new Query('/system/schedule/print');
             $schedules->where('name', $scheduleName);
             $resultSchedules = $client->query($schedules)->read();
@@ -222,7 +222,7 @@ class ScheduleService
     public function disabledScheduleById($routerboard, $scheduleId, $disabledStatus, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $schedules = new Query('/system/schedule/print');
             $schedules->where('.id', $scheduleId);
             $resultSchedules = $client->query($schedules)->read();
@@ -279,7 +279,7 @@ class ScheduleService
     public function removeSchedule($routerboard, $scheduleId, string $traceId)
     {
         try {
-            $client = MikrotikConnectionService::getClient($routerboard, $traceId);
+            $client = MikrotikService::getMikrotik($routerboard, $traceId);
             $schedules = new Query('/system/schedule/print');
             $schedules->where('.id', $scheduleId);
             $resultSchedules = $client->query($schedules)->read();

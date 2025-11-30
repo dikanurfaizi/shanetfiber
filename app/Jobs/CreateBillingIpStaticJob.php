@@ -18,7 +18,6 @@ class CreateBillingIpStaticJob implements ShouldQueue
     private Mikrotik $mikrotik;
     private string $comment;
     private string $simplequeId;
-    private IpStaticService $IpStaticService;
     private string $traceId;
 
     /**
@@ -29,16 +28,15 @@ class CreateBillingIpStaticJob implements ShouldQueue
         $this->mikrotik = $mikrotik;
         $this->comment = $comment;
         $this->simplequeId = $simplequeId;
-        $this->IpStaticService = app(IpStaticService::class);
         $this->traceId = $traceId;
     }
 
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(IpStaticService $IpStaticService): void
     {
-        $this->IpStaticService->setCommentSimpleque($this->mikrotik, $this->comment, $this->simplequeId, $this->traceId);
+        $IpStaticService->setCommentSimpleque($this->mikrotik, $this->comment, $this->simplequeId, $this->traceId);
         //  $this->SecretService->deleteActiveSecret($this->mikrotik, $this->username);
     }
 }

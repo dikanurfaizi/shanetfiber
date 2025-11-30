@@ -8,12 +8,12 @@
             {!! Form::model($pppProfile, ['route' => ['ppp-profiles.update', $pppProfile->id], 'method' => 'PUT']) !!}
 
             <div class="card-body col-lg-8">
-                @include('packets.profiles.partials.general')
-                @include('packets.profiles.partials.limits')
-                @include('packets.profiles.partials.queue')
-                @include('packets.profiles.partials.advanced')
-                @include('packets.profiles.partials.scripts')
-                @include('packets.profiles.partials.comment-rate')
+                @include('packages.profiles.partials.general')
+                @include('packages.profiles.partials.limits')
+                @include('packages.profiles.partials.queue')
+                @include('packages.profiles.partials.advanced')
+                @include('packages.profiles.partials.scripts')
+                @include('packages.profiles.partials.comment-rate')
             </div>
 
             <div class="card-footer">

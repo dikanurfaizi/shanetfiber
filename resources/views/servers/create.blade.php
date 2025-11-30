@@ -122,6 +122,7 @@
             });
             $('#checkConnection').on('click', function(e) {
                 if (e.currentTarget.checked) {
+                    const name = $('#name').val();
                     const host = $('#host').val();
                     const username = $('#username').val();
                     const password = $('#password').val();
@@ -131,6 +132,7 @@
                         method: "POST",
                         cache: false,
                         data: {
+                            'name': name,
                             'host': host,
                             'password': password,
                             'username': username,

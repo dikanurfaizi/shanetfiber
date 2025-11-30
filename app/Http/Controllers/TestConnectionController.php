@@ -21,23 +21,26 @@ class TestConnectionController extends Controller
     public function testConn(Request $request)
     {
         $traceId = (string) Str::uuid();
+        $startTime = microtime(true);
 
         $validator = Validator::make($request->all(), [
             'host' => 'required',
             'password' => 'required',
             'username' => 'required',
-            'port' => 'required',
-        ], [
-            'host.required' => 'Host harus diisi.',
-            'username.required' => 'Username harus diisi.',
-            'password.required' => 'Password harus diisi.',
-            'port.required' => 'Port harus diisi.',
+            'port' => 'required|integer',
         ]);
 
         if ($validator->fails()) {
             LogHelper::logError(
                 null,
-                ['validation_errors' => $validator->errors()],
+                [
+                    'input' => [
+                        'host' => $request->host,
+                        'username' => $request->username,
+                        'port' => $request->port,
+                    ],
+                    'validation_errors' => $validator->errors(),
+                ],
                 400,
                 'Validation failed for Mikrotik connection test',
                 $traceId
@@ -50,68 +53,109 @@ class TestConnectionController extends Controller
             ], 400);
         }
 
-        // 🔒 ubah array menjadi object agar seragam dengan Mikrotik model
-        $router = (object)[
-            'timeout'  => 1,
+        $router = [
+            'timeout'  => 2,
             'host'     => $request->input('host'),
             'username' => $request->input('username'),
             'password' => $request->input('password'),
             'port'     => (int) $request->input('port'),
         ];
 
+        LogHelper::logInfo(
+            null,
+            [
+                'router_input' => [
+                    'host' => $router['host'],
+                    'username' => $router['username'],
+                    'port' => $router['port'],
+                    'has_password' => !empty($router['password']),
+                ]
+            ],
+            200,
+            "🔍 Start Mikrotik Connection Test",
+            $traceId
+        );
+
         try {
+            $preConn = microtime(true);
+
             $response = $this->testConnectionService->testConnection($router, $traceId);
 
-            $boardName = $response['data']['board-name'] ?? 'Unknown';
-
-            if ($boardName === 'Unknown') {
-                LogHelper::logError(null, [
-                    'error' => [
-                        'code' => 422,
-                        'message' => 'Router did not respond with valid board name.'
-                    ]
-                ], 422, "Router did not respond with valid board name: " . $router->name, $traceId);
-                return response()->json([
-                    'status' => 'error',
-                    'title' => 'Router sedang offline!',
-                    'message' => 'Router tidak merespon / tidak bisa diakses.',
-                ], 500);
-            }
+            $connDuration = round((microtime(true) - $preConn) * 1000, 2);
 
             LogHelper::logInfo(
                 null,
-                ['response' => $response],
+                [
+                    'conn_latency_ms' => $connDuration,
+                    'response_raw' => $response, // tidak ada password di Mikrotik response
+                ],
                 200,
-                "Successfully connected to Mikrotik: " . $router->host,
+                "✅ Mikrotik responded successfully",
+                $traceId
+            );
+
+            if (!$response) {
+                throw new \Exception('Missing required system info from RouterOS', 422);
+            }
+
+            $totalDuration = round((microtime(true) - $startTime) * 1000, 2);
+            $boardName = $request->input('name', $response['board_name'] ?? 'Unknown');
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'response' => $response,
+                    'total_latency_ms' => $totalDuration,
+                ],
+                200,
+                "🎯 Successfully connected to Mikrotik: " . $router['host'],
                 $traceId
             );
 
             return response()->json([
                 'status' => 'success',
                 'title' => $boardName . ' ⇌ CONNECTED',
-                'message' => 'Silahkan lanjutkan proses penambahan router!',
+                'message' => 'Router successfully connected!',
                 'boardName' => $boardName,
+                'latency_ms' => $totalDuration,
+                'system_info' => [
+                    'uptime' => $response['uptime'] ?? '-',
+                    'cpu_load' => $response['cpu_load'] ?? '-',
+                    'version' => $response['version'] ?? '-',
+                ]
             ]);
         } catch (\Exception $e) {
-            $code = $e->getCode();
-            $message = $e->getMessage();
+            $totalDuration = round((microtime(true) - $startTime) * 1000, 2);
 
-            if ($code === 422 && str_contains($message, 'board name')) {
-                $message = 'Router tidak merespon dengan informasi sistem. Periksa kembali koneksi atau kredensial login Mikrotik.';
-            }
+            $errorCategory = match (true) {
+                str_contains($e->getMessage(), 'No route to host') => 'Network / Firewall',
+                str_contains($e->getMessage(), 'invalid user name or password') => 'Authentication',
+                str_contains($e->getMessage(), 'timeout') => 'Connection Timeout',
+                str_contains($e->getMessage(), 'Socket') => 'Socket Failure',
+                default => 'Unknown Error',
+            };
 
-            LogHelper::logError(null, [
-                'error' => [
-                    'code' => $code,
-                    'message' => $e->getMessage(),
-                ]
-            ], $code ?: 500, "Router did not respond with valid board name: " . $router->name, $traceId);
+            LogHelper::logError(
+                null,
+                [
+                    'error_type' => $errorCategory,
+                    'exception_message' => $e->getMessage(),
+                    'latency_ms' => $totalDuration,
+                    'router_host' => $router['host'],
+                    'router_port' => $router['port'],
+                ],
+                $e->getCode() ?: 500,
+                "❌ Mikrotik connection failed (" . $errorCategory . ")",
+                $traceId
+            );
 
             return response()->json([
                 'status' => 'error',
-                'title' => 'Router tidak merespon!',
-                'message' => $message,
-            ], $code ?: 500);
+                'title' => 'Router not responding!',
+                'message' => $e->getMessage(),
+                'error_type' => $errorCategory,
+                'latency_ms' => $totalDuration
+            ], $e->getCode() ?: 500);
         }
     }
 

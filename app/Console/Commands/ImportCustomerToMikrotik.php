@@ -6,7 +6,7 @@ use Illuminate\Console\Command;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
-use App\Jobs\MigrateCustomerToRouter;
+use App\Jobs\ExportMikrotik\MigrateCustomerToRouter;
 use App\Models\Mikrotik;
 
 class ImportCustomerToMikrotik extends Command
@@ -40,7 +40,7 @@ class ImportCustomerToMikrotik extends Command
             LogHelper::logInfo(null, [], 200, $this->descriptionEn . " dimulai", $traceId);
             $mikrotik = Mikrotik::findOrFail(1);
             if ($mikrotik) {
-                dispatch(new MigrateCustomerToRouter($mikrotik, $mikrotik))->onQueue('default');
+                dispatch(new MigrateCustomerToRouter($mikrotik, $mikrotik, $traceId))->onQueue('default');
             }
             $dispatchTime = Carbon::now()->format('Y-m-d H:i:s');
             LogHelper::logInfo(null, [], 200, $this->descriptionEn . " selesai", $traceId);

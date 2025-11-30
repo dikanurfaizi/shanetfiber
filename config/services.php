@@ -31,4 +31,16 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'whatsapp' => [
+        'base_url' => 'https://wa.me/',
+        'ssl_verify' => env('WHATSAPP_SSL_VERIFY', true),
+        'timeout' => env('WHATSAPP_TIMEOUT', 10),
+        'version' => env('WHATSAPP_VERSION', 'v22.0'),
+        'graph_url' => env('WHATSAPP_GRAPH_URL', 'https://graph.facebook.com'),
+    ],
+
+    'shanetfiber' => [
+        'allow_mikrotik_actions' => env('ALLOW_MIKROTIK_ACTIONS', false),
+    ],
+
 ];

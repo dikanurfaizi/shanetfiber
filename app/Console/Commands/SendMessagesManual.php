@@ -84,21 +84,21 @@ class SendMessagesManual extends Command
 
             // ProcessWhatsappMessageJob::dispatch($whatsappJobData1)->onQueue('whatsapp_broadcast');
 
-            $whatsappJobData2 = new WhatsappJobDto(
-                customerId: '62',
-                action: WhatsappAction::CASH->value,
-                traceId: $traceId,
-                billingId: '1795',
-                receiptId: '2181',
-                receiptData: null,
-                startDate: null,
-                endDate: null,
-                orderId: null,
-                oldPaketName: null,
-                oldPaketPrice: null
-            );
+            // $whatsappJobData2 = new WhatsappJobDto(
+            //     customerId: '62',
+            //     action: WhatsappAction::CASH->value,
+            //     traceId: $traceId,
+            //     billingId: '1795',
+            //     receiptId: '2181',
+            //     receiptData: null,
+            //     startDate: null,
+            //     endDate: null,
+            //     orderId: null,
+            //     oldPackageName: null,
+            //     oldPackagePrice: null
+            // );
 
-            ProcessWhatsappMessageJob::dispatch($whatsappJobData2)->onQueue('whatsapp_broadcast');
+            // ProcessWhatsappMessageJob::dispatch($whatsappJobData2)->onQueue('whatsapp_broadcast');
             // }
             // ProcessTelegramMessageJob::dispatch(
             //     '336',

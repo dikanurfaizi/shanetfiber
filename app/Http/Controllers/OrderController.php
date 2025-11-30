@@ -2,23 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Order;
-use App\Models\Midtran;
-use App\Models\Websystem;
+use App\Events\OrderCreated;
+use App\Helpers\LogHelper;
+use App\Http\Controllers\PaymentGateway\TripayController;
 use App\Models\Billing\Billing;
 use App\Models\Customer;
+use App\Models\Midtran;
+use App\Models\Order;
 use App\Models\PaymentGateway;
-use App\Http\Controllers\Controller;
-use App\Http\Controllers\PaymentGateway\TripayController;
-use App\Helpers\LogHelper;
+use App\Models\Websystem;
 use App\Services\Midtrans\CreateSnapTokenService;
-use App\Services\WhatsappMessageService;
-use App\Jobs\WhatsApp\ProcessWhatsappMessageJob;
+use App\Services\Whatsapp\GowaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use App\DataTransferObjects\WhatsappJobDto;
-use phpDocumentor\Reflection\Types\Null_;
 
 class OrderController extends Controller
 {
@@ -27,12 +24,14 @@ class OrderController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    private WhatsappMessageService $messageService;
-    public function __construct(WhatsappMessageService $messageService)
+    private GowaService $gowaService;
+
+    public function __construct(GowaService $gowaService)
     {
         $this->middleware('customerauth');
-        $this->messageService = $messageService;
+        $this->gowaService = $gowaService;
     }
+
     public function index()
     {
 
@@ -48,7 +47,6 @@ class OrderController extends Controller
                 })
                 ->orderBy('created_at', 'ASC')
                 ->paginate(10);
-
 
             return view('customers.pages.orders.index', compact('orders', 'websystem'))
                 ->with('i', (request()->input('page', 1) - 1) * 10);
@@ -71,7 +69,7 @@ class OrderController extends Controller
             $order = Order::create([
                 'customer_id' => $billing->customer_id,
                 'billing_id' => $billing->id,
-                'number' => rand(10000000, 99999999) . str_pad($billing->customer_id . $billing->id,  5, STR_PAD_LEFT),
+                'number' => rand(10000000, 99999999) . str_pad($billing->customer_id . $billing->id, 5, STR_PAD_LEFT),
                 'total_price' => $billing->total_amount,
                 'payment_status' => 1,
             ]);
@@ -83,13 +81,12 @@ class OrderController extends Controller
             return redirect()->route('customer.dashboard')
                 ->with('error', 'You canot use payment gateway');
         }
-        //return dd($billing);
+        // return dd($billing);
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
@@ -100,7 +97,6 @@ class OrderController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param  \App\Models\Order  $order
      * @return \Illuminate\Http\Response
      */
     public function show(Order $order)
@@ -134,6 +130,7 @@ class OrderController extends Controller
         $snapToken = $midtrans->getSnapToken();
 
         $order->update(['snap_token' => $snapToken]);
+
         return $snapToken;
     }
 
@@ -145,7 +142,7 @@ class OrderController extends Controller
         $order = Order::where([
             ['customer_id', $billing->customer_id],
             ['billing_id', $billing->id],
-            ['id', $order->id]
+            ['id', $order->id],
         ])->first();
 
         $viewData = $this->getViewData($order);
@@ -160,7 +157,7 @@ class OrderController extends Controller
         }
 
         // Jika belum termasuk kondisi di atas, tampilkan halaman dengan channels
-        $tripay = new TripayController();
+        $tripay = new TripayController;
         $viewData['channels'] = $tripay->getPaymentChannels();
 
         return view('customers.pages.payments.tripays.show', $viewData);
@@ -172,8 +169,8 @@ class OrderController extends Controller
         $order = Order::find($order->id);
 
         Log::info('Order Payment Status Updated', [
-            'order_id'   => $order->id,
-            'status' => $order->payment_status
+            'order_id' => $order->id,
+            'status' => $order->payment_status,
         ]);
 
         $viewData = $this->getViewData($order);
@@ -189,10 +186,10 @@ class OrderController extends Controller
         return response()->json([
             'html' => view('customers.components.payment-status', ['order' => $order])->render(),  // hanya status yang ditampilkan di halaman utama
             'modal' => view('customers.components.order-status-modal', [
-                'order'     => $order,
-                'billing'   => $viewData['billing'],
+                'order' => $order,
+                'billing' => $viewData['billing'],
                 'websystem' => $viewData['websystem'],
-                'gateway'   => $viewData['paymentGateway'],
+                'gateway' => $viewData['paymentGateway'],
             ])->render(),
             'footer' => view('customers.components.payment-footer', ['order' => $order])->render(),
             'payment_status' => $order->payment_status,
@@ -201,25 +198,25 @@ class OrderController extends Controller
 
     private function setView(Order $order)
     {
-        $shouldShow = !in_array($order->payment_method, ['SHOPEEPAY', 'DANA', 'QRIS', 'QRISC', 'QRIS2']);
+        $shouldShow = ! in_array($order->payment_method, ['SHOPEEPAY', 'DANA', 'QRIS', 'QRISC', 'QRIS2']);
         $isOVO = $order->payment_method === 'OVO';
         $contact = $order->billing->customer->contact ?? null;
 
-        if ($isOVO && !is_null($contact)) {
+        if ($isOVO && ! is_null($contact)) {
             $contact = preg_replace('/^628/', '08', $contact);
         }
 
-        $vaNumber = $isOVO && !is_null($contact) ? $contact : $order->va_number;
+        $vaNumber = $isOVO && ! is_null($contact) ? $contact : $order->va_number;
 
-        return (object)[
+        return (object) [
             'shouldShow' => $shouldShow,
-            'vaNumber'   => $vaNumber,
+            'vaNumber' => $vaNumber,
         ];
     }
 
     private function getWebsystem()
     {
-        return Websystem::firstWhere('slug', 'websystem');;
+        return Websystem::firstWhere('slug', 'websystem');
     }
 
     private function getPaymentGateway()
@@ -235,7 +232,7 @@ class OrderController extends Controller
         }
 
         $paymentGateway = $this->getPaymentGateway();
-        if (!$paymentGateway) {
+        if (! $paymentGateway) {
             return redirect()->route('customer.dashboard')->with('error', 'There is no active payment gateway.');
         }
 
@@ -245,15 +242,13 @@ class OrderController extends Controller
 
         return compact('billing', 'websystem', 'paymentGateway', 'order', 'expiredAt') + [
             'shouldShow' => $setView->shouldShow,
-            'vaNumber'   => $setView->vaNumber,
+            'vaNumber' => $setView->vaNumber,
         ];
     }
-
 
     /**
      * Show the form for editing the specified resource.
      *
-     * @param  \App\Models\Order  $order
      * @return \Illuminate\Http\Response
      */
     public function edit(Order $order)
@@ -264,8 +259,6 @@ class OrderController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Order  $order
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, Order $order)
@@ -276,7 +269,6 @@ class OrderController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\Models\Order  $order
      * @return \Illuminate\Http\Response
      */
     public function destroy(Order $order)
@@ -287,18 +279,19 @@ class OrderController extends Controller
     public function tripayShow(Order $order)
     {
         $viewData = $this->getViewData($order);
+
         return view('customers.pages.orders.tripays.show', $viewData);
     }
 
     public function tripayCreate(Request $request, Billing $billing)
     {
         $traceId = (string) Str::uuid();
-        if (!$billing) {
+        if (! $billing) {
             LogHelper::logError(
                 null,
                 ['billing_id' => $order->billing_id ?? null],
                 500,
-                "[Tripay] Billing not found",
+                '[Tripay] Billing not found',
                 $traceId ?? null
             );
 
@@ -316,36 +309,36 @@ class OrderController extends Controller
 
         // Buat objek sementara order (belum simpan ke DB)
         $tempOrder = [
-            'customer_id'     => $billing->customer_id,
-            'billing_id'      => $billing->id,
-            'number'          => $orderNumber,
-            'package'         => $billing->billingSubscription->customerSubscription->package->name,
-            'total_price'     => (int) $billing->total_amount,
-            'payment_status'  => 1,
-            'payment_method'  => $request->input('payment_method'),
+            'customer_id' => $billing->customer_id,
+            'billing_id' => $billing->id,
+            'number' => $orderNumber,
+            'package' => $billing->billingSubscription->customerSubscription->package->name,
+            'total_price' => (int) $billing->total_amount,
+            'payment_status' => 1,
+            'payment_method' => $request->input('payment_method'),
             'payment_gateway' => $request->input('payment_channel'),
-            'icon_url'        => $request->input('icon_url'),
-            'created_at'      => now(),
+            'icon_url' => $request->input('icon_url'),
+            'created_at' => now(),
         ];
 
         LogHelper::logInfo(null, [
-            'order_number'   => $orderNumber,
-            'customer_id'    => $billing->customer_id,
-            'billing_id'     => $billing->id,
-            'total_amount'   => (int) $billing->total_amount,
+            'order_number' => $orderNumber,
+            'customer_id' => $billing->customer_id,
+            'billing_id' => $billing->id,
+            'total_amount' => (int) $billing->total_amount,
             'payment_method' => $request->input('payment_method'),
             'payment_channel' => $request->input('payment_channel'),
         ], 200, '[Tripay] Create Transaction Request', $traceId);
 
-        $tripay = new TripayController();
+        $tripay = new TripayController;
         $signature = $tripay->getSignature($tempOrder);
         $tempOrder['signature'] = $signature;
 
         LogHelper::logInfo(null, [
             'name' => optional($customer)->name,
             'email' => $customer->getEmailForPayment(),
-            'contact' => optional($customer)->contac
-        ], 200, "[Tripay] Start to Request Transaction", $traceId);
+            'contact' => optional($customer)->contac,
+        ], 200, '[Tripay] Start to Request Transaction', $traceId);
 
         // Kirim request ke Tripay
         $reqTransaction = $tripay->requestTransaction(
@@ -355,10 +348,8 @@ class OrderController extends Controller
             optional($customer)->contact
         );
 
-        // dd($reqTransaction);
-
         // Jika gagal
-        if (!is_array($reqTransaction)) {
+        if (! is_array($reqTransaction)) {
             $message = $reqTransaction['original']['message']
                 ?? $reqTransaction['message']
                 ?? 'Tripay transaction response is not valid.';
@@ -366,18 +357,18 @@ class OrderController extends Controller
             LogHelper::logError(
                 null,
                 [
-                    'customer_id'     => $customer?->id,
-                    'customer_name'   => optional($customer)->name,
+                    'customer_id' => $customer?->id,
+                    'customer_name' => optional($customer)->name,
                     'customer_contact' => optional($customer)->contact,
-                    'billing_id'      => $billing->id,
-                    'payment_method'  => $request->input('payment_method'),
+                    'billing_id' => $billing->id,
+                    'payment_method' => $request->input('payment_method'),
                     'payment_channel' => $request->input('payment_channel'),
-                    'email'           => optional($customer)->email ?? optional($customer->user)->email,
-                    'raw_response'    => json_encode($reqTransaction),
-                    'error'           => $message
+                    'email' => optional($customer)->email ?? optional($customer->user)->email,
+                    'raw_response' => json_encode($reqTransaction),
+                    'error' => $message,
                 ],
                 500,
-                "Gagal membuat transaksi Tripay.",
+                'Gagal membuat transaksi Tripay.',
                 $traceId
             );
 
@@ -386,48 +377,34 @@ class OrderController extends Controller
 
         // Kalau berhasil, simpan order ke DB
         $order = Order::create([
-            'customer_id'     => $billing->customer_id,
-            'billing_id'      => $billing->id,
-            'number'          => $orderNumber,
-            'package'         => $billing->billingSubscription->customerSubscription->package->name,
-            'total_price'     => $billing->total_amount,
-            'payment_status'  => 1,
-            'payment_method'  => $request->input('payment_method'),
+            'customer_id' => $billing->customer_id,
+            'billing_id' => $billing->id,
+            'number' => $orderNumber,
+            'package' => $billing->billingSubscription->customerSubscription->package->name,
+            'total_price' => $billing->total_amount,
+            'payment_status' => 1,
+            'payment_method' => $request->input('payment_method'),
             'payment_gateway' => $request->input('payment_channel'),
-            'icon_url'        => $request->input('icon_url'),
-            'signature'       => $signature,
-            'reference'       => $reqTransaction['reference'],
+            'icon_url' => $request->input('icon_url'),
+            'signature' => $signature,
+            'reference' => $reqTransaction['reference'],
             'payment_selection_type' => $reqTransaction['payment_selection_type'],
-            'va_number'       => $reqTransaction['pay_code'],
-            'expired_time'    => $reqTransaction['expired_time'],
-            'checkout_url'    => $reqTransaction['checkout_url'],
-            'payment_name'    => $reqTransaction['payment_name'],
-            'total_fee'       => $reqTransaction['total_fee'],
-            'quantity'        => $reqTransaction['order_items'][0]['quantity'] ?? 1,
-            'total_amount'    => ($reqTransaction['total_fee'] ?? 0) + $billing->total_amount,
-            'qr_string'       => $reqTransaction['qr_string'] ?? null,
-            'qr_url'          => $reqTransaction['qr_url'] ?? null,
-            'merchant_ref'    => $reqTransaction['merchant_ref'] ?? null,
-            'payment_type'    => $request->input('payment_type')
+            'va_number' => $reqTransaction['pay_code'],
+            'expired_time' => $reqTransaction['expired_time'],
+            'checkout_url' => $reqTransaction['checkout_url'],
+            'payment_name' => $reqTransaction['payment_name'],
+            'total_fee' => $reqTransaction['total_fee'],
+            'quantity' => $reqTransaction['order_items'][0]['quantity'] ?? 1,
+            'total_amount' => ($reqTransaction['total_fee'] ?? 0) + $billing->total_amount,
+            'qr_string' => $reqTransaction['qr_string'] ?? null,
+            'qr_url' => $reqTransaction['qr_url'] ?? null,
+            'merchant_ref' => $reqTransaction['merchant_ref'] ?? null,
+            'payment_type' => $request->input('payment_type'),
         ]);
 
-        $getOrder = $order->fresh();
+        $order->fresh();
 
-        $jobData = new WhatsappJobDto(
-            customerId: (int) $billing->customer_id,
-            action: 'create_order',
-            traceId: (string) $traceId,
-            billingId: (int) $billing->id,
-            receiptId: null,
-            receiptData: null,
-            startDate: null,
-            endDate: null,
-            orderId: $getOrder->id,
-            oldPackageName: null,
-            oldPackagePrice: null
-        );
-
-        ProcessWhatsappMessageJob::dispatch($jobData)->onQueue('whatsapp_single');
+        event(new OrderCreated($customer, $billing, $order, $traceId));
 
         return redirect()->route('customer.pages.order.tripays.show', $order->id)
             ->with('success', 'Order created successfully.');
@@ -436,12 +413,13 @@ class OrderController extends Controller
     public function paymentInstruction(Order $order)
     {
         try {
-            $tripay = new TripayController();
+            $tripay = new TripayController;
+
             return $tripay->getInstruction($order);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
+                'message' => 'Error: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -449,7 +427,7 @@ class OrderController extends Controller
     public function cancelPayment(Order $order)
     {
         $order->update([
-            'payment_status' => '4'
+            'payment_status' => '4',
         ]);
 
         return redirect()->route('customer.payment.index')->with('success', 'Successfully cancel payment');
