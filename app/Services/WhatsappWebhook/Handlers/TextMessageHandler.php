@@ -40,7 +40,7 @@ class TextMessageHandler extends BaseHandler
         }
 
         // 3. Reply sesuai template
-        $action = 'reply.' . $keyword->slug;
+        $action = $keyword->slug;
 
         $this->dispatcher->dispatch(
             action: $action,
