@@ -19,6 +19,6 @@ class MessageAckHandler extends BaseHandler
         ], 200, '[Webhook] Message ACK', $traceId);
 
         // Offload ke job (opsional tapi sehat untuk scale)
-        ProcessMessageAckJob::dispatch($payload->raw, $traceId)->onQueue('whatsapp-webhook');
+        ProcessMessageAckJob::dispatch($payload->raw, $traceId)->onQueue('notification');
     }
 }

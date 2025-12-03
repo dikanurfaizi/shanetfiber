@@ -21,6 +21,7 @@ class BillingEligibleCollector
                 'customers.name as customer_name',
                 'customers.contact as customer_contact',
                 'customers.address as customer_address',
+                'customers.is_opt_out',
                 'billings.due_date',
                 'users.name as admin_name',
                 'users.id as admin_id',
@@ -40,6 +41,7 @@ class BillingEligibleCollector
             ->whereNull('me.id')
             ->whereNotNull('customers.contact')
             ->where('customers.contact', '!=', '')
+            ->where('customers.is_opt_out', 0)
             ->where('bsp.billing_periode_id', $billingPeriodeId)
             ->where(function ($q) {
                 $q->where(function ($q1) {

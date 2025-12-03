@@ -9,13 +9,17 @@ use App\Services\Messaging\MessageBuilder;
 use Carbon\Carbon;
 use App\Helpers\LogHelper;
 
-class CreateOrderHandler implements MessageActionHandler
+class CreateOrderHandler extends BaseBroadcastAwareHandler implements MessageActionHandler
 {
     public function __construct(
         private Billing $billing,
         private Order $order,
-        private MessageBuilder $builder
-    ) {}
+        private MessageBuilder $builder,
+        string $category
+    ) {
+        $this->setCategory($category);
+        $this->setRawContact($billing->customer->contact);
+    }
 
     public function action(): string
     {
@@ -24,13 +28,7 @@ class CreateOrderHandler implements MessageActionHandler
 
     public function validate(string $traceId): void
     {
-        if (empty($this->billing->customer?->contact)) {
-            LogHelper::logError(null, [
-                'billing_id' => $this->billing->id,
-                'trace_id' => $traceId,
-            ], 400, "Contact kosong saat validasi CreateOrderHandler", $traceId);
-            throw new \RuntimeException('Contact kosong');
-        }
+        $this->validateBase($traceId);
     }
 
     public function build(string $traceId): array

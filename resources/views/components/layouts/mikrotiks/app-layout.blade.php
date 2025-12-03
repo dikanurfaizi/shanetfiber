@@ -8,7 +8,7 @@
     <meta name="description" content="">
     <meta name="author" content="Mehrdad Amini">
     <meta name="csrf-token" content="{{ csrf_token() }}" />
-    <title>{{ $title ?? 'Customer Management' }}</title>
+    <title>{{ $title ?? 'Shanum Network Fiber' }}</title>
 
     @vite('resources/sass/app.scss')
     <!-- Custom fonts for this template-->

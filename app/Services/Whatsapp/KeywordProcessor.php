@@ -10,22 +10,28 @@ class KeywordProcessor
         private KeywordNormalizer $normalizer
     ) {}
 
-    public function resolveKeyword(string $text): ?WhatsAppMessage
+    public function resolveKeyword(string $text): ?WhatsappMessage
     {
-        $normalized = $this->normalizer->normalize($text);
+        $normalized = strtolower(trim($this->normalizer->normalize($text)));
 
-        // 1. STOP keyword – highest priority
+        // STOP adalah prioritas tertinggi
         if ($this->normalizer->isStop($text)) {
             return WhatsappMessage::where('slug', 'stop')->first();
         }
 
-        // 2. Exact match to known command
-        $msg = WhatsappMessage::where('name', $normalized)->first();
+        // 1. Exact match ke incoming_message
+        $msg = WhatsappMessage::where('incoming_message', $normalized)->first();
         if ($msg) {
             return $msg;
         }
 
-        // 3. Unknown keyword
+        // 2. Match ke keywords (JSON array)
+        $alias = WhatsappMessage::whereJsonContains('keywords', $normalized)->first();
+        if ($alias) {
+            return $alias;
+        }
+
+        // 3. Fallback → unknown keyword
         return WhatsappMessage::where('slug', 'unknown_keyword')->first();
     }
 }

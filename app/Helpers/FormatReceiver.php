@@ -72,4 +72,17 @@ class FormatReceiver
             return null;
         }
     }
+
+    public function normalizeSender(string $raw): string
+    {
+        if (str_contains($raw, ' in ')) {
+            $raw = explode(' in ', $raw)[0];
+        }
+
+        if (str_contains($raw, ':')) {
+            $raw = explode(':', $raw)[0];
+        }
+
+        return str_replace('@s.whatsapp.net', '', $raw);
+    }
 }

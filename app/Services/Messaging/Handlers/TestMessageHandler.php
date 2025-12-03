@@ -3,13 +3,15 @@
 namespace App\Services\Messaging\Handlers;
 
 use App\Services\Messaging\Contracts\MessageActionHandler;
+use App\Helpers\LogHelper;
 
 class TestMessageHandler implements MessageActionHandler
 {
     public function __construct(
         private string $receiver,
         private int $gatewayId,
-        private string $templateSlug
+        private string $templateSlug,
+        private string $category
     ) {}
 
     public function action(): string

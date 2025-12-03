@@ -9,7 +9,7 @@ use Closure;
 use Carbon\Carbon;
 use App\Helpers\LogHelper;
 
-class BroadcastMidMonthHandler implements MessageActionHandler
+class BroadcastMidMonthHandler extends BaseBroadcastAwareHandler implements MessageActionHandler
 {
     public function __construct(
         private Billing $billing,
@@ -18,8 +18,12 @@ class BroadcastMidMonthHandler implements MessageActionHandler
         private Closure $getBankInfo,
         private Closure $getBillingPackages,
         private Closure $formatPackageInfo,
-        private Closure $getUnpaidSummary
-    ) {}
+        private Closure $getUnpaidSummary,
+        string $category
+    ) {
+        $this->setCategory($category);
+        $this->setRawContact($billing->customer?->contact ?? null);
+    }
 
     public function action(): string
     {
@@ -28,13 +32,7 @@ class BroadcastMidMonthHandler implements MessageActionHandler
 
     public function validate(string $traceId): void
     {
-        if (empty($this->billing->customer?->contact)) {
-            LogHelper::logError(null, [
-                'billing_id' => $this->billing->id,
-                'trace_id' => $traceId,
-            ], 400, "Contact kosong saat validasi BroadcastMidMonthHandler", $traceId);
-            throw new \RuntimeException('Contact kosong');
-        }
+        $this->validateBase($traceId);
     }
 
     public function build(string $traceId): array

@@ -8,7 +8,7 @@
     <meta name="description" content="">
     <meta name="author" content="Mehrdad Amini">
     <meta name="csrf-token" content="{{ csrf_token() }}" />
-    <title>{{ $title ?? '' }} | {{ __('websystem.title') }}</title>
+    <title>{{ $title ?? 'Shanet Fiber Management' }} | {{ __('websystem.title') }}</title>
     <link rel="icon" type="image/x-icon" href="{{ asset('images/favicon/favicon.png') }}" />
     @vite('resources/sass/app.scss')
     <!-- Custom fonts for this template-->

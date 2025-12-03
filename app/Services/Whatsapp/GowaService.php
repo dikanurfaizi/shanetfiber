@@ -7,6 +7,7 @@ use App\Helpers\LogHelper;
 use App\Models\Billing\Billing;
 use App\Models\Customer;
 use App\Models\Order;
+use App\Models\Receipt;
 use App\Models\Whatsapp\WhatsappGateway;
 use App\Services\Messaging\Collectors\BankInfoCollector;
 use App\Services\Messaging\Collectors\BillingEligibleCollector;
@@ -72,10 +73,11 @@ class GowaService
 
             $this->dispatcher->dispatch(
                 $action,
-                fn() => new ActivationHandler(
+                fn(string $category) => new ActivationHandler(
                     customer: $customer,
                     builder: $this->builder,
-                    getBankInfo: fn($userId) => $this->bankInfoCollector->getBankInfo($userId)
+                    getBankInfo: fn($userId) => $this->bankInfoCollector->getBankInfo($userId),
+                    category: $category
                 ),
                 'notification',
                 $traceId,
@@ -116,10 +118,11 @@ class GowaService
 
             $this->dispatcher->dispatch(
                 $action,
-                fn() => new CreateOrderHandler(
+                fn(string $category) => new CreateOrderHandler(
                     billing: $billing,
                     order: $order,
-                    builder: $this->builder
+                    builder: $this->builder,
+                    category: $category
                 ),
                 'notification',
                 $traceId,
@@ -151,7 +154,7 @@ class GowaService
      * Unpayment package
      *
      */
-    public function payment_package($billing, $receipt, $action, $traceId)
+    public function payment_package(Customer $customer, Billing $billing, Receipt $receipt, string $action, string $traceId)
     {
         try {
             // Mapping handler
@@ -162,11 +165,13 @@ class GowaService
             if (in_array($action, $statusHandlers, true)) {
                 $this->dispatcher->dispatch(
                     $action,
-                    fn() => new BillingStatusHandler(
+                    fn(string $category) => new BillingStatusHandler(
+                        customer: $customer,
                         billing: $billing,
                         type: $action,
                         builder: $this->builder,
-                        getBankInfo: fn($userId) => $this->bankInfoCollector->getBankInfo($userId)
+                        getBankInfo: fn($userId) => $this->bankInfoCollector->getBankInfo($userId),
+                        category: $category
                     ),
                     'notification',
                     $traceId,
@@ -180,11 +185,12 @@ class GowaService
             if (in_array($action, $paymentHandlers, true)) {
                 $this->dispatcher->dispatch(
                     'payment',
-                    fn() => new PaymentHandler(
+                    fn(string $category) => new PaymentHandler(
                         billing: $billing,
                         receipt: $receipt,
                         channel: $action,
-                        builder: $this->builder
+                        builder: $this->builder,
+                        category: $category
                     ),
                     'notification',
                     $traceId,
@@ -245,12 +251,13 @@ class GowaService
             foreach ($billings as $billing) {
                 $this->dispatcher->dispatch(
                     $action,
-                    fn() => new BroadcastMonthlyHandler(
+                    fn(string $category) => new BroadcastMonthlyHandler(
                         billingRow: $billing,
                         builder: $this->builder,
                         getBankInfo: fn(int $userId) => $this->bankInfoCollector->getBankInfo($userId),
                         getBillingPackages: fn(int $custId) => $this->packageCollector->getBillingPackages($custId),
-                        formatPackageInfo: fn($pkg) => $this->formatterCollector->formatPackageInfo($pkg)
+                        formatPackageInfo: fn($pkg) => $this->formatterCollector->formatPackageInfo($pkg),
+                        category: $category
                     ),
                     'notification',
                     $traceId,
@@ -298,7 +305,7 @@ class GowaService
                 foreach ($billings as $billing) {
                     $this->dispatcher->dispatch(
                         $slug,
-                        fn() => new BroadcastMidMonthHandler(
+                        fn(string $category) => new BroadcastMidMonthHandler(
                             billing: $billing,
                             type: $slug,
                             builder: $this->builder,
@@ -306,6 +313,7 @@ class GowaService
                             getBillingPackages: fn($custId) => $this->packageCollector->getBillingPackages($custId),
                             formatPackageInfo: fn($pkg) => $this->formatterCollector->formatPackageInfo($pkg),
                             getUnpaidSummary: fn($custId) => $this->unpaidSummaryCollector->getUnpaidSummary($custId),
+                            category: $category
                         ),
                         queue: 'notification',
                         traceId: $traceId,
@@ -340,13 +348,14 @@ class GowaService
         try {
             $this->dispatcher->dispatch(
                 'changes_package',
-                fn() => new ChangesPackageHandler(
+                fn(string $category) => new ChangesPackageHandler(
                     customerId: $customerId,
                     oldPackageName: $oldPackageName,
                     oldPackagePrice: $oldPackagePrice,
                     builder: $this->builder,
                     getBankInfo: fn(int $userId) => $this->bankInfoCollector->getBankInfo($userId),
-                    formatReceiver: fn(string $number) => $this->formatNumber->formatReceiver($number, null, false)
+                    formatReceiver: fn(string $number) => $this->formatNumber->formatReceiver($number, null, false),
+                    category: $category
                 ),
                 'notification',
                 $traceId,
@@ -400,10 +409,11 @@ class GowaService
 
             $dispatcher->dispatch(
                 action: $templateSlug,
-                handlerFactory: fn() => new TestMessageHandler(
+                handlerFactory: fn(string $category) => new TestMessageHandler(
                     receiver: $receive_number,
                     gatewayId: $gateway->id,
-                    templateSlug: $templateSlug
+                    templateSlug: $templateSlug,
+                    category: $category
                 ),
                 queue: 'notification',
                 traceId: $traceId
@@ -435,11 +445,12 @@ class GowaService
         try {
             $this->dispatcher->dispatch(
                 'changes_package',
-                fn() => new MenuHandler(
+                fn(string $category) => new MenuHandler(
                     type: 'menu',
                     builder: $this->builder,
                     custContact: $custContact,
-                    custName: $custName
+                    custName: $custName,
+                    category: $category
                 ),
                 'default',
                 $traceId

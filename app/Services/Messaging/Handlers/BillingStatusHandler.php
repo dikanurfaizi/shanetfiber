@@ -2,20 +2,26 @@
 // app/Services/Messaging/Handlers/BillingStatusHandler.php
 namespace App\Services\Messaging\Handlers;
 
+use App\Models\Customer;
 use App\Models\Billing\Billing;
 use App\Services\Messaging\Contracts\MessageActionHandler;
 use App\Services\Messaging\MessageBuilder;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Carbon;
 
-class BillingStatusHandler implements MessageActionHandler
+class BillingStatusHandler extends BaseBroadcastAwareHandler implements MessageActionHandler
 {
     public function __construct(
+        private Customer $customer,
         private Billing $billing,
         private string $type, // 'paylater' | 'unpayment'
         private MessageBuilder $builder,
-        private \Closure $getBankInfo
-    ) {}
+        private \Closure $getBankInfo,
+        string $category
+    ) {
+        $this->setCategory($category);
+        $this->setRawContact($customer?->contact ?? null);
+    }
 
     public function action(): string
     {
@@ -24,20 +30,15 @@ class BillingStatusHandler implements MessageActionHandler
 
     public function validate(string $traceId): void
     {
-        if (empty($this->billing->customer?->contact)) {
-            LogHelper::logError(null, [
-                'billing_id' => $this->billing->id,
-                'trace_id' => $traceId,
-            ], 400, "Contact kosong saat validasi BillingStatusHandler", $traceId);
-            throw new \RuntimeException('Contact kosong');
-        }
+        $this->validateBase($traceId);
     }
 
     public function build(string $traceId): array
     {
+        $this->customer->loadMissing('user', 'member');
         $this->billing->loadMissing(['customer.user', 'billingSubscription']);
 
-        $cust      = $this->billing->customer;
+        $cust      = $this->customer;
         $user      = $cust?->user;
         $periode   = $this->billing->billingSubscription?->billing_periode ?? '-';
         $bank      = ($this->getBankInfo)($user?->id ?? 1);

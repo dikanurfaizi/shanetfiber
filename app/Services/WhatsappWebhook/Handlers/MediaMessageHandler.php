@@ -20,6 +20,6 @@ class MediaMessageHandler extends BaseHandler
             'mime_type'  => $media['mime_type'] ?? '',
         ], 200, '[Webhook] Media Message Received', $traceId);
 
-        ProcessIncomingMediaMessageJob::dispatch($payload->raw, $traceId)->onQueue('whatsapp-webhook');
+        ProcessIncomingMediaMessageJob::dispatch($payload->raw, $traceId)->onQueue('notification');
     }
 }

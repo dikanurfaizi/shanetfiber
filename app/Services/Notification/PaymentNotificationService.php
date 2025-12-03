@@ -81,6 +81,7 @@ class PaymentNotificationService
                 );
             } else {
                 $this->gowaService->payment_package(
+                    $receipt->billing->customer,
                     $receipt->billing,
                     $receipt,
                     $receipt->payment_methode,

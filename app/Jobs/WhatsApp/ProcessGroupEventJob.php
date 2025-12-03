@@ -17,7 +17,7 @@ class ProcessGroupEventJob implements ShouldQueue
         public array $payload,
         public string $traceId
     ) {
-        $this->onQueue('whatsapp-webhook');
+        $this->onQueue('notification');
     }
 
     public function handle(): void

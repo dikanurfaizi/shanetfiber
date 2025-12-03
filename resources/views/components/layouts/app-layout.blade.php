@@ -8,7 +8,7 @@
     <meta name="description" content="">
     <meta name="author" content="Ari Purnawan">
     <meta name="csrf-token" content="{{ csrf_token() }}" />
-    <title>{{ $title ?? 'Customer Management' }}</title>
+    <title>{{ $title ?? 'Shanet Fiber Management' }}</title>
     <link rel="apple-touch-icon" sizes="120x120" href="{{ asset('images/favicon/apple-touch-icon.png') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon/favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/favicon/favicon-16x16.png') }}">

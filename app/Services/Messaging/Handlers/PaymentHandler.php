@@ -8,14 +8,18 @@ use App\Services\Messaging\Contracts\MessageActionHandler;
 use App\Services\Messaging\MessageBuilder;
 use App\Helpers\LogHelper;
 
-class PaymentHandler implements MessageActionHandler
+class PaymentHandler extends BaseBroadcastAwareHandler implements MessageActionHandler
 {
     public function __construct(
         private Billing $billing,
         private ?Receipt $receipt,
         private string $channel, // 'transfer' | 'cash' | 'payment_gateway'
-        private MessageBuilder $builder
-    ) {}
+        private MessageBuilder $builder,
+        string $category
+    ) {
+        $this->setCategory($category);
+        $this->setRawContact($billing->customer->contact);
+    }
 
     public function action(): string
     {
@@ -23,15 +27,9 @@ class PaymentHandler implements MessageActionHandler
     }
 
     public function validate(string $traceId): void
-{
-    if (empty($this->billing->customer?->contact)) {
-        LogHelper::logError(null, [
-            'billing_id' => $this->billing->id,
-            'channel' => $this->channel,
-        ], 400, "Contact kosong saat validasi PaymentHandler", $traceId);
-        throw new \RuntimeException('Contact kosong');
+    {
+        $this->validateBase($traceId);
     }
-}
 
     public function build(string $traceId): array
     {
@@ -64,7 +62,7 @@ class PaymentHandler implements MessageActionHandler
                 '%discount%'        => $this->builder->currency($this->receipt?->discount ?? 0),
                 '%total%'           => $this->builder->currency($this->receipt?->price_after_discount ?? $this->billing->total_amount),
                 '%member%'          => $this->receipt?->member_type ?? 'Non Member / Tidak Ada',
-                '%payment_time%'    => $this->receipt?->payment_time ? now()->parse($this->receipt->payment_time)->setTimezone('Asia/Jakarta')->translatedFormat('d F Y, H:i').' WIB' : null,
+                '%payment_time%'    => $this->receipt?->payment_time ? now()->parse($this->receipt->payment_time)->setTimezone('Asia/Jakarta')->translatedFormat('d F Y, H:i') . ' WIB' : null,
                 '%teller%'          => $this->receipt?->teller_name ?? $this->billing->teller_name,
                 '%payment_methode%' => $paymentMethodText,
                 '%cs_contact%'      => $cust->user?->contact,

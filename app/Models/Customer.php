@@ -90,33 +90,33 @@ class Customer extends Authenticatable
         return $this->hasOne(AutoIsolir::class, 'mikrotik_id', 'mikrotik_id');
     }
 
-    public function isPreviousPassword($plainPassword)
-    {
-        $previousPasswords = ActivityLog::where('customer_id', $this->id)
-            ->where('field_name', 'password')
-            ->where('is_sensitive', true)
-            ->orderBy('created_at', 'desc')
-            ->take(5) // Ambil 5 password terakhir
-            ->pluck('old_value');
+    // public function isPreviousPassword($plainPassword)
+    // {
+    //     $previousPasswords = ActivityLog::where('customer_id', $this->id)
+    //         ->where('field_name', 'password')
+    //         ->where('is_sensitive', true)
+    //         ->orderBy('created_at', 'desc')
+    //         ->take(5) // Ambil 5 password terakhir
+    //         ->pluck('old_value');
 
-        foreach ($previousPasswords as $oldHash) {
-            if (Hash::check($plainPassword, $oldHash)) {
-                return true;
-            }
-        }
+    //     foreach ($previousPasswords as $oldHash) {
+    //         if (Hash::check($plainPassword, $oldHash)) {
+    //             return true;
+    //         }
+    //     }
 
-        return false;
-    }
+    //     return false;
+    // }
 
     public function passwordHistory()
     {
         return $this->hasMany(PasswordHistory::class);
     }
 
-    public function activityLogs()
-    {
-        return $this->hasMany(ActivityLog::class);
-    }
+    // public function activityLogs()
+    // {
+    //     return $this->hasMany(ActivityLog::class);
+    // }
 
     public function getEmailForPayment(): string
     {

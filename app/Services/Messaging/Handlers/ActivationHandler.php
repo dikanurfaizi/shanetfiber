@@ -8,22 +8,26 @@ use App\Services\Messaging\Contracts\MessageActionHandler;
 use App\Services\Messaging\MessageBuilder;
 use App\Helpers\LogHelper;
 
-class ActivationHandler implements MessageActionHandler
+class ActivationHandler extends BaseBroadcastAwareHandler implements MessageActionHandler
 {
     public function __construct(
         private Customer $customer,
         private MessageBuilder $builder,
-        private \Closure $getBankInfo
-    ) {}
+        private \Closure $getBankInfo,
+        string $category
+    ) {
+        $this->setCategory($category);
+        $this->setRawContact($customer->contact);
+    }
 
-    public function action(): string { return 'activation_customer'; }
+    public function action(): string
+    {
+        return 'activation_customer';
+    }
 
     public function validate(string $traceId): void
     {
-        if (empty($this->customer->contact)) {
-            LogHelper::logError(null,['customer' => $this->customer],400,"Contact kosong saat validasi ActivationHandler",$traceId);
-            throw new \RuntimeException('Contact pelanggan kosong');
-        }
+        $this->validateBase($traceId);
     }
 
     public function build(string $traceId): array

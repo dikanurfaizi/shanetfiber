@@ -31,20 +31,20 @@ class MessageDispatcher
         try {
             // === INIT ===
             LogHelper::logInfo(null, [
-                'trace_id' => $traceId,
                 'action'   => $action,
                 'queue'    => $queue,
                 'stage'    => $stage,
             ], 200, '[MessageDispatcher] Starting dispatch process', $traceId);
 
+            $category = $this->registry->getCategory($action);
+
             /** @var MessageActionHandler $handler */
-            $handler = $handlerFactory();
+            $handler = $handlerFactory($category);
 
             // === VALIDATE ===
             $stage = 'VALIDATE';
             $handler->validate($traceId);
             LogHelper::logInfo(null, [
-                'trace_id' => $traceId,
                 'action'   => $action,
                 'stage'    => $stage,
             ], 200, '[MessageDispatcher] Handler validation completed', $traceId);
@@ -53,7 +53,6 @@ class MessageDispatcher
             $stage = 'BUILD';
             $built = $handler->build($traceId);
             LogHelper::logInfo(null, [
-                'trace_id'       => $traceId,
                 'action'         => $action,
                 'built_to'       => $built['to'] ?? null,
                 'template_slug'  => $built['template_slug'] ?? null,
@@ -69,7 +68,6 @@ class MessageDispatcher
                 $traceId
             );
             LogHelper::logInfo(null, [
-                'trace_id'      => $traceId,
                 'template_slug' => $built['template_slug'],
                 'message_len'   => strlen($message ?? ''),
                 'stage'         => $stage,
@@ -82,7 +80,6 @@ class MessageDispatcher
             $formattedReceiver = $formatter->formatReceiver($built['to'], null, true);
 
             LogHelper::logInfo(null, [
-                'trace_id' => $traceId,
                 'action' => $action,
                 'stage' => $stage,
                 'receiver' => $formattedReceiver,
@@ -101,7 +98,6 @@ class MessageDispatcher
             ]);
 
             LogHelper::logInfo(null, [
-                'trace_id'     => $traceId,
                 'action'       => $action,
                 'stage'        => $stage,
                 'event_id'     => $event->id,
@@ -128,7 +124,6 @@ class MessageDispatcher
 
             $duration = round(microtime(true) - $startTime, 4);
             LogHelper::logInfo(null, [
-                'trace_id' => $traceId,
                 'action'   => $action,
                 'queue'    => $queue ?? 'default',
                 'event_id' => $event->id,
@@ -137,7 +132,6 @@ class MessageDispatcher
         } catch (Throwable $e) {
             $duration = round(microtime(true) - $startTime, 4);
             LogHelper::logError(null, [
-                'trace_id'       => $traceId,
                 'action'         => $action,
                 'queue'          => $queue ?? 'default',
                 'stage'          => $stage,

@@ -11,6 +11,10 @@ use App\Services\Whatsapp\KeywordProcessor;
 use App\Services\Whatsapp\OptOutService;
 use App\Services\Messaging\MessageDispatcher;
 use App\Services\Messaging\Handlers\WebhookReplyHandler;
+use App\Services\Messaging\Handlers\BillingInfoHandler;
+use App\Services\Messaging\Handlers\PackageInfoHandler;
+use App\Services\Messaging\MessageBuilder;
+use App\Services\Messaging\Collectors\BankInfoCollector;
 
 class TextMessageHandler extends BaseHandler
 {
@@ -23,7 +27,7 @@ class TextMessageHandler extends BaseHandler
     public function handle(WebhookPayload $payload, string $traceId): void
     {
         $format = new FormatReceiver();
-        $sender = $payload->sender();
+        $sender = $format->normalizeSender($payload->sender());
         $text   = strtolower(trim($payload->text() ?? ''));
 
         // 1. Resolve keyword → table whatsapp_messages
@@ -44,12 +48,39 @@ class TextMessageHandler extends BaseHandler
 
         $this->dispatcher->dispatch(
             action: $action,
-            handlerFactory: fn() => new WebhookReplyHandler(
-                sender: $sender,
-                keyword: $keyword,
-                customerId: optional(Customer::where('contact', $format->formatReceiver($sender, null, false))
-                    ->orWhere('contact', $format->formatReceiver($sender, 'display', false))->first())->id
-            ),
+            handlerFactory: function (string $category) use ($keyword, $sender, $format) {
+
+                $customer = Customer::where('contact', $format->formatReceiver($sender, null, false))
+                    ->orWhere('contact', $format->formatReceiver($sender, 'display', false))
+                    ->first();
+
+                // Pilih handler berdasarkan slug keyword
+                return match ($keyword->slug) {
+
+                    // === INFO TAGIHAN (billing BL/PL, bisa no_bill)
+                    'info_tagihan' => new BillingInfoHandler(
+                        customer: $customer,
+                        builder: app(MessageBuilder::class),
+                        getBankInfo: fn($userId) => app(BankInfoCollector::class)->getBankInfo($userId),
+                        category: $category
+                    ),
+
+                    // === INFO PAKET (bisa no_paket)
+                    'info_paket' => new PackageInfoHandler(
+                        customer: $customer,
+                        builder: app(MessageBuilder::class),
+                        category: $category
+                    ),
+
+                    // === handler default
+                    default => new WebhookReplyHandler(
+                        sender: $sender,
+                        keyword: $keyword,
+                        customerId: $customer?->id,
+                        category: $category
+                    ),
+                };
+            },
             queue: 'notification',
             traceId: $traceId,
             delay: now()->addSeconds(1)

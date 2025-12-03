@@ -2,18 +2,22 @@
 
 namespace App\Services\Messaging\Handlers;
 
+use App\Helpers\LogHelper;
 use App\Services\Messaging\Contracts\MessageActionHandler;
 use App\Services\Messaging\MessageBuilder;
-use App\Helpers\LogHelper;
 
-class MenuHandler implements MessageActionHandler
+class MenuHandler extends BaseBroadcastAwareHandler implements MessageActionHandler
 {
     public function __construct(
         private string $type,
         private MessageBuilder $builder,
         private string $custContact,
-        private string $custName
-    ) {}
+        private string $custName,
+        string $category
+    ) {
+        $this->setCategory($category);
+        $this->setRawContact($custContact);
+    }
 
     public function action(): string
     {
@@ -22,12 +26,7 @@ class MenuHandler implements MessageActionHandler
 
     public function validate(string $traceId): void
     {
-        if (empty($this->billing->customer?->contact)) {
-            LogHelper::logError(null, [
-                'trace_id' => $traceId,
-            ], 400, "Contact kosong saat validasi BillingStatusHandler", $traceId);
-            throw new \RuntimeException('Contact kosong');
-        }
+        $customer = $this->validateBase($traceId);
     }
 
     public function build(string $traceId): array
@@ -35,9 +34,9 @@ class MenuHandler implements MessageActionHandler
         return [
             'template_slug' => $this->type,
             'to'            => $this->custContact,
-            'customer_id'   => null,
+            'customer_id'   => null, // menu bisa tanpa customer
             'replacements'  => [
-                '%name%'           => $this->custName
+                '%name%' => $this->custName,
             ],
         ];
     }

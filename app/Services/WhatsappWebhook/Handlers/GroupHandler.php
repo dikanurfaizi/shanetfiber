@@ -18,6 +18,6 @@ class GroupHandler extends BaseHandler
             'members' => $p['jids'] ?? [],
         ], 200, '[Webhook] Group Event', $traceId);
 
-        ProcessGroupEventJob::dispatch($payload->raw, $traceId)->onQueue('whatsapp-webhook');
+        ProcessGroupEventJob::dispatch($payload->raw, $traceId)->onQueue('notification');
     }
 }

@@ -7,15 +7,19 @@ use App\Models\Websystem;
 use App\Services\Messaging\Contracts\MessageActionHandler;
 use App\Services\Messaging\MessageBuilder;
 
-class BroadcastMonthlyHandler implements MessageActionHandler
+class BroadcastMonthlyHandler extends BaseBroadcastAwareHandler implements MessageActionHandler
 {
     public function __construct(
         private object $billingRow,      // row hasil join di getEligibleBillings()
         private MessageBuilder $builder,
         private \Closure $getBankInfo,   // fn(int $userId): string
         private \Closure $getBillingPackages, // fn(int $customerId): \Illuminate\Support\Collection
-        private \Closure $formatPackageInfo  // fn($package): string
-    ) {}
+        private \Closure $formatPackageInfo,  // fn($package): string
+        string $category
+    ) {
+        $this->setCategory($category);
+        $this->setRawContact($billingRow->customer_contact);
+    }
 
     public function action(): string
     {
@@ -24,10 +28,7 @@ class BroadcastMonthlyHandler implements MessageActionHandler
 
     public function validate(string $traceId): void
     {
-        if (empty($this->billingRow->customer_contact)) {
-            LogHelper::logError(null, ['billing_id' => $this->billingRow->billing_id], 400, 'No customer contact', $traceId);
-            throw new \RuntimeException('Contact kosong');
-        }
+        $this->validateBase($traceId);
     }
 
     public function build(string $traceId): array

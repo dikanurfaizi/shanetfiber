@@ -6,18 +6,19 @@ use App\Services\Messaging\Contracts\MessageActionHandler;
 use App\Models\Whatsapp\WhatsappMessage;
 use App\Models\Customer;
 use App\Helpers\LogHelper;
+use App\Helpers\FormatReceiver;
 
 class WebhookReplyHandler implements MessageActionHandler
 {
     public function __construct(
         private string $sender,
-        private WhatsappMessage $keyword,  // row dari table whatsapp_messages
-        private ?int $customerId = null    // optional
+        private WhatsappMessage $keyword,
+        private ?int $customerId = null,
+        string $category
     ) {}
 
     public function action(): string
     {
-        // Pastikan sama dengan slug atau override action
         return $this->keyword->slug;
     }
 
@@ -29,7 +30,7 @@ class WebhookReplyHandler implements MessageActionHandler
                 'trace_id' => $traceId,
             ], 500, '[WebhookReplyHandler] Template reply_message kosong', $traceId);
 
-            throw new \RuntimeException("Template reply_message kosong untuk slug {$this->keyword->slug}");
+            throw new \RuntimeException("Template reply_message kosong");
         }
     }
 
@@ -38,16 +39,14 @@ class WebhookReplyHandler implements MessageActionHandler
         return [
             'template_slug' => $this->keyword->slug,
             'to'            => $this->sender,
-            'customer_id'   => $this->customerId, // bisa null
+            'customer_id'   => $this->customerId,
             'replacements'  => $this->buildReplacements(),
         ];
     }
 
     private function buildReplacements(): array
     {
-        // Minimal placeholder agar %name% tidak error
         $name = $this->resolveNameFromDB($this->sender);
-
         return [
             '%name%' => $name ?? 'Pelanggan',
         ];
@@ -55,7 +54,10 @@ class WebhookReplyHandler implements MessageActionHandler
 
     private function resolveNameFromDB(string $phone): ?string
     {
-        $cust = Customer::where('contact', $phone)->first();
+        $format = new FormatReceiver();
+        $cust = Customer::where('contact', $format->formatReceiver($phone, null, false))
+            ->orWhere('contact', $format->formatReceiver($phone, 'display', false))
+            ->first();
         return $cust?->name;
     }
 }

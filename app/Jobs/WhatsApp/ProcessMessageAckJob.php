@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Jobs\WhatsApp;
+namespace App\Jobs\Whatsapp;
 
 use App\Helpers\LogHelper;
 use Illuminate\Bus\Queueable;
@@ -17,7 +17,7 @@ class ProcessMessageAckJob implements ShouldQueue
         public array $payload,
         public string $traceId
     ) {
-        $this->onQueue('whatsapp-webhook');
+        $this->onQueue('notification');
     }
 
     public function handle(): void

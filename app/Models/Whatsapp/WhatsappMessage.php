@@ -15,6 +15,11 @@ class WhatsappMessage extends Model
         'id',
     ];
 
+    protected $casts = [
+        'keywords' => 'array',
+    ];
+
+
     public function getRouteKeyName(): string
     {
         return 'slug';

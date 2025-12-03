@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" content="">
     <meta name="author" content="Mehrdad Amini">
-    <title>{{ config('app.name', 'Customer Management') }}</title>
+    <title>{{ config('app.name', 'Shanum Network Fiber') }}</title>
 
     @vite('resources/sass/app.scss')
     <!-- Custom fonts for this template-->
