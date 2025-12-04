@@ -2,6 +2,7 @@
 
 namespace App\Services\Whatsapp;
 
+use App\Helpers\LogHelper;
 use App\Models\Whatsapp\WhatsappMessage;
 
 class KeywordProcessor
@@ -10,28 +11,38 @@ class KeywordProcessor
         private KeywordNormalizer $normalizer
     ) {}
 
-    public function resolveKeyword(string $text): ?WhatsappMessage
+    public function resolveKeyword(string $text, $customer): ?WhatsappMessage
     {
         $normalized = strtolower(trim($this->normalizer->normalize($text)));
 
-        // STOP adalah prioritas tertinggi
+        $scope = $customer
+            ? ['registered', 'both']
+            : ['unregistered', 'both'];
+
+        LogHelper::logInfo(null, ['scope' => $scope], 200, "Scope");
+
+        // STOP tetap prioritas
         if ($this->normalizer->isStop($text)) {
-            return WhatsappMessage::where('slug', 'stop')->first();
+            return WhatsappMessage::where('keywords', 'stop')
+                ->whereIn('message_scope', $scope)
+                ->first();
         }
 
         // 1. Exact match ke incoming_message
-        $msg = WhatsappMessage::where('incoming_message', $normalized)->first();
-        if ($msg) {
-            return $msg;
-        }
+        $msg = WhatsappMessage::where('keywords', $normalized)
+            ->whereIn('message_scope', $scope)
+            ->first();
+        if ($msg) return $msg;
 
-        // 2. Match ke keywords (JSON array)
-        $alias = WhatsappMessage::whereJsonContains('keywords', $normalized)->first();
-        if ($alias) {
-            return $alias;
-        }
+        // 2. JSON array match
+        $alias = WhatsappMessage::whereJsonContains('keywords', $normalized)
+            ->whereIn('message_scope', $scope)
+            ->first();
+        if ($alias) return $alias;
 
         // 3. Fallback → unknown keyword
-        return WhatsappMessage::where('slug', 'unknown_keyword')->first();
+        return WhatsappMessage::where('slug', 'unknown_keyword')
+            ->where('message_scope', 'both')
+            ->first();
     }
 }

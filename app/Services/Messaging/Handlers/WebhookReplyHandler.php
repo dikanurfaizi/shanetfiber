@@ -10,6 +10,8 @@ use App\Helpers\FormatReceiver;
 
 class WebhookReplyHandler implements MessageActionHandler
 {
+    private ?array $resolvedCustomer = null;
+
     public function __construct(
         private string $sender,
         private WhatsappMessage $keyword,
@@ -36,28 +38,64 @@ class WebhookReplyHandler implements MessageActionHandler
 
     public function build(string $traceId): array
     {
+        $customer = $this->resolveCustomer($this->sender);
+
         return [
             'template_slug' => $this->keyword->slug,
             'to'            => $this->sender,
-            'customer_id'   => $this->customerId,
-            'replacements'  => $this->buildReplacements(),
+            'customer_id'   => $customer['id'],   // aman, karena dijamin selalu ada key id
+            'replacements'  => [
+                '%name%' => $customer['name'] ?? 'Pelanggan'
+            ]
         ];
     }
 
-    private function buildReplacements(): array
+    private function resolveCustomer(string $phone): array
     {
-        $name = $this->resolveNameFromDB($this->sender);
-        return [
-            '%name%' => $name ?? 'Pelanggan',
-        ];
-    }
+        // Cache supaya tidak query DB dua kali
+        if ($this->resolvedCustomer !== null) {
+            return $this->resolvedCustomer;
+        }
 
-    private function resolveNameFromDB(string $phone): ?string
-    {
         $format = new FormatReceiver();
-        $cust = Customer::where('contact', $format->formatReceiver($phone, null, false))
-            ->orWhere('contact', $format->formatReceiver($phone, 'display', false))
+
+        /**
+         * 1. Jika customerId ada → coba pakai ID
+         */
+        if (!empty($this->customerId)) {
+            $cust = Customer::find($this->customerId);
+
+            if ($cust) {
+                return $this->resolvedCustomer = [
+                    'id'   => $cust->id,
+                    'name' => $cust->name,
+                ];
+            }
+        }
+
+        /**
+         * 2. Fallback cari berdasarkan nomor
+         */
+        $normalized = $format->formatReceiver($phone, null, false);
+        $displayed  = $format->formatReceiver($phone, 'display', false);
+
+        $cust = Customer::where('contact', $normalized)
+            ->orWhere('contact', $displayed)
             ->first();
-        return $cust?->name;
+
+        if ($cust) {
+            return $this->resolvedCustomer = [
+                'id'   => $cust->id,
+                'name' => $cust->name,
+            ];
+        }
+
+        /**
+         * 3. Benar-benar bukan customer → tetap return array konsisten
+         */
+        return $this->resolvedCustomer = [
+            'id'   => null,
+            'name' => null,
+        ];
     }
 }

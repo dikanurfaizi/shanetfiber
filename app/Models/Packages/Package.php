@@ -27,7 +27,7 @@ class Package extends Model
 
     public function subscriptionDurations()
     {
-        return $this->hasMany(SubscriptionDuration::class);
+        return $this->hasMany(SubscriptionDuration::class, 'package_id');
     }
 
     public function customerSubscriptions()

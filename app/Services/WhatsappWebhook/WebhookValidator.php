@@ -29,13 +29,6 @@ class WebhookValidator
 
         $isValid = hash_equals($expected, $provided);
 
-        // ==== LOG VALIDATION ====
-        LogHelper::logInfo(null, [
-            'expected_hmac' => $expected,
-            'provided_hmac' => $provided,
-            'match'         => $isValid,
-        ], 200, '[WebhookValidator] Signature Comparison Result');
-
         return $isValid;
     }
 
