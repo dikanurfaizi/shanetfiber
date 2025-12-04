@@ -296,10 +296,10 @@ class GowaService
                 LogHelper::logInfo(null, [], 200, "Found {$count} billing(s) for '{$type}'", $traceId);
 
                 $slug = match ($type) {
-                    'past_due'  => 'warning_bill',
-                    'due_today' => 'deadline_bill',
-                    'upcoming'  => 'reminder_bill',
-                    default     => 'reminder_bill',
+                    'past_due'  => 'billing_due_soon',
+                    'due_today' => 'billing_due_today',
+                    'upcoming'  => 'billing_overdue',
+                    default     => 'billing_overdue',
                 };
 
                 foreach ($billings as $billing) {

@@ -42,8 +42,25 @@ class BroadcastMidMonthHandler extends BaseBroadcastAwareHandler implements Mess
         $bank = ($this->getBankInfo)($admin->id ?? 1);
         $packages = ($this->getBillingPackages)($cust->id);
         $pkgText = $packages->map(fn($p) => ($this->formatPackageInfo)($p))->implode("\n---\n");
-        $due = $packages->pluck('due_date')->filter()->sort()->first();
-        $day = $due ? Carbon::today()->diffInDays(Carbon::parse($due), false) : 0;
+
+        // Tentukan due date per billing (PL → pay_later, BL → due_date)
+        $dueDates = $packages->map(function ($p) {
+            return $p->status === 'PL'
+                ? $p->pay_later
+                : $p->due_date;
+        });
+
+        // Ambil due date paling dekat
+        $due = $dueDates->filter()->sort()->first();
+
+        // Hitung selisih hari dari hari ini
+        $day = $due ? now()->diffInDays(Carbon::parse($due), false) : 0;
+
+        // Format tanggal untuk template
+        $due_date_formatted = $due
+            ? Carbon::parse($due)->translatedFormat('d F Y')
+            : '-';
+
         $unpaidSummary = ($this->getUnpaidSummary)($cust->id);
 
         return [
@@ -57,6 +74,7 @@ class BroadcastMidMonthHandler extends BaseBroadcastAwareHandler implements Mess
                 '%account_bank%'    => $bank,
                 '%packages%'        => $pkgText,
                 '%total-bill%'      => $this->builder->currency($unpaidSummary['total_unpaid']),
+                '%due-date%'        => $due_date_formatted,
                 '%day%'             => $day,
                 '%cs_contact%'      => $admin?->contact ?? '-',
                 '%count-bill%'      => $unpaidSummary['count_unpaid'],
