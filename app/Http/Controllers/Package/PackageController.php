@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Package;
 
+use App\Helpers\LogHelper;
 use App\Models\Packages\Package;
 use Illuminate\Http\Request;
 use App\Http\Requests\PackageStoreRequest;
@@ -45,15 +46,15 @@ class PackageController extends Controller
     }
 
     public function show($slug)
-{
-    try {
-        $data = $this->packageService->show($slug);
-        return view('packages.show', $data);
-    } catch (\Exception $e) {
-        return redirect()->route('packages.index')
-            ->withErrors(['msg' => 'Failed to load package detail.']);
+    {
+        try {
+            $data = $this->packageService->show($slug);
+            return view('packages.show', $data);
+        } catch (\Exception $e) {
+            return redirect()->route('packages.index')
+                ->withErrors(['msg' => 'Failed to load package detail.']);
+        }
     }
-}
 
     public function edit($slug)
     {
@@ -85,11 +86,12 @@ class PackageController extends Controller
         return redirect()->route('packages.index')->with('success', 'Package deleted successfully.');
     }
 
-    public function toggleDisplay(Request $request, $id)
+    public function toggleDisplay(Request $request, $slug)
     {
-        $package = $this->packageService->toggleDisplay($id, $request->boolean('display_to_customer'));
+        $package = $this->packageService->toggleDisplay($slug, $request->boolean('display_to_customer'));
         return response()->json([
             'status'  => 'success',
+            'title'   => 'Package Display',
             'message' => 'Display status updated.',
             'value'   => $package->display_to_customer
         ]);

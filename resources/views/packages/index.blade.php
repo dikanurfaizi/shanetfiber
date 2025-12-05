@@ -1,7 +1,8 @@
 <x-layouts.app-layout title="Packages">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('package.header.index') }} - {{ count($packages) }} Packages</h5>
+        <h5 class="m-0 font-weight-bold text-primary">{{ __('package.header.index') }} - {{ count($packages) }} Packages
+        </h5>
         @can('package-create')
             <span><a class="btn btn-sm btn-success mt-2" href="{{ route('packages.create') }}"><i class="fa fa-plus"></i>
                     {{ __('package.button.create') }}</a></span>
@@ -65,7 +66,8 @@
                                     <div class="form-check form-switch d-flex justify-content-center">
                                         <input class="form-check-input toggle-display" type="checkbox" role="switch"
                                             data-id="{{ $package->id }}"
-                                            {{ $package->display_to_customer ? 'checked' : '' }}>
+                                            {{ $package->display_to_customer ? 'checked' : '' }}
+                                            data-slug="{{ $package->slug }}">
                                     </div>
                                 </td>
                             @endcan
@@ -135,13 +137,20 @@
     @can('package-edit')
         @section('custom_scripts')
             <script>
+                const toggleDisplayRoute = "{{ route('package.toggle-display', ':slug') }}";
+            </script>
+            <script>
                 document.addEventListener('DOMContentLoaded', function() {
                     document.querySelectorAll('.toggle-display').forEach(toggle => {
-                        toggle.addEventListener('change', function() {
-                            const packageId = this.dataset.id;
-                            const isChecked = this.checked ? 1 : 0;
 
-                            fetch(`/cpanel/packets/${packageId}/toggle-display`, {
+                        toggle.addEventListener('change', function(event) {
+                            const checkbox = event.target;
+                            const packageSlug = checkbox.dataset.slug;
+                            const isChecked = checkbox.checked ? 1 : 0;
+
+                            const url = toggleDisplayRoute.replace(':slug', packageSlug);
+
+                            fetch(url, {
                                     method: 'PUT',
                                     headers: {
                                         'Content-Type': 'application/json',
@@ -152,18 +161,56 @@
                                         display_to_customer: isChecked
                                     })
                                 })
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.status !== 'success') {
-                                        alert('Gagal memperbarui status!');
-                                        this.checked = !isChecked; // rollback kalau gagal
+                                .then(res => res.json())
+                                .then(response => {
+
+                                    if (response.status !== 'success') {
+
+                                        new Notify({
+                                            status: response.status || 'error',
+                                            title: response.title || 'Update Failed',
+                                            text: response.message ||
+                                                'Gagal memperbarui status!',
+                                            effect: 'slide',
+                                            speed: 500,
+                                            showCloseButton: true,
+                                            autotimeout: 5000,
+                                            autoclose: true
+                                        });
+
+                                        checkbox.checked = !isChecked; // rollback
+                                        return;
                                     }
+
+                                    new Notify({
+                                        status: response.status,
+                                        title: response.title,
+                                        text: response.message,
+                                        effect: 'slide',
+                                        speed: 500,
+                                        showCloseButton: true,
+                                        autotimeout: 5000,
+                                        autoclose: true
+                                    });
+
                                 })
                                 .catch(() => {
-                                    alert('Terjadi kesalahan koneksi!');
-                                    this.checked = !isChecked;
+                                    new Notify({
+                                        status: 'error',
+                                        title: 'Connection Error',
+                                        text: 'Terjadi kesalahan koneksi!',
+                                        effect: 'slide',
+                                        speed: 500,
+                                        showCloseButton: true,
+                                        autotimeout: 5000,
+                                        autoclose: true
+                                    });
+
+                                    checkbox.checked = !isChecked;
                                 });
+
                         });
+
                     });
                 });
             </script>

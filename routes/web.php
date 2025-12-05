@@ -188,7 +188,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::put('/packages/{packet:slug}/disabled/true', [PackageController::class, 'disable'])->name('disable.package');
         Route::put('/packages/{packet:slug}/disabled/false', [PackageController::class, 'enable'])->name('enable.package');
         Route::get('/packages/{packet:slug}/delete', [PackageController::class, 'delete'])->name('package.delete');
-        Route::put('/packages/{packet:slug}/toggle-display', [PackageController::class, 'toggleDisplay'])->name('paket.toggle-display');
+        Route::put('/packages/{packet:slug}/toggle-display', [PackageController::class, 'toggleDisplay'])->name('package.toggle-display');
 
         // ==================== PACKAGE CATEGORIES ====================
         Route::resource('package-categories', PackageCategoriesController::class)->names('categories');

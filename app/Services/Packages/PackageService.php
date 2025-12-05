@@ -8,6 +8,7 @@ use App\Models\SubscriptionDuration;
 use Illuminate\Support\Str;
 use App\Services\Packages\PackageQueryService;
 use Illuminate\Support\Facades\DB;
+use App\Helpers\LogHelper;
 
 class PackageService
 {
@@ -150,11 +151,11 @@ class PackageService
         ], 'Successfully deleted package');
     }
 
-    public function toggleDisplay($id, $value)
+    public function toggleDisplay($slug, $value)
     {
         [$traceId, $startTime] = $this->startTrace();
 
-        $package = Package::findOrFail($id);
+        $package = Package::where('slug', $slug)->first();
         $package->display_to_customer = $value;
         $package->save();
 
