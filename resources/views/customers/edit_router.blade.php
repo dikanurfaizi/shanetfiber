@@ -154,7 +154,7 @@
                 <button type="submit" class="btn btn-sm btn-success">
                     <i class="fas fa-user-check"></i>&nbsp{{ __('customer.button.update-router') }}
                 </button>
-                <a class="btn btn-sm btn-secondary" href="{{ route('customers.edit', $customer->slug ?? '#') }}">
+                <a class="btn btn-sm btn-secondary" href="{{ route('customers.show', $customer->slug ?? '#') }}">
                     <i class="fa fa-arrow-left"></i>&nbsp{{ __('customer.button.back') }}
                 </a>
                 @can('customer-edit')

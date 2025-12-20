@@ -4,7 +4,7 @@ namespace App\Services\Messaging\Handlers;
 
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 
 abstract class BaseBroadcastAwareHandler
 {

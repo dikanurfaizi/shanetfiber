@@ -2,11 +2,11 @@
 
 namespace App\Jobs\Notification;
 
-use App\Models\Customer;
-use App\Models\Billing\Billing;
+use App\Models\Membership\CustomerMembership;
+use App\Models\Billings\Billing;
+use App\Models\Customers\CustomerSubscription;
 use App\Models\Receipt;
 use App\Services\Notification\CustomerActivationNotificationService;
-use App\Helpers\LogHelper;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -18,7 +18,8 @@ class SendCustomerActivationNotificationJob implements ShouldQueue
     use Dispatchable, Queueable, InteractsWithQueue, SerializesModels;
 
     public function __construct(
-        public Customer $customer,
+        public ?int $customerMembershipId,
+        public CustomerSubscription $customerSubscription,
         public Billing $billing,
         public Receipt $receipt,
         public string $traceId
@@ -27,7 +28,8 @@ class SendCustomerActivationNotificationJob implements ShouldQueue
     public function handle(CustomerActivationNotificationService $service): void
     {
         $service->send(
-            customer: $this->customer,
+            customerMembershipId: $this->customerMembershipId,
+            customerSubscription: $this->customerSubscription,
             billing: $this->billing,
             receipt: $this->receipt,
             traceId: $this->traceId

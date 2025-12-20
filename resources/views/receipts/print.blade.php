@@ -1,146 +1,102 @@
 @extends('layouts.print')
 
 @section('content')
-    <div class="invoice-box">
-        <table cellpadding="0" cellspacing="0">
-            <tr class="top">
-                <td colspan="2">
-                    <table>
-                        <tr>
-                            <td class="title">
-                                <img src="{{ public_path('images/receipt_logo.png') }}"
-                                    style="width: 100%; max-width: 150px" />
-                            </td>
-                            <td>
-                                Receipt #: {{ $receipt->number }}<br />
-                                {{ Carbon\Carbon::parse($receipt->created_at)->translatedFormat('d M Y') ?? 'No Created Time' }}<br />
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
+    {{-- WATERMARK --}}
+    <div class="invoice-watermark"></div>
 
-            <tr class="information">
-                <td colspan="2">
-                    <table>
-                        <tr>
-                            <td>
-                                Bill to : {{ $receipt->customer_name }} (ID: {{ $receipt->customer->customer_id }})<br />
-                                {{ $receipt->customer_address }}<br />
-                                {{ $receipt->customer->contact ?? '' }}
-                            </td>
-                            <td>
-                                {{ $websystem->title }}<br />
-                                {{ $receipt->teller_name }}<br />
-                                {{ $websystem->email }}<br />
-                                {{ $websystem->phone }}
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
+    {{-- HEADER --}}
+    <table class="header-table">
+        <tr>
+            <td class="logo">
+                <img src="{{ public_path('images/receipt_logo.png') }}" style="max-width:140px">
+            </td>
+            <td class="header-info">
+                <div class="invoice-title">RECEIPT</div>
+                <div>Receipt No : <strong>{{ $receipt->number }}</strong></div>
+                <div>Paid At :
+                    {{ \Carbon\Carbon::parse($receipt->payment_time)->translatedFormat('d M Y H:i') }}
+                </div>
+            </td>
+        </tr>
+    </table>
 
-            <tr class="heading">
-                <td>Payment Method</td>
-                <td>
-                    @if ($receipt->payment_methode === 'cash')
-                        Cash#
-                    @elseif ($receipt->payment_methode === 'transfer')
-                        Transfer#
-                    @elseif ($receipt->payment_methode === 'online')
-                        Online#
-                    @else
-                        No Payment Methode#
-                    @endif
-                </td>
-            </tr>
+    <hr>
 
-            <tr class="details">
-                <td>
-                    {{ ucfirst($receipt->payment_methode) }} on
-                    {{ Carbon\Carbon::parse($receipt->payment_time)->translatedFormat('d M Y H:i:s') }}
-                </td>
-                <td>@moneyIDR($receipt->package_price)</td>
-            </tr>
+    {{-- PAID BY / RECEIVED BY --}}
+    <table class="info-table">
+        <tr>
+            <td>
+                <strong>Paid By</strong><br>
+                {{ $receipt->customer_name }}
+                ({{ $receipt->customer->customer_id }})<br>
+                {{ $receipt->customer_address }}<br>
+                {{ $receipt->customer->contact ?? '-' }}
+            </td>
+            <td>
+                <strong>Received By</strong><br>
+                Shanum Network Fiber<br>
+                {{ $receipt->teller_name ?? '-' }}<br>
+                {{ $websystem->email }}<br>
+                {{ $websystem->phone }}
+            </td>
+        </tr>
+    </table>
 
-            <tr class="heading">
-                <td>Package</td>
-                <td>Price</td>
+    {{-- ITEMS --}}
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width:45%">Item</th>
+                <th style="width:10%">Qty</th>
+                <th style="width:20%">Price</th>
+                <th style="width:25%">Amount</th>
             </tr>
+        </thead>
+        <tbody>
+            @foreach ($receiptItems as $item)
+                <tr @if ($item->type === 'discount') class="discount" @endif>
+                    <td>
+                        {{ $item->name }}
+                        <span class="muted">({{ ucfirst($item->type) }})</span>
+                    </td>
+                    <td class="center">{{ $item->qty }}</td>
+                    <td class="right">@moneyIDR(abs($item->unit_price))</td>
+                    <td class="right">@moneyIDR(abs($item->subtotal))</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
 
-            <tr class="item">
-                <td>{{ $receipt->package_name }} - {{ $receipt->periode }}</td>
-                <td>@moneyIDR($receipt->package_price)</td>
-            </tr>
+    {{-- SUMMARY --}}
+    <table class="summary-table">
+        <tr>
+            <td>Sub Total</td>
+            <td class="right">@moneyIDR($subtotal)</td>
+        </tr>
+        <tr class="discount">
+            <td>Discount</td>
+            <td class="right">@moneyIDR(abs($discount))</td>
+        </tr>
+        <tr>
+            <td>PPN</td>
+            <td class="right">@moneyIDR($receipt->tax)</td>
+        </tr>
+        <tr class="total">
+            <td>Total Paid</td>
+            <td class="right">@moneyIDR($total)</td>
+        </tr>
+    </table>
 
-            <tr class="total">
-                <td></td>
-                <td>
-                    <table>
-                        <tr>
-                            <td>
-                                Discount:
-                            </td>
-                            <td>
-                                @moneyIDR($receipt->discount)
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                Sub Total:
-                            </td>
-                            <td>
-                                @moneyIDR($receipt->price_after_discount)
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                PPN:
-                            </td>
-                            <td>
-                                @moneyIDR($receipt->tax)
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                Total:
-                            </td>
-                            <td>
-                                @moneyIDR($receipt->price_after_discount + $receipt->tax)
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
-
+    {{-- PAYMENT DETAILS --}}
+    <div class="payment-info">
+        <strong>Payment Details</strong><br>
         <table class="payment-details">
-            @if ($receipt->payment_methode === 'transfer')
-                <tr>
-                    <td>Payment Method</td>
-                    <td>Transfer</td>
-                </tr>
-                <tr>
-                    <td>Bank</td>
-                    <td>{{ $receipt->bank_name }}</td>
-                </tr>
-                <tr>
-                    <td>Account Name</td>
-                    <td>{{ $receipt->account_name }}</td>
-                </tr>
-                <tr>
-                    <td>Account Number</td>
-                    <td>{{ $receipt->account_number }}</td>
-                </tr>
-                <tr>
-                    <td>Reference Id</td>
-                    <td>{{ $receipt->billing_number }}</td>
-                </tr>
-            @elseif ($receipt->payment_methode === 'online')
-                <tr>
-                    <td>Payment Method</td>
-                    <td>Online</td>
-                </tr>
+            <tr>
+                <td>Payment Method</td>
+                <td>{{ ucfirst($receipt->payment_methode) }}</td>
+            </tr>
+
+            @if ($receipt->payment_methode === 'transfer' || $receipt->payment_methode === 'online')
                 <tr>
                     <td>Bank</td>
                     <td>{{ $receipt->bank_name }}</td>
@@ -153,28 +109,20 @@
                     <td>Account Number</td>
                     <td>{{ $receipt->account_number }}</td>
                 </tr>
-            @elseif ($receipt->payment_methode === 'cash')
+            @endif
+
+            @if ($receipt->billing_number)
                 <tr>
-                    <td>Payment Method</td>
-                    <td>Cash</td>
-                </tr>
-                <tr>
-                    <td>Teller</td>
-                    <td>{{ $receipt->teller_name }}</td>
-                </tr>
-                <tr>
-                    <td>Reference Id</td>
+                    <td>Reference ID</td>
                     <td>{{ $receipt->billing_number }}</td>
                 </tr>
             @endif
         </table>
     </div>
-    <div class="invoice-box" style="text-align: center; font-size: 12px;">
-        Struk ini adalah bukti pembayaran sah dari {{ strtoupper($websystem->title) }} dan tidak memerlukan tanda tangan
-        basah.
-    </div>
-    <div
-        style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 80px; color: rgba(0, 0, 255, 0.1); font-weight: bold;">
-        {{ strtoupper($websystem->title) }}
+
+    {{-- FOOTER --}}
+    <div class="footer">
+        Receipt generated by Shanum Network Fiber © {{ now()->year }}.<br>
+        This receipt is system generated and does not require signature.
     </div>
 @endsection

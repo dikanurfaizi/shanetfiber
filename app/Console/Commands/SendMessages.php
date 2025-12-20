@@ -19,7 +19,7 @@ class SendMessages extends Command
         $startTime = microtime(true);
         $now       = Carbon::now('Asia/Jakarta');
 
-        $allowedDays  = [10, 15];
+        $allowedDays  = [10, 12, 15];
         $allowedHours = range(8, 21);
         $allowTestMode = config('messaging.reminder_allow_test');
 

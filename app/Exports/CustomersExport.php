@@ -4,8 +4,8 @@ namespace App\Exports;
 
 use App\Helpers\FormatReceiver;
 use App\Helpers\UserAuth;
-use App\Models\Customer;
-use Illuminate\Support\Carbon;
+use App\Models\Customers\Customer;
+use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -14,31 +14,39 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class CustomersExport implements FromCollection, WithColumnFormatting, WithHeadings, WithMapping, WithStyles
+class CustomersExport implements
+    FromCollection,
+    WithHeadings,
+    WithMapping,
+    WithColumnFormatting,
+    WithStyles
 {
     private function getUserAuthData()
     {
         return UserAuth::getUserDetails();
     }
 
-    /**
-     * Ambil data dari database
-     */
     public function collection()
     {
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
 
+        $query = Customer::query()
+            ->with([
+                'activeSubscription.package',
+                'activeMembership.membership',
+                'mikrotik',
+                'pppType',
+                'user',
+            ]);
+
         if ($user && $user->can('view-customers-widget-related')) {
-            return Customer::where('user_id', $user->id)->get();
+            $query->where('user_id', $user->id);
         }
 
-        return Customer::get(); // tanpa withTrashed()
+        return $query->get();
     }
 
-    /**
-     * Header untuk file Excel
-     */
     public function headings(): array
     {
         return [
@@ -54,54 +62,85 @@ class CustomersExport implements FromCollection, WithColumnFormatting, WithHeadi
             'Internet Service',
             'Secret ID',
             'Password PPP',
-            'PPP Type ID',
+            'PPP Type',
             'Package',
-            'Price',
+            'Package Price',
             'Discount (%)',
             'Discount (Nominal)',
             'Price After Discount',
             'Responsibility',
             'State',
-            'Member Type',
-            'Periode Discount',
+            'Membership',
+            'Discount Period',
         ];
     }
 
-    /**
-     * Mapping data untuk setiap baris
-     */
     public function map($customer): array
     {
-        static $number = 1; // Mulai nomor dari 1
+        static $no = 1;
 
         $formatter = new FormatReceiver;
-        $contact = $formatter->formatReceiver($customer->contact, 'display', false);
+        $contact = "'" . $formatter->formatReceiver(
+            $customer->contact,
+            'display',
+            false
+        );
 
-        // Tambahkan "'" agar tetap dalam format teks di Excel
-        $contact = "'".$contact;
+        // =============================
+        // ACTIVE SUBSCRIPTION
+        // =============================
+        $subscription = $customer->activeSubscription;
+        $package      = $subscription?->package;
 
-        $nominalDiscount = optional($customer->member)->discount ?? 0;
-        $packagePrice = optional($customer->package)->price ?? 0;
+        $packageName  = $package?->name ?? '-';
+        $packagePrice = (float) ($package?->price ?? 0);
 
-        $priceAfterDiscount = $customer->billing_option == 1 || ($customer->billing_option == 2 && $customer->billing_period == date('F'))
-            ? $packagePrice - $nominalDiscount
-            : $packagePrice;
+        // =============================
+        // ACTIVE MEMBERSHIP
+        // =============================
+        $custMembership = $customer->activeMembership;
+        $membership     = $custMembership?->membership;
 
-        // Prevent division by zero
-        $discountPercentage = $packagePrice > 0
-            ? ($nominalDiscount / $packagePrice)  // 0.2 for 20%
+        $membershipName = $membership?->name ?? '-';
+        $discountNominal = (float) ($membership?->discount_value ?? 0);
+
+        $discountPercent = $packagePrice > 0
+            ? $discountNominal / $packagePrice
             : 0;
 
+        $priceAfterDiscount = max(
+            $packagePrice - $discountNominal,
+            0
+        );
+
+        // =============================
+        // DISCOUNT PERIOD
+        // =============================
+        if (!$custMembership) {
+            $discountPeriod = '-';
+        } elseif ($custMembership->end_date === null) {
+            $discountPeriod = 'Monthly';
+        } else {
+            $discountPeriod = Carbon::parse(
+                $custMembership->end_date
+            )->format('F Y');
+        }
+
+        // =============================
+        // OTHERS
+        // =============================
         $activationDate = $customer->activation_date
             ? Carbon::parse($customer->activation_date)->format('d/m/Y')
-            : 'No Data';
+            : '-';
 
-        $mikrotikName = $customer->mikrotik->name ?? '-';
-        $pppTypeName = $customer->pppType->name ?? '-';
-        $userName = $customer->user->name ?? '-';
+        $state = $customer->activation === 'false'
+            ? 'Not Activated'
+            : ($customer->disabled === 'true'
+                ? 'Disabled'
+                : 'Enabled');
 
         return [
-            $number++,
+            $no++,
             $customer->customer_id,
             $customer->username,
             $customer->name,
@@ -109,53 +148,41 @@ class CustomersExport implements FromCollection, WithColumnFormatting, WithHeadi
             $contact,
             $customer->address,
             $activationDate,
-            $mikrotikName,
+            $customer->mikrotik->name ?? '-',
             $customer->internet_service,
             $customer->secret_id,
             $customer->password_ppp,
-            $pppTypeName,
-            $customer->package->name ?? 'No Package',
+            $customer->pppType->name ?? '-',
+            $packageName,
 
-            // Numeric fields
-            (float) $packagePrice,
-            (float) $discountPercentage,     // <-- NUMBER, NOT STRING
-            (float) $nominalDiscount,
-            (float) $priceAfterDiscount,
+            // numeric
+            $packagePrice,
+            $discountPercent,
+            $discountNominal,
+            $priceAfterDiscount,
 
-            $userName,
-            $customer->activation == 'false'
-                ? 'Not Activated'
-                : ($customer->disabled === 'true' ? 'Disabled' : 'Enabled'),
-            $customer->member->type ?? '-',
-            $customer->billing_period ?? '-',
+            $customer->user->name ?? '-',
+            $state,
+            $membershipName,
+            $discountPeriod,
         ];
     }
 
-    /**
-     * Format angka sebagai mata uang (tanpa Rp karena sudah di-mapping)
-     */
     public function columnFormats(): array
     {
         return [
-            'O' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Price
-            'P' => NumberFormat::FORMAT_PERCENTAGE_00,           // Discount %
-            'Q' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Discount nominal
-            'R' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Price after discount
+            'O' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1,
+            'P' => NumberFormat::FORMAT_PERCENTAGE_00,
+            'Q' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1,
+            'R' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1,
         ];
     }
 
-    /**
-     * Styling untuk header dan border seluruh tabel
-     */
     public function styles(Worksheet $sheet)
     {
-        // ⭐ Freeze header row
         $sheet->freezePane('A2');
-
-        // ⭐ Auto-filter untuk seluruh header
         $sheet->setAutoFilter('A1:V1');
 
-        // ⭐ Styling header
         $sheet->getStyle('A1:V1')->applyFromArray([
             'font' => [
                 'bold' => true,
@@ -166,39 +193,32 @@ class CustomersExport implements FromCollection, WithColumnFormatting, WithHeadi
                 'vertical' => 'center',
             ],
             'fill' => [
-                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                'color' => ['rgb' => '4F81BD'], // biru profesional
+                'fillType' => 'solid',
+                'color' => ['rgb' => '4F81BD'],
             ],
             'borders' => [
                 'allBorders' => [
-                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                    'color' => ['rgb' => '000000'],
+                    'borderStyle' => 'thin',
                 ],
             ],
         ]);
 
-        // ⭐ Border untuk seluruh tabel
         $highestRow = $sheet->getHighestRow();
-        $highestColumn = $sheet->getHighestColumn();
+        $highestCol = $sheet->getHighestColumn();
 
-        $sheet->getStyle("A1:{$highestColumn}{$highestRow}")->applyFromArray([
-            'borders' => [
-                'allBorders' => [
-                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                ],
-            ],
-        ]);
+        $sheet->getStyle("A1:{$highestCol}{$highestRow}")
+            ->getBorders()
+            ->getAllBorders()
+            ->setBorderStyle('thin');
 
-        // ⭐ Right align untuk kolom angka
         foreach (['O', 'P', 'Q', 'R'] as $col) {
             $sheet->getStyle("{$col}2:{$col}{$highestRow}")
                 ->getAlignment()
                 ->setHorizontal('right');
         }
 
-        // ⭐ Auto-size semua kolom
-        foreach (range('A', $highestColumn) as $column) {
-            $sheet->getColumnDimension($column)->setAutoSize(true);
+        foreach (range('A', $highestCol) as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
         }
     }
 }

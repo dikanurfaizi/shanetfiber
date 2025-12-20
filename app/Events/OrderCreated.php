@@ -2,9 +2,9 @@
 
 namespace App\Events;
 
-use App\Models\Customer;
-use App\Models\Billing\Billing;
-use App\Models\Order;
+use App\Models\Customers\Customer;
+use App\Models\Billings\Billing;
+use App\Models\Billings\Order;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 

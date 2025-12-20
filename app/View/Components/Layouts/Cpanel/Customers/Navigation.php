@@ -3,7 +3,7 @@
 namespace App\View\Components\Layouts\Cpanel\Customers;
 
 use Closure;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
 use Illuminate\View\Component;
 use Illuminate\Contracts\View\View;

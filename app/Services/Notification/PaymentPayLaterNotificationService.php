@@ -7,7 +7,8 @@ use App\Enums\TelegramAction;
 use App\Enums\WhatsappAction;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
-use App\Models\Billing\Billing;
+use App\Models\Billings\Billing;
+use App\Models\Customers\CustomerSubscription;
 use App\Services\Whatsapp\CloudAPIService;
 use App\Services\Whatsapp\WhatsappGatewayResolver;
 use App\Services\Whatsapp\GowaService;
@@ -35,7 +36,7 @@ class PaymentPayLaterNotificationService
                 return;
             }
 
-            $billing = Billing::with(['customer', 'receipt', 'billingSubscription'])
+            $billing = Billing::with(['customer', 'billingSubscription'])
                 ->findOrFail($billingId);
 
             if (! $billing || ! $billing->customer) {
@@ -79,10 +80,12 @@ class PaymentPayLaterNotificationService
                     traceId: $traceId,
                 );
             } else {
-                $this->gowaService->payment_package(
+                $subscription = CustomerSubscription::where('customer_id', $billing->customer->id)
+                    ->where('status', 'active')->first();
+
+                $this->gowaService->notifyPayLater(
+                    $subscription,
                     $billing,
-                    $billing->receipt,
-                    WhatsAppAction::PAYLATER->value,
                     $traceId
                 );
             }
@@ -108,6 +111,10 @@ class PaymentPayLaterNotificationService
             LogHelper::logError($e, [
                 'billing_id' => $billingId,
                 'customer_id' => $billing->customer->id ?? null,
+                'error' => [
+                    'code' => $e->getCode(),
+                    'message' => $e->getMessage()
+                ]
             ], 500, 'Failed sending PayLater notification', $traceId);
         }
     }

@@ -8,7 +8,7 @@ use App\Enums\WhatsAppAction;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Helpers\DummyReceiptHelper;
-use App\Models\Billing\Billing;
+use App\Models\Billings\Billing;
 use App\Services\Whatsapp\CloudAPIService;
 use App\Services\Whatsapp\GowaService;
 use App\Services\Telegrams\TelegramMessageService;
@@ -96,10 +96,9 @@ class PaymentCancellationNotificationService
                     return;
                 }
 
-                $this->gowaService->payment_package(
+                $this->gowaService->notifyUnpayment(
+                    $billing->billingSubscription->customerSubscription,
                     $billing,
-                    $receipt,
-                    WhatsAppAction::UNPAYMENT->value,
                     $traceId
                 );
             }
@@ -123,10 +122,14 @@ class PaymentCancellationNotificationService
                 'receipt_id' => $receiptId,
             ], 200, 'Payment cancellation notification dispatched', $traceId);
         } catch (\Throwable $e) {
-            LogHelper::logError($e, [
+            LogHelper::logError(null, [
                 'billing_id' => $billingId,
                 'customer_id' => $billing->customer_id ?? null,
                 'receipt_id' => $receiptId,
+                'error' => [
+                    'code' => $e->getCode(),
+                    'message' => $e->getMessage()
+                ]
             ], 500, 'Failed to send cancellation notification', $traceId);
         }
     }

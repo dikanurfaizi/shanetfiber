@@ -6,7 +6,7 @@ use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Models\Whatsapp\WhatsappMessage;
 use App\Models\Whatsapp\WhatsappNumber;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Services\WhatsappWebhook\DTO\WebhookPayload;
 use App\Services\Whatsapp\KeywordProcessor;
 use App\Services\Whatsapp\OptOutService;
@@ -67,11 +67,12 @@ class TextMessageHandler extends BaseHandler
             'info_tagihan',
             'info_paket',
             'lapor_gangguan',
-            'hubungi_admin'
+            'hubungi_admin',
+            'unknown_info_paket',
         ]);
 
         // Customer wajib tapi tidak ditemukan
-        if ($needsCustomer && !$customer) {
+        if ($needsCustomer && (!$customer || empty($customer))) {
             $this->dispatchUnknownCustomer($sender, $keyword, $traceId);
             return;
         }

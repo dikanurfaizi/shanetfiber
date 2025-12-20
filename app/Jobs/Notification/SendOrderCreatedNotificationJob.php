@@ -7,9 +7,9 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use App\Models\Customer;
-use App\Models\Billing\Billing;
-use App\Models\Order;
+use App\Models\Customers\Customer;
+use App\Models\Billings\Billing;
+use App\Models\Billings\Order;
 use App\Services\Notification\OrderCreatedNotificationService;
 
 class SendOrderCreatedNotificationJob implements ShouldQueue

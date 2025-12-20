@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AddonController;
 use App\Http\Controllers\Auth\CustomerLoginController;
 use App\Http\Controllers\AutoIsolirController;
 use App\Http\Controllers\BankController;
@@ -11,12 +12,16 @@ use App\Http\Controllers\Customer\DeviceController;
 use App\Http\Controllers\Customer\ForgotPasswordController;
 use App\Http\Controllers\Customer\PaymentController;
 use App\Http\Controllers\Customer\ProfileController as CustomerProfileController;
+use App\Http\Controllers\Customer\CustomerTabController;
+use App\Http\Controllers\Customer\CustomerWizardController;
+use App\Http\Controllers\Customer\CustomerInfoController;
+use App\Http\Controllers\Customer\CustomerBillingController;
 use App\Http\Controllers\DropdownController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\IsolirController;
-use App\Http\Controllers\MemberController;
+use App\Http\Controllers\Memberships\MembershipController;
 use App\Http\Controllers\Midtran\PaymentCallbackController;
 use App\Http\Controllers\Mikrotik\MikrotikController;
 use App\Http\Controllers\Mikrotik\Ppp\ProfileController as MikrotikProfileController;
@@ -28,6 +33,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\Package\PackageCategoriesController;
 use App\Http\Controllers\Package\PackageController;
 use App\Http\Controllers\Package\PppProfileController;
+use App\Http\Controllers\Package\PackageDurationController;
 use App\Http\Controllers\PaymentGateway\MidtranController;
 use App\Http\Controllers\PaymentGateway\PaymentGatewayController;
 use App\Http\Controllers\PaymentGateway\TripayController;
@@ -37,10 +43,9 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\RouterController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\Subscription\CustomerSubscriptionController;
-use App\Http\Controllers\Subscription\SubscriptionDurationController;
-use App\Http\Controllers\TelegramChatIdController;
-use App\Http\Controllers\TelegramGatewayController;
-use App\Http\Controllers\TelegramMessageController;
+use App\Http\Controllers\Telegram\ChatIdController as TelegramChatIdController;
+use App\Http\Controllers\Telegram\GatewayController as TelegramGatewayController;
+use App\Http\Controllers\Telegram\MessageController as TelegramMessageController;
 use App\Http\Controllers\TestConnectionController;
 use App\Http\Controllers\UpdateController;
 use App\Http\Controllers\UserController;
@@ -189,6 +194,8 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::put('/packages/{packet:slug}/disabled/false', [PackageController::class, 'enable'])->name('enable.package');
         Route::get('/packages/{packet:slug}/delete', [PackageController::class, 'delete'])->name('package.delete');
         Route::put('/packages/{packet:slug}/toggle-display', [PackageController::class, 'toggleDisplay'])->name('package.toggle-display');
+        Route::post('/packages/discount/calculate', [PackageController::class, 'getDiscount'])->name('package.discount');
+        Route::post('/packages/durations/label/info', [PackageController::class, 'getPackageDurations'])->name('package.durations');
 
         // ==================== PACKAGE CATEGORIES ====================
         Route::resource('package-categories', PackageCategoriesController::class)->names('categories');
@@ -216,16 +223,39 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('/customers/file/export', [CustomerController::class, 'export'])->name('customers.export');
         Route::patch('settings/customers/activation', [CustomerController::class, 'activation_all_customer'])->name('customers.all.activation');
 
+        Route::get('/customers/{customer:slug}/tab/info', [CustomerTabController::class, 'info'])->name('customers.tab.info');
+        Route::get('/customers/{customer:slug}/tab/billing', [CustomerTabController::class, 'billing'])->name('customers.tab.billing');
+        Route::get('/customers/{customer:slug}/tab/server', [CustomerTabController::class, 'server'])->name('customers.tab.server');
+        Route::get('/customers/{customer:slug}/tab/ont', [CustomerTabController::class, 'ont'])->name('customers.tab.ont');
+        Route::get('/customers/{customer:slug}/tab/traffic', [CustomerTabController::class, 'traffic'])->name('customers.tab.traffic');
+
+        // =================== EDIT TAB CUSTOMER DETAIL ===================
+        Route::patch('/customers/{customer:slug}/info', [CustomerInfoController::class, 'update'])->name('customers.update.info');
+        Route::patch('/cpanel/customers/{customer:slug}/billing', [CustomerBillingController::class, 'update'])->name('customers.update.billing');
+
         // ==================== CUSTOMER SUBSCRIPTIONS ====================
         Route::resource('customer-subscriptions', CustomerSubscriptionController::class)->names('customerSubscriptions');
 
         // ==================== SUBSCRIPTION DURATIONS ====================
-        Route::get('subscription/durations/manage/{packet:slug}', [SubscriptionDurationController::class, 'manage'])->name('subscriptionDurations.manage');
-        Route::resource('subscription/durations', SubscriptionDurationController::class)->names('subscriptionDurations');
+        Route::get('subscription/durations/manage/{packet:slug}', [PackageDurationController::class, 'manage'])->name('subscriptionDurations.manage');
+        Route::resource('subscription/durations', PackageDurationController::class)->names('subscriptionDurations');
 
         // ==================== MEMBER MANAGEMENT ====================
-        Route::resource('members', MemberController::class);
-        Route::get('/members/{member:slug}/delete', [MemberController::class, 'delete'])->name('members.delete');
+        Route::resource('members', MembershipController::class);
+        Route::patch('/members/{member}/activate', [MembershipController::class, 'activate'])->name('members.activate');
+        Route::patch('/members/{member}/deactivate', [MembershipController::class, 'deactivate'])->name('members.deactivate');
+
+        // ==================== Wizard ===============================
+        Route::get('customers/wizard/step1', [CustomerWizardController::class, 'step1'])->name('wizard.step1');
+        Route::post('customers/wizard/step1', [CustomerWizardController::class, 'step1Post']);
+        Route::get('customers/wizard/step2', [CustomerWizardController::class, 'step2'])->name('wizard.step2');
+        Route::post('customers/wizard/step2', [CustomerWizardController::class, 'step2Post']);
+        Route::get('customers/wizard/step3', [CustomerWizardController::class, 'step3'])->name('wizard.step3');
+        Route::post('customers/wizard/step3', [CustomerWizardController::class, 'step3Post']);
+        Route::get('customers/wizard/step4', [CustomerWizardController::class, 'step4'])->name('wizard.step4');
+        Route::post('customers/wizard/step4', [CustomerWizardController::class, 'step4Post']);
+        Route::get('/customer/wizard/step5', [CustomerWizardController::class, 'step5'])->name('wizard.step5');
+        Route::post('/customer/wizard/process', [CustomerWizardController::class, 'process'])->name('wizard.process');
 
         // ==================== BILLING MANAGEMENT ====================
         Route::resource('billings', BillingController::class);
@@ -241,6 +271,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::patch('billings/{billing:slug}/post_paylater', [BillingController::class, 'post_paylater'])->name('billings.postPaylater');
         Route::patch('billings/{billing:slug}/unpayment', [BillingController::class, 'unpayment'])->name('billings.unpayment');
         Route::post('billings/auto-generate', [BillingController::class, 'billing_auto_generate'])->name('billings.auto-generate');
+        Route::get('billings/{billing:slug}/print-invoice', [BillingController::class, 'printInvoice'])->name('billings.print-invoice');
 
         // ==================== BILLING HISTORY ====================
         Route::resource('billing-history', BillingHistoryController::class)->names('billingHistory');
@@ -385,6 +416,11 @@ Route::group(['prefix' => 'cpanel'], function () {
 
         // ==================== ONU MANAGEMENT ====================
         Route::resource('network/ontmanagements', ONTManagementController::class)->names('onts');
+
+        // ==================== ADDONS MANAGEMENT ====================
+        Route::resource('addons', AddonController::class)->names('addons');
+        Route::put('/addons/{addon:slug}/disable', [AddonController::class, 'disable'])->name('addon.disable');
+        Route::put('/addons/{addon:slug}/enable', [AddonController::class, 'enable'])->name('addon.enable');
     });
 });
 

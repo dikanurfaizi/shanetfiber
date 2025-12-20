@@ -11,7 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use App\Http\Requests\ServerStoreRequest;
 use App\Http\Requests\ServerUpdateRequest;
 use App\Models\AutoIsolir;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Services\Routerboard\SystemService;
 use App\Helpers\LogHelper;
 use App\Jobs\MigrateCustomerToRouter;

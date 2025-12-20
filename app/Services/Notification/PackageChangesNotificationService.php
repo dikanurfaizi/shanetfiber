@@ -4,7 +4,7 @@ namespace App\Services\Notification;
 
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Services\Whatsapp\CloudAPIService;
 use App\Services\Whatsapp\WhatsappGatewayResolver;
 use App\Services\Whatsapp\GowaService;

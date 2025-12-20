@@ -103,6 +103,7 @@
     <script src="{{ asset('assets/notify/notify.min.js') }}"></script>
     <script src="{{ asset('assets/sweet-alert/sweet-alert.min.js') }}"></script>
     <script src="{{ asset('assets/vendor/datatables/datatables.min.js') }}"></script>
+    <script src="{{ asset('js/customers/billing-edit.js') }}"></script>
     <!-- Page level custom scripts -->
     @yield('custom_scripts')
     @if ($message = Session::get('success'))

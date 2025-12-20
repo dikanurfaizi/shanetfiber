@@ -1,4 +1,4 @@
-<x-layouts.cpanel.customers.app-layout title="Create Member Type">
+<x-layouts.app-layout title="Create Membership">
 
     <div class="card-header py-3">
         <h5 class="m-0 font-weight-bold text-primary">{{ __('member.header.create') }}</h5>
@@ -7,103 +7,178 @@
     <div class="row">
         <div class="col-lg-12">
             {!! Form::open(['route' => 'members.store', 'method' => 'POST', 'id' => 'member-form']) !!}
+
             <div class="card-body col-lg-8">
-                <div class="row align-items-center">
-                    <div class="col-md-12 mb-3">
-                        <label for="type"><strong>{{ __('member.label.name') }}</strong><span
-                                class="text-danger">*</span></label>
-                        <div class="input-group ">
-                            {!! Form::text('type', null, ['placeholder' => __('member.placeholder.name'), 'class' => 'form-control']) !!}
-                            <div class="input-group-append">
-                                <div class="input-group-text">
-                                    <span class="fas fa-users"></span>
-                                </div>
-                            </div>
-                        </div>
-                        @if ($errors->has('type'))
-                            <span class="text-danger">{{ $errors->first('type') }}</span>
-                        @endif
-                    </div>
+
+                {{-- NAME --}}
+                <div class="mb-3">
+                    <label><strong>{{ __('member.label.name') }}</strong></label>
+                    {!! Form::text('name', old('name'), [
+                        'placeholder' => __('member.placeholder.name'),
+                        'class' => 'form-control',
+                    ]) !!}
+                    @error('name')
+                        <span class="text-danger">{{ $message }}</span>
+                    @enderror
                 </div>
 
-                <div class="row align-items-center">
-                    <div class="col-md-12 mb-3">
-                        <label for="discount"><strong>{{ __('member.label.discount') }}</strong></label>
-                        {{-- <div class="row"> --}}
+                {{-- DISCOUNT TYPE --}}
+                <div class="mb-3">
+                    <label><strong>{{ __('member.label.type') }}</strong></label>
+                    {!! Form::select(
+                        'discount_type',
+                        ['none' => 'None', 'percent' => 'Percent (%)', 'amount' => 'Amount (Rp)'],
+                        old('discount_type', 'none'),
+                        [
+                            'class' => 'form-control',
+                            'id' => 'discount_type',
+                        ],
+                    ) !!}
+                    @error('discount_type')
+                        <span class="text-danger">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                {{-- DISCOUNT VALUE WRAPPER --}}
+                <div class="mb-3 d-none" id="discount_value_wrapper">
+                    <label><strong>{{ __('member.label.value') }}</strong></label>
+
+                    {{-- AMOUNT --}}
+                    <div id="discount_amount_group" class="d-none">
                         <div class="input-group">
                             <span class="input-group-text">Rp</span>
-                            {!! Form::text('discount', null, [
-                                'placeholder' => __('member.placeholder.discount'),
+                            {!! Form::text('discount_value', old('discount_value'), [
                                 'class' => 'form-control',
-                                'id' => 'discount',
+                                'id' => 'discount_amount',
                                 'oninput' => 'formatNumber(this)',
                             ]) !!}
                         </div>
-                        {{-- </div> --}}
-                        @if ($errors->has('discount'))
-                            <span class="text-danger">{{ $errors->first('discount') }}</span>
-                        @endif
+                        @error('discount_value')
+                            <span class="text-danger">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    {{-- PERCENT --}}
+                    <div id="discount_percent_group" class="d-none">
+                        <div class="input-group">
+                            {!! Form::number('discount_percent', old('discount_percent'), [
+                                'class' => 'form-control',
+                                'id' => 'discount_percent',
+                                'step' => '0.01',
+                                'min' => 0,
+                                'max' => 100,
+                            ]) !!}
+                            <span class="input-group-text">%</span>
+                        </div>
+                        @error('discount_percent')
+                            <span class="text-danger">{{ $message }}</span>
+                        @enderror
                     </div>
                 </div>
 
-                <div class="row align-items-center">
-                    <div class="col-md-12 mb-3">
-                        <label for="status"><strong>{{ __('member.label.status') }}</strong></label>
-                        <div class="d-flex justify-content-between">
-                            <div class="form-switch">
-                                <input type="hidden" name="status" value="0">
-                                <input class="form-check-input" type="checkbox" name="status" id="status"
-                                    value="1" {{ old('status', $member->status ?? '') == '1' ? 'checked' : '' }}>
-                                <label class="form-check-label"
-                                    for="status-form">{{ old('status', $member->status ?? '') == '1' ? 'Active' : 'Inactive' }}</label>
-                            </div>
-                            @if ($errors->has('status'))
-                                <span class="text-danger">{{ $errors->first('status') }}</span>
-                            @endif
-                        </div>
+                {{-- STATUS --}}
+                <div class="mb-3">
+                    <label><strong>{{ __('member.label.status') }}</strong></label>
+                    <div class="form-switch">
+                        <input type="hidden" name="status" value="0">
+                        <input class="form-check-input" type="checkbox" name="status" id="status" value="1"
+                            {{ old('status', 1) == 1 ? 'checked' : '' }}>
+                        <label class="form-check-label" for="status" id="status-label">
+                            {{ old('status', 1) ? 'Active' : 'Inactive' }}
+                        </label>
                     </div>
+                    @error('status')
+                        <span class="text-danger">{{ $message }}</span>
+                    @enderror
                 </div>
+
             </div>
 
             <div class="card-footer">
-                <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-user-plus"></i> &nbsp
-                    {{ __('member.button.save') }}</button>
-                <a class="btn btn-sm btn-secondary" href="{{ route('members.index') }}"><i
-                        class="fa fa-arrow-left"></i>
-                    &nbsp {{ __('member.button.back') }}</a>
+                <button type="submit" class="btn btn-sm btn-success">
+                    <i class="fas fa-user-plus"></i>&nbsp{{ __('member.button.save') }}
+                </button>
+                <a class="btn btn-sm btn-secondary" href="{{ route('members.index') }}">
+                    <i class="fa fa-arrow-left"></i>&nbsp{{ __('member.button.back') }}
+                </a>
             </div>
+
             {!! Form::close() !!}
         </div>
     </div>
 
-    <script>
-        function formatNumber(input) {
-            let value = input.value.replace(/[^0-9]/g, ''); // Hapus semua karakter kecuali angka
-            value = Number(value).toLocaleString('id-ID'); // Format ke pemisah ribuan
-            input.value = value;
-        }
+    {{-- SCRIPTS --}}
+    @section('custom_scripts')
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
 
-        // Bersihin pemisah ribuan sebelum submit form
-        const form = document.getElementById('member-form'); // Ganti dengan ID form kamu
-        form.addEventListener('submit', function() {
-            const discountInput = document.getElementById('discount');
-            discountInput.value = discountInput.value.replace(/\./g, ''); // Hapus titik pemisah ribuan
-        });
+                const typeSelect = document.getElementById('discount_type');
+                const wrapper = document.getElementById('discount_value_wrapper');
+                const percentGroup = document.getElementById('discount_percent_group');
+                const amountGroup = document.getElementById('discount_amount_group');
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const statusCheckbox = document.getElementById('status');
-            const statusLabel = document.querySelector('label[for="status-form"]');
+                const percentInput = document.getElementById('discount_percent');
+                const amountInput = document.getElementById('discount_amount');
 
-            function updateStatusLabel() {
-                statusLabel.textContent = statusCheckbox.checked ? 'Active' : 'Inactive';
+                const statusCheckbox = document.getElementById('status');
+                const statusLabel = document.getElementById('status-label');
+
+                // STATUS LABEL
+                function updateStatusLabel() {
+                    statusLabel.textContent = statusCheckbox.checked ? 'Active' : 'Inactive';
+                }
+                updateStatusLabel();
+                statusCheckbox.addEventListener('change', updateStatusLabel);
+
+                // DISCOUNT UI LOGIC
+                function updateDiscountUI() {
+                    const type = typeSelect.value;
+
+                    // reset
+                    percentGroup.classList.add('d-none');
+                    amountGroup.classList.add('d-none');
+                    percentInput.disabled = true;
+                    amountInput.disabled = true;
+
+                    if (type === 'none') {
+                        wrapper.classList.add('d-none');
+                        percentInput.value = 0;
+                        amountInput.value = 0;
+                        return;
+                    }
+
+                    wrapper.classList.remove('d-none');
+
+                    if (type === 'percent') {
+                        percentGroup.classList.remove('d-none');
+                        percentInput.disabled = false;
+                    }
+
+                    if (type === 'amount') {
+                        amountGroup.classList.remove('d-none');
+                        amountInput.disabled = false;
+                    }
+                }
+
+                typeSelect.addEventListener('change', updateDiscountUI);
+                updateDiscountUI(); // initial load
+
+                // CLEAN FORMAT BEFORE SUBMIT
+                document.getElementById('member-form').addEventListener('submit', function() {
+                    if (!amountInput.disabled && amountInput.value) {
+                        amountInput.value = amountInput.value.replace(/\./g, '');
+                    }
+                });
+
+            });
+
+            // Rupiah formatter
+            function formatNumber(input) {
+                let value = input.value.replace(/[^0-9]/g, '');
+                value = Number(value).toLocaleString('id-ID');
+                input.value = value;
             }
+        </script>
+    @endsection
 
-            // Update label saat halaman dimuat
-            updateStatusLabel();
-
-            // Update label saat checkbox diubah
-            statusCheckbox.addEventListener('change', updateStatusLabel);
-        });
-    </script>
-
-</x-layouts.cpanel.customers.app-layout>
+</x-layouts.app-layout>

@@ -57,7 +57,14 @@
                         @endif
                     </div>
                 </div>
-
+                <div class="row align-items-center d-none" id="package-duration-wrapper">
+                    <div class="col-md-12 mb-3">
+                        <label><strong>Package Duration</strong></label>
+                        <select name="package_duration_id" id="package-duration" class="form-control">
+                            <option value="">-- Select Duration --</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="internet_service"><strong>{{ __('customer.label.internet_service') }}</strong><span
@@ -256,8 +263,8 @@
                             onchange="toggleDiscountField()">
                             <option value="non-member">Non Member</option>
                             @foreach ($members as $member)
-                                <option value="{{ $member->id }}" data-discount="{{ $member->discount }}">
-                                    {{ $member->type }} - @moneyIDR($member->discount)
+                                <option value="{{ $member->id }}">
+                                    {{ $member->name }} - @moneyIDR($member->discount_value)
                                 </option>
                             @endforeach
                         </select>
@@ -282,6 +289,18 @@
                     </div>
                 </div>
 
+                <div class="row align-items-center" id="periode-wrapper" style="display:none;">
+                    <div class="col-md-12 mb-3">
+                        <label><strong>Select Billing Period</strong></label>
+                        <select name="member_billing_periode" id="periode-select" class="form-control">
+                            <option value="">-- Select Period --</option>
+                            @foreach ($availablePeriodes as $periode)
+                                <option value="{{ $periode['name'] }}">{{ $periode['name'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
                 <div class="row align-items-center mb-3">
                     <div class="col-md-12 mb-3">
                         <label for="discount"><strong>{{ __('customer.label.discount') }}</strong></label>
@@ -293,7 +312,6 @@
                                         'placeholder' => __('customer.placeholder.discount_nominal'),
                                         'class' => 'form-control',
                                         'id' => 'discount_nominal',
-                                        'oninput' => 'formatRupiah(this); calculateDiscount();',
                                     ]) !!}
                                 </div>
                             </div>
@@ -332,13 +350,75 @@
     @section('custom_scripts')
         <script>
             document.addEventListener('DOMContentLoaded', function() {
+
+                // =========================
+                // ELEMENT SELECTION (single source)
+                // =========================
                 const packageDropdown = document.getElementById('package-dropdown');
                 const memberDropdown = document.getElementById('member-dropdown');
-                const discountInput = document.getElementById('discount_nominal');
+                const discountPercent = document.getElementById('discount');
+                const monthlyOption = document.getElementById('monthly');
+                const oneTimeOption = document.getElementById('one-time');
+                const periodeWrapper = document.getElementById('periode-wrapper');
+                const billingOptions = document.getElementById('billing-options');
+                const hiddenMemberInput = document.getElementById('hidden_member_id');
+                const durationWrapper = document.getElementById('package-duration-wrapper');
+                const durationSelect = document.getElementById('package-duration');
 
-                packageDropdown.addEventListener('change', () => {
+                // =========================
+                // MAIN EVENT HANDLERS
+                // =========================
+
+                packageDropdown.addEventListener('change', function() {
                     updateMemberDropdown();
+                    toggleDiscountField();
                     calculateDiscount();
+
+                    const packageId = this.value;
+
+                    if (!packageId) {
+                        durationWrapper.classList.add('d-none');
+                        durationSelect.innerHTML = '<option value="">-- Select Duration --</option>';
+                        return;
+                    }
+
+                    fetch("{{ route('package.durations') }}", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({
+                                package_id: packageId
+                            })
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+
+                            let items = [];
+
+                            // Jika response adalah object dengan key "duration"
+                            if (Array.isArray(data.duration)) {
+                                items = data.duration;
+
+                                // Jika response adalah array langsung
+                            } else if (Array.isArray(data)) {
+                                items = data;
+                            }
+
+                            durationSelect.innerHTML = '<option value="">-- Select Duration --</option>';
+
+                            items.forEach(item => {
+                                durationSelect.innerHTML += `
+        <option value="${item.id}" data-label="${item.duration?.name_en}">
+            ${item.duration?.name_en}
+        </option>
+    `;
+                            });
+
+
+                            durationWrapper.classList.remove('d-none');
+                        });
                 });
 
                 memberDropdown.addEventListener('change', () => {
@@ -346,63 +426,82 @@
                     calculateDiscount();
                 });
 
-                discountInput.addEventListener('input', () => {
-                    formatRupiah(discountInput);
-                    calculateDiscount();
-                });
+                if (monthlyOption) {
+                    monthlyOption.addEventListener('change', function() {
+                        periodeWrapper.style.display = 'none';
+                    });
+                }
 
-                // Trigger awal saat load
-                updateMemberDropdown();
-                toggleDiscountField();
-                calculateDiscount();
+                if (oneTimeOption) {
+                    oneTimeOption.addEventListener('change', function() {
+                        periodeWrapper.style.display = 'block';
+                    });
+                }
 
-                $('#server-dropdown').on('change', function() {
-                    const idServer = this.value;
-
-                    if (idServer) {
-                        $('#package-dropdown').removeClass('d-none');
-                    } else {
-                        $('#package-dropdown').addClass('d-none');
-                    }
-                });
+                // =========================
+                // SERVICE TYPE (PPP / STATIC)
+                // =========================
 
                 $('#service-dropdown').on('change', function() {
-                    var idService = this.value;
-                    if (idService == 'ppp') {
+                    const idService = this.value;
+                    const idServer = $('#server-dropdown').val();
+
+                    if (idService === 'ppp') {
                         $("#input-ppp").removeClass('d-none');
                         $("#input-ip-static").addClass('d-none');
-                    } else if (idService == 'ip_static') {
+                        return;
+                    }
+
+                    if (idService === 'ip_static') {
                         $("#input-ppp").addClass('d-none');
                         $("#input-ip-static").removeClass('d-none');
 
                         $("#interface-dropdown").html('');
-                        const url_interface = "{{ route('fetch.interface') }}";
                         $.ajax({
-
-                            url: url_interface,
+                            url: "{{ route('fetch.interface') }}",
                             type: "POST",
                             data: {
                                 mikrotik_id: idServer,
                                 _token: '{{ csrf_token() }}'
                             },
                             dataType: 'json',
-                            success: function(result_server) {
+                            success: function(result) {
                                 $('#interface-dropdown').html(
                                     '<option value="">Select Interface</option>');
-                                $.each(result_server, function(key, value) {
-                                    $("#interface-dropdown").append('<option value="' +
-                                        value.name + '">' + value.name + '</option>');
+                                $.each(result, function(_, val) {
+                                    $("#interface-dropdown").append(
+                                        `<option value="${val.name}">${val.name}</option>`
+                                    );
                                 });
                             }
-
                         });
-
-                    } else {
-                        $("#input-ppp").addClass('d-none');
-                        $("#input-ip-static").addClass('d-none');
+                        return;
                     }
+
+                    $("#input-ppp").addClass('d-none');
+                    $("#input-ip-static").addClass('d-none');
                 });
+
+                // =========================
+                // SERVER CHANGE → Show packages
+                // =========================
+                $('#server-dropdown').on('change', function() {
+                    $('#package-dropdown').toggleClass('d-none', !this.value);
+                });
+
+                // =========================
+                // INITIALIZE ON LOAD
+                // =========================
+                updateMemberDropdown();
+                toggleDiscountField();
+                calculateDiscount();
+
             });
+
+
+            // =======================================================================
+            // FUNCTIONS — Semua fungsi eksisting dipertahankan (tidak ada yang hilang)
+            // =======================================================================
 
             function getPackagePrice() {
                 const packageDropdown = document.getElementById('package-dropdown');
@@ -433,8 +532,10 @@
             }
 
             function toggleDiscountField() {
-                const memberDropdown = document.getElementById('member-dropdown');
                 const discountNominalField = document.getElementById('discount_nominal');
+                if (!discountNominalField) return; // ⛔ FIX ERROR
+
+                const memberDropdown = document.getElementById('member-dropdown');
                 const billingOptions = document.getElementById('billing-options');
                 const monthlyOption = document.getElementById('monthly');
                 const oneTimeOption = document.getElementById('one-time');
@@ -446,67 +547,76 @@
                 if (!hiddenMemberInput) return;
 
                 if (isNonMember) {
-                    discountNominalField.removeAttribute('readonly');
-                    discountNominalField.removeAttribute('disabled');
-                    discountNominalField.value = '';
+
+                    discountNominalField.value = '0';
+                    discountNominalField.setAttribute('readonly', true);
+                    discountNominalField.setAttribute('disabled', true);
+
                     billingOptions.style.display = 'none';
                     monthlyOption.checked = false;
                     oneTimeOption.checked = false;
                     hiddenMemberInput.value = '';
+
                 } else {
                     discountNominalField.setAttribute('readonly', true);
                     discountNominalField.setAttribute('disabled', true);
-                    const discount = parseFloat(selectedMember.getAttribute('data-discount')) || 0;
-                    discountNominalField.value = discount.toLocaleString('id-ID');
+
                     billingOptions.style.display = 'block';
                     hiddenMemberInput.value = selectedMember.value;
+
+                    calculateDiscount();
                 }
             }
 
             function calculateDiscount() {
-                let packagePrice = getPackagePrice();
-                const memberDropdown = document.getElementById('member-dropdown');
-                const selectedMember = memberDropdown.options[memberDropdown.selectedIndex];
-                const isNonMember = selectedMember.value === 'non-member';
-                const discountNominalField = document.getElementById('discount_nominal');
-                const discountField = document.getElementById('discount');
-
-                if (!isNonMember) {
-                    const memberDiscount = parseFloat(selectedMember.getAttribute('data-discount')) || 0;
-                    discountNominalField.value = memberDiscount.toLocaleString('id-ID');
-                }
-
-                const discountNominal = parseFloat(discountNominalField.value.replace(/\./g, '').replace(',', '.')) || 0;
-                const discountPercentage = packagePrice > 0 ? (discountNominal / packagePrice) * 100 : 0;
-                discountField.value = discountPercentage.toFixed(2);
+                if (!document.getElementById('discount_nominal')) return; // ⛔ FIX
+                fetchDiscountFromServer();
             }
 
             function updateMemberDropdown() {
-                const packagePrice = getPackagePrice();
-                const memberDropdown = document.getElementById('member-dropdown');
-                const members = memberDropdown.options;
-
-                const discountField = document.getElementById('discount');
-                const discountNominalField = document.getElementById('discount_nominal');
-
-                // Selalu pastikan non-member (index 0) enabled
-                members[0].disabled = false;
-
-                for (let i = 1; i < members.length; i++) {
-                    const discount = +members[i].getAttribute('data-discount') || 0;
-                    members[i].disabled = discount > packagePrice;
-                }
-
-                // Reset ke non-member tapi tidak mengganti selectedIndex jika user sudah pilih
-                // Jadi, kita **tidak** mengubah memberDropdown.selectedIndex di sini
-
-                // Reset input diskon
-                discountNominalField.value = 0;
-                discountNominalField.readOnly = true;
-                discountField.value = 0;
-
                 toggleDiscountField();
                 calculateDiscount();
+            }
+
+            async function fetchDiscountFromServer() {
+                const packageId = document.getElementById('package-dropdown').value;
+                const memberId = document.getElementById('member-dropdown').value;
+
+                if (!packageId) return;
+
+                const url = "{{ route('package.discount') }}";
+
+                try {
+                    const response = await fetch(url, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({
+                            package_id: packageId,
+                            member_id: memberId
+                        })
+                    });
+
+                    const data = await response.json();
+                    updateDiscountFields(data);
+
+                } catch (err) {
+                    console.error("DISCOUNT API ERROR:", err);
+                }
+            }
+
+            function updateDiscountFields(data) {
+                const discountNominal = document.getElementById('discount_nominal');
+                const discountPercent = document.getElementById('discount');
+
+                if (!discountNominal || !discountPercent) return; // ⛔ FIX
+
+                discountNominal.value = new Intl.NumberFormat('id-ID')
+                    .format(data.effective_discount);
+
+                discountPercent.value = data.effective_percent.toFixed(2);
             }
         </script>
     @endsection

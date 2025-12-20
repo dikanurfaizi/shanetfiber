@@ -2,7 +2,7 @@
 // app/Services/Messaging/Handlers/BroadcastMidMonthHandler.php
 namespace App\Services\Messaging\Handlers;
 
-use App\Models\Billing\Billing;
+use App\Models\Billings\Billing;
 use App\Services\Messaging\Contracts\MessageActionHandler;
 use App\Services\Messaging\MessageBuilder;
 use Closure;

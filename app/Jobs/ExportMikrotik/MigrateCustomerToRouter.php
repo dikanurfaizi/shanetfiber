@@ -2,7 +2,7 @@
 
 namespace App\Jobs\ExportMikrotik;
 
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\AutoIsolir;
 use App\Models\Mikrotik;
 use App\Services\Routerboard\Ppp\SecretService;

@@ -1,143 +1,98 @@
 @extends('layouts.thermal')
 
 @section('content')
-    <div class="container">
-        <!-- Watermark -->
-        <div class="watermark">
-            {{ strtoupper(str_replace(['MANAGEMENT', 'Management'], '', $websystem->title)) }} </br>
-            Payment Received
+    <div class="watermark">
+        {{ strtoupper($websystem->title) }}
+    </div>
+
+    <div class="sheet">
+
+        {{-- HEADER --}}
+        <div class="center logo">
+            <img src="{{ public_path('images/receipt_logo.png') }}">
         </div>
 
-        <div class="header">
-            <img src="{{ public_path('images/receipt_logo.png') }}" style="width: 100%; max-width: 45mm;" />
-            <div class="separator"></div>
+        <div class="center title">
+            PAYMENT RECEIPT<br />
+            {{ $receipt->number }}
         </div>
-        <div class="receipt-info">
+
+        {{-- CUSTOMER --}}
+        <div>
+            Customer : {{ $receipt->customer_name }}<br>
+            ID : {{ $receipt->customer->customer_id }}<br>
+            Period : {{ $receipt->periode }}
+        </div>
+
+        <div class="divider"></div>
+
+        {{-- ITEMS --}}
+        <table>
+            @foreach ($receiptItems as $item)
+                {{-- Nama item --}}
+                <tr>
+                    <td colspan="3" class="left">
+                        {{ $item->name }}
+                    </td>
+                </tr>
+
+                {{-- Qty x Price = Subtotal --}}
+                <tr>
+                    <td class="col-item left">
+                        {{ $item->qty }} x {{ number_format($item->unit_price, 0, ',', '.') }}
+                    </td>
+                    <td class="col-rp left">Rp</td>
+                    <td class="col-val right">
+                        {{ number_format($item->subtotal, 0, ',', '.') }}
+                    </td>
+                </tr>
+            @endforeach
+        </table>
+
+        <div class="divider"></div>
+
+        {{-- SUMMARY --}}
+        <table class="summary">
+            <tr>
+                <td>Subtotal</td>
+                <td class="right">Rp</td>
+                <td class="right">{{ number_format($subtotal, 0, ',', '.') }}</td>
+            </tr>
+            <tr>
+                <td>PPN</td>
+                <td class="right">Rp</td>
+                <td class="right">{{ number_format($receipt->tax, 0, ',', '.') }}</td>
+            </tr>
+            <tr class="total">
+                <td>TOTAL PAID</td>
+                <td class="right">Rp</td>
+                <td class="right">{{ number_format($total, 0, ',', '.') }}</td>
+            </tr>
+        </table>
+
+        <div class="divider"></div>
+
+        {{-- PAYMENT --}}
+        <div>
+            Paid via : {{ ucfirst($receipt->payment_methode) }}<br>
+            Paid at :
+            {{ \Carbon\Carbon::parse($receipt->payment_time)->translatedFormat('d M Y H:i') }}<br>
+        </div>
+
+        @if (in_array($receipt->payment_methode, ['transfer', 'online']))
             <div>
-                Receipt #: {{ $receipt->number }}
+                Bank : {{ $receipt->bank_name }}<br>
+                Acc : {{ $receipt->account_number }}<br>
+                A/N : {{ $receipt->account_name }}
             </div>
-            <div>
-                Created: {{ Carbon\Carbon::parse($receipt->created_at)->translatedFormat('l, d M Y') ?? 'No Created Time' }}
-            </div>
-        </div>
-        <div class="content" style="font-size: 10px">
-            <div class="section">
-                <div class="label">
-                    Bill to :
-                </div>
-                <div class="value">
-                    {{ $receipt->customer_name }} (Your ID: {{ $receipt->customer->customer_id }})
-                </div>
-                <div class="value">
-                    {{ $receipt->customer_address }}
-                </div>
-                <div class="value">
-                    {{ $receipt->customer->contact ?? '' }}
-                </div>
-            </div>
-            <table class="table table-margin-top">
-                <tr>
-                    <th>Package</th>
-                    <th>Price (Rp)</th>
-                </tr>
-                <tr>
-                    <td>{{ $receipt->package_name }} - {{ $receipt->periode }}</td>
-                    <td class="right">@moneyIDR($receipt->package_price)</td>
-                </tr>
-            </table>
-            <table class="table">
-                <tr>
-                    <td class="right">
-                        Discount:
-                    </td>
-                    <td class="right">
-                        @moneyIDR($receipt->discount ?? 0)
-                    </td>
-                </tr>
-                <tr>
-                    <td class="right">
-                        Sub Total:
-                    </td>
-                    <td class="right">
-                        @moneyIDR($receipt->price_after_discount)
-                    </td>
-                </tr>
-                <tr>
-                    <td class="right">
-                        PPN:
-                    </td>
-                    <td class="right">
-                        @moneyIDR($receipt->tax)
-                    </td>
-                </tr>
-                <tr>
-                    <td class="right">
-                        <strong>
-                            Total:
-                        </strong>
-                    </td>
-                    <td class="right">
-                        <strong>
-                            @moneyIDR($receipt->price_after_discount + $receipt->tax)
-                        </strong>
-                    </td>
-                </tr>
-            </table>
-            <table class="table" style="border-collapse: collapse; border: none;">
-                <tr>
-                    <td class="label" style="border: none;">Payment Method:</td>
-                    <td class="value" style="border: none;">{{ ucfirst($receipt->payment_methode) }}</td>
-                </tr>
-                @if ($receipt->payment_methode === 'transfer')
-                    <tr>
-                        <td class="label" style="border: none;">Bank:</td>
-                        <td class="value" style="border: none;">{{ $receipt->bank_name }}</td>
-                    </tr>
-                    <tr>
-                        <td class="label" style="border: none;">Account Name:</td>
-                        <td class="value" style="border: none;">{{ $receipt->account_name }}</td>
-                    </tr>
-                    <tr>
-                        <td class="label" style="border: none;">Account Number:</td>
-                        <td class="value" style="border: none;">{{ $receipt->account_number }}</td>
-                    </tr>
-                    <tr>
-                        <td class="label" style="border: none;">Reference Id:</td>
-                        <td class="value" style="border: none;">{{ $receipt->billing_number }}</td>
-                    </tr>
-                @elseif ($receipt->payment_methode === 'online')
-                    <tr>
-                        <td class="label" style="border: none;">Bank:</td>
-                        <td class="value" style="border: none;">{{ $receipt->bank_name }}</td>
-                    </tr>
-                    <tr>
-                        <td class="label" style="border: none;">Account Name:</td>
-                        <td class="value" style="border: none;">{{ $receipt->account_name }}</td>
-                    </tr>
-                    <tr>
-                        <td class="label" style="border: none;">Account Number:</td>
-                        <td class="value" style="border: none;">{{ $receipt->account_number }}</td>
-                    </tr>
-                    <tr>
-                        <td class="label" style="border: none;">Reference Id:</td>
-                        <td class="value" style="border: none;">{{ $receipt->billing_number }}</td>
-                    </tr>
-                @elseif ($receipt->payment_methode === 'cash')
-                    <tr>
-                        <td class="label" style="border: none;">Teller:</td>
-                        <td class="value" style="border: none;">{{ $receipt->teller_name }}</td>
-                    </tr>
-                    <tr>
-                        <td class="label" style="border: none;">Reference Id:</td>
-                        <td class="value" style="border: none;">{{ $receipt->billing_number }}</td>
-                    </tr>
-                @endif
-            </table>
-        </div>
+        @endif
+
+        {{-- FOOTER --}}
         <div class="footer">
-            Struk ini merupakan bukti pembayaran yang sah dari {{ strtoupper($websystem->title) }} dan tidak diperlukan
-            tanda tangan
-            basah. <br /> <br /> ~~~ Terimakasih ~~~
+            Valid proof of payment<br>
+            {{ strtoupper($websystem->title) }}<br>
+            No signature required
         </div>
+
     </div>
 @endsection

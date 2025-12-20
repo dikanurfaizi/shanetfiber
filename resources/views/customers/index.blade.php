@@ -217,16 +217,13 @@
                             </span>
                             <td>
                                 <span class="badge bg-danger-soft">
-                                    <i class="fas fa-chalkboard"></i> {{ $customer->package->name }}
+                                    <i class="fas fa-chalkboard"></i>
+                                    {{ $customer->active_package->name ?? 'No Active Package' }}
                                 </span>
                             </td>
                             <td>
                                 <span class="badge bg-danger-soft">
-                                    @if ($customer->billing_option === 1 || ($customer->billing_option === 2 && $customer->billing_period === $periodeName))
-                                        @moneyIDR(optional($customer->package)->price - optional($customer->member)->discount)
-                                    @else
-                                        @moneyIDR(optional($customer->package)->price)
-                                    @endif
+                                    @moneyIDR(optional($customer->active_package)->price - optional($customer->member)->discount_value)
                                 </span>
                             </td>
 
@@ -252,7 +249,7 @@
                                     @endif
                                     @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
                                         <span
-                                            class="badge text-white @if ($customer->disabled === 'false') bg-secondary @endif">
+                                            class="badge text-white @if ($customer->disabled === 'true') bg-danger @endif">
                                             <i class="fas fa-lock"></i> {{ __('pppoe.secret.disabled') }}
                                         </span>
                                     @endif
@@ -402,8 +399,9 @@
                                 @endcan
                             </h6>
                             <span class="custom-badge text-truncate bg-turquoise-soft text-turquoise"
-                                style="max-width: 50%;" title="{{ $customer->package->name }}">
-                                {{ $customer->package->name }}
+                                style="max-width: 50%;"
+                                title="{{ $customer->active_package->name ?? 'No Active Package' }}">
+                                {{ $customer->active_package->name ?? 'No Active Package' }}
                             </span>
                         </div>
 
@@ -415,10 +413,8 @@
                             <small class="fw-semibold">
                                 @php
                                     $harga =
-                                        $customer->billing_option === 1 ||
-                                        ($customer->billing_option === 2 && $customer->billing_period === $periodeName)
-                                            ? optional($customer->package)->price - optional($customer->member)->discount
-                                            : optional($customer->package)->price;
+                                        optional($customer->active_package)->price -
+                                        optional($customer->member)->discount_value;
                                 @endphp
                                 @moneyIDR($harga)
                             </small>

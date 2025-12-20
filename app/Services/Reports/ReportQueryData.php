@@ -3,7 +3,7 @@
 namespace App\Services\Reports;
 
 use App\Models\Mikrotik;
-use App\Models\Billing\BillingPeriode;
+use App\Models\Billings\BillingPeriode;
 use App\Models\Expenses\Expense;
 use Illuminate\Support\Carbon;
 

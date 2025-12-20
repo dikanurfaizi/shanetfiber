@@ -11,7 +11,8 @@ class QueueCustomerActivationNotification
     public function handle(CustomerActivated $event): void
     {
         SendCustomerActivationNotificationJob::dispatch(
-            customer: $event->customer,
+            customerMembershipId: $event->customerMembershipId,
+            customerSubscription: $event->customerSubscription,
             billing: $event->billing,
             receipt: $event->receipt,
             traceId: $event->traceId

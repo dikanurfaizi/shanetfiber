@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers\Billing;
 
-use App\Models\Billing\Billing;
-use App\Models\Billing\BillingPeriode;
+use App\Exports\Billing\BillingYearWorkbookExport;
+use App\Models\Billings\Billing;
+use App\Models\Billings\BillingPeriode;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Services\Billings\BillingQueryService;
 use App\Services\Billings\BillingReportService;
 use Illuminate\Support\Str;
-use App\Exports\BillingsExport;
+use App\Exports\Billing\BillingSnapshotExport;
 use Maatwebsite\Excel\Facades\Excel;
 
 class BillingHistoryController extends Controller
@@ -82,14 +83,14 @@ class BillingHistoryController extends Controller
 
     public function exportAllPeriode(Request $request)
     {
-        $timestamp = now()->format('Ymd_His');
-        $periode = $request->get('periode'); // contoh: "August 2025"
-        return Excel::download(new BillingsExport(null, $periode), "All_Billings_{$timestamp}.xlsx");
+        return Excel::download(
+            new BillingYearWorkbookExport(),
+            'Billing-' . now()->year . '.xlsx'
+        );
     }
 
     public function exportSelectedPeriode(Request $request)
     {
-        // dd($request);
         $timestamp = now()->format('Ymd_His');
         $status  = $request->get('status');
         $periodeId = $request->get('periode_id');
@@ -109,7 +110,7 @@ class BillingHistoryController extends Controller
         }
 
         return Excel::download(
-            new BillingsExport($status, $periodeId),
+            new BillingSnapshotExport($status, $periodeId),
             "{$statusCamel}_Billing_{$periode->name}_{$timestamp}.xlsx"
         );
     }

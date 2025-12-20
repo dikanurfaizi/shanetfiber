@@ -3,7 +3,7 @@
 namespace App\Services\Customers;
 
 use App\Models\AutoIsolir;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
 use App\Jobs\Secrets\DisablePppSecretJob;
 use App\Jobs\Secrets\EnablePppSecretJob;
@@ -198,14 +198,14 @@ class CustomerStatusService
         $router = Mikrotik::find($customer->mikrotik_id);
 
         try {
-            $this->testConnectionService->checkOnline($router, $traceId);
-
             // Dispatch job async
             DisablePppSecretJob::dispatch(
                 $router,
                 $customer->username,
-                $customer->id
-            )->onQueue('ppp');
+                $customer->id,
+                $traceId
+            )->onQueue('default');
+
 
             LogHelper::logInfo(
                 null,
@@ -249,18 +249,13 @@ class CustomerStatusService
         $router = Mikrotik::find($customer->mikrotik_id);
 
         try {
-            // Check if router is online
-            $this->testConnectionService->checkOnline($router, $traceId);
-
             // Dispatch async job
             EnablePppSecretJob::dispatch(
                 $router,
                 $customer->username,
-                $customer->id
-            )->onQueue('ppp');
-
-            // Optimistic update (optional)
-            $customer->update(['disabled' => 'false']);
+                $customer->id,
+                $traceId
+            )->onQueue('default');
 
             LogHelper::logInfo(
                 null,

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\Migration;
 use App\Models\Websystem;
 use Illuminate\Http\Request;

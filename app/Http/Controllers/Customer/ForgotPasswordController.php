@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use Illuminate\Support\Str;
 use App\Notifications\ResetPasswordOTP;
 use Illuminate\Support\Facades\Notification;
@@ -39,7 +39,7 @@ class ForgotPasswordController extends Controller
             ]
         );
 
-        Notification::send($customer, new ResetPasswordOTP($otp));
+        // Notification::send($customer, new ResetPasswordOTP($otp));
 
         // kalau lewat modal, jangan redirect ke route yg nabrak
         return response()->json([
@@ -69,7 +69,7 @@ class ForgotPasswordController extends Controller
             ]
         );
 
-        Notification::send($customer, new ResetPasswordOTP($otp));
+        // Notification::send($customer, new ResetPasswordOTP($otp));
 
         return redirect()->route('customer.password.reset', $token)
             ->with('status', 'Kode OTP telah dikirim!');

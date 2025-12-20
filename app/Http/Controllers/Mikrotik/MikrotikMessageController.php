@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use App\Jobs\WhatsApp\SendWhatsappMessageJob;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use Illuminate\Support\Str;
 
 class MikrotikMessageController extends Controller

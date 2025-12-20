@@ -1,19 +1,19 @@
 <?php
 // app/Services/Messaging/Handlers/PaymentHandler.php
+
 namespace App\Services\Messaging\Handlers;
 
-use App\Models\Billing\Billing;
+use App\Models\Billings\Billing;
 use App\Models\Receipt;
 use App\Services\Messaging\Contracts\MessageActionHandler;
 use App\Services\Messaging\MessageBuilder;
-use App\Helpers\LogHelper;
 
 class PaymentHandler extends BaseBroadcastAwareHandler implements MessageActionHandler
 {
     public function __construct(
         private Billing $billing,
         private ?Receipt $receipt,
-        private string $channel, // 'transfer' | 'cash' | 'payment_gateway'
+        private string $channel, // transfer | cash | payment_gateway
         private MessageBuilder $builder,
         string $category
     ) {
@@ -29,44 +29,58 @@ class PaymentHandler extends BaseBroadcastAwareHandler implements MessageActionH
     public function validate(string $traceId): void
     {
         $this->validateBase($traceId);
+
+        if (! $this->receipt) {
+            throw new \RuntimeException('Receipt is required for payment notification.');
+        }
     }
 
     public function build(string $traceId): array
     {
-        $cust = $this->billing->customer;
+        $this->receipt->loadMissing('items');
+        $this->billing->loadMissing('billingSubscription.billingPeriode');
+
+        $cust        = $this->billing->customer;
+        $packageItem = $this->receipt->packageItem();
+        $addons      = $this->receipt->addons();
 
         $paymentMethodText = match ($this->channel) {
             'transfer' => sprintf(
-                "%s %s - %s - %s",
-                $this->receipt?->payment_methode,
-                $this->receipt?->bank_name,
-                $this->receipt?->account_name,
-                $this->receipt?->account_number
+                '%s %s - %s - %s',
+                $this->receipt->payment_methode,
+                $this->receipt->bank_name,
+                $this->receipt->account_name,
+                $this->receipt->account_number
             ),
             'cash' => 'Cash',
-            default => $this->receipt?->payment_methode ?? 'Payment Gateway'
+            default => $this->receipt->payment_methode ?? 'Payment Gateway',
         };
 
         return [
             'template_slug' => 'payment',
-            'to' => $cust->contact,
-            'customer_id' => $cust->id,
-            'replacements' => [
-                '%name%'            => $this->billing->customer_name,
-                '%address%'         => $this->billing->customer_address,
+            'to'            => $cust->contact,
+            'customer_id'   => $cust->id,
+            'replacements'  => [
+                '%name%'            => $cust->name,
+                '%address%'         => $cust->address,
                 '%customer_id%'     => $cust->customer_id,
-                '%billing_number%'  => $this->receipt?->number ?? $this->billing->billing_number,
-                '%package%'         => $this->receipt?->package_name ?? ($cust->package->name ?? '-'),
-                '%periode%'         => $this->billing->billingSubscription?->billing_periode,
-                '%bill%'            => $this->builder->currency($this->receipt?->package_price ?? $this->billing->base_price),
-                '%discount%'        => $this->builder->currency($this->receipt?->discount ?? 0),
-                '%total%'           => $this->builder->currency($this->receipt?->price_after_discount ?? $this->billing->total_amount),
-                '%member%'          => $this->receipt?->member_type ?? 'Non Member / Tidak Ada',
-                '%payment_time%'    => $this->receipt?->payment_time ? now()->parse($this->receipt->payment_time)->setTimezone('Asia/Jakarta')->translatedFormat('d F Y, H:i') . ' WIB' : null,
-                '%teller%'          => $this->receipt?->teller_name ?? $this->billing->teller_name,
+                '%billing_number%'  => $this->receipt->number,
+                '%package%'         => $packageItem?->name ?? '-',
+                '%periode%'         => $this->billing->billingSubscription?->billingPeriode?->name ?? '-',
+                '%bill%'            => $this->builder->currency($packageItem?->unit_price ?? 0),
+                '%addons%'          => $this->builder->formatAddons($addons),
+                '%discount%'        => $this->builder->discountCurrency($this->receipt->discount),
+                '%total%'           => $this->builder->currency($this->receipt->price_after_discount),
+                '%member%'          => $this->receipt->member_type ?? 'Non Member',
+                '%payment_time%'    => optional($this->receipt->payment_time)
+                    ? now()->parse($this->receipt->payment_time)
+                    ->setTimezone('Asia/Jakarta')
+                    ->translatedFormat('d F Y, H:i') . ' WIB'
+                    : '-',
+                '%teller%'          => $this->receipt->teller_name,
                 '%payment_methode%' => $paymentMethodText,
-                '%cs_contact%'      => $cust->user?->contact,
-            ]
+                '%cs_contact%'      => $cust->user?->contact ?? '-',
+            ],
         ];
     }
 }

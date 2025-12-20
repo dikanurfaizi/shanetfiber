@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Http\FormRequest;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 
 class CustomerPppUpdateRequest extends FormRequest
 {

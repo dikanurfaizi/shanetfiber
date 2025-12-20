@@ -4,10 +4,10 @@ namespace App\View\Components\Layouts\Cpanel\Billings;
 
 use App\Models\Bank;
 use Closure;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use Illuminate\View\Component;
-use App\Models\Billing\Billing;
-use App\Models\Billing\BillingPeriode;
+use App\Models\Billings\Billing;
+use App\Models\Billings\BillingPeriode;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;

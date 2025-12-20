@@ -1,0 +1,59 @@
+<?php
+
+namespace App\Models\Customers;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Packages\Package;
+use App\Models\Packages\PackageDuration;
+use App\Models\Billings\BillingSubscriptionPeriode;
+
+class CustomerSubscription extends Model
+{
+    use SoftDeletes;
+
+    protected $table = 'customer_subscriptions';
+
+    protected $fillable = [
+        'customer_id',
+        'package_id',
+        'package_duration_id',
+        'status',
+        'start_date',
+        'end_date',
+        'price_final',
+        'discount_type_final',
+        'discount_value_final',
+        'terminated_at'
+    ];
+
+    protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'price_final' => 'decimal:2',
+        'discount_value_final' => 'decimal:2',
+        'terminated_at' => 'date'
+    ];
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class, 'customer_id');
+    }
+
+    public function package(): BelongsTo
+    {
+        return $this->belongsTo(Package::class, 'package_id');
+    }
+
+    public function packageDuration(): BelongsTo
+    {
+        return $this->belongsTo(PackageDuration::class, 'package_duration_id');
+    }
+
+    public function billingSubscriptionPeriodes(): HasMany
+    {
+        return $this->hasMany(BillingSubscriptionPeriode::class, 'customer_subscription_id');
+    }
+}

@@ -3,9 +3,9 @@
 namespace App\Services\Billings;
 
 use App\Models\Bank;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\User;
-use App\Models\Billing\BillingPeriode;
+use App\Models\Billings\BillingPeriode;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Helpers\LogHelper;
 

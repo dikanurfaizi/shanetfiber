@@ -2,6 +2,7 @@
 
 namespace App\Services\Notification;
 
+use App\Enums\WhatsAppAction;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Models\Receipt;
@@ -23,7 +24,10 @@ class PaymentNotificationService
      */
     public function sendWhatsAppPaymentNotificationByReceiptId(int $receiptId, string $traceId): void
     {
-        $receipt = Receipt::with(['billing.customer', 'billing.billingSubscription'])
+        $receipt = Receipt::with([
+            'billingPayment.billing.customer',
+            'billingPayment.billing.billingSubscription',
+        ])
             ->find($receiptId);
 
         if (! $receipt) {
@@ -53,15 +57,15 @@ class PaymentNotificationService
             $formatter = new FormatReceiver;
 
             $to = $formatter->formatReceiver(
-                $receipt->billing->customer->contact,
+                $receipt->billingPayment->billing->customer->contact,
                 null,
                 false
             );
 
             $bodyParams = [
                 $receipt->customer_name,
-                $receipt->billing->billingSubscription->billing_periode,
-                'Rp ' . number_format($receipt->amount_paid, 0, ',', '.00'),
+                $receipt->billingPayment->billing->billingSubscription->billing_periode,
+                'Rp ' . number_format($receipt->price_after_discount, 0, ',', '.00'),
                 Carbon::parse($receipt->payment_time)->format('d F Y'),
                 $receipt->number,
                 $receipt->teller_name,
@@ -80,11 +84,10 @@ class PaymentNotificationService
                     traceId: $traceId,
                 );
             } else {
-                $this->gowaService->payment_package(
-                    $receipt->billing->customer,
-                    $receipt->billing,
-                    $receipt,
-                    $receipt->payment_methode,
+                $this->gowaService->notifyPaymentCompleted(
+                    $receipt->billingPayment->billing,
+                    $receipt,          // ⬅️ WAJIB
+                    $receipt->payment_methode,            // cash | transfer | payment_gateway
                     $traceId
                 );
             }

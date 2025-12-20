@@ -3,7 +3,7 @@
 namespace App\Jobs\Secrets;
 
 use App\Models\Mikrotik;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Helpers\LogHelper;
+use App\Services\Routerboard\TestConnectionService;
 
 class DisablePppSecretJob implements ShouldQueue
 {
@@ -23,14 +24,19 @@ class DisablePppSecretJob implements ShouldQueue
         $this->traceId = $traceId;
     }
 
-    public function handle(SecretService $secretService): void
+    public function handle(SecretService $secretService, TestConnectionService $testConnectionService): void
     {
         try {
-            // 1. Hapus session aktif
-            $secretService->deleteActiveSecret($this->mikrotik, $this->username, $this->traceId);
+            if (config('services.shanetfiber.allow_mikrotik_actions')) {
+                // 1. Cek koneksi
+                $testConnectionService->checkOnline($this->mikrotik, $this->traceId);
 
-            // 2. Nonaktifkan secret
-            $secretService->disableSecret($this->mikrotik, $this->username, $this->traceId);
+                // 2. Hapus session aktif
+                $secretService->deleteActiveSecret($this->mikrotik, $this->username, $this->traceId);
+
+                // 3. Nonaktifkan secret
+                $secretService->disableSecret($this->mikrotik, $this->username, $this->traceId);
+            }
 
             // 3. Update status di database
             Customer::where('id', $this->userId)->update(['disabled' => 'true']);

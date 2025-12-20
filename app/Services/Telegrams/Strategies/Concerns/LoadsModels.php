@@ -2,10 +2,9 @@
 
 namespace App\Services\Telegrams\Strategies\Concerns;
 
-use App\Models\Customer;
-use App\Models\Billing\Billing;
+use App\Models\Customers\Customer;
+use App\Models\Billings\Billing;
 use App\Models\Receipt;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 trait LoadsModels
 {

@@ -4,19 +4,24 @@ namespace App\Http\Controllers\Billing;
 
 use App\Events\PaymentSucceeded;
 use App\Events\PayLaterApplied;
-use App\Exports\BillingsExport;
+use App\Exports\Billing\BillingSnapshotExport;
+use App\Exports\Billing\BillingYearWorkbookExport;
 use App\Helpers\LogHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Bank;
-use App\Models\Billing\Billing;
-use App\Models\Billing\BillingPeriode;
+use App\Models\Billings\Billing;
+use App\Models\Billings\BillingPeriode;
+use App\Models\Customers\CustomerSubscription;
 use App\Models\Websystem;
+use App\Models\Receipt;
+use App\Models\Membership\CustomerMembership;
 use App\Services\Billings\BillingQueryService;
 use App\Services\Billings\BillingReportService;
 use App\Services\Billings\BillingService;
 use App\Services\Billings\PayLaterService;
 use App\Services\Billings\PaymentCancellationService;
 use App\Services\Billings\PaymentService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -158,7 +163,6 @@ class BillingController extends Controller
         try {
             $periode = $request->name ?? Carbon::now()->format('F Y');
             $billingPeriode = $this->billingService->createBillingPeriode($periode, $traceId);
-            // $totalBillingCreated = $this->billingService->generateBillingsForPeriod($billingPeriode, $traceId);
 
             LogHelper::logInfo(
                 null,
@@ -182,8 +186,8 @@ class BillingController extends Controller
     {
         $traceId = (string) Str::uuid();
         try {
-            // dd($request);
-            $totalBillingCreated = $this->billingService->generateBillingsForPeriod($request->id, $traceId);
+            $billingPeriod = BillingPeriode::latest('created_at')->first();
+            $totalBillingCreated = $this->billingService->generateBillingsForPeriod($billingPeriod, $traceId);
 
             LogHelper::logInfo(
                 null,
@@ -222,32 +226,83 @@ class BillingController extends Controller
     public function payment(Request $request, Billing $billing)
     {
         $traceId = (string) Str::uuid();
+        $startTime = microtime(true);
+
+        LogHelper::logInfo(null, [
+            'billing_id'     => $billing->id,
+            'customer_id'    => $billing->customer_id,
+            'payment_method' => $request->payment_methode,
+        ], 100, 'payment.request.received', $traceId, 0);
+
         $paymentMethod = $request->payment_methode;
 
-        if ($paymentMethod == 'transfer') {
-            return redirect()->route('billings.transfer', $billing->slug);
-        } elseif ($paymentMethod == 'paylater') {
-            return redirect()->route('billings.paylater', $billing->slug);
-        } elseif ($paymentMethod == 'not-active-periode') {
-            $billing->update([
-                'teller_name' => auth()->user()->name,
-                'status' => 'NP',
-            ]);
+        $now = microtime(true);
+        $exec = round($now - $startTime, 3);
+        $lastCheckpoint = $now;
 
-            return redirect()->back()->with('success', 'The billing status for ' . $billing->customer_name . ' has been marked as No Usage for this period.');
+        // === ROUTING DECISIONS (LOG ONCE PER PATH) ===
+        if ($paymentMethod === 'transfer') {
+
+            LogHelper::logInfo(null, [
+                'billing_id' => $billing->id,
+            ], 200, 'payment.route.transfer', $traceId, $exec);
+
+            return redirect()->route('billings.transfer', $billing->slug);
         }
 
+        if ($paymentMethod === 'paylater') {
+
+            LogHelper::logInfo(null, [
+                'billing_id' => $billing->id,
+            ], 200, 'payment.route.paylater', $traceId, $exec);
+
+            return redirect()->route('billings.paylater', $billing->slug);
+        }
+
+        if ($paymentMethod === 'not-active-periode') {
+
+            $billing->update([
+                'teller_name' => auth()->user()->name,
+                'status'      => 'NP',
+            ]);
+
+            LogHelper::logInfo(null, [
+                'billing_id' => $billing->id,
+                'status'     => 'NP',
+            ], 200, 'payment.marked.no_usage', $traceId, $exec);
+
+            return redirect()->back()
+                ->with('success', 'The billing status for ' . $billing->customer_name . ' has been marked as No Usage for this period.');
+        }
+
+        $now = microtime(true);
+        $exec = round($now - $startTime, 3);
+        $lastCheckpoint = $now;
+
+        // === MAIN PAYMENT FLOW ===
         try {
             $paymentData = $this->preparePaymentData($request);
-            $result = $this->paymentService->processPayment($billing, $paymentData, $traceId);
 
-            if ($result['receipt']) {
+            $result = $this->paymentService
+                ->processPayment($billing, $paymentData, $traceId, $lastCheckpoint);
+
+            if (!empty($result['receipt'])) {
                 event(new PaymentSucceeded($result['receipt']->id, $traceId));
             }
 
-            return redirect()->back()->with('success', 'Payment ' . $billing->customer_name . ' successfully.');
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Payment failed: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('success', 'Payment ' . $billing->customer_name . ' successfully.');
+        } catch (\Throwable $e) {
+
+            // hanya log di boundary, DETAIL sudah di service
+            LogHelper::logError(null, [
+                'billing_id' => $billing->id,
+                'exception'  => class_basename($e),
+                'message'    => $e->getMessage(),
+            ], 500, 'payment.request.failed', $traceId, $exec);
+
+            return redirect()->back()
+                ->with('error', 'Payment failed.');
         }
     }
 
@@ -288,7 +343,7 @@ class BillingController extends Controller
 
         try {
             $result = $this->paymentCancellationService
-                ->cancelPayment($billing, $traceId);
+                ->cancelPayment($billing->billingPayment, $traceId);
 
             if ($result['success']) {
                 return redirect()
@@ -309,42 +364,122 @@ class BillingController extends Controller
 
     public function show(Billing $billing)
     {
-        $billing->loadMissing(['customer.member', 'billingSubscription']);
+        $memberDisplay = 'Non Member';
+        $endDate = '-';
+        $discount = 0;
 
+        // Load customer + billingSubscription
+        $billing->loadMissing(['customer', 'billingSubscription', 'billingPayment.receipt']);
+
+        // Ambil semua billing pelanggan, pagination
         $billings = Billing::where('customer_id', $billing->customer_id)
-            ->where('status', '!=', 'LS')
-            ->get();
+            ->with(['billingPayment', 'billingSubscription'])   // 👈 eager load per billing
+            ->orderBy('created_at', 'desc')
+            ->paginate(5);
 
-        $totalPrice = $billings->sum('total_amount');
+        // TOTALS
+        $totalUnpaidAmount = Billing::where('customer_id', $billing->customer_id)
+            ->whereIn('status', ['BL', 'PL']) // belum lunas / pay later
+            ->sum('total_amount');
 
-        $websystem = Websystem::firstWhere('slug', 'websystem');
+        $totalPaidAmount = Billing::where('customer_id', $billing->customer_id)
+            ->where('status', 'LS') // lunas
+            ->sum('total_amount');
 
-        $customer = $billing->customer;
-        $currentPeriode = $billing->billingSubscription?->billing_periode;
+        $totalUnpaidBill = Billing::where('customer_id', $billing->customer_id)
+            ->whereIn('status', ['BL', 'PL'])
+            ->count();
 
-        $isValidMember = match (true) {
-            ! $customer => false,
-            $customer->billing_option === 1 => true,
-            $customer->billing_option === 2
-                && $customer->billing_period === $currentPeriode => true,
-            default => false,
-        };
+        $totalPaidBill = Billing::where('customer_id', $billing->customer_id)
+            ->where('status', 'LS')
+            ->count();
 
-        $memberDisplay = $isValidMember
-            ? ($customer->member?->type ?? 'Non Member')
-            : 'Non Member';
+        // Membership & Subscription
+        $customerMembership = CustomerMembership::where('customer_id', $billing->customer_id)->first();
+        $customerSubscription = CustomerSubscription::where('customer_id', $billing->customer_id)
+            ->where('status', 'active')
+            ->first();
 
-        $discount = $isValidMember
-            ? ($customer->member?->discount ?? 0)
-            : 0;
+        // Membership Logic
+        if ($customerMembership !== null) {
+
+            $memberDisplay = $customerMembership->membership->name;
+            $endDate = 'Lifetime';
+
+            // Hitung discount by type
+            if ($customerMembership->membership->discount_type === 'amount') {
+                $discount = $customerMembership->membership->discount_value;
+            } else {
+
+                // Persentase dari harga paket aktif
+                $packagePrice = $customerSubscription?->package?->price ?? 0;
+
+                $discount = ($customerMembership->membership->discount_value / 100) * $packagePrice;
+            }
+
+            // Override end_date jika ada
+            if (!empty($customerMembership->end_date)) {
+                $endDate = Carbon::parse($customerMembership->end_date)->format('d F Y');
+            }
+        }
+
+        $billings->getCollection()->transform(function ($item) {
+
+            // LS — Payment Time
+            $paymentTime = $item->billingPayment && $item->billingPayment->payment_time
+                ? Carbon::parse($item->billingPayment->payment_time)->format('d M Y, H:i') . ' WIB'
+                : '-';
+
+            // PL — Pay Later Time
+            $payLaterTime = $item->pay_later
+                ? Carbon::parse($item->pay_later)->format('d M Y, H:i') . ' WIB'
+                : '-';
+
+            // BL — Due Date
+            $dueDateTime = $item->due_date
+                ? Carbon::parse($item->due_date)->format('d M Y, H:i') . ' WIB'
+                : '-';
+
+            // Payment Method
+            $paymentMethod = $item->billingPayment?->payment_method
+                ? ucwords(str_replace('_', ' ', strtolower($item->billingPayment->payment_method)))
+                : 'cash';
+
+            // Transfer Receipt Data
+            $receipt = Receipt::where('billing_payment_id', $item->billingPayment?->id)->first();
+
+            $item->formatted = [
+                'payment_time'    => $paymentTime,
+                'pay_later'       => $payLaterTime,
+                'due_date'        => $dueDateTime,
+                'method'          => $paymentMethod,
+                'bank_name'       => $receipt->bank_name ?? null,
+                'account_name'    => $receipt->account_name ?? null,
+                'account_number'  => $receipt->account_number ?? null,
+                'receipt_slug'    => $receipt->slug ?? null,
+                'paid_by' => $item->billingPayment?->paidBy?->name,
+            ];
+
+            return $item;
+        });
 
         return view('billings.show', [
             'billing' => $billing,
             'billings' => $billings,
-            'totalPrice' => $totalPrice,
-            'websystem' => $websystem,
+
+            // Additional totals requested
+            'totalUnpaidAmount' => $totalUnpaidAmount,
+            'totalPaidAmount' => $totalPaidAmount,
+            'totalUnpaidBill' => $totalUnpaidBill,
+            'totalPaidBill' => $totalPaidBill,
+
+            // Membership & subscription data
             'memberDisplay' => $memberDisplay,
+            'endDate' => $endDate,
             'discount' => $discount,
+
+            // Active subscription
+            'customerSubscription' => $customerSubscription,
         ]);
     }
 
@@ -397,10 +532,11 @@ class BillingController extends Controller
 
     public function exportAll(Request $request)
     {
-        $timestamp = now()->format('Ymd_His');
-        $periode = $request->get('periode'); // contoh: "August 2025"
-
-        return Excel::download(new BillingsExport(null, $periode), "Billings_{$periode}_{$timestamp}.xlsx");
+        LogHelper::logInfo(null, ['request' => $request->all()], 200, "", null);
+        return Excel::download(
+            new BillingYearWorkbookExport(),
+            'Billing-' . now()->year . '.xlsx'
+        );
     }
 
     public function exportSelected(Request $request)
@@ -417,14 +553,51 @@ class BillingController extends Controller
             'NP' => 'NOT ACTIVE PERIOD',
         ];
 
-        $statusCamel = 'All';
+        $statusCamel = now()->format('F Y');
+        $fileName = "Billing_{$statusCamel}_{$timestamp}.xlsx";
         if ($status != null) {
             $statusCamel = Str::title(strtolower($statusMap[$status]));
+            $fileName = "{$statusCamel}_Billing_{$periode}_{$timestamp}.xlsx";
         }
 
         return Excel::download(
-            new BillingsExport($status, $periode),
-            "{$statusCamel}_Billing_{$periode}_{$timestamp}.xlsx"
+            new BillingSnapshotExport($status, $periode),
+            $fileName
+        );
+    }
+
+    public function printInvoice(Billing $billing)
+    {
+        // Pastikan invoice hanya untuk BL / PL
+        if (!in_array($billing->status, ['BL', 'PL'], true)) {
+            abort(403, 'Invoice only available for unpaid billing');
+        }
+
+        $billing->load([
+            'customer',
+            'billingItems',      // 👈 ini kunci
+            'billingSubscription',
+        ]);
+
+        $banks = Bank::orderBy('name', 'ASC')->where('disabled', 'false')->where('user_id', $billing->customer->user_id)->get();
+
+        $websystem = Websystem::where('slug', 'websystem')->first();
+
+        $items = $billing->billingItems->groupBy('item_type');
+
+        return PDF::loadView('billings.print-invoice', [
+            'billing'    => $billing,
+            'customer'   => $billing->customer,
+            'websystem'  => $websystem,
+
+            // grouped items
+            'packages'  => $items->get('package', collect()),
+            'addons'    => $items->get('addon', collect()),
+            'discounts' => $items->get('discount', collect()),
+
+            'banks'      => $banks,
+        ])->download(
+            'INVOICE_' . $billing->billing_number . '.pdf'
         );
     }
 }

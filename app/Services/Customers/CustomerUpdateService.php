@@ -2,15 +2,15 @@
 
 namespace App\Services\Customers;
 
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
 use App\Models\AutoIsolir;
 use App\Models\Packages\Package;
-use App\Models\Billing\Billing;
-use App\Models\Billing\BillingPeriode;
-use App\Models\CustomerSubscription;
-use App\Models\Billing\BillingSubscriptionPeriode;
-use App\Models\SubscriptionDuration;
+use App\Models\Billings\Billing;
+use App\Models\Billings\BillingPeriode;
+use App\Models\Billings\BillingSubscriptionPeriode;
+use App\Models\Customers\CustomerSubscription;
+use App\Models\Packages\PackageDuration;
 use App\Models\Websystem;
 use App\Jobs\AddPaymentBeforeDueDateJob;
 use App\Jobs\AddPaymentIpStaticBeforeDueDateJob;
@@ -1340,7 +1340,7 @@ class CustomerUpdateService
             }
 
             // === GET DURATION DAN KONFIGURASI ===
-            $subscriptionDuration = SubscriptionDuration::where('package_id', $customer->package_id)
+            $subscriptionDuration = PackageDuration::where('package_id', $customer->package_id)
                 ->where('is_active', true)
                 ->first();
 
@@ -1524,7 +1524,7 @@ class CustomerUpdateService
                     ? $package->price
                     : $package->price + $package->installation_fee;
 
-                $subscriptionDuration = SubscriptionDuration::where('package_id', $newPackageId)->first();
+                $subscriptionDuration = PackageDuration::where('package_id', $newPackageId)->first();
 
                 // Buat customer_subscriptions baru
                 $newSubscription = CustomerSubscription::create([

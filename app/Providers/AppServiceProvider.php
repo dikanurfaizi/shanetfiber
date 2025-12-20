@@ -35,13 +35,6 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->bind(PaymentService::class, function ($app) {
-            return new PaymentService(
-                $app->make(PaymentProcessingService::class),
-                $app->make(PaymentCancellationService::class)
-            );
-        });
-
         $this->app->singleton(OltDataService::class, function ($app) {
             return new OltDataService();
         });

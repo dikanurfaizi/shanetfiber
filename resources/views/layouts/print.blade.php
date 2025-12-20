@@ -1,107 +1,131 @@
 <head>
-    <title>Receipt {{ $receipt->number}} - ShaNet</title>
+    <title>Receipt {{ $receipt->number }} - ShaNet</title>
     <meta charset="utf-8" />
     <style>
-        .invoice-info {
-            max-width: 800px;
-            margin: auto;
-            padding: 10px;
-            font-size: 10px;
-            line-height: 24px;
-            font-family: 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
-            color: #555;
-        }
-
-        .invoice-box {
-            max-width: 800px;
-            margin: auto;
-            padding: 30px;
-            border: 1px solid #eee;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
-            font-size: 16px;
-            line-height: 24px;
-            font-family: 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
-            color: #555;
-        }
-
-        .invoice-box table {
-            width: 100%;
-            line-height: inherit;
-            text-align: left;
-        }
-
-        .invoice-box table td {
-            padding: 5px;
-            vertical-align: top;
-        }
-
-        .invoice-box table tr td:nth-child(2) {
-            text-align: right;
-        }
-
-        .invoice-box table tr.top table td {
-            padding-bottom: 20px;
-        }
-
-        .invoice-box table tr.top table td.title {
-            font-size: 45px;
-            line-height: 45px;
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 11px;
             color: #333;
         }
 
-        .invoice-box table tr.information table td {
-            padding-bottom: 40px;
+        hr {
+            border: none;
+            border-top: 1px solid #ddd;
+            margin: 10px 0;
         }
 
-        .invoice-box table tr.heading td {
-            background: #eee;
-            border-bottom: 1px solid #ddd;
-            font-weight: bold;
+        .header-table {
+            width: 100%;
         }
 
-        .invoice-box table tr.details td {
-            padding-bottom: 20px;
+        .logo {
+            width: 50%;
         }
 
-        .invoice-box table tr.item td {
-            border-bottom: 1px solid #eee;
-        }
-
-        .invoice-box table tr.item.last td {
-            border-bottom: none;
-        }
-
-        .invoice-box table tr.total td:nth-child(2) {
-            border-top: 2px solid #eee;
-            font-weight: bold;
-        }
-
-        @media only screen and (max-width: 600px) {
-            .invoice-box table tr.top table td {
-                width: 100%;
-                display: block;
-                text-align: center;
-            }
-
-            .invoice-box table tr.information table td {
-                width: 100%;
-                display: block;
-                text-align: center;
-            }
-        }
-
-        /** RTL **/
-        .invoice-box.rtl {
-            direction: rtl;
-            font-family: Tahoma, 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
-        }
-
-        .invoice-box.rtl table {
+        .header-info {
+            width: 50%;
             text-align: right;
         }
 
-        .invoice-box.rtl table tr td:nth-child(2) {
-            text-align: left;
+        .invoice-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .info-table {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .period {
+            margin: 10px 0;
+            font-size: 11px;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .items-table th {
+            background: #f2f2f2;
+            border-bottom: 1px solid #ccc;
+            padding: 6px;
+            font-size: 11px;
+        }
+
+        .items-table td {
+            border-bottom: 1px solid #eee;
+            padding: 6px;
+            font-size: 11px;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .right {
+            text-align: right;
+        }
+
+        .muted {
+            color: #888;
+            font-size: 10px;
+        }
+
+        .discount td {
+            color: #c0392b;
+            font-weight: normal;
+        }
+
+        .summary-table {
+            width: 40%;
+            float: right;
+            margin-top: 10px;
+        }
+
+        .summary-table td {
+            padding: 5px;
+            font-size: 11px;
+        }
+
+        .summary-table .total td {
+            font-weight: bold;
+            border-top: 2px solid #333;
+        }
+
+        .payment-info {
+            clear: both;
+            margin-top: 20px;
+            font-size: 11px;
+        }
+
+        .payment-info ul {
+            padding-left: 15px;
+            margin: 5px 0;
+        }
+
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+        }
+
+        .invoice-watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 420px;
+            height: 420px;
+            transform: translate(-50%, -50%) rotate(-15deg);
+            background-image: url('{{ public_path('images/receipt_logo.png') }}');
+            background-repeat: no-repeat;
+            background-size: contain;
+            opacity: 0.1;
+            z-index: -1;
         }
     </style>
 </head>

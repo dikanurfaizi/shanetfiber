@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use Exception;
 use Illuminate\Http\Request;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
-use App\Models\Billing\Billing;
-use App\Models\Billing\BillingPeriode;
+use App\Models\Billings\Billing;
+use App\Models\Billings\BillingPeriode;
 use App\Models\Websystem;
 use App\Models\User;
 use App\Models\InvestorAdmin;
@@ -408,30 +408,37 @@ class HomeController extends Controller
 
     private function calculatePackageSummary()
     {
-        $startTime = microtime(true); // start time
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
         $userId = $auth['userId'];
 
-        // Base query untuk menghitung jumlah customer per package
+        // Base query menggunakan customer_subscription
         $query = Customer::query()
-            ->select('packages.id', 'packages.name as package_name', DB::raw('COUNT(customers.id) as total_customers'))
-            ->join('packages', 'customers.package_id', '=', 'packages.id')
+            ->select(
+                'packages.id',
+                'packages.name as package_name',
+                DB::raw('COUNT(customers.id) as total_customers')
+            )
+            ->join('customer_subscriptions', 'customer_subscriptions.customer_id', '=', 'customers.id')
+            ->join('packages', 'customer_subscriptions.package_id', '=', 'packages.id')
             ->whereNull('customers.deleted_at')
+            ->where('customer_subscriptions.status', 'active')   // ⬅ WAJIB! hindari hitung dobel
             ->groupBy('packages.id', 'packages.name')
             ->orderByDesc('total_customers');
 
-        // Filter berdasarkan role/permission
+        // === ROLE FILTERING ===
         if ($user->can('view-customer-registration-chart')) {
-            // Superadmin: tidak ada filter tambahan
+            // superadmin → no filter
         } elseif ($user->can('view-customer-churn-chart')) {
             $query->where('customers.user_id', $userId);
         } elseif ($user->can('investor-billing-chart')) {
-            $linkedAdminIds = InvestorAdmin::where('investor_id', $userId)->pluck('admin_id')->toArray();
+            $linkedAdminIds = InvestorAdmin::where('investor_id', $userId)
+                ->pluck('admin_id')
+                ->toArray();
+
             $visibleUserIds = array_merge([$userId], $linkedAdminIds);
             $query->whereIn('customers.user_id', $visibleUserIds);
         } else {
-            // Tidak punya akses
             return collect();
         }
 

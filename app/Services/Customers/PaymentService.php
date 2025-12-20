@@ -2,9 +2,9 @@
 
 namespace App\Services\Customers;
 
-use App\Models\Billing\Billing;
+use App\Models\Billings\Billing;
 use App\Models\Websystem;
-use App\Models\Order;
+use App\Models\Billings\Order;
 use App\Models\PaymentGateway;
 use Illuminate\Support\Carbon;
 use App\Http\Controllers\PaymentGateway\TripayController;

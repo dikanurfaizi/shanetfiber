@@ -3,7 +3,6 @@
 namespace App\Jobs\Billing;
 
 use App\Helpers\LogHelper;
-use App\Models\Billing\BillingPeriode;
 use App\Services\Billings\BillingService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Auth\Factory as Auth;
@@ -11,7 +10,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -47,7 +45,7 @@ class CreateInitialBillingJob implements ShouldQueue
 
         // 2) Generate billings for periode
         try {
-            $totalCreated = $billingService->generateBillingsForPeriod($billingPeriode->id, $traceId);
+            $totalCreated = $billingService->generateBillingsForPeriod($billingPeriode, $traceId);
 
             LogHelper::logInfo(
                 null,

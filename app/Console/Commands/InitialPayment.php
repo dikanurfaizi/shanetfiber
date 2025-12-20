@@ -5,7 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 use Illuminate\Support\Carbon;
-use App\Models\Billing\BillingPeriode;
+use App\Models\Billings\BillingPeriode;
 use App\Helpers\LogHelper;
 use App\Enums\WhatsAppAction;
 use App\Events\MonthlyKickoffBroadcastTriggered;

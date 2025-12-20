@@ -7,7 +7,7 @@ use App\Http\Requests\ProfileUpdateRequest;
 use App\Helpers\LogHelper;
 use Exception;
 use App\Models\User;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 
 class ProfileController extends Controller
 {

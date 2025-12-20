@@ -2,8 +2,8 @@
 
 namespace App\Services\Billings;
 
-use App\Models\Billing\Billing;
-use App\Models\Billing\BillingPeriode;
+use App\Models\Billings\Billing;
+use App\Models\Billings\BillingPeriode;
 use App\Models\User;
 use App\Models\InvestorAdmin;
 use Carbon\Carbon;
@@ -18,9 +18,9 @@ class BillingQueryService
         $query = Billing::select('billings.*')
             ->with([
                 'customer',
-                'receipt',
                 'billingSubscription',
-                'billingSubscription.billingPeriode'
+                'billingSubscription.billingPeriode',
+                'billingPayment'
             ]);
 
 
@@ -47,7 +47,10 @@ class BillingQueryService
 
         // Filter berdasarkan kolom di tabel billings
         if ($searchParams['name']) {
-            $query->where('customer_name', 'like', "%{$searchParams['name']}%");
+            $name = $searchParams['name'];
+            $query->whereHas('customer', function ($q) use ($name) {
+                $q->where('name', 'like', "%{$name}%");
+            });
         }
 
         // Filter berdasarkan relasi customer slug
@@ -222,7 +225,7 @@ class BillingQueryService
         $statusLabels = [
             'LS' => 'PAID',
             'BL' => 'UNPAID',
-            'NP' => 'NOT ACTIVE PERIOD',
+            'VD' => 'VOID',
             'PL' => 'PAYLATER',
         ];
 

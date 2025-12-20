@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CustomerStoreRequest extends FormRequest
 {
@@ -19,6 +20,12 @@ class CustomerStoreRequest extends FormRequest
         $rules = [
             'mikrotik_id' => 'required',
             'package_id' => 'required|exists:packages,id',
+            'package_duration_id' => [
+                'required',
+                Rule::exists('package_durations', 'id')
+                    ->where('package_id', $this->input('package_id'))
+                    ->where('is_active', true),
+            ],
             'internet_service' => 'required|in:ppp,ip_static',
             'discount' => ['numeric', 'nullable'],
             'contact' => 'nullable|digits_between:10,15',
@@ -27,7 +34,7 @@ class CustomerStoreRequest extends FormRequest
             'password' => 'nullable|min:8',
             'address' => 'nullable|string|max:255',
             'user_id' => 'required|exists:users,id',
-            'member_id' => 'nullable|exists:members,id',
+            'member_id' => 'nullable|exists:memberships,id',
             'billing_option' => 'nullable|string',
         ];
 

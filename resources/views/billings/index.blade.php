@@ -130,7 +130,8 @@
                             <th class="text-center align-middle">{{ __('billing.table.periode') }}</th>
                             <th class="text-center align-middle">{{ __('billing.table.bill') }}</th>
                             <th class="text-center align-middle">{{ __('billing.table.bill-state') }}</th>
-                            <th class="text-center align-middle">{{ __('billing.table.payment-methode') }}</th>
+                            <th class="text-center align-middle action-col">{{ __('billing.table.payment-methode') }}
+                            </th>
                             @can('billing-edit')
                                 <th class="text-center align-middle">{{ __('billing.table.action') }}</th>
                             @endcan
@@ -146,7 +147,7 @@
                                 $badgeClass = 'badge bg-blue-soft ';
                                 if ($billing->status === 'LS') {
                                     $badgeClass .= 'text-success';
-                                } elseif ($billing->status === 'NP') {
+                                } elseif ($billing->status === 'VD') {
                                     $badgeClass .= 'text-muted';
                                 } else {
                                     $badgeClass .= 'text-danger';
@@ -160,10 +161,10 @@
                                 <td><a href="{{ route('billings.show', $billing->slug) }}" data-bs-toggle="tooltip"
                                         data-bs-placement="top" title="Show Billing">
                                         <span
-                                            class="badge text-primary">{{ $billing->customer_name ?? 'no name' }}</span></a>
+                                            class="badge text-primary">{{ $billing->customer->name ?? 'no name' }}</span></a>
                                 </td>
                                 <td><span
-                                        class="badge text-primary">{{ $billing->customer_address ?? 'no address' }}</span>
+                                        class="badge text-primary">{{ $billing->customer->address ?? 'no address' }}</span>
                                 </td>
                                 <td><span class="badge text-primary">{{ $periodeText ?? 'no periode' }}</span>
                                 </td>
@@ -177,7 +178,11 @@
                                 <td>{!! \App\Helpers\BillingHelper::getBillingStatusBadge($billing, $data) !!}</td>
                                 <td>{!! \App\Helpers\BillingHelper::getBillingPaymentSection($billing, $bank) !!}</td>
                                 @can('billing-edit')
-                                    <td>{!! \App\Helpers\BillingHelper::getBillingActionButton($billing) !!}</td>
+                                    <td class="text-center action-col">
+                                        <div class="d-inline-flex gap-2 align-items-center flex-nowrap">
+                                            {!! \App\Helpers\BillingHelper::getBillingActionButton($billing) !!}
+                                        </div>
+                                    </td>
                                 @endcan
                             </tr>
 
@@ -213,8 +218,11 @@
                                             </div>
                                             @can('billing-edit')
                                                 <div style="flex: 1;">
-                                                    <strong>{{ __('customer.table.action') }}:</strong><br>
-                                                    {!! \App\Helpers\BillingHelper::getBillingActionButton($billing) !!}
+                                                    <strong
+                                                        class="d-block mb-1">{{ __('customer.table.action') }}:</strong>
+                                                    <div class="d-inline-flex gap-2 align-items-center flex-nowrap">
+                                                        {!! \App\Helpers\BillingHelper::getBillingActionButton($billing) !!}
+                                                    </div>
                                                 </div>
                                             @endcan
                                         </div>
@@ -250,6 +258,12 @@
     @section('custom_styles')
         <link href="{{ asset('css/flatpickr.min.css') }}" rel="stylesheet">
         <style>
+            .table th.action-col,
+            .table td.action-col {
+                min-width: 180px;
+                white-space: nowrap;
+            }
+
             @media (max-width: 576px) {
                 table.table thead {
                     display: none;

@@ -1,9 +1,9 @@
-<x-layouts.cpanel.customers.app-layout title="Edit Member">
+<x-layouts.app-layout title="Edit Membership">
 
 
     <div class="card-header py-3">
         <h6 class="m-0 font-weight-bold text-primary">
-            {{ $member->type . ' Member - Rp ' . number_format($member->discount, 2, ',', '.') }}
+            {{ $member->name }}
         </h6>
     </div>
 
@@ -18,36 +18,60 @@
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="type"><strong>{{ __('member.label.name') }}</strong></label>
-                        {!! Form::text('type', null, ['placeholder' => __('member.placeholder.name'), 'class' => 'form-control']) !!}
-                        @if ($errors->has('type'))
+                        {!! Form::text('name', null, ['placeholder' => __('member.placeholder.name'), 'class' => 'form-control']) !!}
+                        @if ($errors->has('name'))
                             <span class="text-danger">{{ $errors->first('name') }}</span>
                         @endif
                     </div>
                 </div>
-                <div class="row align-items-center mb-3">
+                <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
-                        <label for="discount"><strong>{{ __('member.label.discount') }}</strong></label>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="input-group">
-                                    <span class="input-group-text">Rp</span>
-                                    {!! Form::text('discount', null, [
-                                        'placeholder' => __('member.placeholder.discount'),
-                                        'class' => 'form-control',
-                                        'id' => 'discount',
-                                        'oninput' => 'formatNumber(this)',
-                                        'onload' => 'formatNumber(this)',
-                                    ]) !!}
-                                </div>
+                        <label for="discount_type"><strong>{{ __('member.label.type') }}</strong></label>
+                        {!! Form::select(
+                            'discount_type',
+                            [
+                                'none' => 'None',
+                                'percent' => 'Percent (%)',
+                                'amount' => 'Amount (Rp)',
+                            ],
+                            $member->discount_type ?? 'none',
+                            [
+                                'class' => 'form-control',
+                                'id' => 'discount_type',
+                            ],
+                        ) !!}
+                    </div>
+                </div>
+                <div class="row align-items-center">
+                    <div class="col-md-12 mb-3" id="discount_value_wrapper">
+                        <label><strong>{{ __('member.label.value') }}</strong></label>
+
+                        <div id="discount_amount_group" class="d-none">
+                            <div class="input-group">
+                                <span class="input-group-text">Rp</span>
+                                {!! Form::text('discount_value', $member->discount_value, [
+                                    'class' => 'form-control',
+                                    'id' => 'discount_amount',
+                                    'oninput' => 'formatNumber(this)',
+                                ]) !!}
+                            </div>
+                        </div>
+
+                        <div id="discount_percent_group" class="d-none">
+                            <div class="input-group">
+                                {!! Form::number('discount_percent', $member->discount_value, [
+                                    'class' => 'form-control',
+                                    'id' => 'discount_percent',
+                                    'step' => '0.01',
+                                    'min' => 0,
+                                    'max' => 100,
+                                ]) !!}
+                                <span class="input-group-text">%</span>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-12">
-                        @if ($errors->has('discount'))
-                            <span class="text-danger">{{ $errors->first('discount') }}</span>
-                        @endif
-                    </div>
                 </div>
+
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="status"><strong>{{ __('member.label.status') }}</strong></label>
@@ -55,9 +79,10 @@
                             <div class="form-switch">
                                 <input type="hidden" name="status" value="0">
                                 <input class="form-check-input" type="checkbox" name="status" id="status"
-                                    value="1" {{ old('status', $member->status ?? '') == '1' ? 'checked' : '' }}>
+                                    value="1"
+                                    {{ old('status', $member->is_active ?? '') == '1' ? 'checked' : '' }}>
                                 <label class="form-check-label"
-                                    for="status-form">{{ old('status', $member->status ?? '') == '1' ? 'Active' : 'Inactive' }}</label>
+                                    for="status-form">{{ old('status', $member->is_active ?? '') == '1' ? 'Active' : 'Inactive' }}</label>
                             </div>
                             @if ($errors->has('status'))
                                 <span class="text-danger">{{ $errors->first('status') }}</span>
@@ -94,43 +119,76 @@
             }
             flatpickr("input[type=datetime-local]", config);
         </script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const typeSelect = document.getElementById('discount_type');
+                const wrapper = document.getElementById('discount_value_wrapper');
+                const percentGroup = document.getElementById('discount_percent_group');
+                const amountGroup = document.getElementById('discount_amount_group');
+
+                const percentInput = document.getElementById('discount_percent');
+                const amountInput = document.getElementById('discount_amount');
+
+                const statusCheckbox = document.getElementById('status');
+                const statusLabel = document.querySelector('label[for="status-form"]');
+
+                function updateStatusLabel() {
+                    statusLabel.textContent = statusCheckbox.checked ? 'Active' : 'Inactive';
+                }
+
+                // Update label saat halaman dimuat
+                updateStatusLabel();
+
+                // Update label saat checkbox diubah
+                statusCheckbox.addEventListener('change', updateStatusLabel);
+
+                function updateDiscountUI() {
+                    const type = typeSelect.value;
+
+                    // reset state
+                    percentGroup.classList.add('d-none');
+                    amountGroup.classList.add('d-none');
+                    percentInput.disabled = true;
+                    amountInput.disabled = true;
+
+                    if (type === 'none') {
+                        wrapper.classList.add('d-none');
+                        percentInput.value = 0;
+                        amountInput.value = 0;
+                        percentInput.disabled = true;
+                        amountInput.disabled = true;
+                        return;
+                    }
+
+                    wrapper.classList.remove('d-none');
+
+                    if (type === 'percent') {
+                        percentGroup.classList.remove('d-none');
+                        percentInput.disabled = false;
+                    }
+
+                    if (type === 'amount') {
+                        amountGroup.classList.remove('d-none');
+                        amountInput.disabled = false;
+                    }
+                }
+
+                typeSelect.addEventListener('change', updateDiscountUI);
+                updateDiscountUI();
+            });
+
+            document.getElementById('member-form').addEventListener('submit', function() {
+                const amount = document.getElementById('discount_amount');
+                if (amount && !amount.disabled) {
+                    amount.value = amount.value.replace(/\./g, '');
+                }
+            });
+
+            function formatNumber(input) {
+                let value = input.value.replace(/[^0-9]/g, ''); // Hapus semua karakter kecuali angka
+                value = Number(value).toLocaleString('id-ID'); // Format ke pemisah ribuan
+                input.value = value;
+            }
+        </script>
     @endsection
-</x-layouts.cpanel.customers.app-layout>
-
-<script>
-    function formatNumber(input) {
-        let value = input.value.replace(/[^0-9]/g, ''); // Hapus semua karakter kecuali angka
-        value = Number(value).toLocaleString('id-ID'); // Format ke pemisah ribuan
-        input.value = value;
-    }
-
-    // Bersihin pemisah ribuan sebelum submit form
-    const form = document.getElementById('member-form'); // Ganti dengan ID form kamu
-    form.addEventListener('submit', function() {
-        const discountInput = document.getElementById('discount');
-        discountInput.value = discountInput.value.replace(/\./g, ''); // Hapus titik pemisah ribuan
-    });
-
-    // Panggil formatNumber pas onload buat input yang udah ada valuenya
-    window.addEventListener('load', function() {
-        const discountInput = document.getElementById('discount');
-        if (discountInput) {
-            formatNumber(discountInput);
-        }
-    });
-
-    document.addEventListener('DOMContentLoaded', function() {
-        const statusCheckbox = document.getElementById('status');
-        const statusLabel = document.querySelector('label[for="status-form"]');
-
-        function updateStatusLabel() {
-            statusLabel.textContent = statusCheckbox.checked ? 'Active' : 'Inactive';
-        }
-
-        // Update label saat halaman dimuat
-        updateStatusLabel();
-
-        // Update label saat checkbox diubah
-        statusCheckbox.addEventListener('change', updateStatusLabel);
-    });
-</script>
+</x-layouts.app-layout>

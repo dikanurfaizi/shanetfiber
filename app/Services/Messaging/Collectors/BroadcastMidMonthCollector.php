@@ -2,6 +2,7 @@
 
 namespace App\Services\Messaging\Collectors;
 
+use App\Helpers\LogHelper;
 use App\Models\Billing\Billing;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -12,17 +13,17 @@ class BroadcastMidMonthCollector
     public function collect(Carbon $today, string $type): Collection
     {
         $dateOps = match ($type) {
-            'past_due'  => '<',
-            'due_today' => '=',
-            'upcoming'  => '>',
-            default     => null,
+            'billing_overdue'  => '<',
+            'billing_due_today' => '=',
+            'billing_due_soon'  => '>',
+            default     => '=',
         };
 
         $slug = match ($type) {
-            'past_due'  => 'warning_bill',
-            'due_today' => 'deadline_bill',
-            'upcoming'  => 'reminder_bill',
-            default     => 'reminder_bill',
+            'billing_overdue'  => 'billing_overdue',
+            'billing_due_today' => 'billing_due_today',
+            'billing_due_soon'  => 'billing_due_soon',
+            default     => 'billing_due_today',
         };
 
         if (!$dateOps || !$slug) return collect();
@@ -34,6 +35,7 @@ class BroadcastMidMonthCollector
                 'billings.billing_number',
                 'billings.status',
                 'billings.due_date',
+                'billings.pay_later',
                 'customers.customer_id as customer_unique_id',
                 'customers.name as customer_name',
                 'customers.contact as customer_contact',
@@ -54,13 +56,14 @@ class BroadcastMidMonthCollector
             ->whereNull('me.id')
             ->whereIn('billings.status', ['BL', 'PL'])
             ->whereNotNull(DB::raw('COALESCE(billings.due_date, billings.pay_later)'))
+            ->whereNotNull('customers.contact')
             ->whereDate(
                 DB::raw("CASE WHEN billings.status = 'BL' THEN billings.due_date ELSE billings.pay_later END"),
                 $dateOps,
                 $today
             )
             ->where('customers.is_opt_out', 0)
-            ->limit(10)
+            ->limit(5)
             ->get();
     }
 }

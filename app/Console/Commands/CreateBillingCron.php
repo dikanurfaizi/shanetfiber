@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Jobs\Billing\CreateInitialBillingJob;
 use App\Models\Websystem;
-use App\Models\Billing\BillingPeriode;
+use App\Models\Billings\BillingPeriode;
 use App\Helpers\LogHelper;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;

@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Billing\Billing;
-use App\Models\Customer;
+use App\Models\Billings\BillingPayment;
+use App\Models\Customers\Customer;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Receipt extends Model
@@ -27,8 +28,25 @@ class Receipt extends Model
         return $this->belongsTo(Customer::class);
     }
 
-    public function billing(): HasOne
+    public function billingPayment()
     {
-        return $this->hasOne(Billing::class, 'receipt_id');
+        return $this->belongsTo(BillingPayment::class);
+    }
+
+    public function items()
+    {
+        return $this->hasMany(ReceiptItem::class);
+    }
+
+    public function addons()
+    {
+        return $this->items
+            ->where('type', 'addon')
+            ->values();
+    }
+
+    public function packageItem()
+    {
+        return $this->items->where('type', 'package')->first();
     }
 }

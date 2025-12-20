@@ -2,7 +2,7 @@
 
 namespace App\Services\Messaging\Collectors;
 
-use App\Models\Billing\Billing;
+use App\Models\Billings\Billing;
 use Illuminate\Support\Collection;
 use App\Helpers\LogHelper;
 use Carbon\Carbon;

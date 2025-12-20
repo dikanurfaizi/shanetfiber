@@ -2,7 +2,7 @@
 
 namespace App\Services\Whatsapp;
 
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Helpers\LogHelper;
 use App\Helpers\FormatReceiver;
 

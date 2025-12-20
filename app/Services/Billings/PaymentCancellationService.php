@@ -9,11 +9,12 @@ use App\Jobs\CancelPaymentBeforeDueDateJob;
 use App\Jobs\CancelPaymentIpStaticAfterDueDateJob;
 use App\Jobs\CancelPaymentIpStaticBeforeDueDateJob;
 use App\Models\AutoIsolir;
-use App\Models\Billing\Billing;
-use App\Models\Billing\BillingPeriode;
-use App\Models\Customer;
+use App\Models\Billings\Order;
+use App\Models\Billings\Billing;
+use App\Models\Billings\BillingPayment;
+use App\Models\Billings\BillingPeriode;
+use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
-use App\Models\Order;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -22,32 +23,33 @@ class PaymentCancellationService
     /**
      * Orkestrasi pembatalan pembayaran (unpayment) secara transactional.
      */
-    public function cancelPayment(Billing $billing, string $traceId): array
+    public function cancelPayment(BillingPayment $payment, string $traceId): array
     {
-        DB::beginTransaction();
-
+        $mikrotikResult = [
+            'status' => 'skipped',
+            'reason' => 'mikrotik_action_disabled',
+        ];
         try {
-            // 1) Ambil & soft-delete receipt lama (kalau ada)
-            $originalReceipt = $this->handleReceipt($billing);
+            DB::transaction(function () use ($payment, $traceId, &$originalReceipt) {
 
-            // 2) Update status billing (PAID -> BL/unpaid)
-            $this->updateBillingStatus($billing, $traceId);
+                $payment->lockForUpdate();
 
-            // 3) Update order terkait
-            $this->updateRelatedOrders($billing, $traceId);
+                $billing = $payment->billing()->lockForUpdate()->firstOrFail();
 
-            // 4) Update subscription periode (is_paid = false, dsb.)
-            $this->updateBillingSubscriptionPeriodes($billing, $traceId);
+                $originalReceipt = $this->handleReceipt($payment);
 
-            // Semua perubahan DB sudah OK
-            DB::commit();
+                $this->updateBillingStatus($billing, $traceId);
+                $this->updateRelatedOrders($billing, $traceId);
+            });
 
-            // 5) Setelah DB commit → operasi ke sistem eksternal (Mikrotik)
-            $mikrotikResult = $this->processMikrotikCancellation($billing->customer, $traceId);
+            if (config('services.shanetfiber.allow_mikrotik_actions')) {
+                // 5) Setelah DB commit → operasi ke sistem eksternal (Mikrotik)
+                $mikrotikResult = $this->processMikrotikCancellation($payment->billing->customer, $traceId);
+            }
 
             // 6) NOTIFIKASI → LEWAT EVENT
             event(new PaymentCancelled(
-                billingId: $billing->id,
+                billingId: $payment->billing_id,
                 receiptId: $originalReceipt['id'] ?? null,
                 receiptData: $originalReceipt,
                 traceId: $traceId,
@@ -55,7 +57,7 @@ class PaymentCancellationService
 
             return [
                 'success' => true,
-                'message' => 'Pembatalan pembayaran untuk ' . $billing->customer_name . ' berhasil diproses.',
+                'message' => 'Pembatalan pembayaran untuk ' . $payment->billing->customer->name . ' berhasil diproses.',
                 'receipt' => $originalReceipt,
                 'mikrotik' => $mikrotikResult,
             ];
@@ -63,7 +65,7 @@ class PaymentCancellationService
             DB::rollBack();
 
             LogHelper::logError(null, [
-                'billing_id' => $billing->id,
+                'billing_id' => $payment->billing_id,
                 'exception' => get_class($e),
                 'message' => $e->getMessage(),
             ], 500, 'Failed to cancel payment.', $traceId);
@@ -340,49 +342,29 @@ class PaymentCancellationService
      */
     public function updateBillingStatus(Billing $billing, string $traceId): void
     {
-        LogHelper::logInfo('UpdateBillingStatus', [
-            'trace_id' => $traceId,
-            'billing_id' => $billing->id ?? null,
-        ], 200, 'Starting update billing status', $traceId);
-
         $billing->update([
-            'teller_name' => auth()->user()->name,
+            'updated_by' => auth()->user()->id,
             'status' => 'BL',
-            'receipt_id' => null,
         ]);
-
-        LogHelper::logInfo('UpdateBillingStatus', [
-            'trace_id' => $traceId,
-        ], 200, 'Successfully updated billing status', $traceId);
     }
 
     /**
      * Ambil data receipt asli, soft delete, dan lepaskan relasi dari billing.
      * Return array data receipt (untuk referensi notifikasi), atau null jika tidak ada.
      */
-    public function handleReceipt(Billing $billing): ?array
+    public function handleReceipt(BillingPayment $payment): ?array
     {
-        $billing->loadMissing('receipt');
-        $originalReceipt = $billing->receipt;
+        $payment->loadMissing('receipt');
 
-        if (! $originalReceipt) {
+        $receipt = $payment->receipt;
+        if (! $receipt) {
             return null;
         }
 
-        $receiptData = $originalReceipt->toArray();
+        $data = $receipt->toArray();
+        $receipt->delete(); // soft delete
 
-        // Soft delete
-        $originalReceipt->delete();
-
-        // Lepas referensi dari billing
-        $billing->update(['receipt_id' => null]);
-
-        LogHelper::logInfo(null, [
-            'billing_id' => $billing->id,
-            'receipt_id' => $originalReceipt->id,
-        ], 200, 'Successfully soft-deleted original receipt');
-
-        return $receiptData;
+        return $data;
     }
 
     /**
@@ -417,29 +399,5 @@ class PaymentCancellationService
             'Canceled orders',
             $traceId
         );
-    }
-
-    /**
-     * Reset flag pembayaran pada billingSubscription.
-     */
-    public function updateBillingSubscriptionPeriodes(Billing $billing, string $traceId): void
-    {
-        $billing->loadMissing(['billingSubscription']);
-
-        if (! $billing->billingSubscription) {
-            throw new \RuntimeException('Billing subscription not found for billing ID: ' . $billing->id);
-        }
-
-        $billing->billingSubscription->update([
-            'is_paid' => false,
-            'paid_at' => null,
-        ]);
-
-        LogHelper::logInfo(null, [
-            'billing_id' => $billing->id,
-            'billing_subscription_id' => $billing->billingSubscription->id ?? null,
-            'is_paid' => false,
-            'paid_at' => null,
-        ], 200, 'Billing subscription periodes updated successfully', $traceId);
     }
 }

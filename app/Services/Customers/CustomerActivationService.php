@@ -2,18 +2,20 @@
 
 namespace App\Services\Customers;
 
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
 use App\Models\Packages\Package;
 use App\Models\AutoIsolir;
-use App\Models\Billing\Billing;
-use App\Models\Receipt;
+use App\Models\Billings\Billing;
+use App\MOdels\Billings\BillingPayment;
 use App\Models\PppType;
+use App\Models\Customers\CustomerSubscription;
 use Carbon\Carbon;
-use Illuminate\Support\Str;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Routerboard\QueueService;
 use App\Services\Routerboard\IpStaticService;
+use App\Services\Receipts\CreateReceiptService;
+use App\Services\Receipts\ReferenceIdGeneratorService;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Facades\DB;
 
@@ -22,7 +24,9 @@ class CustomerActivationService
     public function __construct(
         private SecretService $secretService,
         private QueueService $queueService,
-        private IpStaticService $ipStaticService
+        private IpStaticService $ipStaticService,
+        private CreateReceiptService $createReceiptService,
+        private ReferenceIdGeneratorService $referenceIdGeneratorService,
     ) {}
 
     public function activateAllCustomers(int $mikrotikId, string $traceId): array
@@ -135,59 +139,155 @@ class CustomerActivationService
         }
     }
 
-    public function activateCustomer(Customer $customer, string $traceId): array
+    public function activateCustomer(Customer $customer, string $traceId, $lastCheckpoint): array
     {
         $activationDate = now();
-
+        $paymentMethod = 'cash';
         try {
-            $result = $this->createReceiptAndUpdateBilling($customer, $traceId, $activationDate);
+            $allResult = DB::transaction(function () use ($customer, $activationDate, $traceId, $paymentMethod, &$lastCheckpoint) {
 
-            if (isset($result['status']) && $result['status'] === 'success') {
-                if (config('services.shanetfiber.allow_mikrotik_actions')) {
-                    $this->microtikActivate($customer, $activationDate, $traceId);
-                }
+                /** -----------------------------------------
+                 * 1. Ambil subscription aktif customer
+                 * ----------------------------------------- */
+                $subscription = CustomerSubscription::query()
+                    ->with(['customer', 'package'])
+                    ->where('customer_id', $customer->id)
+                    ->where('status', 'active')
+                    ->lockForUpdate() // ⬅️ penting untuk race condition
+                    ->firstOrFail();
 
+                /** -----------------------------------------
+                 * 2. Ambil billing terkait subscription
+                 * ----------------------------------------- */
+                $billing = Billing::query()
+                    ->with(['billingSubscription.billingPeriode'])
+                    ->whereHas(
+                        'billingSubscription',
+                        fn($q) =>
+                        $q->where('customer_subscription_id', $subscription->id)
+                    )
+                    ->lockForUpdate()
+                    ->latest()
+                    ->firstOrFail();
+
+                /** -----------------------------------------
+                 * 3. Update billing (PAID)
+                 * ----------------------------------------- */
+                $billing->update([
+                    'status'     => 'LS',
+                    'updated_by' => auth()->user()->id,
+                ]);
+
+                /** -----------------------------------------
+                 * 4. Insert billing payment
+                 * ----------------------------------------- */
+                $billingPayment = BillingPayment::create([
+                    'billing_id'       => $billing->id,
+                    'amount_paid'      => $billing->total_amount,
+                    'payment_method'   => $paymentMethod,
+                    'reference_id'     => $this->referenceIdGeneratorService->generate('ACT'),
+                    'paid_by_user_id'  => auth()->user()->id,
+                    'payment_time'     => $activationDate,
+                ]);
+
+                $now = microtime(true);
+                $exec = round($now - $lastCheckpoint, 3);
+
+                /** -----------------------------------------
+                 * 5. Buat receipt
+                 * ----------------------------------------- */
+                $result = $this->createReceiptService
+                    ->createReceipt(
+                        $subscription,
+                        $billing,
+                        $billingPayment,
+                        [$paymentMethod],
+                        $traceId,
+                        $lastCheckpoint
+                    );
+
+                /** -----------------------------------------
+                 * 6. Update customer
+                 * ----------------------------------------- */
                 $customer->update([
                     'activation_date' => $activationDate,
-                    'activation' => 'true',
-                    'disabled' => 'false',
+                    'activation'      => 'true',
+                    'disabled'        => 'false',
                 ]);
+
+                $customer->refresh();
+                $billing->refresh();
+
+                $now = microtime(true);
+                $exec = round($now - $result['lastCheckpoint'], 3);
+                $lastCheckpoint = $now;
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customerId' => $customer->id,
+                        'customerName' => $customer->name,
+                        'billingId'  => $billing->id,
+                        'billingPaymentId' => $billingPayment->id,
+                        'receiptId'  => $result['receipt']->id
+                    ],
+                    200,
+                    "Customer, Billing, BillingPayment, Receipt Has been updated",
+                    $traceId,
+                    $exec
+                );
+
+                return [
+                    'customer' => $customer,
+                    'billing'  => $billing,
+                    'billingPayment' => $billingPayment,
+                    'receipt'  => $result['receipt'],
+                    'lastCheckpoint' => $lastCheckpoint,
+                    'subscription' => $subscription,
+                    'membership' => $result['membership']
+                ];
+            });
+
+            /** -----------------------------------------
+             * 7. SIDE EFFECT (di luar transaction)
+             * ----------------------------------------- */
+            if (config('services.shanetfiber.allow_mikrotik_actions')) {
+                $this->microtikActivate($customer, $activationDate, $traceId);
             }
 
-            $customer->refresh();
-
-            LogHelper::logInfo('Activation', [
-                'customer_id' => $customer->id,
-                'billing_id' => $result['billing']->id,
-                'receipt_id' => $result['receipt']->id,
-            ], 200, 'Customer activated successfully', $traceId);
-
             return [
-                'success' => true,
-                'billing' => $result['billing'],
-                'receipt' => $result['receipt'],
-                'customer' => $customer,
-                'traceId' => $traceId,
+                'success'  => true,
+                'customer' => $allResult['customer'],
+                'billing'  => $allResult['billing'],
+                'billingPayment' => $allResult['billingPayment'],
+                'receipt'  => $allResult['receipt'],
+                'traceId'  => $traceId,
+                'lastCheckpoint' => $lastCheckpoint,
+                'subscription' => $allResult['subscription'],
+                'membership' => $allResult['membership']
             ];
         } catch (\Throwable $e) {
+            $now = microtime(true);
+            $exec = round($now - $lastCheckpoint, 3);
+            LogHelper::logError(
+                null,
+                [
+                    'customer_id' => $customer->id,
+                    'exception'   => [
+                        'message' => $e->getMessage(),
+                        'file'    => $e->getFile(),
+                        'line'    => $e->getLine(),
+                    ],
+                ],
+                500,
+                'Customer activation failed',
+                $traceId,
+                $exec
+            );
 
-            LogHelper::logError('Activation', [
-                'customer_id' => $customer->id,
-                'exception' => [
-                    'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                ]
-            ], 500, 'Customer activation failed', $traceId);
-
-            return [
-                'error' => 'Activation failed: ' . $e->getMessage(),
-                'customer_id' => $customer->id,
-                'trace_id' => $traceId,
-            ];
+            throw $e;
         }
     }
-
 
     private function getCommentPayment(int $mikrotikId): string
     {
@@ -362,128 +462,6 @@ class CustomerActivationService
                 'server' => $router->name
             ], 500, 'Failed to activate IP Static customer', $traceId);
             return ['error' => 'Cannot connect to the server ' . $router->name . '.'];
-        }
-    }
-
-    private function createReceiptAndUpdateBilling(Customer $customer, string $traceId, Carbon $activationDate): array
-    {
-        LogHelper::logInfo('ActivationBilling', [
-            'customer_id' => $customer->id,
-            'activation_date' => $activationDate
-        ], 200, 'Start createReceiptAndUpdateBilling', $traceId);
-
-        DB::beginTransaction();
-
-        try {
-            // Fetch billing
-            $billing = Billing::where('customer_id', $customer->id)->firstOrFail();
-
-            // Generate receipt number
-            $numberReceipt = $this->generateReceiptNumber($traceId);
-
-            // Create receipt
-            $receipt = Receipt::create([
-                'slug' => str('inv-' . $customer->id . '-' . Str::random(4))->slug(),
-                'periode' => $billing->billingSubscription->billing_periode,
-                'number' => sprintf("%05d", $numberReceipt) . '-KWT-' . now()->format('F-Y'),
-                'billing_number' => $billing->billing_number,
-                'customer_id' => $customer->id,
-                'customer_name' => $customer->name,
-                'customer_address' => $customer->address,
-                'package_name' => $customer->package->name,
-                'package_price' => $customer->package->price * ((100 - $customer->discount) / 100),
-                'payment_methode' => 'cash',
-                'created_name' => auth()->user()->name ?? 'System',
-                'teller_name' => auth()->user()->name ?? 'System',
-                'payment_time' => $activationDate,
-            ]);
-
-            // Update billing
-            $billing->update([
-                'payment_time' => $activationDate,
-                'teller_name' => auth()->user()->name ?? 'System',
-                'status' => 'LS',
-                'receipt_id' => $receipt->id,
-            ]);
-
-            // Update billingSubscription
-            $billing->billingSubscription->update([
-                'is_paid' => true,
-                'status' => 'paid',
-                'paid_at' => today()
-            ]);
-
-            DB::commit();
-
-            $billing = $billing->fresh()->load('billingSubscription');
-            $receipt = $receipt->fresh();
-
-            LogHelper::logInfo('ActivationBilling', [
-                'customer_id' => $customer->id,
-                'billing_id' => $billing->id,
-                'receipt_id' => $receipt->id,
-            ], 200, 'createReceiptAndUpdateBilling success', $traceId);
-
-            // === RETURN RESULT ===
-            return [
-                'status' => 'success',
-                'billing' => $billing,
-                'receipt' => $receipt,
-                'billing_subscription' => $billing->billingSubscription
-            ];
-        } catch (\Throwable $e) {
-
-            DB::rollBack();
-
-            LogHelper::logError('ActivationBilling', [
-                'customer_id' => $customer->id,
-                'exception' => [
-                    'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                ]
-            ], 500, 'createReceiptAndUpdateBilling failed', $traceId);
-
-            throw $e; // <-- Tetap throw!
-        }
-    }
-
-    private function generateReceiptNumber(string $traceId): string
-    {
-        try {
-            $lastReceipt = Receipt::latest('created_at')->value('number');
-
-            LogHelper::logInfo('GenerateReceiptNumber', [
-                'trace_id' => $traceId,
-                'last_receipt_number' => $lastReceipt
-            ], 200, 'Generating new receipt number', $traceId);
-
-            if ($lastReceipt && str_starts_with($lastReceipt, 'KWT-')) {
-                $parts = explode('-', $lastReceipt);
-                $number = (int)$parts[1] + 1;
-            } else {
-                $number = 1;
-            }
-
-            $newNumber = 'KWT-' . sprintf("%05d", $number) . '-' .
-                Carbon::now()->format('F') . '-' . Carbon::now()->format('Y');
-
-            LogHelper::logInfo('GenerateReceiptNumber', [
-                'trace_id' => $traceId,
-                'generated_receipt_number' => $newNumber
-            ], 200, 'Receipt number generated successfully', $traceId);
-
-            return $newNumber;
-        } catch (\Throwable $e) {
-            LogHelper::logError('GenerateReceiptNumber', [
-                'trace_id' => $traceId,
-                'exception' => get_class($e),
-                'error_message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ], 500, 'Failed to generate receipt number', $traceId);
-
-            // fallback kalau gagal
-            return 'KWT-ERROR-' . Carbon::now()->timestamp;
         }
     }
 

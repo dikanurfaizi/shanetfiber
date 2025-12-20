@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Subscription;
 
-use App\Models\CustomerSubscription;
+use App\Models\Customers\CustomerSubscription;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 
@@ -10,7 +10,7 @@ class CustomerSubscriptionController extends Controller
 {
     public function index()
     {
-        $subscriptions = CustomerSubscription::with(['customer', 'package', 'subscriptionDuration'])
+        $subscriptions = CustomerSubscription::with(['customer', 'package', 'packageDuration'])
             ->paginate(15);
         return view('customerSubscriptions.index', compact('subscriptions'));
     }

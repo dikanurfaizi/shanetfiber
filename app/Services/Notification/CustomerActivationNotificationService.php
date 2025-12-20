@@ -7,10 +7,12 @@ use App\Enums\TelegramAction;
 use App\Enums\WhatsAppAction;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
-use App\Models\Billing\Billing;
-use App\Models\Customer;
+use App\Models\Billings\Billing;
+use App\Models\User;
 use App\Models\Receipt;
 use App\Models\Bank;
+use App\Models\Customers\CustomerSubscription;
+use App\Models\Membership\CustomerMembership;
 use App\Services\Whatsapp\CloudAPIService;
 use App\Services\Whatsapp\WhatsappGatewayResolver;
 use App\Services\Whatsapp\GowaService;
@@ -26,7 +28,8 @@ class CustomerActivationNotificationService
     ) {}
 
     public function send(
-        Customer $customer,
+        ?int $customerMembershipId,
+        CustomerSubscription $customerSubscription,
         Billing $billing,
         Receipt $receipt,
         string $traceId
@@ -40,9 +43,9 @@ class CustomerActivationNotificationService
                 return; // resolver sudah log
             }
 
-            if (empty($customer->contact)) {
+            if (empty($customerSubscription->customer->contact)) {
                 LogHelper::logWarning(null, [
-                    'customer_id' => $customer->id,
+                    'customer_id' => $customerSubscription->customer_id,
                 ], 400, 'Customer has no contact for activation notification.', $traceId);
                 return;
             }
@@ -50,22 +53,28 @@ class CustomerActivationNotificationService
             // Format nomor customer + admin
             $formatter = new FormatReceiver;
 
-            $to = $formatter->formatReceiver($customer->contact, null, false);
+            $to = $formatter->formatReceiver($customerSubscription->customer->contact, null, false);
+
+            $user = User::find($customerSubscription->customer->user_id);
 
             $adminNumber = $formatter->formatReceiver(
-                $customer->user?->contact,
+                $user->contact,
                 'display',
                 false
             );
 
+            $dueDate = $billing->status === 'PL'
+                ? $billing->paylater_until
+                : $billing->due_date;
+
             // === Ambil semua bank user ===
-            $bankAccounts = Bank::where('user_id', $customer->user->id)
+            $bankAccounts = Bank::where('user_id', $user->id)
                 ->where('disabled', 'false')->get();
 
             if ($bankAccounts->isEmpty()) {
                 LogHelper::logWarning(null, [
-                    'customer_id' => $customer->id,
-                    'user_id' => $customer->user->id,
+                    'customer_id' => $customerSubscription->customer_id,
+                    'user_id' => $user->id,
                 ], 200, 'User has no bank accounts, activation WA will show blank bank list.', $traceId);
             }
 
@@ -77,12 +86,12 @@ class CustomerActivationNotificationService
 
             /** Template Param */
             $templateParams = [
-                $customer->name, // {{1}}
-                $customer->customer_id ?? $customer->id, // {{2}}
-                $customer->package->name, // {{3}}
-                'Rp ' . number_format($customer->package->price, 0, ',', '.'), // {{4}}
-                optional($customer->member)->type ?? 'Non Member', // {{5}}
-                $customer->user->name, // {{6}} admin name
+                $customerSubscription->customer->name, // {{1}}
+                $customerSubscription->customer_id ?? $customerSubscription->customer->id, // {{2}}
+                $customerSubscription->package->name, // {{3}}
+                'Rp ' . number_format($customerSubscription->package->price, 0, ',', '.'), // {{4}}
+                $customerMembership?->membership->name ?? 'NON MEMBER', // {{5}}
+                $user->name, // {{6}} admin name
                 $adminNumber, // {{7}} admin phone
                 $formattedBanks, // {{8}} daftar bank
             ];
@@ -99,14 +108,15 @@ class CustomerActivationNotificationService
                 );
             } else {
                 $this->gowaService->activation(
-                    $customer->id,
+                    $customerMembershipId,
+                    $customerSubscription,
                     WhatsAppAction::ACTIVATION->value,
                     $traceId
                 );
             }
 
             $telegramJobData = new TelegramJobDto(
-                customerId: $customer->id,
+                customerId: $customerSubscription->customer_id,
                 action: TelegramAction::ACTIVATION->value,
                 traceId: $traceId,
                 billingId: null,
@@ -117,7 +127,7 @@ class CustomerActivationNotificationService
             $this->telegramMessageService->process($telegramJobData, $traceId);
 
             LogHelper::logInfo(null, [
-                'customer_id' => $customer->id,
+                'customer_id' => $customerSubscription->customer_id,
                 'billing_id' => $billing->id,
                 'receipt_id' => $receipt->id,
                 'gateway_type' => $gateway->type,
@@ -125,7 +135,7 @@ class CustomerActivationNotificationService
         } catch (\Throwable $e) {
 
             LogHelper::logError($e, [
-                'customer_id' => $customer->id,
+                'customer_id' => $customerSubscription->customer_id,
                 'billing_id' => $billing->id,
                 'receipt_id' => $receipt->id,
                 'error_message' => $e->getMessage(),

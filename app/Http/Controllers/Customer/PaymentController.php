@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Customer;
 
 use Illuminate\Http\Request;
-use App\Models\Billing\Billing;
+use App\Models\Billings\Billing;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Str;
 use App\Services\Customers\PaymentService;

@@ -18,7 +18,7 @@
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>Name:</strong>
-                {{ $billing->customer_name ?? 'no data' }}
+                {{ $billing->customer->name ?? 'no data' }}
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
@@ -30,7 +30,7 @@
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="form-group">
                 <strong>Package:</strong>
-                {{ $billing->customer->package->name ?? 'no data' }}
+                {{ $billing->billingSubscription->customerSubscription->package->name ?? 'no data' }}
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
@@ -43,7 +43,7 @@
             <div class="form-group">
                 <strong>User Created:</strong>
                 <span class="badge bg-danger-soft text-danger">
-                    <i class="fas fa-id-card-alt"></i> {{ $billing->created_name ?? 'no data' }}
+                    <i class="fas fa-id-card-alt"></i> {{ $billing->createdByUser->name ?? 'no data' }}
                 </span>
             </div>
         </div>
@@ -91,9 +91,9 @@
                 @endphp --}}
                 <span>
                     <input type="text" class="form-control flatpickr-date" name="pay_later" autocomplete="off"
-                        value="{{ $billing->pay_later ? \Carbon\Carbon::parse($billing->pay_later)->format('d F Y') : now()->format('d F Y') }}">
+                        value="{{ $billing->paylater_until ? \Carbon\Carbon::parse($billing->paylater_until)->format('d F Y') : now()->format('d F Y') }}">
                     <input type="hidden" name="pay_later_db"
-                        value="{{ $billing->pay_later ? \Carbon\Carbon::parse($billing->pay_later)->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s') }}">
+                        value="{{ $billing->paylater_until ? \Carbon\Carbon::parse($billing->paylater_until)->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s') }}">
                 </span>
                 @if ($errors->has('pay_later'))
                     <span class="text-danger">{{ $errors->first('pay_later') }}</span>

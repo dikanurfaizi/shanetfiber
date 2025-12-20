@@ -11,7 +11,7 @@
         @else
             <div class="alert alert-success mt-2">
                 <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-                {{ $data->total() }} billings found.
+                {{ $data->total() }} billing histories found.
             </div>
         @endif
         @if (session('warning'))
@@ -141,7 +141,7 @@
                             {{-- @dd($billing->total_amount) --}}
                             @php
                                 $i++;
-                                $periodeText = $billing->billingSubscription?->billing_periode
+                                $periodeText = $billing->billingSubscription?->billingPeriode->name
                                     ? \Carbon\Carbon::parse($billing->billingSubscription->billing_periode)->format(
                                         'M Y',
                                     )
@@ -151,8 +151,10 @@
                                 $badgeClass = 'badge bg-blue-soft ';
                                 if ($billing->status === 'LS') {
                                     $badgeClass .= 'text-success';
-                                } elseif ($billing->status === 'NP') {
+                                } elseif ($billing->status === 'VD') {
                                     $badgeClass .= 'text-muted';
+                                } elseif ($billing->status === 'PL') {
+                                    $badgeClass .= 'text-warning';
                                 } else {
                                     $badgeClass .= 'text-danger';
                                 }
@@ -166,10 +168,10 @@
                                 <td><a href="{{ route('billings.show', $billing->slug) }}" data-bs-toggle="tooltip"
                                         data-bs-placement="top" title="Show Billing">
                                         <span
-                                            class="badge text-primary">{{ $billing->customer_name ?? 'no name' }}</span></a>
+                                            class="badge text-primary">{{ $billing->customer->name ?? 'no name' }}</span></a>
                                 </td>
                                 <td><span
-                                        class="badge text-primary">{{ $billing->customer_address ?? 'no address' }}</span>
+                                        class="badge text-primary">{{ $billing->customer->address ?? 'no address' }}</span>
                                 </td>
                                 <td><span class="badge text-primary">{{ $periodeText ?? 'no periode' }}</span>
                                 </td>

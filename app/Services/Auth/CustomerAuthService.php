@@ -2,7 +2,7 @@
 
 namespace App\Services\Auth;
 
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\Packages\Package;
 use App\Models\Websystem;
 use App\Helpers\LogHelper;
@@ -17,13 +17,14 @@ class CustomerAuthService
         $packages = Package::select([
             'packages.*',
             'pc.name as category_name',
-            'sd.name_en as duration_name'
+            'dl.name_en as duration_name'
         ])
-            ->leftJoin('subscription_durations as sd', 'packages.id', '=', 'sd.package_id')
+            ->leftJoin('package_durations as pd', 'packages.id', '=', 'pd.package_id')
+            ->join('duration_labels as dl', 'pd.duration_id', '=', 'dl.id')
             ->join('package_categories as pc', 'packages.package_category_id', '=', 'pc.id')
             ->where('packages.display_to_customer', true)
             ->where('packages.price', '>', 0)
-            ->with(['category', 'subscriptionDurations'])
+            ->with(['category', 'packageDurations'])
             ->get()
             ->map(function ($package) {
                 return (object) [

@@ -3,7 +3,7 @@
 namespace App\Jobs\Secrets;
 
 use App\Models\Mikrotik;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Helpers\LogHelper;
+use App\Services\Routerboard\TestConnectionService;
 
 class EnablePppSecretJob implements ShouldQueue
 {
@@ -28,11 +29,16 @@ class EnablePppSecretJob implements ShouldQueue
         $this->traceId = $traceId;
     }
 
-    public function handle(SecretService $secretService): void
+    public function handle(SecretService $secretService, TestConnectionService $testConnectionService): void
     {
         try {
-            // 1. Enable the PPP secret
-            $secretService->enableSecret($this->mikrotik, $this->username, $this->traceId);
+            if (config('services.shanetfiber.allow_mikrotik_actions')) {
+                // Check if router is online
+                $testConnectionService->checkOnline($this->mikrotik, $this->traceId);
+
+                // 1. Enable the PPP secret
+                $secretService->enableSecret($this->mikrotik, $this->username, $this->traceId);
+            }
 
             // 2. Update customer status in database
             Customer::where('id', $this->customerId)->update(['disabled' => 'false']);

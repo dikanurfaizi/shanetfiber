@@ -2,7 +2,7 @@
 
 namespace App\Services\Messaging\Collectors;
 
-use App\Models\Billing\BillingPeriode;
+use App\Models\Billings\BillingPeriode;
 use App\Helpers\LogHelper;
 
 class BillingPeriodCollector

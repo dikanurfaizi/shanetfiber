@@ -6,7 +6,7 @@
         <div class="container-fluid px-4">
             <div class="d-flex align-items-center">
                 <a class="navbar-brand me-4" href="#">
-                    <img src="/images/receipt_logo1.png" alt="Shawnn Network Fiber" height="40">
+                    <img src="/images/logo_top_customer.png" alt="Shawnn Network Fiber" height="50">
                 </a>
 
                 <!-- Contact Info -->
@@ -227,7 +227,8 @@
         <div class="container-fluid px-4">
             <div class="row">
                 <div class="col-md-6 mb-3 mb-md-0">
-                    <img src="/images/donate.png" alt="Shawnn Network Fiber" height="50" class="mb-3">
+                    <img src="/images/logo_footer_customer.png" alt="Shawnn Network Fiber" height="75"
+                        class="mb-3">
                     <p class="text-sm text-neutral-200" style="margin-bottom: 0;">
                         <a href="https://maps.app.goo.gl/zRT4QfXNmoJysKRQ8" target="_blank" rel="noopener noreferrer"
                             class="text-neutral-200 text-decoration-none">

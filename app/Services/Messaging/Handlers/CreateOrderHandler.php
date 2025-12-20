@@ -2,7 +2,7 @@
 // app/Services/Messaging/Handlers/CreateOrderHandler.php
 namespace App\Services\Messaging\Handlers;
 
-use App\Models\Billing\Billing;
+use App\Models\Billings\Billing;
 use App\Models\Order;
 use App\Services\Messaging\Contracts\MessageActionHandler;
 use App\Services\Messaging\MessageBuilder;

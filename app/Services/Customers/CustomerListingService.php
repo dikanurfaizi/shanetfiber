@@ -1,0 +1,209 @@
+<?php
+
+namespace App\Services\Customers;
+
+use App\Helpers\LogHelper;
+use App\Models\Customers\Customer;
+use App\Models\Mikrotik;
+use App\Models\User;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
+use Illuminate\Http\Request;
+
+class CustomerListingService
+{
+    public function getPaginatedCustomers(array $filters, int $perPage, string $traceId): LengthAwarePaginator
+    {
+        $statusFilter = new CustomerStatusFilterService();
+        try {
+            $query = Customer::with(['user'])
+                ->when($filters['search_name'] ?? null, fn($query, $name) => $query->where('name', 'like', "%{$name}%"))
+                ->when($filters['search_address'] ?? null, function ($query, $address) {
+                    if ($address === 'NULL') {
+                        $query->whereNull('address');
+                    } else {
+                        $query->where('address', $address);
+                    }
+                })
+                ->when($filters['search_admin'] ?? null, function ($query, $admin) {
+                    if ($admin === 'NULL') {
+                        $query->whereNull('user_id');
+                    } else {
+                        $query->where('user_id', $admin);
+                    }
+                })
+                ->when($filters['status'] ?? null, fn($query, $status) => $statusFilter->applyStatusFilter($query, $status, $traceId))
+                ->when($filters['server_search'] ?? null, fn($query, $server) => $query->where('mikrotik_id', $server))
+                ->when($filters['search_package'] ?? null, fn($query, $package) => $query->where('package_id', $package))
+                ->orderBy('name');
+
+            $result = $query->paginate($perPage);
+
+            return $result;
+        } catch (\Throwable $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'exception' => [
+                        'message' => $e->getMessage(),
+                        'code' => $e->getCode(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                    ],
+                    'filters' => $filters,
+                    'per_page' => $perPage,
+                ],
+                500,
+                'Failed to get paginated customers',
+                $traceId
+            );
+            throw $e;
+        }
+    }
+
+    public function paginateResults(Collection $results, int $perPage, Request $request, string $traceId): LengthAwarePaginator
+    {
+        try {
+            $currentPage = LengthAwarePaginator::resolveCurrentPage();
+            $currentPageResults = $results->slice(($currentPage - 1) * $perPage, $perPage)->all();
+
+            $paginator = new LengthAwarePaginator(
+                $currentPageResults,
+                $results->count(),
+                $perPage,
+                $currentPage,
+                ['path' => $request->url(), 'query' => $request->except('page')]
+            );
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'total_pages' => $paginator->lastPage(),
+                    'current_page' => $paginator->currentPage(),
+                ],
+                200,
+                'Successfully paginated results',
+                $traceId
+            );
+
+            return $paginator;
+        } catch (\Throwable $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'exception' => [
+                        'message' => $e->getMessage(),
+                        'code' => $e->getCode(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                    ],
+                    'total_results' => $results->count(),
+                    'per_page' => $perPage,
+                ],
+                500,
+                'Failed to paginate results',
+                $traceId
+            );
+            throw $e;
+        }
+    }
+
+    public function getCustomerAddresses(string $traceId): Collection
+    {
+        try {
+            $addresses = Customer::select('address')->distinct()->pluck('address', 'address');
+
+            LogHelper::logInfo(
+                null,
+                ['address_count' => $addresses->count()],
+                200,
+                'Successfully retrieved customer addresses',
+                $traceId
+            );
+
+            return $addresses;
+        } catch (\Throwable $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'exception' => [
+                        'message' => $e->getMessage(),
+                        'code' => $e->getCode(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                    ],
+                ],
+                500,
+                'Failed to get customer addresses',
+                $traceId
+            );
+            throw $e;
+        }
+    }
+
+    public function getActiveServers(string $traceId): Collection
+    {
+        try {
+            $servers = Mikrotik::where('disabled', 'false')->orderBy('name')->pluck('name', 'id');
+
+            LogHelper::logInfo(
+                null,
+                ['server_count' => $servers->count()],
+                200,
+                'Successfully retrieved active servers',
+                $traceId
+            );
+
+            return $servers;
+        } catch (\Throwable $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'exception' => [
+                        'message' => $e->getMessage(),
+                        'code' => $e->getCode(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                    ],
+                ],
+                500,
+                'Failed to get active servers',
+                $traceId
+            );
+            throw $e;
+        }
+    }
+
+    public function getActiveAdmins(string $traceId): Collection
+    {
+        try {
+            $admins = User::where('disabled', 'false')->orderBy('name')->pluck('name', 'id');
+
+            LogHelper::logInfo(
+                null,
+                ['admin_count' => $admins->count()],
+                200,
+                'Successfully retrieved active admins',
+                $traceId
+            );
+
+            return $admins;
+        } catch (\Throwable $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'exception' => [
+                        'message' => $e->getMessage(),
+                        'code' => $e->getCode(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                    ],
+                ],
+                500,
+                'Failed to get active admins',
+                $traceId
+            );
+            throw $e;
+        }
+    }
+}

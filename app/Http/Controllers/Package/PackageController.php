@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Package;
 
 use App\Helpers\LogHelper;
+use App\Models\Packages\PackageDuration;
 use App\Models\Packages\Package;
+use App\Models\Membership\Membership;
 use Illuminate\Http\Request;
 use App\Http\Requests\PackageStoreRequest;
 use App\Http\Requests\PackageUpdateRequest;
 use App\Http\Controllers\Controller;
+use App\Services\Packages\PackageGetService;
 use App\Services\Packages\PackageService;
 use App\Services\Packages\PackageQueryService;
 
@@ -15,11 +18,13 @@ class PackageController extends Controller
 {
     protected $packageService;
     protected $queryService;
+    private PackageGetService $packageGetService;
 
-    public function __construct(PackageService $packageService, PackageQueryService $queryService)
+    public function __construct(PackageService $packageService, PackageQueryService $queryService, PackageGetService $packageGetService)
     {
         $this->packageService = $packageService;
         $this->queryService = $queryService;
+        $this->packageGetService = $packageGetService;
         $this->middleware('permission:package-list|package-create|package-edit|package-delete', ['only' => ['index', 'show']]);
         $this->middleware('permission:package-create', ['only' => ['create', 'store', 'setting', 'exportToRouter']]);
         $this->middleware('permission:package-edit', ['only' => ['edit', 'update', 'setting', 'exportToRouter', 'enable', 'disable', 'toggleDisplay']]);
@@ -95,5 +100,30 @@ class PackageController extends Controller
             'message' => 'Display status updated.',
             'value'   => $package->display_to_customer
         ]);
+    }
+
+    public function getDiscount(Request $request)
+    {
+        $packageId = $request->package_id;
+        $memberId  = $request->member_id;
+
+        $discountData = $this->packageGetService->getDiscount($packageId, $memberId);
+
+        return response()->json([
+            'package_price'      => $discountData['package_price'],
+            'effective_discount' => $discountData['effective_discount'],
+            'effective_percent'  => $discountData['effective_percent'],
+        ]);
+    }
+
+    public function getPackageDurations(Request $request)
+    {
+        $packageId = $request->package_id;
+
+        $durations = $this->packageGetService->getDuration($packageId);
+
+        LogHelper::logInfo(null, ['duration' => $durations], 200, "Result Package Duration");
+
+        return response()->json($durations);
     }
 }

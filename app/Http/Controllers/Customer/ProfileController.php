@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Customer;
 
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\ActivityLog;
 use App\Models\PasswordHistory;
 use Illuminate\Http\Request;
@@ -144,6 +144,8 @@ class ProfileController extends Controller
     {
         $customer = Customer::find(Auth::guard('customer')->id());
         $traceId = Str::uuid();
+        $startTime = microtime(true);
+        $lastCheckpoint = $startTime;
 
         $validator = Validator::make($request->all(), [
             'current_password' => [
@@ -168,6 +170,18 @@ class ProfileController extends Controller
         ]);
 
         if ($validator->fails()) {
+            $now = microtime(true);
+            $exec = round($now - $lastCheckpoint, 3);
+            $lastCheckpoint = $now;
+
+            $context = [
+                'success' => false,
+                'message' => 'Terdapat kesalahan validasi',
+                'errors' => $validator->errors()->toArray(),
+            ];
+
+            LogHelper::logInfo(null, $context, 400, 'Validation Password Failed', $traceId, $exec);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Terdapat kesalahan validasi',
@@ -177,7 +191,7 @@ class ProfileController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($customer, $request) {
+            DB::transaction(function () use ($customer, $request, $traceId, &$lastCheckpoint) {
                 // 1. Simpan password lama ke history
                 PasswordHistory::create([
                     'customer_id' => $customer->id,
@@ -220,6 +234,24 @@ class ProfileController extends Controller
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
+            $now = microtime(true);
+            $exec = round($now - $lastCheckpoint, 3);
+            $lastCheckpoint = $now;
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'success' => true,
+                    'message' => 'Password berhasil diperbarui! Silakan login kembali.',
+                    'requires_logout' => true,
+                    'show_toast' => true
+                ],
+                200,
+                '[G9] Finished Update Password',
+                $traceId,
+                round(microtime(true) - $startTime, 3)
+            );
+
             return response()->json([
                 'success' => true,
                 'message' => 'Password berhasil diperbarui! Silakan login kembali.',
@@ -228,12 +260,16 @@ class ProfileController extends Controller
                 'show_toast' => true
             ]);
         } catch (\Exception $e) {
+            $now = microtime(true);
+            $exec = round($now - $lastCheckpoint, 3);
             LogHelper::logError(null, [
                 'customer_id' => $customer->id,
                 'ip' => $request->ip(),
-                'error_code' => $e->getCode(),
-                'error_message' => $e->getMessage()
-            ], 500, "Password Change Failed", $traceId);
+                'error' => [
+                    'code' => $e->getCode(),
+                    'message' => $e->getMessage()
+                ],
+            ], 500, "Password Change Failed", $traceId, $exec);
 
             return response()->json([
                 'success' => false,

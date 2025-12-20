@@ -3,7 +3,7 @@
 namespace App\Models\Messaging;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\WhatsApp\WhatsAppGateway;
 
 class MessageEvent extends Model

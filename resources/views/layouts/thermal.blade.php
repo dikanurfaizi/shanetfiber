@@ -1,145 +1,117 @@
 <head>
-    <title>Receipt {{ $receipt->number }} - ShaNet</title>
-    <meta charset="utf-8" />
+    <meta charset="UTF-8">
+    <title>Receipt {{ $receipt->number }}</title>
+
     <style>
         @page {
-            size: 53mm 100mm;
+            size: 58mm auto;
             margin: 0;
         }
 
         body {
-            font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f5f5f5;
+            font-family: monospace;
+            background: #fff;
         }
 
-        /* Aturan khusus untuk cetak */
-        @media print {
-            body {
-                width: 53mm;
-                height: 100mm;
-                margin: 0;
-                background-color: #ffffff;
-            }
-
-            .container {
-                width: 50mm;
-                padding: 5px;
-                margin: 0 auto;
-                box-shadow: none;
-                overflow: visible;
-            }
+        .sheet {
+            width: 46mm;
+            /* AMAN untuk printer 58mm */
+            margin: 0 auto;
+            padding: 2mm;
+            font-size: 9px;
+            line-height: 1.35;
+            position: relative;
         }
 
-        .container {
-            background-color: #fff;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-            width: 40mm;
-            max-height: 100mm;
-            overflow: auto;
-            margin: auto;
+        /* WATERMARK */
+        .watermark {
+            position: fixed;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-30deg);
+            font-size: 16px;
+            font-weight: bold;
+            color: rgba(0, 0, 0, 0.06);
+            white-space: nowrap;
+            z-index: 0;
         }
 
-        .header {
+        .center {
             text-align: center;
-            margin-bottom: 5px;
         }
 
-        .header img {
-            width: 35mm;
-            height: auto;
-        }
-
-        .header .separator {
-            border-bottom: 1px solid #ddd;
-            margin-top: 3px;
-            margin-bottom: 5px;
-        }
-
-        .receipt-info {
-            text-align: center;
-            font-size: 7px;
-            color: rgba(6, 6, 6, 0.95);
-            margin-bottom: 5px;
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-        }
-
-        .content {
-            margin-bottom: 5px;
-        }
-
-        .content .section .label,
-        .content .section .value {
-            font-size: 7px;
-            text-align: left;
-        }
-
-        .section-margin {
-            margin-bottom: 5px;
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 5px;
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-        }
-
-        .table th,
-        .table td {
-            border-top: 1px solid #ddd;
-            padding: 2px;
-            text-align: left;
-            font-size: 7px;
-        }
-
-        .table th {
-            background-color: #f2f2f2;
-            border-bottom: 1px solid #000;
-        }
-
-        .table .right {
+        .right {
             text-align: right;
         }
 
-        .table-margin-top {
-            padding-top: 10px
+        .left {
+            text-align: left;
+        }
+
+        .logo img {
+            width: 28mm;
+            /* DIPERKECIL */
+            margin-bottom: 3px;
+        }
+
+        .title {
+            font-weight: bold;
+            font-size: 10px;
+            margin-bottom: 4px;
+        }
+
+        .divider {
+            border-top: 1px dashed #000;
+            margin: 4px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        td {
+            vertical-align: top;
+            padding: 1px 0;
+            word-break: break-word;
+        }
+
+        /* ITEM TABLE */
+        .col-item {
+            width: 60%;
+        }
+
+        .col-rp {
+            width: 10%;
+        }
+
+        .col-val {
+            width: 30%;
+        }
+
+        .summary td {
+            padding: 1px 0;
+        }
+
+        .total {
+            font-weight: bold;
+            font-size: 10px;
         }
 
         .footer {
-            font-size: 7px;
-            color: rgba(6, 6, 6, 0.95);
+            margin-top: 6px;
+            padding-top: 4px;
+            border-top: 1px dashed #000;
             text-align: center;
-            border-top: 1px solid #ddd;
-            padding-top: 3px;
-            margin-top: 5px;
-        }
-
-        .watermark {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 18px;
-            color: rgba(0, 128, 0, 0.3);
-            font-weight: bold;
-            text-align: center;
-            white-space: nowrap;
-            pointer-events: none;
-            z-index: -1;
-            text-decoration: underline dotted;
-            text-decoration-thickness: 1.5px;
-            text-decoration-color: rgba(0, 128, 0, 0.4);
+            font-size: 8px;
         }
     </style>
 </head>
 
-<body onload="window.print();">
+<body onload="window.print()">
     @yield('content')
-    {{-- @vite('resources/js/app.js') --}}
 </body>
 
 </html>

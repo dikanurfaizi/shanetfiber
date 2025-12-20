@@ -6,7 +6,7 @@ use App\Models\Order;
 use App\Models\Midtran;
 use App\Models\Websystem;
 use Illuminate\Http\Request;
-use App\Models\Billing\Billing;
+use App\Models\Billings\Billing;
 use App\Http\Controllers\Controller;
 use App\Services\Midtrans\CreateSnapTokenService;
 

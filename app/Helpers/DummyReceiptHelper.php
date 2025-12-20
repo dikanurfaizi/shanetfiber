@@ -3,7 +3,7 @@
 namespace App\Helpers;
 
 use App\DataTransferObjects\WhatsappJobDto;
-use App\Models\Billing\Billing;
+use App\Models\Billings\Billing;
 use App\Models\Receipt;
 use Illuminate\Support\Carbon;
 use App\Helpers\LogHelper;

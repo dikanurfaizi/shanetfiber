@@ -2,11 +2,11 @@
 
 namespace App\Services\Billings;
 
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
 use App\Models\AutoIsolir;
-use App\Models\Billing\BillingPeriode;
-use App\Models\Billing\Billing;
+use App\Models\Billings\BillingPeriode;
+use App\Models\Billings\Billing;
 use App\Jobs\AddPaymentBeforeDueDateJob;
 use App\Jobs\AddPaymentAfterDueDateJob;
 use App\Jobs\AddPaymentIpStaticAfterDueDateJob;

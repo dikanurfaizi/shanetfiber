@@ -19,11 +19,9 @@ class KeywordProcessor
             ? ['registered', 'both']
             : ['unregistered', 'both'];
 
-        LogHelper::logInfo(null, ['scope' => $scope], 200, "Scope");
-
         // STOP tetap prioritas
-        if ($this->normalizer->isStop($text)) {
-            return WhatsappMessage::where('keywords', 'stop')
+        if ($this->normalizer->isStop($normalized)) {
+            return WhatsappMessage::where('slug', 'stop')
                 ->whereIn('message_scope', $scope)
                 ->first();
         }

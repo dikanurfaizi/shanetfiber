@@ -4,11 +4,13 @@ namespace App\Services\Whatsapp;
 
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
-use App\Models\Billing\Billing;
-use App\Models\Customer;
-use App\Models\Order;
+use App\Models\Billings\Billing;
+use App\Models\Customers\Customer;
+use App\Models\Billings\Order;
 use App\Models\Receipt;
 use App\Models\Whatsapp\WhatsappGateway;
+use App\Models\Customers\CustomerSubscription;
+use App\Models\Membership\CustomerMembership;
 use App\Services\Messaging\Collectors\BankInfoCollector;
 use App\Services\Messaging\Collectors\BillingEligibleCollector;
 use App\Services\Messaging\Collectors\BillingPackageCollector;
@@ -29,6 +31,7 @@ use App\Services\Messaging\MessageBuilder;
 use App\Services\Messaging\MessageDispatcher;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class GowaService
 {
@@ -52,36 +55,45 @@ class GowaService
     // ============================================
     // =====             Activation           =====
 
-    public function activation(int $customerId, string $action, string $traceId): void
+    public function activation(?int $customerMembershipId, CustomerSubscription $customerSubscription, string $action, string $traceId): void
     {
+        $queueName = 'notification';
+        $globalIndex = 0;
         try {
-            LogHelper::logInfo(null, ['customerId' => $customerId], 200, '[Activation] Start activation', $traceId);
+            LogHelper::logInfo(
+                null,
+                ['customerId' => $customerSubscription->customer_id],
+                200,
+                '[Activation] Start activation',
+                $traceId
+            );
 
-            $customer = Customer::with(['package', 'member', 'user'])->find($customerId);
-
-            if (! $customer) {
-                LogHelper::logWarning(null, ['customer_id' => $customerId], 404, '[Activation] Customer not found', $traceId);
+            if (empty($customerSubscription->customer->contact)) {
+                LogHelper::logWarning(
+                    null,
+                    ['customer_id' => $customerSubscription->customer_id],
+                    400,
+                    '[Activation] Empty contact number',
+                    $traceId
+                );
 
                 return;
             }
 
-            if (empty($customer->contact)) {
-                LogHelper::logWarning(null, ['customer_id' => $customerId], 400, '[Activation] Empty contact number', $traceId);
-
-                return;
-            }
+            $delayTime = $this->delayMessage($globalIndex, 'interactive', $queueName);
 
             $this->dispatcher->dispatch(
                 $action,
                 fn(string $category) => new ActivationHandler(
-                    customer: $customer,
+                    customerMembershipId: $customerMembershipId,
+                    customerSubscription: $customerSubscription,
                     builder: $this->builder,
                     getBankInfo: fn($userId) => $this->bankInfoCollector->getBankInfo($userId),
                     category: $category
                 ),
-                'notification',
-                $traceId,
-                delay: now()->addSeconds(6)
+                queue: $queueName,
+                traceId: $traceId,
+                delay: $delayTime
             );
         } catch (\Throwable $e) {
             LogHelper::logError(null, [
@@ -101,6 +113,8 @@ class GowaService
 
     public function orderCreated(int $billingId, int $orderId, string $action, string $traceId): void
     {
+        $queueName = 'notification';
+        $globalIndex = 0;
         try {
             $billing = Billing::with(['customer.user', 'billingSubscription.customerSubscription.package'])
                 ->find($billingId);
@@ -116,6 +130,8 @@ class GowaService
                 return;
             }
 
+            $delayTime = $this->delayMessage($globalIndex, 'interactive', $queueName);
+
             $this->dispatcher->dispatch(
                 $action,
                 fn(string $category) => new CreateOrderHandler(
@@ -124,9 +140,9 @@ class GowaService
                     builder: $this->builder,
                     category: $category
                 ),
-                'notification',
-                $traceId,
-                delay: now()->addSeconds(6)
+                queue: $queueName,
+                traceId: $traceId,
+                delay: $delayTime
             );
 
             LogHelper::logInfo(null, [
@@ -150,63 +166,118 @@ class GowaService
     // ============================================
     // =====          Payment Package         =====
 
-    /**Payment package
-     * Unpayment package
-     *
-     */
-    public function payment_package(Customer $customer, Billing $billing, Receipt $receipt, string $action, string $traceId)
-    {
+    public function notifyPaymentCompleted(
+        Billing $billing,
+        Receipt $receipt,          // ⬅️ WAJIB
+        string $channel,            // cash | transfer | payment_gateway
+        string $traceId
+    ): void {
+        $queueName = 'notification';
+        $globalIndex = 0;
         try {
-            // Mapping handler
-            $statusHandlers = ['paylater', 'unpayment'];
-            $paymentHandlers = ['transfer', 'cash', 'payment_gateway'];
 
-            // 1️⃣ Gunakan BillingStatusHandler
-            if (in_array($action, $statusHandlers, true)) {
-                $this->dispatcher->dispatch(
-                    $action,
-                    fn(string $category) => new BillingStatusHandler(
-                        customer: $customer,
-                        billing: $billing,
-                        type: $action,
-                        builder: $this->builder,
-                        getBankInfo: fn($userId) => $this->bankInfoCollector->getBankInfo($userId),
-                        category: $category
-                    ),
-                    'notification',
-                    $traceId,
-                    delay: now()->addSeconds(6)
-                );
+            $delayTime = $this->delayMessage($globalIndex, 'interactive', $queueName);
 
-                return;
-            }
-
-            // 2️⃣ Handler lain (payment transfer/cash/payment_gateway) pakai PaymentHandler
-            if (in_array($action, $paymentHandlers, true)) {
-                $this->dispatcher->dispatch(
-                    'payment',
-                    fn(string $category) => new PaymentHandler(
-                        billing: $billing,
-                        receipt: $receipt,
-                        channel: $action,
-                        builder: $this->builder,
-                        category: $category
-                    ),
-                    'notification',
-                    $traceId,
-                    delay: now()->addSeconds(6)
-                );
-
-                return;
-            }
-
-            // 3️⃣ Fallback log
-            LogHelper::logWarning(
+            $this->dispatcher->dispatch(
+                'payment',
+                fn(string $category) => new PaymentHandler(
+                    billing: $billing,
+                    receipt: $receipt,
+                    channel: $channel,
+                    builder: $this->builder,
+                    category: $category
+                ),
+                queue: $queueName,
+                traceId: $traceId,
+                delay: $delayTime
+            );
+        } catch (\Throwable $e) {
+            LogHelper::logError(
                 null,
-                ['billing_id' => $billing->id, 'action' => $action],
-                400,
-                "Aksi {$action} tidak dikenal pada payment_package",
+                [
+                    'billing_id' => $billing->id ?? null,
+                    'action' => $channel,
+                    'error' => [
+                        'code' => $e->getCode(),
+                        'message' => $e->getMessage(),
+                    ],
+                ],
+                500,
+                'Gagal memproses payment_package via handler baru',
                 $traceId
+            );
+        }
+    }
+
+    public function notifyPayLater(
+        CustomerSubscription $customerSubscription,
+        Billing $billing,
+        string $traceId
+    ): void {
+        $queueName = 'notification';
+        $globalIndex = 0;
+        try {
+            $action = 'paylater';
+
+            $delayTime = $this->delayMessage($globalIndex, 'interactive', $queueName);
+
+            $this->dispatcher->dispatch(
+                $action,
+                fn(string $category) => new BillingStatusHandler(
+                    customerSubscription: $customerSubscription,
+                    billing: $billing,
+                    type: $action,
+                    builder: $this->builder,
+                    getBankInfo: fn($userId) => $this->bankInfoCollector->getBankInfo($userId),
+                    category: $category
+                ),
+                queue: $queueName,
+                traceId: $traceId,
+                delay: $delayTime
+            );
+        } catch (\Throwable $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'billing_id' => $billing->id ?? null,
+                    'action' => $action,
+                    'error' => [
+                        'code' => $e->getCode(),
+                        'message' => $e->getMessage(),
+                    ],
+                ],
+                500,
+                'Gagal memproses payment_package via handler baru',
+                $traceId
+            );
+        }
+    }
+
+    public function notifyUnpayment(
+        CustomerSubscription $customerSubscription,
+        Billing $billing,
+        string $traceId
+    ): void {
+        $queueName = 'notification';
+        $globalIndex = 0;
+        try {
+            $action = 'unpayment';
+
+            $delayTime = $this->delayMessage($globalIndex, 'interactive', $queueName);
+
+            $this->dispatcher->dispatch(
+                $action,
+                fn(string $category) => new BillingStatusHandler(
+                    customerSubscription: $customerSubscription,
+                    billing: $billing,
+                    type: $action,
+                    builder: $this->builder,
+                    getBankInfo: fn($userId) => $this->bankInfoCollector->getBankInfo($userId),
+                    category: $category
+                ),
+                queue: $queueName,
+                traceId: $traceId,
+                delay: $delayTime
             );
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -233,7 +304,8 @@ class GowaService
     public function broadcastMonthly(Carbon $startDate, Carbon $endDate, string $action, string $traceId): void
     {
         $startTime = microtime(true);
-
+        $queueName = 'notification';
+        $globalIndex = 0;
         try {
             $periode = $this->periodCollector->getLastBillingPeriod($traceId);
             if (! $periode) {
@@ -249,6 +321,7 @@ class GowaService
 
             $delaySeconds = 0;
             foreach ($billings as $billing) {
+                $delayTime = $this->delayMessage($globalIndex, 'broadcast', $queueName);
                 $this->dispatcher->dispatch(
                     $action,
                     fn(string $category) => new BroadcastMonthlyHandler(
@@ -259,12 +332,12 @@ class GowaService
                         formatPackageInfo: fn($pkg) => $this->formatterCollector->formatPackageInfo($pkg),
                         category: $category
                     ),
-                    'notification',
-                    $traceId,
-                    delay: now()->addSeconds($delaySeconds)
+                    queue: $queueName,
+                    traceId: $traceId,
+                    delay: $delayTime
                 );
 
-                $delaySeconds += 30;
+                $globalIndex++;
             }
 
             LogHelper::logInfo(null, [
@@ -285,6 +358,8 @@ class GowaService
 
     public function broadcastMidMonth(string $traceId): void
     {
+        $queueName = 'notification';
+        $globalIndex = 0;
         try {
             $today = Carbon::today();
             $types = ['past_due', 'due_today', 'upcoming'];
@@ -293,16 +368,16 @@ class GowaService
             foreach ($types as $type) {
                 $billings = $this->collector->collect($today, $type);
                 $count = $billings->count();
-                LogHelper::logInfo(null, [], 200, "Found {$count} billing(s) for '{$type}'", $traceId);
 
                 $slug = match ($type) {
-                    'past_due'  => 'billing_due_soon',
-                    'due_today' => 'billing_due_today',
-                    'upcoming'  => 'billing_overdue',
-                    default     => 'billing_overdue',
+                    'billing_overdue'  => 'billing_overdue',
+                    'billing_due_today' => 'billing_due_today',
+                    'billing_due_soon'  => 'billing_due_soon',
+                    default     => 'billing_due_today',
                 };
 
                 foreach ($billings as $billing) {
+                    $delayTime = $this->delayMessage($globalIndex, 'broadcast', $queueName);
                     $this->dispatcher->dispatch(
                         $slug,
                         fn(string $category) => new BroadcastMidMonthHandler(
@@ -315,11 +390,11 @@ class GowaService
                             getUnpaidSummary: fn($custId) => $this->unpaidSummaryCollector->getUnpaidSummary($custId),
                             category: $category
                         ),
-                        queue: 'notification',
+                        queue: $queueName,
                         traceId: $traceId,
-                        delay: now()->addSeconds($delayCounter)
+                        delay: $delayTime
                     );
-                    $delayCounter += 30;
+                    $globalIndex++;
                 }
             }
         } catch (\Throwable $e) {
@@ -345,7 +420,10 @@ class GowaService
 
     public function changesPackage(int $customerId, ?string $oldPackageName, ?int $oldPackagePrice, string $traceId): void
     {
+        $queueName = 'notification';
+        $globalIndex = 0;
         try {
+            $delayTime = $this->delayMessage($globalIndex, 'interactive', $queueName);
             $this->dispatcher->dispatch(
                 'changes_package',
                 fn(string $category) => new ChangesPackageHandler(
@@ -357,9 +435,9 @@ class GowaService
                     formatReceiver: fn(string $number) => $this->formatNumber->formatReceiver($number, null, false),
                     category: $category
                 ),
-                'notification',
-                $traceId,
-                delay: now()->addSeconds(6)
+                queue: $queueName,
+                traceId: $traceId,
+                delay: $delayTime
             );
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -388,9 +466,10 @@ class GowaService
     public function test(WhatsappGateway $gateway, string $receive_number)
     {
         $traceId = (string) Str::uuid();
-
+        $queueName = 'notification';
+        $globalIndex = 0;
         try {
-
+            $delayTime = $this->delayMessage($globalIndex, 'test', $queueName);
             $activeAccount = $gateway->accounts()->where('is_active', true)->first();
 
             LogHelper::logInfo(null, [
@@ -415,8 +494,9 @@ class GowaService
                     templateSlug: $templateSlug,
                     category: $category
                 ),
-                queue: 'notification',
-                traceId: $traceId
+                queue: $queueName,
+                traceId: $traceId,
+                delay: $delayTime
             );
 
             LogHelper::logInfo(null, [
@@ -472,5 +552,30 @@ class GowaService
                 $traceId
             );
         }
+    }
+
+    private function delayMessage($globalIndex, $type, $queueName)
+    {
+        $lastJob = DB::table('jobs')
+            ->where('queue', $queueName)
+            ->where('payload', 'like', '%SendWhatsappMessageJob%')
+            ->orderByDesc('available_at')
+            ->first();
+
+        if ($lastJob) {
+            $baseTime = Carbon::createFromTimestamp($lastJob->available_at);
+        } else {
+            $baseTime = now();
+        }
+
+        if ($type === 'broadcast') {
+            $delayTime = $baseTime->copy()->addSeconds($globalIndex * 180);
+        } else if ($type === 'test') {
+            $delayTime = $baseTime->copy()->addSeconds($globalIndex * 1);
+        } else {
+            $delayTime = $baseTime->copy()->addSeconds($globalIndex * 90);
+        }
+
+        return $delayTime;
     }
 }

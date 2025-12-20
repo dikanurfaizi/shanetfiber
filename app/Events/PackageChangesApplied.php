@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 

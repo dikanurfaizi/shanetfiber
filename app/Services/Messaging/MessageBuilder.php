@@ -24,4 +24,26 @@ class MessageBuilder
         if (!$date) return null;
         return Carbon::parse($date)->locale('id')->translatedFormat($fmt);
     }
+
+    public function discountCurrency($amount): string
+    {
+        return $this->currency(abs($amount ?? 0));
+    }
+
+    public function formatAddons($addons): string
+    {
+        if ($addons->isEmpty()) {
+            return '-';
+        }
+
+        return $addons->map(function ($item) {
+            return sprintf(
+                "• %s (%d x %s) = %s",
+                $item->name,
+                $item->qty,
+                $this->currency($item->unit_price),
+                $this->currency($item->subtotal)
+            );
+        })->implode("\n");
+    }
 }

@@ -2,10 +2,10 @@
 
 namespace App\Services\Customers;
 
-use App\Models\Billing\Billing;
+use App\Models\Billings\Billing;
 use App\Models\Bank;
 use App\Models\Websystem;
-use App\Models\SubscriptionDuration;
+use App\Models\Packages\PackageDuration;
 use Illuminate\Support\Carbon;
 use Jenssegers\Agent\Agent;
 use App\Helpers\LogHelper;
@@ -57,7 +57,7 @@ class PaymentDashboardService
         $periodEn = null;
         $periodIn = null;
 
-        if ($subDuration = SubscriptionDuration::where('package_id', $customer->package_id)->first()) {
+        if ($subDuration = PackageDuration::where('package_id', $customer->package_id)->first()) {
             $periodEn = $subDuration->name_en;
             $periodIn = $subDuration->name_id;
 

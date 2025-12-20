@@ -164,7 +164,7 @@
                             <button type="submit" class="btn btn-sm btn-success"><i
                                     class="fas fa-user-check"></i>&nbsp{{ __('customer.button.update-ppp') }}</button>
                             <a class="btn btn-sm btn-secondary"
-                                href="{{ route('customers.edit', $customer->slug) }}"><i
+                                href="{{ route('customers.show', $customer->slug) }}"><i
                                     class="fa fa-arrow-left"></i>&nbsp{{ __('customer.button.cancel') }}</a>
                         </div>
                     </div>

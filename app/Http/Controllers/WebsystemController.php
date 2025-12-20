@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\Websystem;
 use Illuminate\Http\Request;
 
@@ -38,10 +38,13 @@ class WebsystemController extends Controller
         } else {
             $statusTax = false;
         }
+
+        $taxValue = ($request->tax_rate != 0) ? ($request->tax_rate / 100) : 0;
+
         $webSystem->update([
             'title' => $request->title,
             'enable_tax' => $statusTax,
-            'tax_rate' => $request->tax_rate,
+            'tax_rate' => $taxValue,
             'email' => $request->email,
             'address' => $request->address,
             'city' => $request->city,

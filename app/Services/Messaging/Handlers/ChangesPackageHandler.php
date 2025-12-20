@@ -2,7 +2,7 @@
 
 namespace App\Services\Messaging\Handlers;
 
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\User;
 use App\Services\Messaging\Contracts\MessageActionHandler;
 use App\Services\Messaging\MessageBuilder;

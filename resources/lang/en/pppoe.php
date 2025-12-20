@@ -34,6 +34,10 @@ return [
         'service' => 'Service',
         'profile' => 'Profile',
         'export' => 'Export Secret',
+        'un-available' => 'Status Un Available',
+        'unknown-state' => 'Unknown State',
+        'db-username' => 'DB Username',
+        'server-username' => 'Server Username',
         'button' => [
             'back' => 'Back',
             'cancel' => 'Cancel',

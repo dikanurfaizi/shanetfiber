@@ -77,8 +77,11 @@
                             </div>
                             <!-- Kolom Package -->
                             <div class="col-md-2 col-12 mb-2">
-                                <select name="search_package" id="package-dropdown" class="form-control d-none">
+                                <select name="search_package" id="package-dropdown" class="form-control">
                                     <option value="">All Package</option>
+                                    @foreach ($allPackages as $pkg)
+                                        <option value="{{ $pkg->id }}">{{ $pkg->name }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                         </div>
@@ -216,16 +219,13 @@
                             </span>
                             <td>
                                 <span class="badge bg-danger-soft">
-                                    <i class="fas fa-chalkboard"></i> {{ $customer->package->name }}
+                                    <i class="fas fa-chalkboard"></i>
+                                    {{ $customer->last_package->name ?? '-' }}
                                 </span>
                             </td>
                             <td>
                                 <span class="badge bg-danger-soft">
-                                    @if ($customer->billing_option === 1 || ($customer->billing_option === 2 && $customer->billing_period === $periodeName))
-                                        @moneyIDR(optional($customer->package)->price - optional($customer->member)->discount)
-                                    @else
-                                        @moneyIDR(optional($customer->package)->price)
-                                    @endif
+                                    @moneyIDR(optional($customer->last_package)->price - optional($customer->customerMembership)->discount_value)
                                 </span>
                             </td>
 
@@ -330,8 +330,8 @@
                                 @endcan
                             </h6>
                             <span class="custom-badge text-truncate bg-turquoise-soft text-turquoise"
-                                style="max-width: 50%;" title="{{ $customer->package->name }}">
-                                {{ $customer->package->name }}
+                                style="max-width: 50%;" title="{{ $customer->last_package->name ?? 'No Package' }}">
+                                {{ $customer->last_package->name ?? 'No Package' }}
                             </span>
                         </div>
 
@@ -341,14 +341,7 @@
                                 {{ $customer->contact }}
                             </small>
                             <small class="fw-semibold">
-                                @php
-                                    $harga =
-                                        $customer->billing_option === 1 ||
-                                        ($customer->billing_option === 2 && $customer->billing_period === $periodeName)
-                                            ? optional($customer->package)->price - optional($customer->member)->discount
-                                            : optional($customer->package)->price;
-                                @endphp
-                                @moneyIDR($harga)
+                                @moneyIDR(optional($customer->last_package)->price - optional($customer->customerMembership)->discount_value)
                             </small>
                         </div>
 

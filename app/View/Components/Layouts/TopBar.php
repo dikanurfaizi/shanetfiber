@@ -2,7 +2,7 @@
 
 namespace App\View\Components\Layouts;
 
-use App\Models\Billing\Billing;
+use App\Models\Billings\Billing;
 use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;

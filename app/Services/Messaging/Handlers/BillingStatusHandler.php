@@ -2,17 +2,20 @@
 // app/Services/Messaging/Handlers/BillingStatusHandler.php
 namespace App\Services\Messaging\Handlers;
 
-use App\Models\Customer;
-use App\Models\Billing\Billing;
+use App\Models\Customers\Customer;
+use App\Models\Billings\Billing;
 use App\Services\Messaging\Contracts\MessageActionHandler;
 use App\Services\Messaging\MessageBuilder;
 use App\Helpers\LogHelper;
+use App\Models\Customers\CustomerAddon;
+use App\Models\Customers\CustomerSubscription;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 
 class BillingStatusHandler extends BaseBroadcastAwareHandler implements MessageActionHandler
 {
     public function __construct(
-        private Customer $customer,
+        private CustomerSubscription $customerSubscription,
         private Billing $billing,
         private string $type, // 'paylater' | 'unpayment'
         private MessageBuilder $builder,
@@ -20,7 +23,7 @@ class BillingStatusHandler extends BaseBroadcastAwareHandler implements MessageA
         string $category
     ) {
         $this->setCategory($category);
-        $this->setRawContact($customer?->contact ?? null);
+        $this->setRawContact($customerSubscription->customer?->contact ?? null);
     }
 
     public function action(): string
@@ -35,13 +38,20 @@ class BillingStatusHandler extends BaseBroadcastAwareHandler implements MessageA
 
     public function build(string $traceId): array
     {
-        $this->customer->loadMissing('user', 'member');
+        $this->customerSubscription->loadMissing(
+            'customer.activeMembership.membership',
+            'package'
+        );
         $this->billing->loadMissing(['customer.user', 'billingSubscription']);
 
-        $cust      = $this->customer;
+        $cust      = $this->customerSubscription->customer;
         $user      = $cust?->user;
-        $periode   = $this->billing->billingSubscription?->billing_periode ?? '-';
+        $periode   = $this->billing->billingSubscription?->billingPeriode->name ?? '-';
         $bank      = ($this->getBankInfo)($user?->id ?? 1);
+
+        $addons = CustomerAddon::where('customer_id', $this->billing->customer_id)->where('is_active', true)->get();
+
+        $userUpdate = User::where('id', $this->billing->updated_by)->first();
 
         return [
             'template_slug' => $this->type,
@@ -51,17 +61,20 @@ class BillingStatusHandler extends BaseBroadcastAwareHandler implements MessageA
                 '%name%'           => $cust->name,
                 '%customer_id%'    => $cust->customer_id,
                 '%billing_number%' => $this->billing->billing_number,
-                '%package%'        => $cust->package->name ?? '-',
+                '%package%'        => $this->customerSubscription->package->name ?? '-',
                 '%periode%'        => $periode ?? '-',
                 '%bill%'           => $this->builder->currency($this->billing->base_price),
-                '%discount%'       => $this->builder->currency($this->billing->discount_amount ?? 0),
+                '%addons%'          => $this->builder->formatAddons($addons),
+                '%discount%'       => $this->builder->discountCurrency($this->billing->discount_amount),
                 '%total%'          => $this->builder->currency($this->billing->total_amount),
                 '%account_bank%'   => $bank,
                 '%admin%'          => $user?->name ?? '-',
-                '%member%'         => optional($cust->member)->type ?? 'Non Member',
+                '%member%' => optional(
+                    $cust->activeMembership?->membership
+                )->name ?? 'Non Member',
                 '%cs_contact%'     => $user?->contact ?? '-',
-                '%teller%'         => $this->billing->teller_name,
-                '%paylater%'       => $this->billing->pay_later ? Carbon::parse($this->billing->pay_later)->locale('id')->translatedFormat('d F Y') : '-',
+                '%teller%'         => $userUpdate->name,
+                '%paylater%'       => $this->billing->paylater_until ? Carbon::parse($this->billing->paylater_until)->locale('id')->translatedFormat('d F Y') : '-',
             ],
         ];
     }

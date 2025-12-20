@@ -2,7 +2,7 @@
 // app/Services/Messaging/Handlers/BillingStatusHandler.php
 namespace App\Services\Messaging\Handlers;
 
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Services\Messaging\Contracts\MessageActionHandler;
 use App\Services\Messaging\MessageBuilder;
 use App\Helpers\LogHelper;

@@ -5,10 +5,10 @@ namespace App\Services\Customers;
 use App\Models\Mikrotik;
 use App\Models\PppType;
 use App\Models\User;
-use App\Models\Member;
-use App\Models\Customer;
+use App\Models\Membership\Membership;
+use App\Models\Customers\Customer;
 use App\Models\Packages\Package;
-use App\Models\Billing\BillingPeriode;
+use App\Models\Billings\BillingPeriode;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
 use App\Helpers\FormatReceiver;
@@ -36,22 +36,9 @@ class CustomerFormService
                 'pppservices' => PppType::orderBy('name', 'ASC')->pluck('name', 'id'),
                 'pppprofiles' => $this->getPackageProfiles($traceId),
                 'users' => User::all(),
-                'members' => Member::all()
+                'members' => Membership::where('is_active', true)->get(),
+                'availablePeriodes' => $this->getAvailableBillingPeriodes($traceId)
             ];
-
-            LogHelper::logInfo(
-                null,
-                [
-                    'mikrotiks_count' => $data['mikrotiks']->count(),
-                    'pppservices_count' => $data['pppservices']->count(),
-                    'pppprofiles_count' => $data['pppprofiles']->count(),
-                    'users_count' => $data['users']->count(),
-                    'members_count' => $data['members']->count()
-                ],
-                200,
-                'Successfully retrieved create form data',
-                $traceId
-            );
 
             return $data;
         } catch (\Throwable $e) {
@@ -86,16 +73,6 @@ class CustomerFormService
                     $package->id => $package->name . ' - Rp ' . number_format($package->price, 0, ',', '.')
                 ]);
 
-            LogHelper::logInfo(
-                null,
-                [
-                    'profiles_count' => $profiles->count()
-                ],
-                200,
-                'Successfully retrieved package profiles',
-                $traceId
-            );
-
             return $profiles;
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -128,9 +105,9 @@ class CustomerFormService
                 'customer_number' => $formatter->formatReceiver($customer->contact, null, false),
                 'users' => User::all(),
                 'packages' => Package::where('disabled', 'false')->orderBy('price', 'ASC')->get(),
-                'members' => Member::all(),
+                'members' => Membership::all(),
                 'serverDisconnect' => $serverDisconnect,
-                'availablePeriodes' => $this->getAvailablePeriodes($traceId)
+                'availablePeriodes' => $this->getAvailableBillingPeriodes($traceId)
             ];
 
             LogHelper::logInfo(
@@ -220,36 +197,35 @@ class CustomerFormService
         return $serverDisconnect;
     }
 
-    private function getAvailablePeriodes(string $traceId): Collection
+    private function getAvailableBillingPeriodes(string $traceId): Collection
     {
         try {
-            $current = Carbon::createFromFormat('F Y', BillingPeriode::latest('created_at')->first()->name);
-            $periodes = collect(range(0, 2))->map(fn($i) => $current->copy()->addMonths($i)->format('F Y'));
 
-            LogHelper::logInfo(
-                null,
-                [
-                    'periodes_count' => $periodes->count()
-                ],
-                200,
-                'Successfully retrieved available periodes',
-                $traceId
-            );
+            $last = BillingPeriode::orderByDesc('id')->first();
+
+            if (!$last) {
+                return collect();
+            }
+
+            // Parse dari name, contoh: "December 2025"
+            $current = Carbon::createFromFormat('F Y', $last->name);
+
+            // Generate 3 bulan
+            $periodes = collect();
+
+            for ($i = 0; $i < 3; $i++) {
+                $periodes->push([
+                    'name' => $current->copy()->addMonths($i)->format('F Y'),
+                ]);
+            }
 
             return $periodes;
         } catch (\Throwable $e) {
             LogHelper::logError(
                 null,
-                [
-                    'exception' => [
-                        'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
-                    ]
-                ],
+                ['error' => $e->getMessage()],
                 500,
-                'Failed to retrieve available periodes',
+                'Failed to generate periodes',
                 $traceId
             );
             return collect();

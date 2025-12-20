@@ -2,7 +2,7 @@
 
 namespace App\Services\Tripays;
 
-use App\Models\{Customer, Receipt, Order, Mikrotik, AutoIsolir};
+use App\Models\{Receipt, Mikrotik, AutoIsolir};
 use App\Jobs\{AddPaymentBeforeDueDateJob, AddPaymentAfterDueDateJob, AddPaymentIpStaticAfterDueDateJob, WhatsApp\ProcessWhatsappMessageJob};
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Routerboard\IpStaticService;
@@ -10,7 +10,9 @@ use Carbon\Carbon;
 use App\Http\Resources\Pppoe\SecretResource;
 use App\Enums\WhatsappAction;
 use App\DataTransferObjects\WhatsappJobDto;
-use App\Models\Billing\BillingSubscriptionPeriode;
+use App\Models\Billings\BillingSubscriptionPeriode;
+use App\Models\Billings\Order;
+use App\Models\Customers\Customer;
 use App\Helpers\LogHelper;
 use App\Jobs\WhatsApp\FullPaymentJob;
 

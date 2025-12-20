@@ -4,8 +4,7 @@ namespace App\Models\Packages;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Mikrotik;
-use App\Models\SubscriptionDuration;
-use App\Models\CustomerSubscription;
+use App\Models\Customers\CustomerSubscription;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -25,9 +24,9 @@ class Package extends Model
         return $this->belongsTo(Mikrotik::class);
     }
 
-    public function subscriptionDurations()
+    public function packageDurations()
     {
-        return $this->hasMany(SubscriptionDuration::class, 'package_id');
+        return $this->hasMany(PackageDuration::class, 'package_id');
     }
 
     public function customerSubscriptions()

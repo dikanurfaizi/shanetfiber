@@ -8,9 +8,9 @@ use App\Jobs\AddPaymentBeforeDueDateJob;
 use App\Jobs\AddPaymentIpStaticAfterDueDateJob;
 use App\Jobs\AddPaymentIpStaticBeforeDueDateJob;
 use App\Models\AutoIsolir;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
-use App\Models\Order;
+use App\Models\Billings\Order;
 use App\Models\Receipt;
 use App\Models\WhatsApp\WhatsAppGateway;
 use App\Services\Routerboard\IpStaticService;
@@ -127,7 +127,7 @@ class PaymentService
     {
         $adjustedDate = min($activationDate, Carbon::now()->addMonth()->daysInMonth);
 
-        return $autoIsolir->comment_unpayment.'_'.$adjustedDate.'_'.$nextMonth;
+        return $autoIsolir->comment_unpayment . '_' . $adjustedDate . '_' . $nextMonth;
     }
 
     protected function processMikrotikPayment(array $data, string $profile, $router, $autoIsolir, string $comment, string $traceId): void
@@ -147,7 +147,7 @@ class PaymentService
 
                 dispatch($job);
             } elseif ($data['internet_service'] === 'ip_static') {
-                $comment_full = $data['username'].'_'.$comment;
+                $comment_full = $data['username'] . '_' . $comment;
                 $address = $this->ipStaticService->getAddressListByIpAddress($router, $data['ip_static'], $traceId);
 
                 if (isset($address[0]['list']) && $address[0]['list'] !== $autoIsolir->address_list_isolir) {
@@ -165,7 +165,7 @@ class PaymentService
                 }
             }
         } catch (\Exception $e) {
-            Log::error('Mikrotik payment error: '.$e->getMessage());
+            Log::error('Mikrotik payment error: ' . $e->getMessage());
         }
     }
 

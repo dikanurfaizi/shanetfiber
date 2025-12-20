@@ -4,7 +4,7 @@ namespace App\Services\Customers;
 
 use App\Helpers\LogHelper;
 use App\Models\PppType;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
 use App\Http\Resources\InterfaceResource;
 use App\Services\Routerboard\IpStaticService;

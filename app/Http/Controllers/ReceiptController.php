@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Billing\BillingPeriode;
 use App\Models\Receipt;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -11,7 +10,6 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ReceiptsExport;
 use Illuminate\Support\Str;
 use App\Helpers\LogHelper;
-use Illuminate\Support\Facades\DB;
 
 //use Barryvdh\DomPDF\PDF;
 
@@ -140,17 +138,46 @@ class ReceiptController extends Controller
      */
     public function show(Receipt $receipt)
     {
+        $receiptItems = $receipt->items;
+        $subtotal = $receiptItems
+            ->where('type', '!=', 'discount')
+            ->sum('subtotal');
+
+        $discount = $receiptItems
+            ->where('type', 'discount')
+            ->sum('subtotal');
+
+        $total = $subtotal + $discount + $receipt->tax;
         return view('receipts.show', [
             'receipt' => $receipt,
+            'receiptItems' => $receiptItems,
+            'subtotal' => $subtotal,
+            'discount' => $discount,
+            'total' => $total,
         ]);
     }
 
     public function print(Receipt $receipt)
     {
         $websystem = Websystem::where('slug', 'websystem')->first();
+        $receiptItems = $receipt->items;
+        $subtotal = $receiptItems
+            ->where('type', '!=', 'discount')
+            ->sum('subtotal');
+
+        $discount = $receiptItems
+            ->where('type', 'discount')
+            ->sum('subtotal');
+
+        $total = $subtotal + $discount + $receipt->tax;
+
         $pdf = PDF::loadView('receipts.print', [
-            'receipt' => $receipt,
-            'websystem' => $websystem
+            'receipt'      => $receipt,
+            'receiptItems' => $receiptItems,
+            'subtotal'     => $subtotal,
+            'discount'     => $discount,
+            'total'        => $total,
+            'websystem'    => $websystem,
         ]);
         return $pdf->download($receipt->number . str($receipt->customer_name)->slug() . '_' . str($receipt->customer_address)->slug() . '_' . str($receipt->month)->slug() . '_' . $receipt->year . '.pdf');
     }
@@ -159,10 +186,25 @@ class ReceiptController extends Controller
     {
         $websystem = Websystem::where('slug', 'websystem')->first();
 
+        $receiptItems = $receipt->items;
+        $subtotal = $receiptItems
+            ->where('type', '!=', 'discount')
+            ->sum('subtotal');
+
+        $discount = $receiptItems
+            ->where('type', 'discount')
+            ->sum('subtotal');
+
+        $total = $subtotal + $discount + $receipt->tax;
+
         // Atur ukuran kertas thermal (58mm x 100mm) dalam satuan milimeter
         $pdf = PDF::loadView('receipts.thermal', [
-            'receipt' => $receipt,
-            'websystem' => $websystem
+            'receipt'      => $receipt,
+            'receiptItems' => $receiptItems,
+            'subtotal'     => $subtotal,
+            'discount'     => $discount,
+            'total'        => $total,
+            'websystem'    => $websystem,
         ])->setPaper([0, 0, 155.43, 283.5], 'portrait'); // 55mm x 100mm dalam satuan point
 
         //return $pdf->download($receipt->number . '_thermal_' . str($receipt->customer_name)->slug() . '_' . str($receipt->customer_address)->slug() . '_' . str($receipt->month)->slug() . '_' . $receipt->year . '.pdf');

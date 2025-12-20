@@ -5,7 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use App\Models\AutoIsolir;
-use App\Models\Billing\Billing;
+use App\Models\Billings\Billing;
 use App\Models\Mikrotik;
 use App\Helpers\LogHelper; // pastikan file ini ada
 use App\Jobs\CancelPaymentAfterDueDateJob;

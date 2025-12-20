@@ -9,148 +9,204 @@
 
 <!-- Nav Item - Tables -->
 
-@canany(['customer-list', 'customer-edit', 'customer-delete', 'customer-create', 'secret-edit'])
+<!-- Customers -->
+@canany(['customer-list', 'customer-create', 'customer-edit', 'customer-delete', 'customer-trashed'])
     <li class="nav-item @if (request()->routeIs('customers*')) active @endif">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseCustomer" aria-expanded="false"
-            aria-controls="collapseCustomer" style="padding-top: inherit;">
-            <i class="fas fa-fw fa-users"></i>
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseCustomer">
+            <i class="fas fa-users"></i>
             <span>{{ __('navigation.customers.nav-item') }}</span>
         </a>
-        <div id="collapseCustomer" class="collapse" aria-labelledby="headingCustomer" data-parent="#accordionSidebar">
+        <div id="collapseCustomer" class="collapse @if (request()->routeIs('customers*')) show @endif"
+            data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 @can('customer-create')
                     <a class="collapse-item @if (request()->routeIs('customers.create')) active @endif"
-                        href="{{ route('customers.create') }}">{{ __('navigation.customers.create') }}</a>
+                        href="{{ route('customers.create') }}">
+                        {{ __('navigation.customers.create') }}
+                    </a>
                 @endcan
-                <a class="collapse-item @if (request()->routeIs('customers.index')) active @endif"
-                    href="{{ route('customers.index') }}">{{ __('navigation.customers.index') }}</a>
-            </div>
-            @canany(['customer-list', 'customer-edit', 'customer-delete'])
-                <div class="bg-white py-2 collapse-inner rounded">
-                    <a class="collapse-item @if (request()->routeIs('customers.member')) active @endif"
-                        href="{{ route('members.index') }}">{{ __('navigation.members.index') }}</a>
+                @can('customer-list')
+                    <a class="collapse-item @if (request()->routeIs('customers.index')) active @endif"
+                        href="{{ route('customers.index') }}">
+                        {{ __('navigation.customers.index') }}
+                    </a>
+                @endcan
+                @can('customer-trashed')
                     <a class="collapse-item @if (request()->routeIs('customers.trashed')) active @endif"
-                        href="{{ route('customers.trashed') }}">{{ __('navigation.customers.trashed') }}</a>
-                </div>
-            @endcanany
+                        href="{{ route('customers.trashed') }}">
+                        {{ __('navigation.customers.trashed') }}
+                    </a>
+                @endcan
+            </div>
         </div>
     </li>
 @endcanany
 
-@canany(['billing-edit', 'billing-delete'])
-    <li class="nav-item @if (request()->routeIs('billings*') || request()->routeIs('receipts*')) active @endif">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBilling"
-            aria-expanded="true" aria-controls="collapseBilling" style="padding-top: inherit;">
-            <i class="fas fa-file-invoice-dollar"></i>
+<!-- Memberships -->
+@canany(['member-list', 'member-create'])
+    <li class="nav-item @if (request()->routeIs('members*')) active @endif">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseMembership">
+            <i class="fas fa-id-card"></i>
+            <span>{{ __('navigation.membership.nav-item') }}</span>
+        </a>
+        <div id="collapseMembership" class="collapse @if (request()->routeIs('members*')) show @endif"
+            data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                @can('member-create')
+                    <a class="collapse-item @if (request()->routeIs('members.create')) active @endif"
+                        href="{{ route('members.create') }}">
+                        {{ __('navigation.membership.create') }}
+                    </a>
+                @endcan
+                @can('member-list')
+                    <a class="collapse-item @if (request()->routeIs('members.index')) active @endif"
+                        href="{{ route('members.index') }}">
+                        {{ __('navigation.membership.index') }}
+                    </a>
+                @endcan
+            </div>
+        </div>
+    </li>
+@endcanany
+
+<!-- Packages -->
+@canany(['package-list', 'package-create', 'package-edit'])
+    <li class="nav-item @if (request()->routeIs('packages*') || request()->routeIs('categories*')) active @endif">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePackages">
+            <i class="fas fa-box"></i>
+            <span>{{ __('navigation.packages.nav-item') }}</span>
+        </a>
+        <div id="collapsePackages" class="collapse @if (request()->routeIs('packages*') || request()->routeIs('categories*')) show @endif"
+            data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                @can('package-create')
+                    <a class="collapse-item @if (request()->routeIs('packages.create')) active @endif"
+                        href="{{ route('packages.create') }}">
+                        {{ __('navigation.packages.create') }}
+                    </a>
+                @endcan
+                @can('package-category-list')
+                    <a class="collapse-item @if (request()->routeIs('categories.index')) active @endif"
+                        href="{{ route('categories.index') }}">
+                        {{ __('navigation.packages.package-categories') }}
+                    </a>
+                @endcan
+                @can('package-list')
+                    <a class="collapse-item @if (request()->routeIs('packages.index')) active @endif"
+                        href="{{ route('packages.index') }}">
+                        {{ __('navigation.packages.index') }}
+                    </a>
+                @endcan
+            </div>
+        </div>
+    </li>
+@endcanany
+
+<!-- Addons -->
+@canany(['addon-view', 'addon-create', 'addon-edit', 'addon-enable', 'addon-disable'])
+    <li class="nav-item @if (request()->routeIs('addons*')) active @endif">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseAddons">
+            <i class="fas fa-puzzle-piece"></i>
+            <span>{{ __('navigation.addons.nav-item') }}</span>
+        </a>
+        <div id="collapseAddons" class="collapse @if (request()->routeIs('addons*')) show @endif"
+            data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                @can('addon-create')
+                    <a class="collapse-item @if (request()->routeIs('addons.create')) active @endif"
+                        href="{{ route('addons.create') }}">
+                        {{ __('navigation.addons.create') }}
+                    </a>
+                @endcan
+                @can('addon-view')
+                    <a class="collapse-item @if (request()->routeIs('addons.index')) active @endif"
+                        href="{{ route('addons.index') }}">
+                        {{ __('navigation.addons.index') }}
+                    </a>
+                @endcan
+            </div>
+        </div>
+    </li>
+@endcanany
+
+<hr class="sidebar-divider">
+
+@canany(['billing-list', 'billing-create', 'billing-edit'])
+    <li class="nav-item @if (request()->routeIs('billings*') || request()->routeIs('billingHistory*')) active @endif">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBilling">
+            <i class="fas fa-layer-group"></i>
             <span>{{ __('navigation.billings.nav-item') }}</span>
         </a>
         <div id="collapseBilling" class="collapse @if (request()->routeIs('billings*') || request()->routeIs('billingHistory*')) show @endif"
-            aria-labelledby="headingBilling" data-parent="#accordionSidebar">
-            @can('billing-create')
-                <div class="bg-white py-2 collapse-inner rounded">
+            data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                @can('billing-create')
                     <a class="collapse-item @if (request()->routeIs('billings.create')) active @endif"
-                        href="{{ route('billings.create') }}">{{ __('navigation.billings.create') }}</a>
-                    <a class="collapse-item @if (request()->routeIs('billings.create.one')) active @endif"
-                        href="{{ route('billings.create.one') }}">{{ __('navigation.billings.add') }}</a>
-                </div>
-            @endcanany
-            @canany(['billing-list'])
-                <div class="bg-white py-2 collapse-inner rounded">
+                        href="{{ route('billings.create') }}">
+                        {{ __('navigation.billings.create') }}
+                    </a>
+                @endcan
+                @can('billing-list')
                     <a class="collapse-item @if (request()->routeIs('billings.index')) active @endif"
                         href="{{ route('billings.index') }}">
-                        {{ __('navigation.billings.active_billing') }}</a>
+                        {{ __('navigation.billings.active_billing') }}
+                    </a>
                     <a class="collapse-item @if (request()->routeIs('billingHistory.index')) active @endif"
                         href="{{ route('billingHistory.index') }}">
-                        {{ __('navigation.billings.history') }}</a>
-                </div>
-            @endcanany
-        </div>
-    </li>
-@endcanany
-@canany(['user-list', 'user-create', 'user-edit', 'user-delete', 'role-list', 'role-edit', 'role-delete', 'server-list',
-    'server-edit', 'server-delete', 'server-create'])
-    <!-- Divider -->
-    <hr class="sidebar-divider">
-    <li class="nav-item">
-        <a class="nav-link" href="{{ route('websystem.edit', 'websystem') }}">
-            <i class="fas fa-tools"></i>
-            <span><strong>{{ __('Settings') }}</strong></span>
-        </a>
-    </li>
-@endcanany
-
-
-
-<!-- Divider -->
-{{-- <hr class="sidebar-divider">
-@if (request()->routeIs('customers.index'))
-    <li class="nav-item active">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSearchCustomer"
-            aria-expanded="false" aria-controls="collapseSearchCustomer" style="padding-top: inherit;"
-            style="padding-top: inherit;">
-            <i class="fas fa-search"></i>
-            <span>{{ __('billing.header.search') }}</span>
-        </a>
-        <div class="collapse show" id="collapseSearchCustomer">
-            <div class="card-header py-3 rounded">
-                <form>
-                    <div class="row align-items-center mb-1">
-                        <input type="search" class="form-control" placeholder="{{ __('customer.placeholder.name') }}"
-                            name="search_name">
-                    </div>
-                    <div class="row align-items-center mb-1">
-                        <select name="search_address" class="form-control">
-                            <option value="">{{ __('customer.placeholder.select-address') }}</option>
-                            <option value="NULL">{{ __('customer.placeholder.without-address') }}</option>
-                            @foreach ($address as $addrr)
-                                <option value="{{ $addrr }}">{{ $addrr }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="row align-items-center mb-1">
-                        <select name="status" class="form-control">
-                            <option value="">All Status</option>
-                            <option value="false">Enable</option>
-                            <option value="true">Disable</option>
-                            <option value="isolir">Isolir</option>
-                            <option value="offline">Offline</option>
-                            <option value="online">Online</option>
-                            <option value="free">Free</option>
-                            <option value="deactivated">Deactivated</option>
-                        </select>
-                    </div>
-                    <div class="row align-items-center mb-1">
-                        <select name="search_service" class="form-control">
-                            <option value="">{{ __('customer.placeholder.all-internet-service') }}</option>
-                            <option value="ppp">{{ __('customer.placeholder.ppp') }}</option>
-                            <option value="ip_static">{{ __('customer.placeholder.ip-static') }}</option>
-
-                        </select>
-                    </div>
-                    <div class="row align-items-center mb-1">
-                        {!! Form::select('server_search', $allServers, null, [
-                            'placeholder' => 'All Server',
-                            'class' => 'form-control',
-                            'id' => 'server-dropdown',
-                        ]) !!}
-                    </div>
-                    <div class="row align-items-center mb-1">
-                        <select name="search_package" id="package-dropdown" class="form-control d-none">
-                            <option value="">All package</option>
-                        </select>
-                    </div>
-
-                    <div class="row align-items-center mt-3">
-                        <span>
-                            <button class="btn btn-success btn-sm" type="submit"><i class="fas fa-search"></i>
-                                {{ __('customer.button.search') }}</button>
-                        </span>
-                    </div>
-                </form>
+                        {{ __('navigation.billings.history') }}
+                    </a>
+                @endcan
             </div>
         </div>
     </li>
-@endif
+@endcanany
+
+<hr class="sidebar-divider">
+
+<!-- ======================
+         OPERASIONAL
+    ======================= -->
+
+<!-- Networks -->
+@canany(['olt-list', 'ont-list'])
+    <li class="nav-item @if (request()->routeIs('olts*') || request()->routeIs('onts*')) active @endif">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseNetworks">
+            <i class="fas fa-server"></i>
+            <span>{{ __('navigation.network.nav-item') }}</span>
+        </a>
+        <div id="collapseNetworks" class="collapse @if (request()->routeIs('olts*') || request()->routeIs('onts*')) show @endif"
+            data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                <a class="collapse-item @if (request()->routeIs('olts.index')) active @endif"
+                    href="{{ route('olts.index') }}">
+                    {{ __('navigation.network.olt-managements.index') }}
+                </a>
+                <a class="collapse-item @if (request()->routeIs('onts.index')) active @endif"
+                    href="{{ route('onts.index') }}">
+                    {{ __('navigation.network.onu-managements.index') }}
+                </a>
+            </div>
+        </div>
+    </li>
+@endcanany
+
+<hr class="sidebar-divider">
+
+<!-- ======================
+         SYSTEM
+    ======================= -->
+
+<!-- Settings -->
+@canany(['user-list', 'role-list', 'server-list'])
+    <li class="nav-item">
+        <a class="nav-link" href="{{ route('websystem.edit', 'websystem') }}">
+            <i class="fas fa-tools"></i>
+            <span><strong>Settings</strong></span>
+        </a>
+    </li>
+@endcanany
+
+<!-- Sidebar Toggle -->
 <div class="text-center d-none d-md-inline pt-4">
     <button class="rounded-circle border-0" id="sidebarToggle"></button>
-</div> --}}
+</div>

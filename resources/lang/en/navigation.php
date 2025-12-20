@@ -26,7 +26,8 @@ return [
         'billing-cycles' => 'Billing Cycles'
     ],
     'receipts' => [
-        'nav-item' => 'Receipts'
+        'nav-item' => 'Receipts',
+        'index' => 'Show All Receipt'
     ],
     'packages' => [
         'nav-item' => 'Packages',
@@ -37,9 +38,6 @@ return [
             'index' => 'Profile',
         ],
         'package-categories' => 'Package Categories'
-    ],
-    'members' => [
-        'index' => 'Member List',
     ],
     'subscriptions' => [
         'nav-item' => 'Subscriptions',
@@ -66,5 +64,15 @@ return [
         'onu-managements' => [
             'index' => 'ONT Management'
         ]
-    ]
+    ],
+    'membership' => [
+        'nav-item' => 'Memberships',
+        'index' => 'Show All Memberships',
+        'create' => 'Create New Membership',
+    ],
+    'addons' => [
+        'nav-item' => 'Addons',
+        'index' => 'Show All Addons',
+        'create' => 'Create New Addon',
+    ],
 ];

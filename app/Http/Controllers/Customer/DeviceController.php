@@ -2,25 +2,21 @@
 
 namespace App\Http\Controllers\Customer;
 
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
 use App\Http\Controllers\Controller;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Str;
-use App\Services\Customers\CustomerViewService;
 use App\Services\Routerboard\SystemService;
 use Exception;
 
 class DeviceController extends Controller
 {
-    private CustomerViewService $customerViewService;
     private SystemService $systemService;
 
     public function __construct(
-        CustomerViewService $customerViewService,
         SystemService $systemService
     ) {
-        $this->customerViewService = $customerViewService;
         $this->systemService = $systemService;
     }
 
@@ -46,7 +42,10 @@ class DeviceController extends Controller
             'customer_id' => $customer->id ?? null
         ], 200, 'Customer akses halaman device information', $traceId);
 
-        return view('customers.pages.devices.info', $this->customerViewService->getCustomerViewData($customer, $traceId));
+        // $data = $this->customerViewService->getCustomerViewData($customer, $traceId);
+        $data = null;
+
+        return view('customers.pages.devices.info', $data);
     }
 
     public function mikrotikTrafficInterface()

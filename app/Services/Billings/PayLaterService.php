@@ -9,8 +9,8 @@ use App\Jobs\AddPaymentAfterDueDateJob;
 use App\Jobs\AddPaymentBeforeDueDateJob;
 use App\Jobs\AddPaymentIpStaticAfterDueDateJob;
 use App\Models\AutoIsolir;
-use App\Models\Billing\Billing;
-use App\Models\Customer;
+use App\Models\Billings\Billing;
+use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
 use App\Services\Routerboard\IpStaticService;
 use App\Services\Routerboard\Ppp\SecretService;
@@ -59,9 +59,9 @@ class PayLaterService
             ], 200, 'Step 2 — Update billing pay_later', $traceId);
 
             $billing->update([
-                'pay_later' => Carbon::parse($request->pay_later),
-                'teller_name' => auth()->user()->name ?? $billing->customer->user->name,
+                'paylater_until' => Carbon::parse($request->pay_later),
                 'status' => 'PL',
+                'updated_by' => auth()->id()
             ]);
 
             // === Step 3: Mikrotik Actions (Optional) ===

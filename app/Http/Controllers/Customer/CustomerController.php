@@ -10,18 +10,19 @@ use App\Http\Requests\CustomerPppUpdateRequest;
 use App\Http\Requests\CustomerRouterUpdateRequest;
 use App\Http\Requests\CustomerStoreRequest;
 use App\Http\Requests\CustomerUpdateRequest;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
 use App\Services\Customers\CustomerActivationService;
-use App\Services\Customers\CustomerDataService;
 use App\Services\Customers\CustomerDeletionService;
 use App\Services\Customers\CustomerFormService;
 use App\Services\Customers\CustomerPppService;
 use App\Services\Customers\CustomerRouterService;
-use App\Services\Customers\CustomerService;
+use App\Services\Customers\CustomerBillingInfoService;
+use App\Services\Customers\CustomerListingService;
 use App\Services\Customers\CustomerStatusService;
 use App\Services\Customers\CustomerUpdateService;
-use App\Services\Customers\CustomerViewService;
+use App\Services\Customers\CustomerQueryService;
+use App\Services\Customers\CustomerRestoreService;
 use App\Services\Routerboard\Ppp\SecretService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,55 +31,58 @@ use Maatwebsite\Excel\Facades\Excel;
 use RouterOS\Exceptions\ClientException;
 use RouterOS\Exceptions\ConnectException;
 use App\Events\CustomerActivated;
+use App\Exports\CustomerMasterExport;
+use App\Services\Customers\CustomerSoftDeleteService;
+use App\Services\Customers\CustomerSubscriptionGuardService;
+use DomainException;
 
 class CustomerController extends Controller
 {
     private SecretService $secretService;
-
-    private CustomerService $customerService;
-
-    private CustomerDataService $customerDataService;
-
     private CustomerStatusService $customerStatusService;
-
     private CustomerFormService $customerFormService;
-
     private CustomerPppService $customerPppService;
-
     private CustomerRouterService $customerRouterService;
-
-    private CustomerViewService $customerViewService;
-
     private CustomerUpdateService $customerUpdateService;
-
     private CustomerActivationService $customerActivationService;
-
     private CustomerDeletionService $customerDeletionService;
+    private CustomerListingService $customerListingService;
+    private CustomerBillingInfoService $customerBillingInfoService;
+    private CustomerQueryService $customerQueryService;
+    private CustomerRestoreService $customerRestoreService;
+    private CustomerSoftDeleteService $customerSoftDeleteService;
+    private CustomerSubscriptionGuardService $subscriptionGuard;
 
     public function __construct(
         SecretService $secretService,
-        CustomerService $customerService,
-        CustomerDataService $customerDataService,
         CustomerStatusService $customerStatusService,
         CustomerFormService $customerFormService,
         CustomerPppService $customerPppService,
         CustomerRouterService $customerRouterService,
-        CustomerViewService $customerViewService,
         CustomerUpdateService $customerUpdateService,
         CustomerActivationService $customerActivationService,
-        CustomerDeletionService $customerDeletionService
+        CustomerDeletionService $customerDeletionService,
+        CustomerListingService $customerListingService,
+        CustomerBillingInfoService $customerBillingInfoService,
+        CustomerQueryService $customerQueryService,
+        CustomerRestoreService $customerRestoreService,
+        CustomerSoftDeleteService $customerSoftDeleteService,
+        CustomerSubscriptionGuardService $subscriptionGuard
     ) {
         $this->secretService = $secretService;
-        $this->customerService = $customerService;
-        $this->customerDataService = $customerDataService;
         $this->customerStatusService = $customerStatusService;
         $this->customerFormService = $customerFormService;
         $this->customerPppService = $customerPppService;
         $this->customerRouterService = $customerRouterService;
-        $this->customerViewService = $customerViewService;
         $this->customerUpdateService = $customerUpdateService;
         $this->customerActivationService = $customerActivationService;
         $this->customerDeletionService = $customerDeletionService;
+        $this->customerListingService = $customerListingService;
+        $this->customerBillingInfoService = $customerBillingInfoService;
+        $this->customerQueryService = $customerQueryService;
+        $this->customerRestoreService = $customerRestoreService;
+        $this->customerSoftDeleteService = $customerSoftDeleteService;
+        $this->subscriptionGuard = $subscriptionGuard;
 
         $this->middleware('permission:customer-list|customer-create|customer-edit|customer-delete|secret-disable|secret-edit', ['only' => ['index', 'show']]);
         $this->middleware('permission:customer-create', ['only' => ['create', 'store', 'activation']]);
@@ -135,22 +139,22 @@ class CustomerController extends Controller
 
     private function showCustomerList(array $searchParams, int $perPage, string $traceId)
     {
-        $data = $this->customerDataService->getPaginatedCustomers($searchParams, $perPage, $traceId);
+        $data = $this->customerListingService->getPaginatedCustomers($searchParams, $perPage, $traceId);
 
         return view('customers.index', [
             'data' => $data,
-            'totalIncoming' => $this->calculateTotalIncoming($data, $traceId),
-            'address' => $this->customerDataService->getCustomerAddresses($traceId),
-            'allServers' => $this->customerDataService->getActiveServers($traceId),
-            'allAdmin' => $this->customerDataService->getActiveAdmins($traceId),
-            'periodeName' => $this->customerDataService->getCurrentBillingPeriod($traceId),
+            // 'totalIncoming' => $this->calculateTotalIncoming($data, $traceId),
+            'address' => $this->customerListingService->getCustomerAddresses($traceId),
+            'allServers' => $this->customerListingService->getActiveServers($traceId),
+            'allAdmin' => $this->customerListingService->getActiveAdmins($traceId),
+            'periodeName' => $this->customerBillingInfoService->getCurrentBillingPeriod($traceId),
             'perPage' => $perPage,
         ])->with('i', (request()->input('page', 1) - 1) * $perPage);
     }
 
     private function handleStatusFilter(Request $request, array $searchParams, int $perPage, string $traceId)
     {
-        $routers = $this->customerDataService->getActiveServers($searchParams['server_search'] ?? null);
+        $routers = $this->customerListingService->getActiveServers($searchParams['server_search'] ?? null);
 
         if ($routers->isEmpty()) {
             return redirect()->route('customers.index')
@@ -175,9 +179,7 @@ class CustomerController extends Controller
 
     private function calculateTotalIncoming($customers, $traceId): float
     {
-        return $customers->sum(
-            fn($customer) => $customer->package->price * ((100 - $customer->discount) / 100)
-        );
+        return $customers->sum(fn($customer) => $customer->estimated_monthly_incoming);
     }
 
     private function getUserFriendlyError(\Exception $e): string
@@ -192,60 +194,12 @@ class CustomerController extends Controller
 
     public function create()
     {
-        $traceId = (string) Str::uuid();
-
-        return view(
-            'customers.create',
-            $this->customerFormService->getCreateFormData($traceId)
-        );
-    }
-
-    public function store(CustomerStoreRequest $request)
-    {
-        $traceId = (string) Str::uuid();
-        try {
-            $customer = $this->customerService->createCustomer($request->validated(), $traceId);
-
-            LogHelper::logInfo(null, [
-                'request' => $request->only([
-                    'name',
-                    'email',
-                    'discount',
-                    'package_id',
-                    'contact',
-                    'address',
-                    'member_id',
-                    'user_id',
-                    'billing_option',
-                    'periode_billing',
-                    'activation_date',
-                ]),
-                'customer' => $customer,
-            ], 200, 'Successfully created customer', $traceId);
-
-            return redirect()->route('customers.index')
-                ->with('success', 'Customer added successfully. Please activate first to create user ppp on server ' .
-                    ($customer->mikrotik->name ?? 'router') . '!');
-        } catch (\Exception $e) {
-
-            LogHelper::logError(null, [
-                'request' => $request,
-                'code' => $e->getCode(),
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ], 500, 'Failed to create customer', $traceId);
-
-            return redirect()->back()
-                ->withInput()
-                ->withErrors(['msg' => 'Failed to create customer: ' . $e->getMessage()]);
-        }
+        return redirect()->route('wizard.step1');
     }
 
     public function show(Customer $customer)
     {
-        $traceId = (string) Str::uuid();
-
-        return view('customers.show', $this->customerViewService->getCustomerViewData($customer, $traceId));
+        return view('customers.show', ['customer' => $customer]);
     }
 
     public function edit(Customer $customer)
@@ -477,7 +431,15 @@ class CustomerController extends Controller
     public function activation(Customer $customer): RedirectResponse
     {
         $traceId = (string) Str::uuid();
-        $result = $this->customerActivationService->activateCustomer($customer, $traceId);
+        $startTime = microtime(true);
+        $lastCheckpoint = $startTime;
+        try {
+            $this->subscriptionGuard->assertReadyForActivation($customer);
+        } catch (DomainException $e) {
+            return back()->withErrors(['msg' => $e->getMessage()]);
+        }
+
+        $result = $this->customerActivationService->activateCustomer($customer, $traceId, $lastCheckpoint);
 
         if (isset($result['error'])) {
             LogHelper::logError(null, [
@@ -489,9 +451,11 @@ class CustomerController extends Controller
         }
 
         if (isset($result['success'])) {
+            $membershipId = $result['membership']->id ?? null;
             event(
                 new CustomerActivated(
-                    $result['customer'],
+                    $membershipId,
+                    $result['subscription'],
                     $result['billing'],
                     $result['receipt'],
                     $result['traceId']
@@ -499,11 +463,14 @@ class CustomerController extends Controller
             );
         }
 
+        $now = microtime(true);
+        $exec = round($now - $result['lastCheckpoint'], 3);
         LogHelper::logInfo(null, [
-            'customerId' => $customer->id,
-            'customerName' => $customer->name,
-            'customerAddress' => $customer->address,
-        ], 200, 'Successfully activated customer', $traceId);
+            'customerId' => $result['customer']->id,
+            'billingId'  => $result['billing']->id,
+            'billingPaymentId' => $result['billingPayment']->id,
+            'receiptId'  => $result['receipt']->id,
+        ], 200, 'Successfully activated customer', $traceId, $exec);
 
         return redirect()->back()->with('success', 'Successfully activated customer');
     }
@@ -566,7 +533,6 @@ class CustomerController extends Controller
 
     private function handleStatusResponse(array $result): RedirectResponse
     {
-        $traceId = (string) Str::uuid();
         if (isset($result['error'])) {
             return redirect()->back()->withErrors(['msg' => $result['error']]);
         }
@@ -577,7 +543,7 @@ class CustomerController extends Controller
     public function delete(Customer $customer)
     {
         $traceId = (string) Str::uuid();
-        $result = $this->customerService->checkCustomerDeletionEligibility($customer, $traceId);
+        $result = $this->customerDeletionService->checkCustomerDeletionEligibility($customer, $traceId);
 
         if (! $result['eligible']) {
             return redirect()->route('billings.index', $result['redirect_data'])
@@ -605,7 +571,7 @@ class CustomerController extends Controller
         $timestamp = now()->format('Ymd_His'); // Format: YYYYMMDD_HHMMSS
         $fileName = "Customers_{$timestamp}.xlsx"; // Contoh: customers_20250325_143530.xlsx
 
-        return Excel::download(new CustomersExport, $fileName);
+        return Excel::download(new CustomerMasterExport, $fileName);
     }
 
     public function trashed(Request $request)
@@ -622,7 +588,7 @@ class CustomerController extends Controller
             'search_admin',
         ]);
 
-        $data = $this->customerService->getTrashedCustomers($searchParams, $perPage, $traceId);
+        $data = $this->customerQueryService->getTrashedCustomers($searchParams, $perPage, $traceId);
 
         return view('customers.trashed', [
             'data' => $data['customers'],
@@ -631,6 +597,7 @@ class CustomerController extends Controller
             'allAdmin' => $data['admins'],
             'periodeName' => $data['periodeName'],
             'perPage' => $data['perPage'],
+            'allPackages' => $data['allPackages']
         ])->with('i', ($request->input('page', 1) - 1) * $perPage);
     }
 
@@ -638,7 +605,7 @@ class CustomerController extends Controller
     {
         $traceId = (string) Str::uuid();
 
-        $this->customerService->restoreCustomer($slug, $traceId);
+        $this->customerRestoreService->restoreCustomer($slug, $traceId);
 
         return redirect()
             ->route('customers.index')
@@ -648,7 +615,7 @@ class CustomerController extends Controller
     public function forceDelete($slug)
     {
         $traceId = (string) Str::uuid();
-        $result = $this->customerService->forceDeleteCustomer($slug, $traceId);
+        $result = $this->customerDeletionService->forceDeleteCustomer($slug, $traceId);
 
         if (! $result['success']) {
             LogHelper::logError(
@@ -699,7 +666,7 @@ class CustomerController extends Controller
     {
         $traceId = (string) Str::uuid();
         try {
-            $this->customerDeletionService->deleteCustomer($customer, $traceId);
+            $this->customerSoftDeleteService->deleteCustomer($customer, $traceId);
 
             return redirect()->route('customers.index')
                 ->with('success', 'Customer deleted successfully');

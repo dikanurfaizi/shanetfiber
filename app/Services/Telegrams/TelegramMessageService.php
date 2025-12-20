@@ -3,7 +3,7 @@
 namespace App\Services\Telegrams;
 
 use App\Helpers\LogHelper;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\Telegram\TelegramChatId;
 use App\DataTransferObjects\TelegramJobDto;
 use RuntimeException;

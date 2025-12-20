@@ -2,12 +2,12 @@
 
 namespace App\Services\Customers;
 
-use App\Models\Customer;
-use App\Models\Billing\BillingPeriode;
+use App\Models\Customers\Customer;
+use App\Models\Billings\BillingPeriode;
 use App\Models\Websystem;
 use Illuminate\Support\Str;
 use App\Helpers\LogHelper;
-use App\Models\SubscriptionDuration;
+use App\Models\Packages\PackageDuration;
 use Illuminate\Support\Carbon;
 use App\Enums\SubscriptionStatus;
 use Illuminate\Support\Facades\DB;
@@ -23,13 +23,19 @@ class CustomerBillingService
 
                 // Step 0: Preload relations
                 $tick = microtime(true);
-                $customer->loadMissing(['package', 'member', 'user', 'customerSubscriptions']);
-                LogHelper::logInfo(null, [
-                    'duration_ms' => (int) round((microtime(true) - $tick) * 1000),
-                    'customer_id' => $customer->id,
-                    'periode_id'  => $periode->id,
-                    'periode'     => $periode->name,
-                ], 200, 'Step 0: Preload relations', $traceId);
+                $customer->loadMissing(['customerSubscriptions.package', 'customerMembership', 'user']);
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id' => $customer->id,
+                        'periode_id'  => $periode->id,
+                        'periode'     => $periode->name,
+                    ],
+                    200,
+                    'Step 0: Preload relations',
+                    $traceId,
+                    (int) round((microtime(true) - $tick) * 1000)
+                );
 
                 // Step 1: Price calculation
                 $tick = microtime(true);
@@ -37,7 +43,7 @@ class CustomerBillingService
                 $basePrice       = (float) ($customer->package->price ?? 0);
                 $memberDiscount  = (float) ($customer->member->discount ?? 0);
 
-                $subscriptionDuration = SubscriptionDuration::where('package_id', $customer->package->id)
+                $subscriptionDuration = PackageDuration::where('package_id', $customer->package->id)
                     ->where('duration_months', 1)
                     ->first();
 
