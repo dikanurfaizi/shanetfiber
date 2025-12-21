@@ -136,20 +136,6 @@ class BillingHelper
 
             if ($customer && $customer->activation === 'true') {
 
-                // Pay button
-                //     $buttons[] = '<button type="button"
-                //     class="btn btn-success btn-sm mt-1 billing-submit-btn"
-                //     data-slug="' . $billing->slug . '">
-                //     <i class="fas fa-money-bill-wave text-white"></i> ' . __('billing.button.pay') . '
-                // </button>';
-
-                //     // Print Invoice button
-                //     $buttons[] = '<a class="btn btn-outline-primary btn-sm mt-1"
-                //     target="_blank"
-                //     href="' . route('billings.print-invoice', $billing->slug) . '">
-                //     <i class="fas fa-file-pdf"></i> Print Invoice
-                // </a>';
-
                 $buttons[] = '<button type="button"
                         class="btn btn-success btn-sm billing-submit-btn"
                         data-slug="' . $billing->slug . '">

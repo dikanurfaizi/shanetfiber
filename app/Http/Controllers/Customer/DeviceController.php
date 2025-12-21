@@ -6,6 +6,7 @@ use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
 use App\Http\Controllers\Controller;
 use App\Helpers\LogHelper;
+use App\Services\Customers\CustomerViewService;
 use Illuminate\Support\Str;
 use App\Services\Routerboard\SystemService;
 use Exception;
@@ -13,11 +14,14 @@ use Exception;
 class DeviceController extends Controller
 {
     private SystemService $systemService;
+    private CustomerViewService $customerViewService;
 
     public function __construct(
-        SystemService $systemService
+        SystemService $systemService,
+        CustomerViewService $customerViewService,
     ) {
         $this->systemService = $systemService;
+        $this->customerViewService = $customerViewService;
     }
 
     private function getCustomerData()
@@ -42,8 +46,8 @@ class DeviceController extends Controller
             'customer_id' => $customer->id ?? null
         ], 200, 'Customer akses halaman device information', $traceId);
 
-        // $data = $this->customerViewService->getCustomerViewData($customer, $traceId);
-        $data = null;
+        $data = $this->customerViewService->getCustomerViewData($customer, $traceId);
+        // $data = null;
 
         return view('customers.pages.devices.info', $data);
     }

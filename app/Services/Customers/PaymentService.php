@@ -14,78 +14,77 @@ class PaymentService
 {
     public function getBillings(int $customerId, ?string $state, int $perPage = 10, string $traceId)
     {
-        LogHelper::logInfo(null, [
-            'customer_id' => $customerId,
-            'status' => $state,
-            'per_page' => $perPage,
-        ], 200, 'Mulai mengambil data billing', $traceId);
-
-        $billings = Billing::with('billingSubscription')
-            ->where('customer_id', $customerId)
-            ->when($state, function ($query) use ($state) {
-                $query->where('status', $state);
-            })
-            ->orderBy('created_at', 'DESC')
-            ->orderBy('customer_name', 'ASC')
+        $billings = Billing::query()
+            ->with(['billingSubscription.billingPeriode', 'customer'])
+            ->join('customers', 'customers.id', '=', 'billings.customer_id')
+            ->where('billings.customer_id', $customerId)
+            ->when($state, fn($q) => $q->where('billings.status', $state))
+            ->orderBy('billings.created_at', 'DESC')
+            ->orderBy('customers.name', 'ASC')
+            ->select('billings.*')
             ->paginate($perPage);
 
-        $billings->getCollection()->transform(function ($billing) use ($traceId) {
-            $periode = $billing->billingSubscription->billing_periode ?? null;
+        $billings->getCollection()->transform(function ($billing) {
+            $periode = $billing->billingSubscription->billingPeriode->name ?? null;
 
-            if ($periode) {
-                $billing->periode_text = Carbon::parse($periode)
-                    ->locale('id')
-                    ->translatedFormat('F Y');
-
-                LogHelper::logInfo(null, [
-                    'billing_id' => $billing->id,
-                    'periode' => $billing->periode_text,
-                ], 200, 'Periode billing berhasil diproses', $traceId);
-            } else {
-                $billing->periode_text = '-';
-                LogHelper::logInfo(null, [
-                    'billing_id' => $billing->id,
-                ], 404, 'Periode billing tidak ditemukan', $traceId);
-            }
+            $billing->periode_text = $periode
+                ? Carbon::parse($periode)->locale('id')->translatedFormat('F Y')
+                : '-';
 
             return $billing;
         });
 
-        LogHelper::logInfo(null, [
-            'count' => $billings->count(),
-        ], 200, 'Data billing berhasil diambil', $traceId);
+        LogHelper::logInfo(
+            null,
+            [
+                'customer_id' => $customerId,
+                'status' => $state,
+                'per_page' => $perPage,
+                'billing_count' => $billings->count(),
+                'billing_ids' => $billings->pluck('id')->values()
+            ],
+            200,
+            'Billing list compiled',
+            $traceId
+        );
 
         return $billings;
     }
 
     public function getWebsystem(string $traceId)
     {
-        LogHelper::logInfo(null, [], 200, 'Mengambil konfigurasi websystem', $traceId);
-
         $websystem = Websystem::where('slug', 'websystem')->first();
 
-        if ($websystem) {
-            LogHelper::logInfo(null, [
-                'payment_gateway' => $websystem->payment_gateway,
-            ], 200, 'Konfigurasi websystem ditemukan', $traceId);
-        } else {
-            LogHelper::logInfo(null, [], 404, 'Konfigurasi websystem tidak ditemukan', $traceId);
-        }
+        LogHelper::logInfo(
+            null,
+            [
+                'found' => (bool) $websystem,
+                'payment_gateway' => $websystem?->payment_gateway,
+                'tax_enabled' => $websystem?->enable_tax,
+                'tax_rate' => $websystem?->tax_rate,
+            ],
+            $websystem ? 200 : 404,
+            'Websystem config resolved',
+            $traceId
+        );
 
         return $websystem;
     }
 
     public function getPaymentDetail(Billing $billing, string $traceId)
     {
-        LogHelper::logInfo(null, [
+        $log = [
             'billing_id' => $billing->id,
             'customer_id' => $billing->customer_id,
-        ], 200, 'Mengambil detail pembayaran', $traceId);
+        ];
 
         $websystem = Websystem::where('slug', 'websystem')->first();
 
-        if ($websystem->payment_gateway !== 'enable') {
-            LogHelper::logInfo(null, [], 503, 'Gateway pembayaran dinonaktifkan', $traceId);
+        if ($websystem?->payment_gateway !== 'enable') {
+            $log['result'] = 'payment_gateway_disabled';
+
+            LogHelper::logInfo(null, $log, 503, 'Payment detail resolved', $traceId);
+
             return [
                 'view' => 'errors.notfound',
                 'data' => [],
@@ -93,16 +92,14 @@ class PaymentService
         }
 
         $payment_gateways = PaymentGateway::where('disabled', 'false')->get();
+        $log['available_gateways'] = $payment_gateways->pluck('slug');
 
         foreach ($payment_gateways as $gateway) {
-            LogHelper::logInfo(null, [
-                'gateway' => $gateway->slug,
-            ], 200, 'Memeriksa gateway pembayaran', $traceId);
 
             if ($gateway->slug === 'midtrans') {
-                LogHelper::logInfo(null, [
-                    'billing_id' => $billing->id,
-                ], 200, 'Menggunakan Midtrans gateway', $traceId);
+                $log['selected_gateway'] = 'midtrans';
+
+                LogHelper::logInfo(null, $log, 200, 'Payment detail resolved', $traceId);
 
                 return [
                     'view' => 'customers.pages.payments.show',
@@ -111,25 +108,19 @@ class PaymentService
             }
 
             if ($gateway->slug === 'tripays') {
-                LogHelper::logInfo(null, [
-                    'billing_id' => $billing->id,
-                ], 200, 'Menggunakan Tripay gateway', $traceId);
-
                 $tripay = new TripayController();
                 $channels = $tripay->getPaymentChannels();
 
-                $order = Order::where('orders.customer_id', $billing->customer_id)
-                    ->where('orders.billing_id', $billing->id)
-                    ->orderBy('created_at', 'desc')
+                $order = Order::where('customer_id', $billing->customer_id)
+                    ->where('billing_id', $billing->id)
+                    ->latest()
                     ->first();
 
-                if ($order) {
-                    LogHelper::logInfo(null, [
-                        'order_id' => $order->id,
-                    ], 200, 'Order ditemukan untuk billing', $traceId);
-                } else {
-                    LogHelper::logInfo(null, [], 404, 'Order tidak ditemukan untuk billing', $traceId);
-                }
+                $log['selected_gateway'] = 'tripays';
+                $log['order_id'] = $order?->id;
+                $log['channel_count'] = count($channels ?? []);
+
+                LogHelper::logInfo(null, $log, 200, 'Payment detail resolved', $traceId);
 
                 return [
                     'view' => 'customers.pages.payments.tripays.show',
@@ -138,7 +129,9 @@ class PaymentService
             }
         }
 
-        LogHelper::logInfo(null, [], 404, 'Tidak ada gateway pembayaran yang cocok', $traceId);
+        $log['result'] = 'no_gateway_matched';
+
+        LogHelper::logInfo(null, $log, 404, 'Payment detail resolved', $traceId);
 
         return [
             'view' => 'errors.notfound',

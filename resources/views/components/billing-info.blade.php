@@ -1,48 +1,115 @@
-<div class="table-responsive">
-    <table class="table table-hover table-condensed">
+<div class="card-body col-lg-8">
+
+    {{-- =========================
+    CUSTOMER INFORMATION
+    ========================= --}}
+    <h6 class="text-primary mb-3">
+        <i class="fas fa-user"></i> Customer Information
+    </h6>
+
+    <table class="table table-sm table-borderless align-middle">
         <tr>
-            <td>ID</td>
-            <td><b>#{{ $billing->billing_number }}</b></td>
+            <th style="width:30%" class="text-muted">Customer ID</th>
+            <td>
+                <span class="badge bg-success text-white">
+                    {{ $billing->customer->customer_id ?? '-' }}
+                </span>
+            </td>
         </tr>
         <tr>
-            <td>Nama</td>
-            <td><b>{{ $billing->customer_name }}</b></td>
+            <th class="text-muted">Name</th>
+            <td>{{ $billing->customer->name }}</td>
         </tr>
         <tr>
-            <td>Periode</td>
-            <td><b>{{ $billing->billingSubscription->billing_periode }}</b></td>
+            <th class="text-muted">Address</th>
+            <td>{{ $billing->customer->address ?? '-' }}</td>
         </tr>
+    </table>
+
+    {{-- =========================
+    BILLING INFORMATION
+    ========================= --}}
+    <h6 class="text-primary mt-4 mb-3">
+        <i class="fas fa-file-invoice-dollar"></i> Billing Information
+    </h6>
+
+    <table class="table table-sm table-borderless align-middle">
         <tr>
-            <td>Package</td>
-            <td><b>{{ $billing->customer->package->name }}</b></td>
+            <th style="width:30%" class="text-muted">Billing Number</th>
+            <td>
+                <span class="badge bg-primary text-white">
+                    #{{ $billing->billing_number }}
+                </span>
+            </td>
+        </tr>
+
+        <tr>
+            <th class="text-muted">Period</th>
+            <td>
+                {{ $billing->billingSubscription->billingPeriode->name ?? '-' }}
+            </td>
+        </tr>
+
+        <tr>
+            <th class="text-muted">Package</th>
+            <td>{{ $billing->customer->active_package->name ?? '-' }}</td>
+        </tr>
+
+        <tr>
+            <th class="text-muted">Created At</th>
+            <td>
+                {{ $billing->created_at->translatedFormat('d F Y, H:i') }}
+            </td>
+        </tr>
+    </table>
+
+    {{-- =========================
+    PAYMENT SUMMARY
+    ========================= --}}
+    <h6 class="text-primary mt-4 mb-3">
+        <i class="fas fa-money-bill-wave"></i> Payment Summary
+    </h6>
+
+    <table class="table table-sm table-borderless align-middle">
+        <tr>
+            <th style="width:30%" class="text-muted">Base Price</th>
+            <td>@moneyIDR($billing->base_price)</td>
         </tr>
 
         @if ($websystem->enable_tax === 'true')
             <tr>
-                <td>Harga</td>
-                <td><b>@moneyIDR($billing->base_price)</b></td>
-            </tr>
-            <tr>
-                <td>PPN</td>
-                <td><b>@moneyIDR($billing->tax)</b></td>
+                <th class="text-muted">Tax (PPN)</th>
+                <td>@moneyIDR($billing->tax)</td>
             </tr>
         @endif
 
         <tr>
-            <td>Total Price</td>
-            <td><b>@moneyIDR($billing->total_amount)</b></td>
-        </tr>
-        <tr>
-            <td>Status Pembayaran</td>
-            <td>
-                <b>
-                    {{ $billing->status == 'BL' ? __('billing.state.belum-lunas') : __('billing.state.lunas') }}
-                </b>
+            <th class="text-muted fw-bold">Total Amount</th>
+            <td class="fw-bold text-success">
+                @moneyIDR($billing->total_amount)
             </td>
         </tr>
+
         <tr>
-            <td>Tanggal</td>
-            <td><b>{{ $billing->created_at->format('d M Y H:i') }}</b></td>
+            <th class="text-muted">Payment Status</th>
+            <td>
+                @if ($billing->status === 'LS')
+                    <span class="badge bg-success text-white">
+                        {{ __('billing.state.lunas') }}
+                    </span>
+                @else
+                    <span class="badge bg-warning text-dark">
+                        {{ __('billing.state.belum-lunas') }}
+                    </span>
+                @endif
+            </td>
         </tr>
     </table>
+
+</div>
+
+<div class="card-footer">
+    <a href="{{ url()->previous() }}" class="btn btn-sm btn-secondary">
+        <i class="fas fa-arrow-left mr-1"></i> Back
+    </a>
 </div>

@@ -117,10 +117,11 @@ Route::group(['prefix' => 'customer', 'namespace' => 'Customer'], function () {
         Route::post('/logout', [CustomerLoginController::class, 'customerLogout'])->name('customerLogout');
         // ===============================BILLINGS=================================================================================
         Route::get('billings/payments', [PaymentController::class, 'index'])->name('customer.payment.index');
-        Route::get('billings/payments/{status}/show', [PaymentController::class, 'index'])->name('customer.payment.state');
+        Route::get('billings/payments/status/{status}', [PaymentController::class, 'index'])->name('customer.payment.state');
         Route::get('billings/payments/{billing:id}/view', [PaymentController::class, 'show'])->name('customer.payment.show');
+        Route::get('billings/payments/{billing}/download/receipt', [PaymentController::class, 'print'])->name('customer.payment.receipt.download');
         Route::get('billings/orders', [OrderController::class, 'index'])->name('customer.order.index');
-        Route::get('billings/orders/{status}/show', [OrderController::class, 'index'])->name('customer.order.state');
+        Route::get('billings/orders/status/(status}', [OrderController::class, 'index'])->name('customer.order.state');
         Route::post('billings/orders/{order:id}/update', [OrderController::class, 'update'])->name('customer.order.update');
         Route::get('billings/orders/{billing:id}/create', [OrderController::class, 'create'])->name('customer.order.create');
         // ================================TRIPAY==================================================================================

@@ -159,7 +159,9 @@ return [
         'submit' => 'Submit',
         'edit-profile' => 'Edit Profile',
         'update-my-data' => 'Update',
-        'change-password' => 'Change Password'
+        'change-password' => 'Change Password',
+        'view' => 'View detail',
+        'download-receipt' => 'Download Receipt'
     ],
 
     'action' => [

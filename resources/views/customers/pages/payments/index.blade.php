@@ -62,11 +62,19 @@
                                 @endif
                             </td>
                             <td class="text-center">
-                                <a href="{{ route('customer.payment.show', $billing->id) }}"
+                                <a href="{{ route('customer.payment.show', $billing) }}"
                                     class="btn btn-sm btn-primary">
                                     <i class="far fa-eye mr-1"></i>
-                                    {{ __('billing.button.view') }}
+                                    {{ __('customer.button.view') }}
                                 </a>
+
+                                @if ($billing->status === 'LS')
+                                    <a href="{{ route('customer.payment.receipt.download', $billing) }}"
+                                        class="btn btn-sm btn-outline-success ml-1">
+                                        <i class="fas fa-file-download mr-1"></i>
+                                        {{ __('customer.button.download-receipt') }}
+                                    </a>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

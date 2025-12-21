@@ -7,9 +7,6 @@
     <x-billing-info :billing="$billing" :websystem="$websystem" />
 
     @if ($billing->status !== 'LS')
-        @php
-            Log::info("Billing Status: {$billing->status} not LS");
-        @endphp
         @if (!$order)
             {{-- Case: Order belum pernah dibuat --}}
             @include('customers.components.partials.create-order-form', [
@@ -19,9 +16,6 @@
                 'gateway' => $gateway,
             ])
         @elseif (in_array($order->payment_status, [\App\Models\Order::STATUS_CANCELED]))
-            @php
-                Log::info('Customer membuka halaman ulang karena order sebelumnya dibatalkan.');
-            @endphp
             @include('customers.components.partials.create-order-form', [
                 'channels' => $channels,
                 'billing' => $billing,
@@ -29,14 +23,8 @@
                 'gateway' => $gateway,
             ])
         @elseif (in_array($order->payment_status, [\App\Models\Order::STATUS_UNPAID]))
-            @php
-                Log::info('Order masih UNPAID. Menampilkan komponen aksi pembayaran.');
-            @endphp
             <x-payment-action :order="$order" :gateway="$gateway" :websystem="$websystem" />
         @elseif (in_array($order->payment_status, [\App\Models\Order::STATUS_EXPIRED]))
-            @php
-                Log::info('Order kadaluwarsa. Menampilkan ulang channel pembayaran.');
-            @endphp
             @include('customers.components.partials.expired-order-form', [
                 'channels' => $channels,
                 'billing' => $billing,

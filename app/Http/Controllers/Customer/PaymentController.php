@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Customer;
 use Illuminate\Http\Request;
 use App\Models\Billings\Billing;
 use App\Http\Controllers\Controller;
+use App\Models\Receipt;
+use App\Models\Websystem;
 use Illuminate\Support\Str;
 use App\Services\Customers\PaymentService;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PaymentController extends Controller
 {
@@ -83,5 +86,53 @@ class PaymentController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    public function print(Billing $billing)
+    {
+        // dd('ROUTE HIT', $billing->id, $billing->slug);
+        $websystem = Websystem::where('slug', 'websystem')->first();
+
+        $receipt = Receipt::with(['items', 'billingPayment.billing'])
+            ->whereHas('billingPayment', function ($q) use ($billing) {
+                $q->where('billing_id', $billing->id);
+            })
+            ->latest()
+            ->first();
+
+        if (!$receipt) {
+            return redirect()
+                ->back()
+                ->with('error', __('Receipt belum tersedia untuk billing ini.'));
+        }
+
+        $receiptItems = $receipt->items ?? collect();
+
+        $subtotal = $receiptItems
+            ->where('type', '!=', 'discount')
+            ->sum('subtotal');
+
+        $discount = $receiptItems
+            ->where('type', 'discount')
+            ->sum('subtotal');
+
+        $total = $subtotal + $discount + ($receipt->tax ?? 0);
+
+        $pdf = Pdf::loadView('receipts.print', [
+            'receipt'      => $receipt,
+            'receiptItems' => $receiptItems,
+            'subtotal'     => $subtotal,
+            'discount'     => $discount,
+            'total'        => $total,
+            'websystem'    => $websystem,
+        ]);
+
+        $filename = sprintf(
+            '%s_%s.pdf',
+            $receipt->number,
+            $receipt->customer_name
+        );
+
+        return $pdf->download($filename);
     }
 }
