@@ -32,15 +32,15 @@ class FullPaymentMessageStrategy implements TelegramMessageStrategy
             '%billing_number%'   => $billing?->billing_number,
             '%name%'             => $customer->name,
             '%customer_id%'      => $customer->customer_id,
-            '%package%'          => $customer->package->name,
-            '%periode%'          => $billing?->billingSubscription?->periode_periode,
+            '%package%'          => $customer->active_package->name,
+            '%periode%'          => $billing?->billingSubscription?->billingPeriode->name,
             '%bill%'             => $billing?->base_price,
             '%discount%'         => $billing?->discount_amount,
-            '%member%'           => $customer?->member?->type ?? 'Non Member',
+            '%member%'           => $customer?->customerMembership?->membership?->name ?? 'Non Member',
             '%total%'            => $billing?->total_amount,
-            '%teller%'           => $billing?->teller_name,
-            '%payment_time%'     => $billing?->payment_time,
-            '%payment_methode%'  => $receipt?->payment_methode,
+            '%teller%'           => $billing?->billingPayment->paidByUser->name,
+            '%payment_time%'     => $billing?->billingPayment->payment_time,
+            '%payment_methode%'  => $receipt?->billingPayment->payment_method,
             '%customer_contact%' => $baseWhatsappLink . $formatContact
         ];
     }

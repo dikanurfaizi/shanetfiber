@@ -28,7 +28,7 @@ class UnpaymentMessageStrategy implements TelegramMessageStrategy
             '%billing_number%' => $billing?->billing_number,
             '%name%'           => $customer->name,
             '%customer_id%'    => $customer->customer_id,
-            '%periode%'        => $billing?->billingSubscription?->periode_periode,
+            '%periode%'        => $billing?->billingSubscription?->billingPeriode?->name,
             '%total%'          => $billing?->total_amount,
             '%customer_contact%' => $baseWhatsappLink . $formatContact
 

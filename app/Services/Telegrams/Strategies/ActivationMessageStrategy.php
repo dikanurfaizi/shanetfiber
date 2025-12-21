@@ -22,7 +22,7 @@ class ActivationMessageStrategy implements TelegramMessageStrategy
             '%address%'       => $customer->address,
             '%email%'         => $customer->email ?? '-',
             '%customer_id%'   => $customer->customer_id,
-            '%paket%'         => $customer->package->name . ' ' . $customer->package->description,
+            '%paket%'         => $customer->active_package->name . ' ' . $customer->active_package->description,
             '%ppp_username%'  => $customer->username,
             '%ppp_password%'  => $customer->password_ppp,
             '%admin_name%'    => $customer->user->name,

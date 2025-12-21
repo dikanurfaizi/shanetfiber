@@ -49,7 +49,7 @@ class ActivationHandler extends BaseBroadcastAwareHandler implements MessageActi
         return [
             'template_slug' => 'activation_customer',
             'to'            => $customer->contact,
-            'customer_id'   => $customer->customer_id,
+            'customer_id'   => $customer->id,
             'replacements'  => [
                 '%name%'             => $customer->name,
                 '%address%'          => $customer->address,

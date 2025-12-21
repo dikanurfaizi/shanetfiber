@@ -7,7 +7,7 @@ use App\Models\Mikrotik;
 use App\Models\Packages\Package;
 use App\Models\AutoIsolir;
 use App\Models\Billings\Billing;
-use App\MOdels\Billings\BillingPayment;
+use App\Models\Billings\BillingPayment;
 use App\Models\PppType;
 use App\Models\Customers\CustomerSubscription;
 use Carbon\Carbon;
@@ -55,7 +55,7 @@ class CustomerActivationService
 
         try {
             foreach ($customers as $customer) {
-                $result = $this->microtikActivate($customer, $activationDate, $traceId);
+                $result = $this->microtikActivate($customer, $customer->activeSubscription, $activationDate, $traceId);
             }
 
             LogHelper::logInfo(null, [
@@ -87,7 +87,7 @@ class CustomerActivationService
         }
     }
 
-    private function microtikActivate(Customer $customer, Carbon $activationDate, string $traceId): array
+    private function microtikActivate(Customer $customer, CustomerSubscription $subs, Carbon $activationDate, string $traceId): array
     {
         $internet_service = $customer->internet_service;
         $mikrotikId = $customer->mikrotik_id;
@@ -99,7 +99,7 @@ class CustomerActivationService
                 $result = $error;
             }
 
-            $profile = Package::where('id', $customer->package_id)->value('profile');
+            $profile = $subs->package->profile;
             $comment_payment = $this->getCommentPayment($mikrotikId);
 
             if ($internet_service == 'ppp') {
@@ -199,7 +199,7 @@ class CustomerActivationService
                         $subscription,
                         $billing,
                         $billingPayment,
-                        [$paymentMethod],
+                        ['payment_method' => $paymentMethod],
                         $traceId,
                         $lastCheckpoint
                     );
@@ -250,7 +250,7 @@ class CustomerActivationService
              * 7. SIDE EFFECT (di luar transaction)
              * ----------------------------------------- */
             if (config('services.shanetfiber.allow_mikrotik_actions')) {
-                $this->microtikActivate($customer, $activationDate, $traceId);
+                $this->microtikActivate($customer, $customer->activeSubscription, $activationDate, $traceId);
             }
 
             return [
