@@ -6,7 +6,7 @@ namespace App\Services\Messaging;
 use App\Models\Messaging\MessageEvent;
 use App\Helpers\LogHelper;
 use App\Helpers\FormatReceiver;
-use App\Jobs\WhatsApp\SendWhatsappMessageJob;
+use App\Jobs\Whatsapp\SendWhatsappMessageJob;
 use App\Services\Messaging\Contracts\MessageActionHandler;
 use Throwable;
 use Illuminate\Support\Carbon;

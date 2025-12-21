@@ -137,12 +137,12 @@ class CustomerActivationService
         }
     }
 
-    public function activateCustomer(Customer $customer, string $traceId, $lastCheckpoint): array
+    public function activateCustomer(Customer $customer, string $traceId): array
     {
         $activationDate = now();
         $paymentMethod = 'cash';
         try {
-            $allResult = DB::transaction(function () use ($customer, $activationDate, $traceId, $paymentMethod, &$lastCheckpoint) {
+            $allResult = DB::transaction(function () use ($customer, $activationDate, $traceId, $paymentMethod) {
 
                 /** -----------------------------------------
                  * 1. Ambil subscription aktif customer
@@ -188,9 +188,6 @@ class CustomerActivationService
                     'payment_time'     => $activationDate,
                 ]);
 
-                $now = microtime(true);
-                $exec = round($now - $lastCheckpoint, 3);
-
                 /** -----------------------------------------
                  * 5. Buat receipt
                  * ----------------------------------------- */
@@ -200,8 +197,7 @@ class CustomerActivationService
                         $billing,
                         $billingPayment,
                         ['payment_method' => $paymentMethod],
-                        $traceId,
-                        $lastCheckpoint
+                        $traceId
                     );
 
                 /** -----------------------------------------
@@ -216,10 +212,6 @@ class CustomerActivationService
                 $customer->refresh();
                 $billing->refresh();
 
-                $now = microtime(true);
-                $exec = round($now - $result['lastCheckpoint'], 3);
-                $lastCheckpoint = $now;
-
                 LogHelper::logInfo(
                     null,
                     [
@@ -232,7 +224,6 @@ class CustomerActivationService
                     200,
                     "Customer, Billing, BillingPayment, Receipt Has been updated",
                     $traceId,
-                    $exec
                 );
 
                 return [
@@ -240,7 +231,6 @@ class CustomerActivationService
                     'billing'  => $billing,
                     'billingPayment' => $billingPayment,
                     'receipt'  => $result['receipt'],
-                    'lastCheckpoint' => $lastCheckpoint,
                     'subscription' => $subscription,
                     'membership' => $result['membership']
                 ];
@@ -260,13 +250,10 @@ class CustomerActivationService
                 'billingPayment' => $allResult['billingPayment'],
                 'receipt'  => $allResult['receipt'],
                 'traceId'  => $traceId,
-                'lastCheckpoint' => $lastCheckpoint,
                 'subscription' => $allResult['subscription'],
                 'membership' => $allResult['membership']
             ];
         } catch (\Throwable $e) {
-            $now = microtime(true);
-            $exec = round($now - $lastCheckpoint, 3);
             LogHelper::logError(
                 null,
                 [
@@ -280,7 +267,6 @@ class CustomerActivationService
                 500,
                 'Customer activation failed',
                 $traceId,
-                $exec
             );
 
             throw $e;

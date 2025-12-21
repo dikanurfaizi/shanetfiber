@@ -2,6 +2,7 @@
 
 namespace App\Services\Routerboard;
 
+use App\Helpers\ExecutionTimer;
 use RouterOS\Client;
 use RouterOS\Config;
 use App\Helpers\LogHelper;
@@ -10,11 +11,12 @@ class MikrotikService
 {
     public static function getMikrotik($mikrotik, $traceId)
     {
+        $timer = new ExecutionTimer();
         LogHelper::logInfo(null, [
             'host' => $mikrotik->host,
             'port' => $mikrotik->port,
             'username' => $mikrotik->username,
-        ], 200, 'MikrotikService::getMikrotik - START', $traceId);
+        ], 200, 'MikrotikService::getMikrotik - START', $traceId, $timer->lap());
 
         try {
             $config = (new Config())
@@ -29,7 +31,7 @@ class MikrotikService
             LogHelper::logInfo(null, [
                 'host' => $mikrotik->host,
                 'status' => 'connected'
-            ], 200, 'MikrotikService::getMikrotik - SUCCESS', $traceId);
+            ], 200, 'MikrotikService::getMikrotik - SUCCESS', $traceId, $timer->lap());
 
             return $client;
         } catch (\Throwable $e) {
@@ -38,19 +40,20 @@ class MikrotikService
                 'error' => $e->getMessage(),
                 'host' => $mikrotik->host,
                 'exception' => get_class($e)
-            ], 500, 'MikrotikService::getMikrotik - FAILED', $traceId);
+            ], 500, 'MikrotikService::getMikrotik - FAILED', $traceId, $timer->lap());
             throw $e;
         }
     }
 
     public static function testConnection($mikrotik, $traceId)
     {
+        $timer = new ExecutionTimer();
         LogHelper::logInfo(null, [
             'trace_id' => $traceId,
             'host' => $mikrotik['host'],
             'port' => $mikrotik['port'],
             'username' => $mikrotik['username']
-        ], 200, 'MikrotikService::testConnection - START', $traceId);
+        ], 200, 'MikrotikService::testConnection - START', $traceId, $timer->lap());
 
         try {
             $config = (new Config())
@@ -65,7 +68,7 @@ class MikrotikService
                 'trace_id' => $traceId,
                 'host' => $mikrotik['host'],
                 'status' => 'connected'
-            ], 200, 'MikrotikService::testConnection - SUCCESS', $traceId);
+            ], 200, 'MikrotikService::testConnection - SUCCESS', $traceId, $timer->lap());
 
             return $client;
         } catch (\Throwable $e) {
@@ -74,7 +77,7 @@ class MikrotikService
                 'error' => $e->getMessage(),
                 'host' => $mikrotik['host'],
                 'exception' => get_class($e)
-            ], 500, 'MikrotikService::testConnection - FAILED', $traceId);
+            ], 500, 'MikrotikService::testConnection - FAILED', $traceId, $timer->lap());
             throw $e;
         }
     }

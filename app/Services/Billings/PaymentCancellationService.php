@@ -2,6 +2,7 @@
 
 namespace App\Services\Billings;
 
+use App\Enums\OrderStatus;
 use App\Events\PaymentCancelled;
 use App\Helpers\LogHelper;
 use App\Jobs\CancelPaymentAfterDueDateJob;
@@ -388,7 +389,7 @@ class PaymentCancellationService
 
         foreach ($orders as $order) {
             $order->update([
-                'payment_status' => Order::STATUS_CANCELED,
+                'payment_status' => OrderStatus::CANCELED,
             ]);
         }
 

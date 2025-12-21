@@ -3,7 +3,7 @@
 namespace App\Services\WhatsappWebhook\Handlers;
 
 use App\Helpers\LogHelper;
-use App\Jobs\WhatsApp\ProcessGroupEventJob;
+use App\Jobs\Whatsapp\ProcessGroupEventJob;
 use App\Services\WhatsappWebhook\DTO\WebhookPayload;
 
 class GroupHandler extends BaseHandler

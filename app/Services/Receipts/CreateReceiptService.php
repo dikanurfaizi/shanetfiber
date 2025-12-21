@@ -2,6 +2,7 @@
 
 namespace App\Services\Receipts;
 
+use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
 use App\Models\Billings\Billing;
 use App\Models\Billings\BillingPayment;
@@ -20,8 +21,9 @@ class CreateReceiptService
         BillingPayment $billingPayment,
         array $paymentData,
         string $traceId,
-        $lastCheckpoint
+        ?string $createdBy = null
     ): array {
+        $timer = new ExecutionTimer();
         try {
             return DB::transaction(function () use (
                 $customerSubscription,
@@ -29,7 +31,7 @@ class CreateReceiptService
                 $billingPayment,
                 $traceId,
                 $paymentData,
-                &$lastCheckpoint
+                &$timer
             ) {
 
                 /** -----------------------------------------
@@ -114,8 +116,8 @@ class CreateReceiptService
                     'discount'             => $billing->discount_amount,
                     'price_after_discount' => $billing->total_amount,
                     'member_type'          => $customerMembership?->membership->name ?? 'NON_MEMBER',
-                    'created_name'         => auth()->user()->name,
-                    'teller_name'          => auth()->user()->name,
+                    'created_name'         => $createdBy ?? auth()->user()->name ?? 'SYSTEM',
+                    'teller_name'          => $createdBy ?? auth()->user()->name ?? 'SYSTEM',
                 ];
 
                 if ($paymentData['payment_method'] === 'transfer') {
@@ -159,9 +161,6 @@ class CreateReceiptService
                 /** -----------------------------------------
                  * 8. Logging
                  * ----------------------------------------- */
-                $now = microtime(true);
-                $exec = round($now - $lastCheckpoint, 3);
-                $lastCheckpoint = $now;
                 LogHelper::logInfo(
                     null,
                     [
@@ -172,20 +171,16 @@ class CreateReceiptService
                     200,
                     'Successfully created receipt',
                     $traceId,
-                    $exec
+                    $timer->lap()
                 );
 
                 return [
                     'success' => true,
                     'receipt' => $receipt,
-                    'lastCheckpoint' => $lastCheckpoint,
                     'membership' => $customerMembership
                 ];
             });
         } catch (\Throwable $e) {
-
-            $exec = round(microtime(true) - $lastCheckpoint, 3);
-
             LogHelper::logError(
                 null,
                 [
@@ -200,7 +195,7 @@ class CreateReceiptService
                 500,
                 'Failed to create receipt',
                 $traceId,
-                $exec
+                $timer->lap()
             );
 
             throw $e; // rollback otomatis

@@ -2,6 +2,7 @@
 
 namespace App\Services\Customers;
 
+use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
 use App\Helpers\FormatReceiver;
 use App\Models\Customers\Customer;
@@ -32,18 +33,17 @@ class CustomerCreateService
 
     public function createCustomer(array $data, string $traceId): Customer
     {
-        $startTime = microtime(true);
-
+        $timer = new ExecutionTimer();
         LogHelper::logInfo(
             null,
             [],
             201,
             'Customer created successfully',
             $traceId,
-            0
+            $timer->lap()
         );
 
-        return DB::transaction(function () use ($data, $traceId, &$startTime) {
+        return DB::transaction(function () use ($data, $traceId, &$timer) {
 
             /** ----------------------------------------------------
              * 1. Password Fallback
@@ -204,12 +204,8 @@ class CustomerCreateService
                 $subscriptionPeriod,
                 $billingPeriode,
                 $subscription,
-                $traceId,
-                round((microtime(true) - $startTime) * 1000, 3)
+                $traceId
             );
-
-            // lanjutkan stopwatch
-            $lastCheckpoint = $result['lastCheckpoint'];
 
             /** ----------------------------------------------------
              * 11. Logging
@@ -222,7 +218,7 @@ class CustomerCreateService
                 201,
                 'Customer created successfully',
                 $traceId,
-                round((microtime(true) - $lastCheckpoint) * 1000, 3)
+                $timer->lap()
             );
 
             return $customer;

@@ -2,6 +2,7 @@
 
 namespace App\Services\Billings;
 
+use App\Helpers\ExecutionTimer;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 use RuntimeException;
@@ -32,15 +33,14 @@ class PaymentService
     public function processPayment(
         Billing $billing,
         array $paymentData,
-        string $traceId,
-        float $lastCheckpoint
+        string $traceId
     ): array {
-
+        $timer = new ExecutionTimer();
         LogHelper::logInfo('Payment', [
             'billing_id'     => $billing->id,
             'customer_id'    => $billing->customer_id,
             'payment_method' => $paymentData['payment_method'] ?? null,
-        ], 100, 'payment.start', $traceId, $lastCheckpoint);
+        ], 100, 'payment.start', $traceId, $timer->lap());
 
         try {
             DB::beginTransaction();
@@ -71,53 +71,41 @@ class PaymentService
 
             // Create receipt
             $receiptResult = $this->createReceiptService
-                ->createReceipt($subscription, $billing, $billingPayment, $paymentData, $traceId, $lastCheckpoint);
+                ->createReceipt($subscription, $billing, $billingPayment, $paymentData, $traceId);
 
             if (!$receiptResult['success']) {
                 throw new RuntimeException("Receipt creation failed for billing_id {$billing->id}");
             }
-
-            $now = microtime(true);
-            $exec = round($now - $receiptResult['lastCheckpoint'], 3);
-            $lastCheckpoint = $now;
 
             DB::commit();
 
             LogHelper::logInfo('Payment', [
                 'billing_id' => $billing->id,
                 'receipt_id' => $receiptResult['receipt']->id,
-            ], 200, 'payment.db.commit', $traceId, $exec);
+            ], 200, 'payment.db.commit', $traceId, $timer->lap());
 
             // External actions (non-critical)
             if (config('services.shanetfiber.allow_mikrotik_actions')) {
-                $now = microtime(true);
-                $exec = round($now - $receiptResult['lastCheckpoint'], 3);
-                $lastCheckpoint = $now;
-
                 $this->paymentProcessingService
                     ->processPaymentActions($billing, $traceId);
 
                 LogHelper::logInfo('Payment', [
                     'billing_id' => $billing->id,
-                ], 200, 'payment.external.processed', $traceId, $exec);
+                ], 200, 'payment.external.processed', $traceId, $timer->lap());
             }
 
             return [
                 'receipt'  => $receiptResult['receipt'],
-                'trace_id' => $traceId,
-                'lastCheckpoint' => $lastCheckpoint
+                'trace_id' => $traceId
             ];
         } catch (Throwable $e) {
-            $now = microtime(true);
-            $exec = round($now - $lastCheckpoint, 3);
-
             DB::rollBack();
 
             LogHelper::logError('Payment', [
                 'billing_id' => $billing->id,
                 'exception'  => class_basename($e),
                 'message'    => $e->getMessage(),
-            ], 500, 'payment.failed', $traceId, $exec);
+            ], 500, 'payment.failed', $traceId, $timer->lap());
 
             throw $e;
         }

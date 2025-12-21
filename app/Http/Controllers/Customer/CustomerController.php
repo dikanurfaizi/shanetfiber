@@ -32,6 +32,7 @@ use RouterOS\Exceptions\ClientException;
 use RouterOS\Exceptions\ConnectException;
 use App\Events\CustomerActivated;
 use App\Exports\CustomerMasterExport;
+use App\Helpers\ExecutionTimer;
 use App\Services\Customers\CustomerSoftDeleteService;
 use App\Services\Customers\CustomerSubscriptionGuardService;
 use DomainException;
@@ -93,11 +94,17 @@ class CustomerController extends Controller
         $this->middleware('permission:customer-trashed', ['only' => ['trashed', 'restore', 'forceDelete']]);
     }
 
-    // ... [previous methods remain the same until index()]
+    private function startTrace(): array
+    {
+        return [
+            'traceId' => (string) Str::uuid(),
+            'timer'   => new ExecutionTimer(),
+        ];
+    }
 
     public function index(Request $request)
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
         $perPage = $request->input('perPage', 25);
         $searchParams = $this->prepareSearchParams($request, $traceId);
 
@@ -204,10 +211,10 @@ class CustomerController extends Controller
 
     public function edit(Customer $customer)
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
         LogHelper::logInfo(null, [
             'customer' => $customer,
-        ], 200, 'Successfuly fetch data customer', $traceId);
+        ], 200, 'Successfuly fetch data customer', $traceId, $timer->lap());
 
         return view(
             'customers.edit',
@@ -218,11 +225,11 @@ class CustomerController extends Controller
     public function editPpp(Customer $customer)
     {
         $callerID = request('caller_id');
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
         try {
             LogHelper::logInfo(null, [
                 'customer' => $customer,
-            ], 200, 'Successfuly fetch data customer', $traceId);
+            ], 200, 'Successfuly fetch data customer', $traceId, $timer->lap());
 
             return view(
                 'customers.editppp',
@@ -238,7 +245,7 @@ class CustomerController extends Controller
                 'code' => $e->getCode(),
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-            ], 500, 'Failed show data for edit PPP/IP Static', $traceId);
+            ], 500, 'Failed show data for edit PPP/IP Static', $traceId, $timer->lap());
 
             return redirect()->back()
                 ->withErrors(['msg' => 'Cannot connect to server']);
@@ -247,11 +254,11 @@ class CustomerController extends Controller
 
     public function editRouter(Customer $customer)
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
         try {
             LogHelper::logInfo(null, [
                 'customer' => $customer,
-            ], 200, 'Successfuly fetch data customer', $traceId);
+            ], 200, 'Successfuly fetch data customer', $traceId, $timer->lap());
 
             return view(
                 'customers.edit_router',
@@ -267,7 +274,7 @@ class CustomerController extends Controller
                 'code' => $e->getCode(),
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-            ], 500, 'Failed show data for edit router', $traceId);
+            ], 500, 'Failed show data for edit router', $traceId, $timer->lap());
 
             return redirect()->back()
                 ->withErrors(['msg' => 'Cannot connect to server']);
@@ -276,7 +283,7 @@ class CustomerController extends Controller
 
     public function update(CustomerUpdateRequest $request, Customer $customer)
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
 
         try {
             $action = $request->input('action', 'update_data');
@@ -300,7 +307,7 @@ class CustomerController extends Controller
 
     public function updatePpp(CustomerPppUpdateRequest $request, Customer $customer)
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
 
         try {
             // ✅ Tangkap return dari service
@@ -319,7 +326,8 @@ class CustomerController extends Controller
                 ],
                 200,
                 'Successfully updated PPP/IP Static',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
 
             // ✅ Pakai pesan dari service jika ada
@@ -346,7 +354,8 @@ class CustomerController extends Controller
                 ],
                 500,
                 'Failed to update PPP/IP Static (RuntimeException)',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
 
             return redirect()->back()
@@ -369,7 +378,8 @@ class CustomerController extends Controller
                 ],
                 500,
                 'Failed to update PPP/IP Static (Exception)',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
 
             return redirect()->back()
@@ -380,7 +390,8 @@ class CustomerController extends Controller
 
     public function updateRouter(CustomerRouterUpdateRequest $request, Customer $customer)
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
+
         try {
             $this->customerRouterService->updateRouterData($customer, $request->validated(), $traceId);
 
@@ -390,7 +401,7 @@ class CustomerController extends Controller
                     'port',
                 ]),
                 'customer' => $customer,
-            ], 200, 'Successfuly Update Router Customer', $traceId);
+            ], 200, 'Successfuly Update Router Customer', $traceId, $timer->lap());
 
             return redirect()->back()
                 ->with('success', 'Router updated successfully');
@@ -405,7 +416,7 @@ class CustomerController extends Controller
                 'code' => $e->getCode(),
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-            ], 500, 'Failed to update router (RuntimeException)', $traceId);
+            ], 500, 'Failed to update router (RuntimeException)', $traceId, $timer->lap());
 
             return redirect()->back()
                 ->withInput()
@@ -420,7 +431,7 @@ class CustomerController extends Controller
                 'code' => $e->getCode(),
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-            ], 500, 'Failed to update router (Exception)', $traceId);
+            ], 500, 'Failed to update router (Exception)', $traceId, $timer->lap());
 
             return redirect()->back()
                 ->withInput()
@@ -430,22 +441,20 @@ class CustomerController extends Controller
 
     public function activation(Customer $customer): RedirectResponse
     {
-        $traceId = (string) Str::uuid();
-        $startTime = microtime(true);
-        $lastCheckpoint = $startTime;
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
         try {
             $this->subscriptionGuard->assertReadyForActivation($customer);
         } catch (DomainException $e) {
             return back()->withErrors(['msg' => $e->getMessage()]);
         }
 
-        $result = $this->customerActivationService->activateCustomer($customer, $traceId, $lastCheckpoint);
+        $result = $this->customerActivationService->activateCustomer($customer, $traceId);
 
         if (isset($result['error'])) {
             LogHelper::logError(null, [
                 'customer' => $customer,
                 'error' => Str::limit($result['error'], 250),
-            ], 400, 'Failed to activate customer', $traceId);
+            ], 400, 'Failed to activate customer', $traceId, $timer->lap());
 
             return redirect()->back()->withErrors(['msg' => $result['error']]);
         }
@@ -463,21 +472,19 @@ class CustomerController extends Controller
             );
         }
 
-        $now = microtime(true);
-        $exec = round($now - $result['lastCheckpoint'], 3);
         LogHelper::logInfo(null, [
             'customerId' => $result['customer']->id,
             'billingId'  => $result['billing']->id,
             'billingPaymentId' => $result['billingPayment']->id,
             'receiptId'  => $result['receipt']->id,
-        ], 200, 'Successfully activated customer', $traceId, $exec);
+        ], 200, 'Successfully activated customer', $traceId, $timer->lap());
 
         return redirect()->back()->with('success', 'Successfully activated customer');
     }
 
     public function activation_all_customer(Request $request): RedirectResponse
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
         $mikrotikId = $request->servers_activation;
 
         $result = $this->customerActivationService->activateAllCustomers($mikrotikId, $traceId);
@@ -486,7 +493,7 @@ class CustomerController extends Controller
             LogHelper::logError(null, [
                 'mikrotik_id' => $mikrotikId,
                 'error' => $result['error'],
-            ], 400, 'Failed to activate all customers', $traceId);
+            ], 400, 'Failed to activate all customers', $traceId, $timer->lap());
 
             return redirect()->back()->withErrors(['msg' => $result['error']]);
         }
@@ -494,14 +501,14 @@ class CustomerController extends Controller
         LogHelper::logInfo(null, [
             'mikrotik_id' => $mikrotikId,
             'activated_count' => $result['count'] ?? null,
-        ], 200, 'Successfully activated all customers', $traceId);
+        ], 200, 'Successfully activated all customers', $traceId, $timer->lap());
 
         return redirect()->back()->with('success', $result['success']);
     }
 
     public function disable(Customer $customer)
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
         $result = $this->customerStatusService->disableCustomer($customer, $traceId);
 
         return $this->handleStatusResponse($result);
@@ -509,7 +516,7 @@ class CustomerController extends Controller
 
     public function forceDisable(Customer $customer)
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
         $result = $this->customerStatusService->forceDisableCustomer($customer, $traceId);
 
         return $this->handleStatusResponse($result);
@@ -517,7 +524,7 @@ class CustomerController extends Controller
 
     public function enable(Customer $customer)
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
         $result = $this->customerStatusService->enableCustomer($customer, $traceId);
 
         return $this->handleStatusResponse($result);
@@ -525,7 +532,7 @@ class CustomerController extends Controller
 
     public function forceEnable(Customer $customer)
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
         $result = $this->customerStatusService->forceEnableCustomer($customer, $traceId);
 
         return $this->handleStatusResponse($result);
@@ -542,7 +549,7 @@ class CustomerController extends Controller
 
     public function delete(Customer $customer)
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
         $result = $this->customerDeletionService->checkCustomerDeletionEligibility($customer, $traceId);
 
         if (! $result['eligible']) {
@@ -555,7 +562,7 @@ class CustomerController extends Controller
 
     public function exportSecret(Customer $customer): RedirectResponse
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
         $result = $this->customerActivationService->exportCustomerSecret($customer, $traceId);
 
         if (isset($result['error'])) {
@@ -567,7 +574,7 @@ class CustomerController extends Controller
 
     public function export()
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
         $timestamp = now()->format('Ymd_His'); // Format: YYYYMMDD_HHMMSS
         $fileName = "Customers_{$timestamp}.xlsx"; // Contoh: customers_20250325_143530.xlsx
 
@@ -576,9 +583,9 @@ class CustomerController extends Controller
 
     public function trashed(Request $request)
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
         $perPage = $request->input('perPage', 25);
-        LogHelper::logInfo(null, ['request' => $request->all(), 'perPage' => $perPage], 200, 'Start Trashed', $traceId);
+        LogHelper::logInfo(null, ['request' => $request->all(), 'perPage' => $perPage], 200, 'Start Trashed', $traceId, $timer->lap());
         $searchParams = $request->only([
             'search_name',
             'search_address',
@@ -603,7 +610,7 @@ class CustomerController extends Controller
 
     public function restore($slug)
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
 
         $this->customerRestoreService->restoreCustomer($slug, $traceId);
 
@@ -614,7 +621,7 @@ class CustomerController extends Controller
 
     public function forceDelete($slug)
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
         $result = $this->customerDeletionService->forceDeleteCustomer($slug, $traceId);
 
         if (! $result['success']) {
@@ -622,7 +629,9 @@ class CustomerController extends Controller
                 null,
                 ['slug' => $slug, 'error' => $result['error'] ?? null],
                 $result['status'],
-                $result['message']
+                $result['message'],
+                $traceId,
+                $timer->lap()
             );
 
             return redirect()->back()
@@ -633,7 +642,9 @@ class CustomerController extends Controller
             null,
             ['slug' => $slug],
             $result['status'],
-            $result['message']
+            $result['message'],
+            $traceId,
+            $timer->lap()
         );
 
         return redirect()->route('customers.trashed')
@@ -642,7 +653,7 @@ class CustomerController extends Controller
 
     public function getPppSecretsActiveByName(Request $request, Mikrotik $mikrotik)
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
         try {
             $pppActive = $this->secretService->getPppSecretActiveByName($mikrotik, $traceId);
             if ($pppActive) {
@@ -664,7 +675,7 @@ class CustomerController extends Controller
 
     public function destroy(Customer $customer)
     {
-        $traceId = (string) Str::uuid();
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
         try {
             $this->customerSoftDeleteService->deleteCustomer($customer, $traceId);
 

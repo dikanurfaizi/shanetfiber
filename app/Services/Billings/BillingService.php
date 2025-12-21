@@ -2,6 +2,7 @@
 
 namespace App\Services\Billings;
 
+use App\Helpers\ExecutionTimer;
 use App\Models\Customers\CustomerSubscription;
 use App\Models\Mikrotik;
 use App\Models\Billings\Billing;
@@ -31,19 +32,14 @@ class BillingService
 
     public function createBillingPeriode(string $periode, string $traceId): ?BillingPeriode
     {
-        $startTime = microtime(true);
-        $lastCheckpoint = $startTime;
+        $timer = new ExecutionTimer();
         $context = [
             'periode' => $periode,
             'action'  => 'create_billing_periode'
         ];
 
         try {
-            $now = microtime(true);
-            $exec = round($now - $lastCheckpoint, 3);
-            $lastCheckpoint = $now;
-            
-            LogHelper::logInfo(null, $context, 200, '[START] create Billing Periodically', $traceId, $exec);
+            LogHelper::logInfo(null, $context, 200, '[START] create Billing Periodically', $traceId, $timer->lap());
 
             $periodeDate = Carbon::createFromFormat('F Y', $periode);
 
@@ -57,7 +53,7 @@ class BillingService
 
             LogHelper::logInfo(null, array_merge($context, [
                 'billing_periode_id' => $billingPeriode->id
-            ]), 200, 'Billing periode ready', $traceId, round(microtime(true) - $startTime, 3));
+            ]), 200, 'Billing periode ready', $traceId, $timer->lap());
 
             return $billingPeriode;
         } catch (\Throwable $e) {
@@ -67,7 +63,7 @@ class BillingService
                     'code' => $e->getCode(),
                     'message'     => $e->getMessage()
                 ]
-            ]), 500, 'Failed to create billing periode', $traceId, round(microtime(true) - $startTime, 3));
+            ]), 500, 'Failed to create billing periode', $traceId, $timer->lap());
 
             return null;
         }
@@ -77,8 +73,7 @@ class BillingService
         BillingPeriode $billingPeriode,
         string $traceId
     ): int {
-        $startTime = microtime(true);
-        $lastCheckpoint = $startTime;
+        $timer = new ExecutionTimer();
         $totalBillingCreated = 0;
 
         $context = [
@@ -93,11 +88,8 @@ class BillingService
             $routers   = Mikrotik::where('disabled', 'false')->get();
             $websystem = Websystem::where('slug', 'websystem')->first();
 
-            $now = microtime(true);
-            $exec = round($now - $lastCheckpoint, 3);
-            $lastCheckpoint = $now;
             if ($routers->isEmpty()) {
-                LogHelper::logWarning(null, $context, 200, '[Step 1] No active routers found', $traceId, $exec);
+                LogHelper::logWarning(null, $context, 200, '[Step 1] No active routers found', $traceId, $timer->lap());
                 return 0;
             }
 
@@ -123,17 +115,12 @@ class BillingService
                         $websystem,
                         $traceId,
                         &$totalBillingCreated,
-                        &$lastCheckpoint
                     ) {
-
+                        $timer = new ExecutionTimer();
                         $sub = CustomerSubscription::with(['customer', 'package'])
                             ->where('customer_id', $customer->id)
                             ->where('status', 'active')
                             ->first();
-
-                        $now = microtime(true);
-                        $exec = round($now - $lastCheckpoint, 3);
-                        $lastCheckpoint = $now;
 
                         if (!$sub) {
                             LogHelper::logInfo(
@@ -142,7 +129,7 @@ class BillingService
                                 200,
                                 '[R2.1] No active subscription for customer',
                                 $traceId,
-                                $exec
+                                $timer->lap()
                             );
                             return;
                         }
@@ -156,10 +143,6 @@ class BillingService
                             ->where('status', 'active')
                             ->first();
 
-                        $now = microtime(true);
-                        $exec = round($now - $lastCheckpoint, 3);
-                        $lastCheckpoint = $now;
-
                         if ($oldBsp && $oldBsp->billing_periode_id == $billingPeriode->id) {
                             LogHelper::logInfo(
                                 null,
@@ -167,7 +150,7 @@ class BillingService
                                 200,
                                 '[S3.1] BSP already exists for current period',
                                 $traceId,
-                                $exec
+                                $timer->lap()
                             );
                             return;
                         }
@@ -184,10 +167,6 @@ class BillingService
 
                         $this->extendSubscriptionEndDate($sub, $billingPeriode);
 
-                        $now = microtime(true);
-                        $exec = round($now - $lastCheckpoint, 3);
-                        $lastCheckpoint = $now;
-
                         if (Billing::where('billing_subscription_id', $newBsp->id)->exists()) {
                             LogHelper::logWarning(
                                 null,
@@ -195,7 +174,7 @@ class BillingService
                                 409,
                                 '[B4.1] Billing already exists',
                                 $traceId,
-                                $exec
+                                $timer->lap()
                             );
                             return;
                         }
@@ -206,8 +185,7 @@ class BillingService
                             $newBsp,
                             $billingPeriode,
                             $sub,
-                            $traceId,
-                            $lastCheckpoint
+                            $traceId
                         );
 
                         $totalBillingCreated++;
@@ -228,17 +206,13 @@ class BillingService
                 }
             }
 
-            $now = microtime(true);
-            $exec = round($now - $lastCheckpoint, 3);
-            $lastCheckpoint = $now;
-
             LogHelper::logWarning(
                 null,
                 array_merge($context, ['totalBillingCreated' => $totalBillingCreated]),
                 200,
                 '[FINISH] Billing created successfully',
                 $traceId,
-                $exec
+                $timer->lap()
             );
 
             return $totalBillingCreated;
@@ -255,7 +229,7 @@ class BillingService
                 500,
                 'Failed generating billings',
                 $traceId,
-                round(microtime(true) - $startTime, 3)
+                $timer->lap()
             );
 
             throw $e;

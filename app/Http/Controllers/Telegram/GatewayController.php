@@ -6,7 +6,7 @@ use App\Models\Telegram\TelegramGateway;
 use App\Models\WhatsApp\WhatsAppGateway;
 use App\Models\User;
 use App\Helpers\LogHelper;
-use App\Jobs\WhatsApp\SendWhatsappMessageJob;
+use App\Jobs\Whatsapp\SendWhatsappMessageJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Crypt;

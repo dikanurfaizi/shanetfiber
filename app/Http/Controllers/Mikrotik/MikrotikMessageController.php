@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Mikrotik;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Jobs\WhatsApp\SendWhatsappMessageJob;
+use App\Jobs\Whatsapp\SendWhatsappMessageJob;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Models\Customers\Customer;

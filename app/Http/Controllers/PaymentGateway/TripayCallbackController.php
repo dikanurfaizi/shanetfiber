@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\PaymentGateway;
 
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
@@ -10,23 +11,24 @@ use App\Models\Order;
 use App\Traits\TripayHelper;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Carbon;
-use App\Services\Tripays\CallbackPaymentService;
+use App\Services\Tripays\TripayCallbackOrchestrator;
 use Illuminate\Support\Str;
 
 class TripayCallbackController extends Controller
 {
     use TripayHelper;
 
-    private CallbackPaymentService $callbackPaymentService;
+    private TripayCallbackOrchestrator $orchestrator;
 
-    public function __construct(CallbackPaymentService $callbackPaymentService)
+    public function __construct(TripayCallbackOrchestrator $orchestrator)
     {
-        $this->callbackPaymentService = $callbackPaymentService;
+        $this->orchestrator = $orchestrator;
     }
 
     public function handle(Request $request)
     {
         $traceId = (string) Str::uuid();
+        $startTime = microtime(true);
         $tripay = $this->getTripayData();
 
         if (!$tripay) {
@@ -47,11 +49,6 @@ class TripayCallbackController extends Controller
         $json = $request->getContent();
         $signature = hash_hmac('sha256', $json, $privateKey);
 
-        // return response()->json([
-        //     'callbackSignature' => $callbackSignature,
-        //     'signature' => $signature,
-        // ]);
-
         if ($signature !== (string) $callbackSignature) {
             Log::warning('Tripay Signature Mismatch', [
                 'expected' => $signature,
@@ -70,11 +67,6 @@ class TripayCallbackController extends Controller
         $callbackEvent = (string) ($request->header('X-Callback-Event')
             ?? $request->server('HTTP_X_CALLBACK_EVENT')
             ?? '');
-
-        // return Response::json([
-        //     'payment_status' => $callbackEvent,  // This will show the event you're checking
-        //     'callback_event' => $callbackEvent,  // Just to confirm which event is received
-        // ]);
 
         if ('payment_status' !== (string) $callbackEvent) {
             return Response::json([
@@ -107,7 +99,7 @@ class TripayCallbackController extends Controller
         if ($data->is_closed_payment === 1) {
             $order = Order::where('merchant_ref', $invoiceId)
                 ->where('reference', $tripayReference)
-                ->where('payment_status', Order::STATUS_UNPAID)
+                ->where('payment_status', OrderStatus::UNPAID)
                 ->first();
 
             if (!$order) {
@@ -119,23 +111,23 @@ class TripayCallbackController extends Controller
 
             switch ($status) {
                 case 'UNPAID':
-                    $order->update(['payment_status' => Order::STATUS_UNPAID]);
-                    $this->callbackPaymentService->processPaymentUnpaid($order, $order->billing, $traceId);
+                    $this->orchestrator->handleUnpaid(order: $order, traceId: $traceId);
                     break;
 
                 case 'PAID':
-                    $order->update(['payment_status' => Order::STATUS_PAID]);
-                    $this->callbackPaymentService->processPaymentSuccess($order, $order->billing, $paid_at, $traceId);
+                    $this->orchestrator->handlePaid(
+                        order: $order,
+                        paidAt: $paid_at,
+                        traceId: $traceId
+                    );
                     break;
 
                 case 'EXPIRED':
-                    $order->update(['payment_status' => Order::STATUS_EXPIRED]);
-                    $this->callbackPaymentService->processUpdatePaymentStatus($order, Order::STATUS_EXPIRED, $traceId);
+                    $this->orchestrator->handleExpired($order, OrderStatus::EXPIRED->value, $traceId);
                     break;
 
                 case 'FAILED':
-                    $order->update(['payment_status' => Order::STATUS_CANCELED]);
-                    $this->callbackPaymentService->processUpdatePaymentStatus($order, Order::STATUS_CANCELED, $traceId);
+                    $this->orchestrator->handleCanceled($order, OrderStatus::CANCELED->value, $traceId);
                     break;
 
                 default:

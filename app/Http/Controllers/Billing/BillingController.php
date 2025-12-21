@@ -6,6 +6,7 @@ use App\Events\PaymentSucceeded;
 use App\Events\PayLaterApplied;
 use App\Exports\Billing\BillingSnapshotExport;
 use App\Exports\Billing\BillingYearWorkbookExport;
+use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Bank;
@@ -226,26 +227,22 @@ class BillingController extends Controller
     public function payment(Request $request, Billing $billing)
     {
         $traceId = (string) Str::uuid();
-        $startTime = microtime(true);
+        $timer = new ExecutionTimer();
 
         LogHelper::logInfo(null, [
             'billing_id'     => $billing->id,
             'customer_id'    => $billing->customer_id,
             'payment_method' => $request->payment_methode,
-        ], 100, 'payment.request.received', $traceId, 0);
+        ], 100, 'payment.request.received', $traceId, $timer->lap());
 
         $paymentMethod = $request->payment_methode;
-
-        $now = microtime(true);
-        $exec = round($now - $startTime, 3);
-        $lastCheckpoint = $now;
 
         // === ROUTING DECISIONS (LOG ONCE PER PATH) ===
         if ($paymentMethod === 'transfer') {
 
             LogHelper::logInfo(null, [
                 'billing_id' => $billing->id,
-            ], 200, 'payment.route.transfer', $traceId, $exec);
+            ], 200, 'payment.route.transfer', $traceId, $timer->lap());
 
             return redirect()->route('billings.transfer', $billing->slug);
         }
@@ -254,7 +251,7 @@ class BillingController extends Controller
 
             LogHelper::logInfo(null, [
                 'billing_id' => $billing->id,
-            ], 200, 'payment.route.paylater', $traceId, $exec);
+            ], 200, 'payment.route.paylater', $traceId, $timer->lap());
 
             return redirect()->route('billings.paylater', $billing->slug);
         }
@@ -269,22 +266,18 @@ class BillingController extends Controller
             LogHelper::logInfo(null, [
                 'billing_id' => $billing->id,
                 'status'     => 'NP',
-            ], 200, 'payment.marked.no_usage', $traceId, $exec);
+            ], 200, 'payment.marked.no_usage', $traceId, $timer->lap());
 
             return redirect()->back()
                 ->with('success', 'The billing status for ' . $billing->customer_name . ' has been marked as No Usage for this period.');
         }
-
-        $now = microtime(true);
-        $exec = round($now - $startTime, 3);
-        $lastCheckpoint = $now;
 
         // === MAIN PAYMENT FLOW ===
         try {
             $paymentData = $this->preparePaymentData($request);
 
             $result = $this->paymentService
-                ->processPayment($billing, $paymentData, $traceId, $lastCheckpoint);
+                ->processPayment($billing, $paymentData, $traceId);
 
             if (!empty($result['receipt'])) {
                 event(new PaymentSucceeded($result['receipt']->id, $traceId));
@@ -299,7 +292,7 @@ class BillingController extends Controller
                 'billing_id' => $billing->id,
                 'exception'  => class_basename($e),
                 'message'    => $e->getMessage(),
-            ], 500, 'payment.request.failed', $traceId, $exec);
+            ], 500, 'payment.request.failed', $traceId, $timer->lap());
 
             return redirect()->back()
                 ->with('error', 'Payment failed.');

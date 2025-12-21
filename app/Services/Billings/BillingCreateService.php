@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use App\Helpers\LogHelper;
 use App\Helpers\BillingDateResolver;
+use App\Helpers\ExecutionTimer;
 
 class BillingCreateService
 {
@@ -25,27 +26,26 @@ class BillingCreateService
         BillingSubscriptionPeriode $billingSubscription,
         BillingPeriode $billingPeriode,
         CustomerSubscription $customerSubscription,
-        string $traceId,
-        float $lastCheckpoint
+        string $traceId
     ): array {
-
+        $timer = new ExecutionTimer();
         LogHelper::logInfo(
             null,
             [],
             201,
             'Create Billing Started',
             $traceId,
-            round((microtime(true) - $lastCheckpoint) * 1000, 3)
+            $timer->lap()
         );
 
-        $result =  DB::transaction(function () use (
+        $billing =  DB::transaction(function () use (
             $websystem,
             $customer,
             $billingSubscription,
             $billingPeriode,
             $customerSubscription,
             $traceId,
-            &$lastCheckpoint
+            &$timer
         ) {
             /** ----------------------------------------
              * 1. Resolve Issue Date & Due Date
@@ -252,20 +252,16 @@ class BillingCreateService
                 201,
                 'Billing created successfully',
                 $traceId,
-                round((microtime(true) - $lastCheckpoint) * 1000, 3)
+                $timer->lap()
             );
 
-            return [
-                'billing'        => $billing,
-                'lastCheckpoint' => $lastCheckpoint,
-            ];
+            return $billing;
         });
 
         return [
             'success'        => true,
-            'billing_id'     => $result['billing']->id,
-            'billing'        => $result['billing'],
-            'lastCheckpoint' => $result['lastCheckpoint'],
+            'billing_id'     => $billing->id,
+            'billing'        => $billing,
         ];
     }
 

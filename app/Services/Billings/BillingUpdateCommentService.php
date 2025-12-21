@@ -2,6 +2,7 @@
 
 namespace App\Services\Billings;
 
+use App\Helpers\ExecutionTimer;
 use App\Models\Mikrotik;
 use App\Models\AutoIsolir;
 use App\Models\Customers\Customer;
@@ -18,8 +19,7 @@ class BillingUpdateCommentService
         float $price,
         string $traceId
     ): void {
-        $startTime = microtime(true);
-        $lastCheckpoint = $startTime;
+        $timer = new ExecutionTimer();
 
         $context = [
             'customer_id'       => $customer->id,
@@ -51,25 +51,19 @@ class BillingUpdateCommentService
 
             // Unknown service type
             if (!isset($jobs[$serviceType])) {
-                $now = microtime(true);
-                $exec = round($now - $lastCheckpoint, 3);
-                $lastCheckpoint = $now;
                 LogHelper::logWarning(
                     null,
                     $context,
                     400,
                     'Unsupported internet service type, billing job skipped',
                     $traceId,
-                    $exec
+                    $timer->lap()
                 );
                 return;
             }
 
             // Feature toggle OFF
             if (!config('services.shanetfiber.allow_mikrotik_actions')) {
-                $now = microtime(true);
-                $exec = round($now - $lastCheckpoint, 3);
-                $lastCheckpoint = $now;
                 LogHelper::logInfo(
                     null,
                     array_merge($context, [
@@ -78,7 +72,7 @@ class BillingUpdateCommentService
                     200,
                     'Mikrotik action disabled by configuration, job not dispatched',
                     $traceId,
-                    $exec
+                    $timer->lap()
                 );
                 return;
             }
@@ -86,10 +80,6 @@ class BillingUpdateCommentService
             // Dispatch job
             dispatch(new $jobs[$serviceType]['class'](...$jobs[$serviceType]['params']))
                 ->onQueue('default');
-
-            $now = microtime(true);
-            $exec = round($now - $lastCheckpoint, 3);
-            $lastCheckpoint = $now;
 
             LogHelper::logInfo(
                 null,
@@ -99,12 +89,9 @@ class BillingUpdateCommentService
                 200,
                 'Billing job dispatched successfully',
                 $traceId,
-                $exec
+                $timer->lap()
             );
         } catch (\Throwable $e) {
-
-            $now = microtime(true);
-            $exec = round($now - $lastCheckpoint, 3);
             LogHelper::logError(
                 null,
                 array_merge($context, [
@@ -117,7 +104,7 @@ class BillingUpdateCommentService
                 500,
                 'Failed to dispatch billing job',
                 $traceId,
-                $exec
+                $timer->lap()
             );
 
             throw $e;

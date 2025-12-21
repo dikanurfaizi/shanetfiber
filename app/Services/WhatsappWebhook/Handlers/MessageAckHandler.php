@@ -3,7 +3,7 @@
 namespace App\Services\WhatsappWebhook\Handlers;
 
 use App\Helpers\LogHelper;
-use App\Jobs\WhatsApp\ProcessMessageAckJob;
+use App\Jobs\Whatsapp\ProcessMessageAckJob;
 use App\Services\WhatsappWebhook\DTO\WebhookPayload;
 
 class MessageAckHandler extends BaseHandler

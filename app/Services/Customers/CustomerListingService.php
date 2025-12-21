@@ -2,6 +2,7 @@
 
 namespace App\Services\Customers;
 
+use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
 use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
@@ -14,6 +15,7 @@ class CustomerListingService
 {
     public function getPaginatedCustomers(array $filters, int $perPage, string $traceId): LengthAwarePaginator
     {
+        $timer = new ExecutionTimer();
         $statusFilter = new CustomerStatusFilterService();
         try {
             $query = Customer::with(['user'])
@@ -55,7 +57,8 @@ class CustomerListingService
                 ],
                 500,
                 'Failed to get paginated customers',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
             throw $e;
         }
@@ -63,6 +66,7 @@ class CustomerListingService
 
     public function paginateResults(Collection $results, int $perPage, Request $request, string $traceId): LengthAwarePaginator
     {
+        $timer = new ExecutionTimer();
         try {
             $currentPage = LengthAwarePaginator::resolveCurrentPage();
             $currentPageResults = $results->slice(($currentPage - 1) * $perPage, $perPage)->all();
@@ -83,7 +87,8 @@ class CustomerListingService
                 ],
                 200,
                 'Successfully paginated results',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
 
             return $paginator;
@@ -102,7 +107,8 @@ class CustomerListingService
                 ],
                 500,
                 'Failed to paginate results',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
             throw $e;
         }
@@ -110,6 +116,7 @@ class CustomerListingService
 
     public function getCustomerAddresses(string $traceId): Collection
     {
+        $timer = new ExecutionTimer();
         try {
             $addresses = Customer::select('address')->distinct()->pluck('address', 'address');
 
@@ -118,7 +125,8 @@ class CustomerListingService
                 ['address_count' => $addresses->count()],
                 200,
                 'Successfully retrieved customer addresses',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
 
             return $addresses;
@@ -135,7 +143,8 @@ class CustomerListingService
                 ],
                 500,
                 'Failed to get customer addresses',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
             throw $e;
         }
@@ -143,6 +152,7 @@ class CustomerListingService
 
     public function getActiveServers(string $traceId): Collection
     {
+        $timer = new ExecutionTimer();
         try {
             $servers = Mikrotik::where('disabled', 'false')->orderBy('name')->pluck('name', 'id');
 
@@ -151,7 +161,8 @@ class CustomerListingService
                 ['server_count' => $servers->count()],
                 200,
                 'Successfully retrieved active servers',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
 
             return $servers;
@@ -168,7 +179,8 @@ class CustomerListingService
                 ],
                 500,
                 'Failed to get active servers',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
             throw $e;
         }
@@ -176,6 +188,7 @@ class CustomerListingService
 
     public function getActiveAdmins(string $traceId): Collection
     {
+        $timer = new ExecutionTimer();
         try {
             $admins = User::where('disabled', 'false')->orderBy('name')->pluck('name', 'id');
 
@@ -184,7 +197,8 @@ class CustomerListingService
                 ['admin_count' => $admins->count()],
                 200,
                 'Successfully retrieved active admins',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
 
             return $admins;
@@ -201,7 +215,8 @@ class CustomerListingService
                 ],
                 500,
                 'Failed to get active admins',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
             throw $e;
         }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ExecutionTimer;
 use Exception;
 use Illuminate\Http\Request;
 use App\Models\Customers\Customer;
@@ -53,17 +54,18 @@ class HomeController extends Controller
     public function __invoke(Request $request)
     {
         $traceId = (string) Str::uuid();
+        $timer = new ExecutionTimer();
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
         $userId = $auth['userId'];
 
         // ====== Versi Check ======
         if ($this->version != $this->newVersion) {
-            Log::warning('Version mismatch', [
+            LogHelper::logWarning(null, [
                 'trace_id' => $traceId,
                 'current_version' => $this->version,
                 'required_version' => $this->newVersion
-            ]);
+            ], 400, 'Version mismatch', $traceId, $timer->lap());
             return redirect()->route('settings.update.index')
                 ->with('error', 'Please update first!');
         }
@@ -114,7 +116,7 @@ class HomeController extends Controller
                 $adminBillingSummary = $this->getOwnerBillingSummary($lastBillingPeriode->id);
             }
         } elseif (!$lastBillingPeriode) {
-            LogHelper::logWarning(null, ['user_id' => $user->id], 404, 'No last billing period found for admin summary', $traceId);
+            LogHelper::logWarning(null, ['user_id' => $user->id], 404, 'No last billing period found for admin summary', $traceId, $timer->lap());
         }
 
         $movementData = $this->calculateCustomerRegistrationChurnData($request, $traceId);
@@ -271,7 +273,7 @@ class HomeController extends Controller
 
     private function getLastBillingData($traceId)
     {
-        $startTime = microtime(true); // start time
+        $timer = new ExecutionTimer();
 
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
@@ -280,12 +282,10 @@ class HomeController extends Controller
         $billingPeriode = BillingPeriode::orderBy('created_at', 'desc')->first();
 
         if (!$billingPeriode) {
-            $duration = microtime(true) - $startTime; // lama eksekusi
             LogHelper::logInfo(null, [
-                'duration' => $duration,
                 'billingPeriode' => $billingPeriode,
                 'lastBillings' => collect(),
-            ], 200, "Details getLastBillingData (no billing period found)", $traceId, $duration);
+            ], 200, "Details getLastBillingData (no billing period found)", $traceId, $timer->lap());
 
             return [null, collect()];
         }
@@ -317,13 +317,10 @@ class HomeController extends Controller
 
         $lastBillings = $billingQuery->get();
 
-        $duration = microtime(true) - $startTime;
-
         LogHelper::logInfo(null, [
-            'duration' => $duration, // durasi eksekusi dalam detik
             'billingPeriode' => $billingPeriode,
             'userId' => $userId,
-        ], 200, "Details getLastBillingData", $traceId, $duration);
+        ], 200, "Details getLastBillingData", $traceId, $timer->lap());
 
         return [$billingPeriode, $lastBillings];
     }
@@ -447,7 +444,7 @@ class HomeController extends Controller
 
     private function calculateCustomerRegistrationChurnData($request, $traceId): array
     {
-        $startTime = microtime(true);
+        $timer = new ExecutionTimer();
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
         $userId = $auth['userId'];
@@ -489,7 +486,7 @@ class HomeController extends Controller
                 'investor_id' => $userId,
                 'linked_admin_ids' => $linkedAdminIds,
                 'total_admins' => $admins->count(),
-            ], 200, 'Investor related admins for registration/churn data', $traceId);
+            ], 200, 'Investor related admins for registration/churn data', $traceId, $timer->lap());
         }
         // 🔹 CASE 3: Admin biasa => hanya dirinya sendiri
         else {
@@ -541,7 +538,7 @@ class HomeController extends Controller
 
     private function calculateBillingSummary($billings, $traceId)
     {
-        $startTime = microtime(true); // start time
+        $timer = new ExecutionTimer();
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
 
@@ -565,7 +562,7 @@ class HomeController extends Controller
             LogHelper::logError(null, [
                 'billings' => $billings instanceof \Illuminate\Support\Collection ? $billings->toArray() : [],
                 'error_message' => $e->getMessage(),
-            ], 500, 'Error calculating billing totals', $traceId);
+            ], 500, 'Error calculating billing totals', $traceId, $timer->lap());
             return [
                 'totalBilling' => 0,
                 'totalPaid' => 0,
@@ -577,7 +574,6 @@ class HomeController extends Controller
 
     public function getBillingMonthly()
     {
-        $startTime = microtime(true); // start time
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
         $userId = $auth['userId'];
@@ -616,7 +612,7 @@ class HomeController extends Controller
 
     public function getCustomerRegistrationChurnData(Request $request)
     {
-        $startTime = microtime(true); // start time
+        $timer = new ExecutionTimer();
         $traceId = (string) Str::uuid();
         try {
             return response()->json($this->calculateCustomerRegistrationChurnData($request, $traceId));
@@ -627,7 +623,7 @@ class HomeController extends Controller
                 'line' => $e->getLine(),
                 'file' => $e->getFile()
             ], 500, 'ERROR getCustomerRegistrationChurnData');
-            return response()->json(['error' => 'Failed to fetch data'], $traceId);
+            return response()->json(['error' => 'Failed to fetch data'], $traceId, $timer->lap());
         }
     }
 
