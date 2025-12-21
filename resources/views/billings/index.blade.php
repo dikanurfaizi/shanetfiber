@@ -192,7 +192,7 @@
                                     <div class="mobile-row-parent">
                                         <div>
                                             <strong>#{{ $i }}</strong> - <span
-                                                class="text-primary">{{ $billing->customer_name }}</span><br>
+                                                class="text-primary">{{ $billing->customer->name }}</span><br>
                                             <small>{!! \App\Helpers\BillingHelper::getBillingStatusBadge($billing, $data) !!}</small>
                                         </div>
                                         <div>

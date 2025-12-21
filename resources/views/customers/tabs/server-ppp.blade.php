@@ -6,6 +6,9 @@
     {{-- Username mismatch warning --}}
     @php
         $serverName = $pppsecret['name'] ?? null;
+
+        $remoteAddress = $secretActive['address'] ?? ($customer->ip_address ?? null);
+        $disabledState = $pppsecret['disabled'] ?? null;
     @endphp
 
     @if ($serverName !== null && $serverName !== $customer->username)
@@ -18,180 +21,176 @@
 </div>
 
 <div class="card-body col-lg-12">
-    <div style="overflow-x: auto;">
-        <table class="table no-footer" id="serverTable">
+    <div class="row">
 
-            {{-- SERVER + PROFILE --}}
-            <tr class="table-borderless">
-                <td class="py-1"><strong>{{ __('customer.label.server') }}</strong></td>
-                <td class="py-1">:
-                    <span class="badge bg-success text-white">
-                        <i class="fas fa-server"></i> {{ $customer->mikrotik->name }}
-                    </span>
-                </td>
+        {{-- SERVER --}}
+        <div class="col-12 col-md-6 mb-3">
+            <div class="fw-bold text-muted small">{{ __('customer.label.server') }}</div>
+            <div class="mt-1">
+                <span class="badge bg-success text-white">
+                    <i class="fas fa-server"></i> {{ $customer->mikrotik->name }}
+                </span>
+            </div>
+        </div>
 
-                <td class="py-1"><strong>{{ __('customer.label.profile') }}</strong></td>
-                <td class="py-1">:
-                    <span class="text-primary">{{ $pppsecret['profile'] ?? $package_profile }}</span>
-                </td>
-            </tr>
+        {{-- PROFILE --}}
+        <div class="col-12 col-md-6 mb-3">
+            <div class="fw-bold text-muted small">{{ __('customer.label.profile') }}</div>
+            <div class="mt-1">
+                <span class="text-primary">{{ $pppsecret['profile'] ?? $package_profile }}</span>
+            </div>
+        </div>
 
-            {{-- USERNAME + PASSWORD --}}
-            @php
-                $usernameIsMismatch = $serverName !== null && $serverName !== $customer->username;
-                $usernameClass = $usernameIsMismatch ? 'alert alert-danger py-1 px-2 d-inline-block' : 'text-primary';
-            @endphp
+        {{-- USERNAME --}}
+        <div class="col-12 col-md-6 mb-3">
+            <div class="fw-bold text-muted small">{{ __('customer.label.username') }}</div>
+            <div class="mt-1">
+                <span
+                    class="{{ $serverName && $serverName !== $customer->username
+                        ? 'alert alert-danger py-1 px-2 d-inline-block'
+                        : 'text-primary' }}">
+                    {{ $serverName ?? $customer->username }}
+                </span>
+            </div>
+        </div>
 
-            <tr class="table-borderless">
-                <td class="py-1"><strong>{{ __('customer.label.username') }}</strong></td>
-                <td class="py-1">:
-                    <span class="{{ $usernameClass }}">
-                        {{ $serverName ?? $customer->username }}
-                    </span>
-                </td>
+        {{-- PASSWORD PPP --}}
+        <div class="col-12 col-md-6 mb-3">
+            <div class="fw-bold text-muted small">{{ __('customer.label.password-ppp') }}</div>
+            <div class="mt-1">
+                <span class="text-primary">{{ $customer->password_ppp ?? 'No Data' }}</span>
+            </div>
+        </div>
 
-                <td class="py-1"><strong>{{ __('customer.label.password-ppp') }}</strong></td>
-                <td class="py-1">:
-                    <span class="text-primary">{{ $customer->password_ppp ?? 'No Data' }}</span>
-                </td>
-            </tr>
+        {{-- REMOTE ADDRESS --}}
+        <div class="col-12 col-md-6 mb-3">
+            <div class="fw-bold text-muted small">{{ __('customer.label.remote-address') }}</div>
+            <div class="mt-1">
+                <span class="text-primary">{{ $remoteAddress ?? 'Offline' }}</span>
 
-            {{-- REMOTE ADDRESS + SERVICE --}}
-            @php
-                $remoteAddress = $secretActive['address'] ?? ($customer->ip_address ?? null);
-            @endphp
+                @if ($remoteAddress)
+                    <a href="http://{{ $remoteAddress }}:{{ $ont->port ?? 80 }}"
+                        class="badge bg-primary text-white ms-2" target="_blank">
+                        {{ __('customer.remote') }}
+                    </a>
+                @endif
+            </div>
+        </div>
 
-            <tr class="table-borderless">
-                <td class="py-1"><strong>{{ __('customer.label.remote-address') }}</strong></td>
-                <td class="py-1">:
-                    <span class="text-primary">{{ $remoteAddress ?? 'Offline' }}</span>
+        {{-- SERVICE --}}
+        <div class="col-12 col-md-6 mb-3">
+            <div class="fw-bold text-muted small">{{ __('customer.label.service') }}</div>
+            <div class="mt-1">
+                <span class="text-primary">{{ $customer->pppType->name ?? 'No Service' }}</span>
+            </div>
+        </div>
 
-                    @if ($remoteAddress)
-                        <a href="http://{{ $remoteAddress }}:{{ $ont->port ?? 80 }}"
-                            class="badge bg-primary text-white ms-2" target="_blank">
-                            {{ __('customer.remote') }}
-                        </a>
-                    @endif
-                </td>
+        {{-- STATE --}}
+        <div class="col-12 col-md-6 mb-3">
+            <div class="fw-bold text-muted small">{{ __('customer.label.state') }}</div>
+            <div class="mt-1">
+                @include('customers.partials.ppp-state-badge', [
+                    'customer' => $customer,
+                    'disabledState' => $disabledState,
+                ])
+            </div>
+        </div>
 
-                <td class="py-1"><strong>{{ __('customer.label.service') }}</strong></td>
-                <td class="py-1">:
-                    <span class="text-primary">{{ $customer->pppType->name ?? 'No Service' }}</span>
-                </td>
-            </tr>
+        {{-- UPTIME --}}
+        <div class="col-12 col-md-6 mb-3">
+            <div class="fw-bold text-muted small">{{ __('customer.label.uptime') }}</div>
+            <div class="mt-1">
+                <span class="text-primary">{{ $customer->uptime_human ?? 'No Data' }}</span>
+            </div>
+        </div>
 
-            {{-- STATE + UPTIME --}}
-            @php
-                $disabledState = $pppsecret['disabled'] ?? null;
-            @endphp
+        {{-- CALLER ID --}}
+        <div class="col-12 col-md-6 mb-3">
+            <div class="fw-bold text-muted small">{{ __('customer.label.caller-id') }}</div>
+            <div class="mt-1">
+                <span class="text-primary">{{ $customer->caller_id ?? 'No Caller ID' }}</span>
+            </div>
+        </div>
 
-            <tr class="table-borderless">
-                <td class="py-1"><strong>{{ __('customer.label.state') }}</strong></td>
-                <td class="py-1">:
+        {{-- LAST CALLER ID --}}
+        <div class="col-12 col-md-6 mb-3">
+            <div class="fw-bold text-muted small">{{ __('customer.label.last-caller-id') }}</div>
+            <div class="mt-1">
+                <span class="text-primary">{{ $pppsecret['last-caller-id'] ?? 'No Caller ID' }}</span>
+            </div>
+        </div>
 
-                    @if ($customer->activation == 'false')
-                        <span class="badge bg-danger text-white">
-                            <i class="fa fa-times text-warning me-2"></i>
-                            {{ __('customer.info.not-activation') }}
-                        </span>
-                    @else
-                        @if ($disabledState === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
-                            <span class="badge bg-success text-white">
-                                <i class="fas fa-lock-open"></i> {{ __('pppoe.secret.enabled') }}
-                            </span>
-                        @elseif ($disabledState === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
-                            <span class="badge bg-danger text-white">
-                                <i class="fas fa-lock"></i> {{ __('pppoe.secret.disabled') }}
-                            </span>
-                        @else
-                            <span class="badge bg-secondary text-white">
-                                {{ __('pppoe.secret.unknown-state') }}
-                            </span>
-                        @endif
-                    @endif
-                </td>
+        {{-- COMMENT --}}
+        <div class="col-12 col-md-6 mb-3">
+            <div class="fw-bold text-muted small">{{ __('customer.label.comment') }}</div>
+            <div class="mt-1">
+                <span class="text-primary">{{ $pppsecret['comment'] ?? 'No Comment' }}</span>
+            </div>
+        </div>
 
-                <td class="py-1"><strong>{{ __('customer.label.uptime') }}</strong></td>
-                <td class="py-1">:
-                    <span class="text-primary">{{ $secretActive['uptime'] ?? 'No Data' }}</span>
-                </td>
-            </tr>
-
-            {{-- CALLER ID --}}
-            <tr class="table-borderless">
-                <td class="py-1"><strong>{{ __('customer.label.caller-id') }}</strong></td>
-                <td class="py-1">:
-                    <span class="text-primary">{{ $customer->caller_id ?? 'No Caller ID' }}</span>
-                </td>
-
-                <td class="py-1"><strong>{{ __('customer.label.last-caller-id') }}</strong></td>
-                <td class="py-1">:
-                    <span class="text-primary">{{ $pppsecret['last-caller-id'] ?? 'No Caller ID' }}</span>
-                </td>
-            </tr>
-
-            {{-- COMMENT --}}
-            <tr class="table-borderless">
-                <td class="py-1"><strong>{{ __('customer.label.comment') }}</strong></td>
-                <td class="py-1">:
-                    <span class="text-primary">{{ $pppsecret['comment'] ?? 'No Comment' }}</span>
-                </td>
-            </tr>
-
-        </table>
     </div>
 
     {{-- ACTION BUTTONS --}}
     <div class="row mt-3">
-        <div class="col-md-12">
+        <div class="col-12">
 
-            @can('secret-edit')
-                <a class="btn-soft btn-blue"
-                    href="{{ route('customers.edit.ppp', [$customer->slug, 'caller_id' => $pppsecret['last-caller-id'] ?? null]) }}">
-                    <i class="fa fa-edit"></i> {{ __('customer.button.edit-ppp') }}
-                </a>
-            @endcan
+            <div class="d-flex flex-column flex-md-row">
 
-            @canany('customer-edit', 'customer-create')
-                @if ($customer->activation == 'false')
-                    <form method="POST" action="{{ route('customers.activation', $customer->slug) }}" class="d-inline">
-                        @csrf @method('put')
-                        <button class="btn-soft btn-green">
-                            <i class="fa fa-check me-2"></i> {{ __('customer.action.activation') }}
-                        </button>
-                    </form>
-                @endif
-            @endcanany
+                @can('secret-edit')
+                    <div class="d-block d-md-inline-block mb-2 mr-md-2">
+                        <a href="{{ route('customers.edit.ppp', [$customer->slug, 'caller_id' => $pppsecret['last-caller-id'] ?? null]) }}"
+                            class="btn-soft btn-blue btn-block btn-md-inline text-center">
+                            <i class="fa fa-edit"></i> {{ __('customer.button.edit-ppp') }}
+                        </a>
+                    </div>
+                @endcan
 
-            @can('secret-disable')
-                @if ($customer->activation == 'true')
-                    {{-- CASE 1: PPP State = DISABLED → Show ENABLE button --}}
-                    @if ($disabledState === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
-                        <form method="POST" action="{{ route('customers.enable', $customer->slug) }}" class="d-inline">
-                            @csrf @method('put')
-                            <button class="btn-soft btn-green">
-                                <i class="fa fa-check me-2"></i> {{ __('pppoe.secret.enable') }}
-                            </button>
-                        </form>
-
-                        {{-- CASE 2: PPP State = ENABLED → Show DISABLE button --}}
-                    @elseif ($disabledState === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
-                        <form method="POST" action="{{ route('customers.disable', $customer->slug) }}" class="d-inline">
-                            @csrf @method('put')
-                            <button class="btn-soft btn-red">
-                                <i class="fa fa-times me-2"></i> {{ __('pppoe.secret.disable') }}
-                            </button>
-                        </form>
-
-                        {{-- CASE 3: STATE UNKNOWN → SHOW DISABLED INFO BUTTON --}}
-                    @else
-                        <button class="btn-soft btn-gray disabled" disabled>
-                            <i class="fa fa-ban me-2"></i> {{ __('pppoe.secret.un-available') }}
-                        </button>
+                @canany('customer-edit', 'customer-create')
+                    @if ($customer->activation == 'false')
+                        <div class="d-block d-md-inline-block mb-2 mr-md-2">
+                            <form method="POST" action="{{ route('customers.activation', $customer->slug) }}">
+                                @csrf @method('put')
+                                <button class="btn-soft btn-green btn-block btn-md-inline">
+                                    <i class="fa fa-check me-2"></i> {{ __('customer.action.activation') }}
+                                </button>
+                            </form>
+                        </div>
                     @endif
-                @endif
-            @endcan
+                @endcanany
+
+                @can('secret-disable')
+                    @if ($customer->activation == 'true')
+                        @if ($disabledState === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
+                            <div class="d-block d-md-inline-block mb-2 mr-md-2">
+                                <form method="POST" action="{{ route('customers.enable', $customer->slug) }}">
+                                    @csrf @method('put')
+                                    <button class="btn-soft btn-green btn-block btn-md-inline">
+                                        <i class="fa fa-check me-2"></i> {{ __('pppoe.secret.enable') }}
+                                    </button>
+                                </form>
+                            </div>
+                        @elseif ($disabledState === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
+                            <div class="d-block d-md-inline-block mb-2 mr-md-2">
+                                <form method="POST" action="{{ route('customers.disable', $customer->slug) }}">
+                                    @csrf @method('put')
+                                    <button class="btn-soft btn-red btn-block btn-md-inline">
+                                        <i class="fa fa-times me-2"></i> {{ __('pppoe.secret.disable') }}
+                                    </button>
+                                </form>
+                            </div>
+                        @else
+                            <div class="d-block d-md-inline-block mb-2 mr-md-2">
+                                <button class="btn-soft btn-gray btn-block btn-md-inline" disabled>
+                                    <i class="fa fa-ban me-2"></i> {{ __('pppoe.secret.un-available') }}
+                                </button>
+                            </div>
+                        @endif
+                    @endif
+                @endcan
+
+            </div>
 
         </div>
     </div>
+
 </div>

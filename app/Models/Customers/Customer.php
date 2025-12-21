@@ -211,4 +211,26 @@ class Customer extends Authenticatable
     {
         return $this->addons()->where('is_active', 1);
     }
+
+    public function getUptimeHumanAttribute(): ?string
+    {
+        if (!$this->uptime_seconds) return null;
+
+        $s = $this->uptime_seconds;
+
+        $d = intdiv($s, 86400);
+        $s %= 86400;
+        $h = intdiv($s, 3600);
+        $s %= 3600;
+        $m = intdiv($s, 60);
+        $s %= 60;
+
+        return trim(sprintf(
+            '%s%s%s%s',
+            $d ? "$d day " : '',
+            $h ? "$h hour " : '',
+            $m ? "$m minute " : '',
+            $s ? "$s second" : ''
+        ));
+    }
 }

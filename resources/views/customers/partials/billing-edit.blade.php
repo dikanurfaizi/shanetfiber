@@ -205,17 +205,20 @@
         </div>
 
         <div class="card-footer">
-            <div class="action-group">
-                <button class="btn-soft btn-green">
+            <div class="d-flex flex-column flex-md-row">
+
+                <button class="btn-soft btn-green w-100 w-md-auto mb-2 mr-md-2">
                     <i class="fa fa-save"></i> Save & Regenerate Billing
                 </button>
 
                 <a href="{{ route('customers.show', [$customer->slug, 'tab' => 'billing']) }}"
-                    class="btn-soft btn-gray">
+                    class="btn-soft btn-gray w-100 w-md-auto text-center">
                     Cancel
                 </a>
+
             </div>
         </div>
+
     </div>
 </form>
 
