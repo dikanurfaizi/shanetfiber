@@ -104,6 +104,7 @@
     <script src="{{ asset('assets/vendor/datatables/datatables.min.js') }}"></script>
     <!-- Page level custom scripts -->
     @yield('custom_scripts')
+    @stack('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             window.toggleExpand = function(slug) {

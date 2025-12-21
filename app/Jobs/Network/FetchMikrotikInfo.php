@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+
 use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
 use App\Services\Routerboard\SystemService;
@@ -17,136 +18,162 @@ class FetchMikrotikInfo implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    private $traceId;
+    private string $traceId;
 
-    /**
-     * Create a new job instance.
-     */
     public function __construct(string $traceId)
     {
         $this->traceId = $traceId;
     }
 
-    /**
-     * Execute the job.
-     */
-    public function handle()
+    public function handle(): void
     {
-        // Ambil semua customer yang perlu diproses
-        $customers = Customer::select('id', 'mikrotik_id', 'username', 'mac_address', 'interface', 'ip_address', 'secret_id')
-            ->get();
+        $customers = Customer::select(
+            'id',
+            'name',
+            'mikrotik_id',
+            'username',
+            'mac_address',
+            'interface',
+            'ip_address',
+            'secret_id'
+        )->get();
 
-        // Kelompokkan customer berdasarkan router
-        $routersGrouped = $customers->groupBy('mikrotik_id');
+        if ($customers->isEmpty()) {
+            LogHelper::logInfo(
+                null,
+                [],
+                200,
+                'FetchMikrotikInfo skipped (no customers)',
+                $this->traceId
+            );
+            return;
+        }
+
+        $customersByRouter = $customers->groupBy('mikrotik_id');
 
         /** @var SystemService $systemService */
-        $systemService = app()->make(SystemService::class);
+        $systemService = app(SystemService::class);
 
         /** @var SecretService $secretService */
-        $secretService = app()->make(SecretService::class);
+        $secretService = app(SecretService::class);
 
-        foreach ($routersGrouped as $routerId => $routerCustomers) {
+        foreach ($customersByRouter as $routerId => $routerCustomers) {
+
             $router = Mikrotik::find($routerId);
 
             if (!$router) {
-                foreach ($routerCustomers as $c) {
-                    LogHelper::logWarning(null, [
-                        'mikrotik_id' => $routerId,
-                        'customer_id' => $c->id
-                    ], 404, "Mikrotik ID not found", $this->traceId);
-                }
+                LogHelper::logWarning(
+                    null,
+                    [
+                        'mikrotik_id'      => $routerId,
+                        'customer_count'  => $routerCustomers->count(),
+                    ],
+                    404,
+                    'Mikrotik not found for customers',
+                    $this->traceId
+                );
                 continue;
             }
 
-            try {
-                // Ambil semua interface di router
-                $interfaces = $systemService->mikrotikInterface($router, $this->traceId);
+            $summary = [
+                'total_customers'        => $routerCustomers->count(),
+                'updated'                => 0,
+                'skipped_null_response'  => 0,
+                'ppp_not_found'          => 0,
+                'interface_not_found'    => 0,
+            ];
 
-                // Log seluruh isi interfaces agar bisa dilihat
-                LogHelper::logInfo(
-                    null,
-                    ['router_id' => $router->id, 'interfaces' => $interfaces],
-                    200,
-                    "Debug: full interface response from router",
-                    $this->traceId
+            try {
+                $interfaces  = collect(
+                    $systemService->mikrotikInterface($router, $this->traceId)
                 );
 
-                // Ambil semua PPP active
-                $pppActives = $secretService->getPppActive($router, $this->traceId);
-
-                LogHelper::logInfo(
-                    null,
-                    ['router_id' => $router->id],
-                    200,
-                    "Debug: full pppActives response from router",
-                    $this->traceId
+                $pppActives  = collect(
+                    $secretService->getPppActive($router, $this->traceId)
                 );
 
                 foreach ($routerCustomers as $customer) {
-                    // Cari interface berdasarkan secret_id
-                    $iface = collect($interfaces)->first(fn($i) => ($i['.id'] ?? null) === $customer->secret_id);
 
-                    // Ambil data dari interface dan ppp active
-                    $interfaceName = $iface['name'] ?? null;
-                    $ppp = collect($pppActives)->first(fn($p) => ($p['name'] ?? null) === $customer->username);
-                    $ipAddress = $ppp['address'] ?? null;
-                    $macAddress = $ppp['caller-id'] ?? null;
+                    $ppp = $pppActives->first(
+                        fn($p) => ($p['name'] ?? null) === $customer->username
+                    );
 
-                    // --- Validasi agar tidak menimpa data lama dengan NULL ---
+                    if (!$ppp) {
+                        $summary['ppp_not_found']++;
+
+                        LogHelper::logWarning(
+                            null,
+                            [
+                                'router_id'   => $router->id,
+                                'customer_id' => $customer->id,
+                                'username'    => $customer->username,
+                            ],
+                            404,
+                            'PPP Active not found',
+                            $this->traceId
+                        );
+
+                        continue;
+                    }
+
+                    $iface = $interfaces->first(
+                        fn($i) => ($i['.id'] ?? null) === $customer->secret_id
+                    );
+
+                    if (!$iface) {
+                        $summary['interface_not_found']++;
+                    }
+
                     $shouldUpdate = false;
 
-                    if (!is_null($macAddress) && $macAddress !== '') {
-                        $customer->mac_address = $macAddress;
-                        $shouldUpdate = true;
-                    }
-                    if (!is_null($interfaceName) && $interfaceName !== '') {
-                        $customer->interface = $interfaceName;
-                        $shouldUpdate = true;
-                    }
-                    if (!is_null($ipAddress) && $ipAddress !== '') {
-                        $customer->ip_address = $ipAddress;
+                    if (!empty($ppp['caller-id'])) {
+                        $customer->mac_address = $ppp['caller-id'];
                         $shouldUpdate = true;
                     }
 
-                    // Hanya save jika memang ada data baru yang valid
+                    if (!empty($ppp['address'])) {
+                        $customer->ip_address = $ppp['address'];
+                        $shouldUpdate = true;
+                    }
+
+                    if (!empty($iface['name'])) {
+                        $customer->interface = $iface['name'];
+                        $shouldUpdate = true;
+                    }
+
                     if ($shouldUpdate) {
                         $customer->save();
-                        LogHelper::logInfo(
-                            null,
-                            [
-                                'customer_id'  => $customer->id,
-                                'customer_name' => $customer->name,
-                                'mac_address'  => $macAddress,
-                                'interface'    => $interfaceName,
-                                'ip_address'   => $ipAddress
-                            ],
-                            200,
-                            "Customer updated successfully",
-                            $this->traceId
-                        );
+                        $summary['updated']++;
                     } else {
-                        LogHelper::logInfo(
-                            null,
-                            [
-                                'customer_id'  => $customer->id,
-                                'customer_name' => $customer->name,
-                                'mac_address'  => $customer->mac_address,
-                                'interface'    => $customer->interface,
-                                'ip_address'   => $customer->ip_address
-                            ],
-                            200,
-                            "Skipped update (response null values)",
-                            $this->traceId
-                        );
+                        $summary['skipped_null_response']++;
                     }
                 }
-            } catch (\Exception $e) {
-                foreach ($routerCustomers as $c) {
-                    LogHelper::logError(null, [
-                        'customer_id' => $c->id,
-                        'error_message' => $e->getMessage()
-                    ], 500, "Failed to fetch interfaces & IP", $this->traceId);
-                }
+
+                // ✅ SINGLE SUMMARY LOG PER ROUTER
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'router_id'   => $router->id,
+                        'router_name' => $router->name ?? null,
+                        'summary'     => $summary,
+                    ],
+                    200,
+                    'FetchMikrotikInfo completed',
+                    $this->traceId
+                );
+            } catch (\Throwable $e) {
+
+                LogHelper::logError(
+                    null,
+                    [
+                        'router_id'      => $router->id,
+                        'error_message'  => $e->getMessage(),
+                        'customer_count' => $routerCustomers->count(),
+                    ],
+                    500,
+                    'FetchMikrotikInfo failed for router',
+                    $this->traceId
+                );
             }
         }
     }

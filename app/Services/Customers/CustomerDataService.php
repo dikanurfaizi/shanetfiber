@@ -3,9 +3,9 @@
 namespace App\Services\Customers;
 
 use App\Helpers\LogHelper;
-use App\Models\Billing\Billing;
-use App\Models\Billing\BillingPeriode;
-use App\Models\Customer;
+use App\Models\Billings\Billing;
+use App\Models\Billings\BillingPeriode;
+use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -18,7 +18,7 @@ class CustomerDataService
     {
         try {
             $query = Customer::with(['user'])
-                ->when($filters['search_name'] ?? null, fn ($query, $name) => $query->where('name', 'like', "%{$name}%"))
+                ->when($filters['search_name'] ?? null, fn($query, $name) => $query->where('name', 'like', "%{$name}%"))
                 ->when($filters['search_address'] ?? null, function ($query, $address) {
                     if ($address === 'NULL') {
                         $query->whereNull('address');
@@ -33,9 +33,9 @@ class CustomerDataService
                         $query->where('user_id', $admin);
                     }
                 })
-                ->when($filters['status'] ?? null, fn ($query, $status) => $this->applyStatusFilter($query, $status, $traceId))
-                ->when($filters['server_search'] ?? null, fn ($query, $server) => $query->where('mikrotik_id', $server))
-                ->when($filters['search_package'] ?? null, fn ($query, $package) => $query->where('package_id', $package))
+                ->when($filters['status'] ?? null, fn($query, $status) => $this->applyStatusFilter($query, $status, $traceId))
+                ->when($filters['server_search'] ?? null, fn($query, $server) => $query->where('mikrotik_id', $server))
+                ->when($filters['search_package'] ?? null, fn($query, $package) => $query->where('package_id', $package))
                 ->orderBy('name');
 
             $result = $query->paginate($perPage);
@@ -78,10 +78,10 @@ class CustomerDataService
     {
         try {
             $filtered = $customers
-                ->when($filters['search_address'] === 'NULL', fn ($c) => $c->whereNull('address'))
-                ->when($filters['search_address'] ?? null, fn ($c, $addr) => $c->where('address', $addr))
-                ->when($filters['server_search'] ?? null, fn ($c, $server) => $c->where('mikrotik_id', $server))
-                ->when($filters['search_package'] ?? null, fn ($c, $package) => $c->where('package_id', $package))
+                ->when($filters['search_address'] === 'NULL', fn($c) => $c->whereNull('address'))
+                ->when($filters['search_address'] ?? null, fn($c, $addr) => $c->where('address', $addr))
+                ->when($filters['server_search'] ?? null, fn($c, $server) => $c->where('mikrotik_id', $server))
+                ->when($filters['search_package'] ?? null, fn($c, $package) => $c->where('package_id', $package))
                 ->where('activation', 'true')
                 ->sortBy('name')
                 ->values();

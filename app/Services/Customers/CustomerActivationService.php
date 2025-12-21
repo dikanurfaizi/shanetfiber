@@ -122,8 +122,6 @@ class CustomerActivationService
                 }
             }
 
-            // $this->dispatchNotificationJobs($customer, $traceId);
-
             return ['result' => $result];
         } catch (\Throwable $e) {
             LogHelper::logError(null, [

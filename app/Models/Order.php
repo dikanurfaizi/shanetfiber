@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use App\Models\Billing\Billing;
-use App\Models\Customer;
+use App\Models\Billings\Billing;
+use App\Models\Customers\Customer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

@@ -25,7 +25,7 @@
                             </tr>
                             <tr>
                                 <td><strong>{{ __('customer.label.package') }}</strong></td>
-                                <td>: {{ $customer->package->name ?? 'No Data' }}</td>
+                                <td>: {{ $packageName }}</td>
                             </tr>
                             <tr>
                                 <td><strong>{{ __('customer.label.price') }}</strong></td>
@@ -37,7 +37,7 @@
                             </tr>
                             <tr>
                                 <td><strong>{{ __('customer.label.discount-type') }}</strong></td>
-                                <td>: {{ $discountMember }}</td>
+                                <td>: {{ $memberName }}</td>
                             </tr>
                             @if ($websystem->enable_tax === 'true')
                                 <tr>

@@ -102,6 +102,7 @@
     <script src="{{ asset('assets/vendor/datatables/datatables.min.js') }}"></script>
     <!-- Page level custom scripts -->
     @yield('custom_scripts')
+    @stack('scripts')
     @if ($message = Session::get('success'))
         <script>
             Swal.fire({

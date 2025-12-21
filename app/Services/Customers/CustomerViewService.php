@@ -2,9 +2,9 @@
 
 namespace App\Services\Customers;
 
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
-use App\Models\CustomerOnt;
+use App\Models\Customers\CustomerOnt;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Http\Resources\Pppoe\SecretResource;
 use App\Helpers\LogHelper;

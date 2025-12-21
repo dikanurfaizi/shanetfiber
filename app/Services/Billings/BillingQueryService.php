@@ -18,10 +18,9 @@ class BillingQueryService
         $query = Billing::select('billings.*')
             ->with([
                 'customer',
-                'billingSubscription',
                 'billingSubscription.billingPeriode',
                 'billingPayment'
-            ]);
+            ])->where('billings.status', '!=', 'VD');
 
 
         // filter by status

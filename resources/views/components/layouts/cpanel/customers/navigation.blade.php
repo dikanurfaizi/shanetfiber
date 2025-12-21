@@ -210,3 +210,15 @@
 <div class="text-center d-none d-md-inline pt-4">
     <button class="rounded-circle border-0" id="sidebarToggle"></button>
 </div>
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.innerWidth < 768) {
+                document
+                    .querySelectorAll('#accordionSidebar .collapse.show')
+                    .forEach(el => el.classList.remove('show'));
+            }
+        });
+    </script>
+@endpush

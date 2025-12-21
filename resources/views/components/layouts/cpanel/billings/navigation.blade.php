@@ -244,4 +244,15 @@
         });
     </script>
 @endsection
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.innerWidth < 768) {
+                document
+                    .querySelectorAll('#accordionSidebar .collapse.show')
+                    .forEach(el => el.classList.remove('show'));
+            }
+        });
+    </script>
+@endpush
 <!-- End of Sidebar -->

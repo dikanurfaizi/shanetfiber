@@ -16,6 +16,7 @@ use App\Http\Resources\Pppoe\SecretResource;
 use Carbon\Carbon;
 use Exception;
 use App\Helpers\LogHelper;
+use App\Models\Customers\CustomerSubscription;
 
 class PaymentProcessingService
 {
@@ -109,7 +110,10 @@ class PaymentProcessingService
             }
 
             $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
-            $customerProfile = $customer->package->profile ?? null;
+            $customerSubscription = CustomerSubscription::with(['package'])
+                ->where('customer_id', $customer->id)
+                ->where('status', 'active')->first();
+            $customerProfile = $customerSubscription->package->profile ?? null;
 
             if ($secretProfiles === $customerProfile) {
                 dispatch(new AddPaymentBeforeDueDateJob($router, $commentPayment, $customer->secret_id, $traceId))
