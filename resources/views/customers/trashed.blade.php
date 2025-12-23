@@ -243,20 +243,15 @@
                                 </span>
                             </td>
                             <td class="items-center justify-content-end">
-                                @canany(['secret-disable', 'customer-edit', 'secret-edit', 'customer-delete'])
+                                @canany(['secret-disable', 'view-deleted-customer', 'secret-edit', 'customer-delete'])
                                     <x-drop-down-action>
-                                        @can('customer-edit')
+                                        @can('view-deleted-customer')
                                             <li>
-                                                <form method="POST" class="d-inline"
-                                                    action="{{ route('customers.restore', $customer->slug) }}">
-                                                    @csrf
-                                                    @method('put')
-                                                    <a class="dropdown-item" href="#"
-                                                        onclick="event.preventDefault(); this.closest('form').submit();">
-                                                        <i class="fas fa-undo-alt me-2 text-success"></i>
-                                                        {{ __('customer.action.restore') }}
-                                                    </a>
-                                                </form>
+                                                <a class="dropdown-item"
+                                                    href="{{ route('customers.restore.preview', $customer->slug) }}">
+                                                    <i class="fas fa-undo-alt me-2 text-success"></i>
+                                                    {{ __('customer.action.restore') }}
+                                                </a>
                                             </li>
                                         @endcan
                                         @can('customer-delete')
@@ -362,9 +357,9 @@
                                     ⋮
                                 </button>
                                 <div class="dropdown-menu dropdown-menu-end">
-                                    @can('customer-edit')
+                                    @can('restore-customer')
                                         <form method="POST" class="d-inline"
-                                            action="{{ route('customers.restore', $customer->slug) }}">
+                                            action="{{ route('customers.restore.preview', $customer->slug) }}">
                                             @csrf
                                             @method('put')
                                             <a class="dropdown-item" href="#"
@@ -375,7 +370,7 @@
                                         </form>
                                     @endcan
                                     <div class="dropdown-divider"></div>
-                                    @can('customer-delete')
+                                    @can('force-deleted-customer')
                                         <form method="POST"
                                             action="{{ route('customers.forceDelete', $customer->slug) }}"
                                             class="d-inline">

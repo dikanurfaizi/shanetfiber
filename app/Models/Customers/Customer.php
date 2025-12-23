@@ -20,6 +20,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
 
 class Customer extends Authenticatable
@@ -232,5 +233,21 @@ class Customer extends Authenticatable
             $m ? "$m minute " : '',
             $s ? "$s second" : ''
         ));
+    }
+
+    public function activeAddonsIndexed(): Collection
+    {
+        return $this->activeAddons()
+            ->get()
+            ->mapWithKeys(function ($addon) {
+                return [
+                    $addon->addon_id => (object) [
+                        'addon_id'   => $addon->addon_id,
+                        'qty'        => (int) $addon->qty,
+                        'unit_price' => (int) $addon->unit_price,
+                        'subtotal'   => (int) $addon->subtotal,
+                    ]
+                ];
+            });
     }
 }

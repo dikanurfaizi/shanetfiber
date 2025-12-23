@@ -16,6 +16,8 @@ use App\Http\Controllers\Customer\CustomerTabController;
 use App\Http\Controllers\Customer\CustomerWizardController;
 use App\Http\Controllers\Customer\CustomerInfoController;
 use App\Http\Controllers\Customer\CustomerBillingController;
+use App\Http\Controllers\Customer\CustomerRestoreController;
+use App\Http\Controllers\Customer\CustomerTrashedController;
 use App\Http\Controllers\DropdownController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\HomeController;
@@ -205,9 +207,6 @@ Route::group(['prefix' => 'cpanel'], function () {
 
         // ==================== CUSTOMER MANAGEMENT ====================
         Route::resource('customers', CustomerController::class);
-        Route::get('/customers/trashed/all', [CustomerController::class, 'trashed'])->name('customers.trashed');
-        Route::put('/customers/{customer:slug}/restore', [CustomerController::class, 'restore'])->name('customers.restore');
-        Route::delete('/customers/{customer:slug}/force-delete', [CustomerController::class, 'forceDelete'])->name('customers.forceDelete');
         Route::get('/customers/search', [PaymentController::class, 'index'])->name('customers.search');
         Route::put('/customers/{customer:slug}/disabled/true', [CustomerController::class, 'disable'])->name('customers.disable');
         Route::put('/customers/{customer:slug}/disabled/false', [CustomerController::class, 'enable'])->name('customers.enable');
@@ -229,6 +228,11 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('/customers/{customer:slug}/tab/server', [CustomerTabController::class, 'server'])->name('customers.tab.server');
         Route::get('/customers/{customer:slug}/tab/ont', [CustomerTabController::class, 'ont'])->name('customers.tab.ont');
         Route::get('/customers/{customer:slug}/tab/traffic', [CustomerTabController::class, 'traffic'])->name('customers.tab.traffic');
+
+        Route::get('/customers/view/all/data', CustomerTrashedController::class)->name('customers.trashed');
+        Route::delete('/customers/{customer:slug}/force-delete', [CustomerTrashedController::class, 'forceDelete'])->name('customers.forceDelete');
+        Route::get('/customers/{customer:slug}/restore/preview', [CustomerRestoreController::class, 'preview'])->name('customers.restore.preview');
+        Route::post('/customers/{customer:slug}/restore/confirm', [CustomerRestoreController::class, 'confirm'])->name('customers.restore.confirm');
 
         // =================== EDIT TAB CUSTOMER DETAIL ===================
         Route::patch('/customers/{customer:slug}/info', [CustomerInfoController::class, 'update'])->name('customers.update.info');

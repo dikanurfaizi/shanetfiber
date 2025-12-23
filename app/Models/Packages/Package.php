@@ -38,4 +38,14 @@ class Package extends Model
     {
         return $this->belongsTo(PackageCategories::class, 'package_category_id');
     }
+
+    public function scopeActive($query)
+    {
+        return $query->where('disabled', 'false');
+    }
+
+    public function isActive(): bool
+    {
+        return $this->disabled === 'false';
+    }
 }

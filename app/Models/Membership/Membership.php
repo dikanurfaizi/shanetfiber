@@ -62,4 +62,14 @@ class Membership extends Model
             default   => 'None'
         };
     }
+
+    public function isActive(): bool
+    {
+        return $this->is_active == true;
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
 }

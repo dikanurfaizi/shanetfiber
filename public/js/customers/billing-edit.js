@@ -34,6 +34,33 @@ window.initBillingEditForm = function () {
     });
 };
 
+window.initBillingRestoreForm = function () {
+    const form = document.getElementById("customer-restore-form");
+    if (!form) return;
+
+    initBillingPackageDuration(form);
+    initBillingDiscount(form);
+    initBillingPeriodToggle(form);
+    initBillingAddons(form);
+
+    // 🔥 HITUNG DISKON SAAT LOAD (initial state)
+    setTimeout(() => {
+        const pkg = form.querySelector("#package-dropdown")?.value;
+        const member = form.querySelector("#member-dropdown")?.value;
+        if (pkg) {
+            // trigger manual
+            form.querySelector("#package-dropdown").dispatchEvent(
+                new Event("change")
+            );
+            if (member) {
+                form.querySelector("#member-dropdown").dispatchEvent(
+                    new Event("change")
+                );
+            }
+        }
+    }, 0);
+};
+
 function initBillingPackageDuration(form) {
     const packageDropdown = form.querySelector("#package-dropdown");
     const durationWrapper = form.querySelector("#duration-wrapper");

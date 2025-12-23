@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Packages\Package;
 use App\Models\Packages\PackageDuration;
 use App\Models\Billings\BillingSubscriptionPeriode;
+use Carbon\Carbon;
 
 class CustomerSubscription extends Model
 {
@@ -37,6 +38,8 @@ class CustomerSubscription extends Model
         'terminated_at' => 'date'
     ];
 
+    protected $appends = ['computed_status'];
+
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_id');
@@ -55,5 +58,27 @@ class CustomerSubscription extends Model
     public function billingSubscriptionPeriodes(): HasMany
     {
         return $this->hasMany(BillingSubscriptionPeriode::class, 'customer_subscription_id');
+    }
+
+    public function isExpired(): bool
+    {
+        if (!$this->end_date) {
+            return false; // tidak pernah expired
+        }
+
+        return Carbon::parse($this->end_date)->isPast();
+    }
+
+    public function getComputedStatusAttribute(): string
+    {
+        if ($this->status === 'terminated') {
+            return 'TERMINATED';
+        }
+
+        if ($this->isExpired()) {
+            return 'EXPIRED';
+        }
+
+        return strtoupper($this->status); // ACTIVE / PAUSED
     }
 }

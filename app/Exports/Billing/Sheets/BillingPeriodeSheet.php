@@ -130,7 +130,7 @@ class BillingPeriodeSheet implements
             'VD' => 'NOT ACTIVE',
         ];
 
-        $formatted = $billing->created_at->format('d-m-Y H:i:s');
+        $formatted = $billing->created_at->format('d-m-Y');
 
         return [
             $no++,

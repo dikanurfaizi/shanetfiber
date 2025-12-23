@@ -167,8 +167,8 @@
 
 
             /* ============================
-                                                                                               BLUE BUTTON (EDIT)
-                                                                                               ============================ */
+                                                                                                   BLUE BUTTON (EDIT)
+                                                                                                   ============================ */
             .btn-blue {
                 background-color: #0d6efd !important;
                 /* base blue */
@@ -187,8 +187,8 @@
             }
 
             /* ============================
-                                                                                       GREEN BUTTON (Activation / Enable)
-                                                                                       ============================ */
+                                                                                           GREEN BUTTON (Activation / Enable)
+                                                                                           ============================ */
             .btn-green {
                 background-color: #28a745 !important;
                 /* iOS-green */
@@ -204,8 +204,8 @@
 
 
             /* ============================
-                                                                                       RED BUTTON (Disable)
-                                                                                       ============================ */
+                                                                                           RED BUTTON (Disable)
+                                                                                           ============================ */
             .btn-red {
                 background-color: #dc3545 !important;
                 /* Bootstrap red */
@@ -221,8 +221,8 @@
 
 
             /* ============================
-                                                                                       GRAY BUTTON (Unavailable / Secondary)
-                                                                                       ============================ */
+                                                                                           GRAY BUTTON (Unavailable / Secondary)
+                                                                                           ============================ */
             .btn-gray {
                 background-color: #7f8c8d !important;
                 /* soft gray */
@@ -242,8 +242,8 @@
             }
 
             /* ======================================
-                                                                BUTTON / ACTION GROUP SPACING
-                                                                ====================================== */
+                                                                    BUTTON / ACTION GROUP SPACING
+                                                                    ====================================== */
             .action-group>* {
                 margin-right: 12px;
             }
