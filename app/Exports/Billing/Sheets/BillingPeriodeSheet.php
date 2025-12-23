@@ -89,6 +89,7 @@ class BillingPeriodeSheet implements
             'Payment Time',
             'Teller',
             'Admin Responsible',
+            'Created At'
         ];
     }
 
@@ -126,8 +127,10 @@ class BillingPeriodeSheet implements
             'LS' => 'PAID',
             'BL' => 'UNPAID',
             'PL' => 'PAYLATER',
-            'NP' => 'NOT ACTIVE',
+            'VD' => 'NOT ACTIVE',
         ];
+
+        $formatted = $billing->created_at->format('d-m-Y H:i:s');
 
         return [
             $no++,
@@ -151,6 +154,7 @@ class BillingPeriodeSheet implements
                 : '-',
             $billing->billingPayment?->paidByUser?->name ?? '-',
             $billing->customer?->user?->name ?? '-',
+            $formatted
         ];
     }
 
@@ -177,7 +181,7 @@ class BillingPeriodeSheet implements
     {
         $sheet->freezePane('A2');
 
-        $sheet->getStyle('A1:Q1')->applyFromArray([
+        $sheet->getStyle('A1:R1')->applyFromArray([
             'font' => ['bold' => true],
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_CENTER,
