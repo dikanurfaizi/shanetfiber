@@ -77,6 +77,9 @@ class UpdateService
             $newPrice = (float) ($packageData[$data['package_id']]['price'] ?? 0);
             $oldPrice = $oldSubscription?->package->price ?? 0;
 
+            $newPackageId = $data['package_id'];
+            $oldPackageId = $oldSubscription?->package_id;
+
             $incomingAddonMap = null;
             $addonDiff = null;
 
@@ -110,6 +113,8 @@ class UpdateService
                 newPrice: $newPrice,
                 hasAddonChange: $addonDiff['has_change'] ?? false,
                 hasMembershipChange: array_key_exists('member_id', $data),
+                oldPackageId: $oldPackageId,
+                newPackageId: $newPackageId,
             );
 
             if ($addonDiff) {

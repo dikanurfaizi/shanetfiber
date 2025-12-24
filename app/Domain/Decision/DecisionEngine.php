@@ -6,7 +6,9 @@ class DecisionEngine
 {
     public function decidePackageChange(DecisionContext $ctx): DecisionResult
     {
-        // NEW SUBSCRIPTION
+        /* ======================================================
+     * NEW SUBSCRIPTION
+     * ====================================================== */
         if (!$ctx->hasActiveSubscription) {
             return new DecisionResult(
                 allowed: true,
@@ -18,7 +20,9 @@ class DecisionEngine
             );
         }
 
-        // SAME PACKAGE
+        /* ======================================================
+     * SAME PACKAGE (ID & price sama)
+     * ====================================================== */
         if ($ctx->isSamePackage()) {
             return new DecisionResult(
                 allowed: true,
@@ -28,7 +32,38 @@ class DecisionEngine
             );
         }
 
-        // UPGRADE
+        /* ======================================================
+     * SIDEGRADE (ID beda, harga sama)
+     * ====================================================== */
+        if ($ctx->isSidegrade()) {
+
+            // Tidak ada dampak finansial → tidak ada prorate
+            // Tapi perubahan entitlement HARUS tercatat
+
+            if (!$ctx->currentBilling || $ctx->isSettled()) {
+                return new DecisionResult(
+                    allowed: true,
+                    effectivePeriod: DecisionResult::PERIOD_CURRENT,
+                    billingStrategy: DecisionResult::STRATEGY_UPDATE_CURRENT,
+                    requireSubscriptionChangeRecord: true,
+                    prorateMode: DecisionResult::PRORATE_ADJUSTMENT,
+                    notes: ['sidegrade apply current']
+                );
+            }
+
+            return new DecisionResult(
+                allowed: true,
+                effectivePeriod: DecisionResult::PERIOD_NEXT,
+                billingStrategy: DecisionResult::STRATEGY_DEFER,
+                requireSubscriptionChangeRecord: true,
+                prorateMode: DecisionResult::PRORATE_ADJUSTMENT,
+                notes: ['sidegrade deferred']
+            );
+        }
+
+        /* ======================================================
+     * UPGRADE (ID beda, harga naik)
+     * ====================================================== */
         if ($ctx->isUpgrade()) {
 
             if (!$ctx->currentBilling) {
@@ -59,7 +94,9 @@ class DecisionEngine
             );
         }
 
-        // DOWNGRADE
+        /* ======================================================
+     * DOWNGRADE (ID beda, harga turun)
+     * ====================================================== */
         if ($ctx->isDowngrade()) {
 
             if ($ctx->hasOutstandingPast) {
@@ -88,7 +125,7 @@ class DecisionEngine
             );
         }
 
-        return new DecisionResult(false, 'Unknown state');
+        return new DecisionResult(false, 'Unknown package transition state');
     }
 
     public function decideAddonChange(DecisionContext $ctx): DecisionResult

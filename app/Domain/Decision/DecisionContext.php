@@ -14,6 +14,9 @@ class DecisionContext
         public bool $hasOutstandingPast,
         public bool $hasActiveSubscription,
 
+        public int|string|null $oldPackageId,
+        public int|string|null $newPackageId,
+
         public float $oldPrice,
         public float $newPrice,
 
@@ -23,19 +26,34 @@ class DecisionContext
         public bool $hasMembershipChange = false,
     ) {}
 
+
     public function isUpgrade(): bool
     {
-        return $this->newPrice > $this->oldPrice;
+        return $this->isPackageChanged()
+            && $this->newPrice > $this->oldPrice;
     }
 
     public function isDowngrade(): bool
     {
-        return $this->newPrice < $this->oldPrice;
+        return $this->isPackageChanged()
+            && $this->newPrice < $this->oldPrice;
     }
 
     public function isSamePackage(): bool
     {
-        return $this->newPrice === $this->oldPrice;
+        return $this->oldPackageId === $this->newPackageId
+            && $this->newPrice === $this->oldPrice;
+    }
+
+    public function isPackageChanged(): bool
+    {
+        return $this->oldPackageId !== $this->newPackageId;
+    }
+
+    public function isSidegrade(): bool
+    {
+        return $this->isPackageChanged()
+            && $this->newPrice === $this->oldPrice;
     }
 
     public function isSettled(): bool
