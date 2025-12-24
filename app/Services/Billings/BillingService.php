@@ -14,8 +14,10 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\LogHelper;
 use App\Models\Customers\Customer;
+use App\Models\Customers\CustomerAddon;
 use App\Services\Billings\BillingCreateService;
 use App\Services\Billings\BillingUpdateCommentService;
+use DomainException;
 
 class BillingService
 {
@@ -30,43 +32,34 @@ class BillingService
         $this->billingUpdateCommentService = $billingUpdateCommentService;
     }
 
-    public function createBillingPeriode(string $periode, string $traceId): ?BillingPeriode
+    public function createBillingPeriode(string $periode): BillingPeriode
     {
-        $timer = new ExecutionTimer();
-        $context = [
-            'periode' => $periode,
-            'action'  => 'create_billing_periode'
-        ];
-
-        try {
-            LogHelper::logInfo(null, $context, 200, '[START] create Billing Periodically', $traceId, $timer->lap());
+        return DB::transaction(function () use ($periode) {
 
             $periodeDate = Carbon::createFromFormat('F Y', $periode);
 
-            $billingPeriode = BillingPeriode::firstOrCreate(
-                ['name' => $periode],
-                [
-                    'month' => $periodeDate->format('F'),
-                    'year'  => $periodeDate->format('Y'),
-                ]
+            // 1. Close hanya periode yang aktif
+            BillingPeriode::where('status', 'active')
+                ->update(['status' => 'closed']);
+
+            // 2. Ambil atau buat periode
+            $billingPeriode = BillingPeriode::firstOrNew(
+                ['name' => $periode]
             );
 
-            LogHelper::logInfo(null, array_merge($context, [
-                'billing_periode_id' => $billingPeriode->id
-            ]), 200, 'Billing periode ready', $traceId, $timer->lap());
+            // 3. Pastikan data konsisten
+            $billingPeriode->fill([
+                'month'      => $periodeDate->format('F'),
+                'year'       => $periodeDate->format('Y'),
+                'start_date' => $periodeDate->copy()->startOfMonth()->startOfDay(),
+                'end_date'   => $periodeDate->copy()->endOfMonth()->endOfDay(),
+                'status'     => 'active',
+            ]);
+
+            $billingPeriode->save();
 
             return $billingPeriode;
-        } catch (\Throwable $e) {
-            LogHelper::logError(null, array_merge($context, [
-                'exception'         => get_class($e),
-                'error'        => [
-                    'code' => $e->getCode(),
-                    'message'     => $e->getMessage()
-                ]
-            ]), 500, 'Failed to create billing periode', $traceId, $timer->lap());
-
-            return null;
-        }
+        });
     }
 
     public function generateBillingsForPeriod(
@@ -117,9 +110,9 @@ class BillingService
                         &$totalBillingCreated,
                     ) {
                         $timer = new ExecutionTimer();
-                        $sub = CustomerSubscription::with(['customer', 'package'])
-                            ->where('customer_id', $customer->id)
+                        $sub = CustomerSubscription::where('customer_id', $customer->id)
                             ->where('status', 'active')
+                            ->lockForUpdate()
                             ->first();
 
                         if (!$sub) {
@@ -141,6 +134,7 @@ class BillingService
 
                         $oldBsp = BillingSubscriptionPeriode::where('customer_subscription_id', $sub->id)
                             ->where('status', 'active')
+                            ->lockForUpdate()
                             ->first();
 
                         if ($oldBsp && $oldBsp->billing_periode_id == $billingPeriode->id) {
@@ -167,6 +161,8 @@ class BillingService
 
                         $this->extendSubscriptionEndDate($sub, $billingPeriode);
 
+                        $this->extendCustomerAddons($customer, $billingPeriode);
+
                         if (Billing::where('billing_subscription_id', $newBsp->id)->exists()) {
                             LogHelper::logWarning(
                                 null,
@@ -192,21 +188,25 @@ class BillingService
 
                         // Dispatch Mikrotik job AFTER commit
                         $autoIsolir = AutoIsolir::where('mikrotik_id', $router->id)->first();
+
                         if ($autoIsolir) {
-                            $this->billingUpdateCommentService
-                                ->dispatchBillingJobForCustomer(
-                                    $customer,
-                                    $router,
-                                    $autoIsolir,
-                                    $sub->price_final,
-                                    $traceId
-                                );
+                            $priceFinal =  $sub->price_final;
+                            DB::afterCommit(function () use ($customer, $router, $autoIsolir, $priceFinal, $traceId) {
+                                $this->billingUpdateCommentService
+                                    ->dispatchBillingJobForCustomer(
+                                        $customer,
+                                        $router,
+                                        $autoIsolir,
+                                        $priceFinal,
+                                        $traceId
+                                    );
+                            });
                         }
                     });
                 }
             }
 
-            LogHelper::logWarning(
+            LogHelper::logInfo(
                 null,
                 array_merge($context, ['totalBillingCreated' => $totalBillingCreated]),
                 200,
@@ -240,17 +240,54 @@ class BillingService
         CustomerSubscription $sub,
         BillingPeriode $billingPeriode
     ): void {
-        // Ambil tahun & bulan dari periode (mis. "January 2026")
-        $periodDate = Carbon::createFromFormat('F Y', $billingPeriode->name);
+        $newEndDate = $this->resolveBillingPeriodeEndDate($billingPeriode);
 
-        // Set ke tanggal 15 bulan tsb
-        $newEndDate = $periodDate->copy()->day(15)->endOfDay();
+        if ($sub->end_date) {
+            $currentEnd = Carbon::parse($sub->end_date)->endOfDay();
 
-        // Update hanya jika lebih kecil (safety)
-        if (!$sub->end_date || Carbon::parse($sub->end_date)->lt($newEndDate)) {
-            $sub->update([
-                'end_date' => $newEndDate,
-            ]);
+            if ($currentEnd->gte($newEndDate)) {
+                return; // tidak perlu extend
+            }
+        }
+
+        $sub->update([
+            'end_date' => $newEndDate,
+        ]);
+    }
+
+    private function resolveBillingPeriodeEndDate(
+        BillingPeriode $billingPeriode
+    ): Carbon {
+        if ($billingPeriode->end_date) {
+            return Carbon::parse($billingPeriode->end_date)->endOfDay();
+        }
+
+        try {
+            return Carbon::createFromFormat('F Y', $billingPeriode->name)
+                ->endOfMonth()
+                ->endOfDay();
+        } catch (\Throwable $e) {
+            throw new DomainException(
+                "Invalid billing period format: {$billingPeriode->name}",
+                previous: $e
+            );
+        }
+    }
+
+    private function extendCustomerAddons(Customer $customer, BillingPeriode $billingPeriode): void
+    {
+        $custAddons = CustomerAddon::where('customer_id', $customer->id)
+            ->where('is_active', true)->get();
+
+        $newEnd = Carbon::parse($billingPeriode->end_date)->endOfDay();
+
+        if ($custAddons) {
+
+            foreach ($custAddons as $custAddon) {
+                if (!$custAddon->end_date || Carbon::parse($custAddon->end_date)->endOfDay()->lt($newEnd)) {
+                    $custAddon->update(['end_date' => $newEnd]);
+                }
+            }
         }
     }
 }
