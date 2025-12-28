@@ -1,6 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
     const filterForm = document.getElementById("filter-form");
 
+    document.querySelectorAll(".olt-status-wrapper").forEach((el) => {
+        renderOltStatus(el, el.dataset.status);
+    });
+
     filterForm.addEventListener("submit", async function (e) {
         e.preventDefault();
 
@@ -55,6 +59,45 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
     });
+
+    function renderOltStatus(wrapper, status) {
+        if (!wrapper) return;
+
+        const s = (status || "").toLowerCase();
+
+        const indicator = wrapper.querySelector(".olt-status-indicator");
+        const icon = indicator?.querySelector("i");
+        const badge = wrapper.querySelector(".status-badge");
+
+        if (!indicator || !icon || !badge) {
+            console.warn("Invalid OLT status DOM structure", wrapper);
+            return;
+        }
+
+        // reset
+        indicator.className = "olt-status-indicator";
+        badge.className = "badge status-badge";
+        icon.className = "fas";
+
+        if (!s) {
+            icon.classList.add("fa-question-circle", "text-muted");
+            badge.textContent = "UNKNOWN";
+            return;
+        }
+
+        indicator.classList.add(s);
+        badge.classList.add(s);
+        badge.textContent = s.toUpperCase();
+
+        const iconMap = {
+            active: ["fa-check-circle", "text-success"],
+            inactive: ["fa-times-circle", "text-danger"],
+            scanning: ["fa-sync-alt", "fa-spin", "text-warning"],
+        };
+
+        const iconCfg = iconMap[s] ?? ["fa-question-circle", "text-muted"];
+        icon.classList.add(...iconCfg);
+    }
 
     function updateStatusClasses(element, status) {
         if (!element) return;
@@ -273,12 +316,10 @@ document.addEventListener("DOMContentLoaded", () => {
                             icon =
                                 '<i class="fas fa-question-circle text-secondary"></i>';
                     }
-                    statusCell.innerHTML = `
-                <div class="d-flex align-items-center">
-                    <div class="olt-status-indicator ${lowerStatus}">${icon}</div>
-                    <span class="badge status-badge ${lowerStatus}">${status.toUpperCase()}</span>
-                </div>
-            `;
+                    const wrapper = row.querySelector(".olt-status-wrapper");
+                    if (wrapper) {
+                        renderOltStatus(wrapper, status);
+                    }
                 }
 
                 // Last scan

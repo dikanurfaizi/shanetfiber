@@ -95,31 +95,84 @@ class OltScanJobService
         }
 
         $healthCheck = OltStatusService::checkOltStatus($olt, $username, true);
-        $status = SnmpHelper::mapSnmpStatus($healthCheck['status']);
         $totalOnts = 0;
 
-        if ($status === 'Active' && $includeOnts) {
+        switch ($healthCheck['status']) {
+
+            case 0:
+                $status = OltHelper::STRING_STATUS_INACTIVE;
+                break;
+
+            case 1:
+                $status = OltHelper::STRING_STATUS_ACTIVE;
+                break;
+
+            default:
+                $status = OltHelper::STRING_STATUS_SCANNING;
+                break;
+        }
+
+        if ($healthCheck['status'] === OltHelper::STATUS_ACTIVE && $includeOnts) {
             $snmpData = SnmpFetchService::getOnts($olt);
             $ontsData = $snmpData['onts'];
+            $olt->updateStatus(OltHelper::STATUS_ACTIVE);
 
             // validasi OLT
             $isValidOnts = is_array($ontsData) && !empty($ontsData);
+
             if ($isValidOnts) {
                 $firstOnt = reset($ontsData);
-                $requiredKeys = ['oid_name', 'txpower', 'rxpower', 'status', 'macaddress', 'temperature'];
+
+                $requiredKeys = [
+                    'oid_name',
+                    'txpower',
+                    'rxpower',
+                    'status',
+                    'macaddress',
+                    'temperature',
+                ];
+
+                $missingKeys = [];
+
                 foreach ($requiredKeys as $k) {
                     if (!array_key_exists($k, $firstOnt)) {
-                        $isValidOnts = false;
-                        break;
+                        $missingKeys[] = $k;
                     }
                 }
+
+                if (!empty($missingKeys)) {
+                    $isValidOnts = false;
+
+                    LogHelper::logWarning(
+                        null,
+                        [
+                            'olt_id'        => $olt->id ?? null,
+                            'olt_ip'        => $olt->ip ?? null,
+                            'ont_total'     => is_array($ontsData) ? count($ontsData) : 0,
+                            'first_ont_keys' => is_array($firstOnt) ? array_keys($firstOnt) : null,
+                            'missing_keys'  => $missingKeys,
+                        ],
+                        400,
+                        '[ONT_SCAN_INVALID_STRUCTURE]'
+                    );
+                }
+            } else {
+                LogHelper::logWarning(
+                    null,
+                    [
+                        'olt_id'   => $olt->id ?? null,
+                        'olt_ip'   => $olt->ip ?? null,
+                        'ont_type' => gettype($ontsData),
+                        'ont_data' => is_array($ontsData) ? 'empty array' : null,
+                    ],
+                    500,
+                    "[ONT_SCAN_EMPTY_DATA]"
+                );
             }
 
             if ($isValidOnts) {
-                $olt->updateStatus(OltHelper::STATUS_ACTIVE);
                 OntUpdateService::updateOnts($olt, $ontsData, $snmpData['duration'], $username);
             } else {
-                $olt->updateStatus(OltHelper::STATUS_INACTIVE);
                 $data = [
                     'olt_id'        => $olt->id,
                     'updated_at'    => now(),

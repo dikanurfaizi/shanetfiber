@@ -230,11 +230,17 @@ class BillingCreateService
                 ->sum('subtotal');
             $total = $subtotal + $tax;
 
+            $status = 'BL';
+            if ($total <= 0) {
+                $status = 'LS';
+            }
+
             $billing->update([
                 'subtotal'     => $subtotal,
                 'tax_amount'   => $tax,
                 'discount_amount' => $discountAmount,
                 'total_amount' => $total,
+                'status'       => $status
             ]);
 
 

@@ -30,11 +30,12 @@ class SnmpFetchService
         $ontsList  = [];
         foreach ($oids as $key => $baseOid) {
             $walkRes = SnmpCoreService::snmpWalk($olt->ip, $olt->port ?? 161, $olt->community, $baseOid, $olt->version);
+            LogHelper::logInfo(null, ['walkRes' => $walkRes], 200, "walkRes Info");
             $rawSnmp[$key] = $walkRes;
             $count = count((array)$walkRes);
 
             // // log jumlah hasil per OID (tidak semua isi)
-            // LogHelper::logInfo(null, ['key' => $key, 'count' => $count], 200, "SNMP walk count");
+            LogHelper::logInfo(null, ['key' => $key, 'count' => $count], 200, "SNMP walk count");
 
             foreach ((array)$walkRes as $fullOid => $val) {
                 if (is_array($val)) $val = reset($val);
@@ -58,12 +59,12 @@ class SnmpFetchService
 
         // Log sample saja biar ringkas
         LogHelper::logInfo(null, [
-            // 'sample_onts' => array_slice($ontsList, 0, 5, true),
+            'sample_onts' => array_slice($ontsList, 0, 5, true),
             'total_ont'   => $totalOnt
         ], 200, "ONT data sample");
 
-        // LogHelper::logInfo(null, ['rawSnmp' => $rawSnmp], 200, "SNMP Raw Data (debug only)");
-        // LogHelper::logInfo(null, ['ontsList' => $ontsList], 200, "OntsList Raw Data (debug only)");
+        LogHelper::logInfo(null, ['rawSnmp' => $rawSnmp], 200, "SNMP Raw Data (debug only)");
+        LogHelper::logInfo(null, ['ontsList' => $ontsList], 200, "OntsList Raw Data (debug only)");
 
         return [
             'snmpData'  => $rawSnmp,

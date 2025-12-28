@@ -2,6 +2,7 @@
 
 namespace App\Services\Networks\Olt;
 
+use App\Helpers\OltHelper;
 use App\Models\Network\OidMapping;
 use App\Services\Networks\Snmp\SnmpFetchService;
 use Illuminate\Support\Facades\Validator;
@@ -47,7 +48,7 @@ class OltValidationService
 
         $healthCheck = OltStatusService::checkOltStatus($olt, $username);
 
-        if ($healthCheck['status'] === 'Up') {
+        if ($healthCheck['status'] === OltHelper::STATUS_ACTIVE) {
             $snmpData = SnmpFetchService::getOnts($olt);
             $totalOnt = $snmpData['total_ont'];
 

@@ -17,16 +17,12 @@
                             {{ $olt->name }}
                         </div>
 
-                        <div class="d-flex align-items-center gap-1 olt-status-indicator-wrapper">
-                            @php
-                                $status = strtolower($olt->status_text);
-                            @endphp
-                            <div class="olt-status-indicator {{ $status }}">
-                                <i class="fas fa-circle"></i>
+                        <div class="d-flex align-items-center gap-1 olt-status-wrapper"
+                            data-status="{{ strtolower($olt->status_text) }}">
+                            <div class="olt-status-indicator">
+                                <i class="fas"></i>
                             </div>
-                            <span class="status-badge {{ $status }}">
-                                {{ strtoupper($olt->status_text) }}
-                            </span>
+                            <span class="status-badge"></span>
                         </div>
                     </div>
 

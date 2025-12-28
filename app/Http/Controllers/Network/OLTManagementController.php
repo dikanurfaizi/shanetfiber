@@ -121,8 +121,8 @@ class OLTManagementController extends Controller
             $data = OltDataService::getOltDetails(new Request(), $oltId);
 
             $lastScan = $data['lastUpdateOnts']
-            ? Carbon::parse($data['lastUpdateOnts'])->format('Y-m-d H:i:s')
-            : '-';
+                ? Carbon::parse($data['lastUpdateOnts'])->format('Y-m-d H:i:s')
+                : '-';
 
             LogHelper::logInfo(null, ['olt_id' => $oltId], 200, '[SUCCESS] OLT Data Refreshed', $traceId);
 
@@ -282,7 +282,7 @@ class OLTManagementController extends Controller
 
         try {
             $jobId = Str::uuid()->toString();
-            ScanOltsJob::dispatch($jobId, $username);
+            ScanOltsJob::dispatch($jobId, $username)->onQueue('mikrotik-heavy');
             LogHelper::logInfo(null, ['job_id' => $jobId], 200, '[DISPATCHED] ScanOltsJob', $traceId);
             return response()->json(['message' => 'Scan job dispatched successfully', 'job_id' => $jobId]);
         } catch (Throwable $e) {

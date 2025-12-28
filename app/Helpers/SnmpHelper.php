@@ -76,8 +76,8 @@ class SnmpHelper
     public static function mapSnmpStatus(string $snmpStatus): string
     {
         return match ($snmpStatus) {
-            'Up' => 'Active',
-            'Down' => 'Inactive',
+            '1' => 'Active',
+            '0' => 'Inactive',
             default => 'Scanning',
         };
     }

@@ -15,7 +15,7 @@ class OltStatusService
     public static function checkOltStatus($olt, $username, bool $updateDb = false)
     {
         $startTime = microtime(true);
-        $status = 'Down';
+        $status = OltHelper::STATUS_INACTIVE;
 
         // Ambil mapping OID vendor
         $mapping = OidMapping::with('details')
@@ -23,7 +23,20 @@ class OltStatusService
 
         $sysNameOid = $mapping?->getOid('sysName');
 
-        $resolvedIp = $sysNameOid ? SnmpHelper::resolveIp($olt->ip) : null;
+        if (!$sysNameOid) {
+            LogHelper::logWarning(null, [
+                'olt_id' => $olt->id ?? null,
+                'vendor_mapping_id' => $olt->oid_mapping_id,
+                'reason' => 'sysName OID not configured'
+            ], 422, 'Skip OLT status check: sysName OID is null');
+
+            return [
+                'status' => OltHelper::STATUS_INACTIVE,
+                'duration' => 0,
+            ];
+        }
+
+        $resolvedIp = SnmpHelper::resolveIp($olt->ip);
         if (!$resolvedIp) {
             LogHelper::logError(null, [
                 'sysNameOid' => $sysNameOid,
@@ -33,7 +46,7 @@ class OltStatusService
             return ['status' => $status, 'duration' => 0];
         }
 
-        $session = SnmpCoreService::snmpGet($olt->ip, $olt->port, $olt->community, $sysNameOid, $olt->version);
+        $session = SnmpCoreService::snmpGet($resolvedIp, $olt->port, $olt->community, $sysNameOid, $olt->version);
 
         OltLogService::houseKeep();
 
@@ -49,13 +62,13 @@ class OltStatusService
             'sysNameOid' => $sysNameOid,
             'version'    => $olt->version,
             'session'  => $session,
-            'status'   => $session ? 'Up' : 'Down',
+            'status'   => $session ? OltHelper::STATUS_ACTIVE : OltHelper::STATUS_INACTIVE,
             'duration' => $duration,
             'username' => $username,
         ], 200, "checkOltStatus Success");
 
         return [
-            'status'   => $session ? 'Up' : 'Down',
+            'status'   => $session ? OltHelper::STATUS_ACTIVE : OltHelper::STATUS_INACTIVE,
             'duration' => $duration,
         ];
     }
