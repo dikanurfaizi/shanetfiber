@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Addon;
+use App\Models\Packages\Addon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
