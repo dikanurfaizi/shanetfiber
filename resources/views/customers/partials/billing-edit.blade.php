@@ -207,12 +207,12 @@
         <div class="card-footer">
             <div class="d-flex flex-column flex-md-row">
 
-                <button class="btn-soft btn-green w-100 w-md-auto mb-2 mr-md-2">
+                <button class="btn-soft btn-green w-100 btn-md-shrink px-4 mb-2 mb-md-0 mr-md-2">
                     <i class="fa fa-save"></i> Save & Regenerate Billing
                 </button>
 
                 <a href="{{ route('customers.show', [$customer->slug, 'tab' => 'billing']) }}"
-                    class="btn-soft btn-gray w-100 w-md-auto text-center">
+                    class="btn-soft btn-gray w-100 btn-md-shrink px-4 text-center">
                     Cancel
                 </a>
 
@@ -224,7 +224,7 @@
 
 @section('custom_styles')
     <style>
-        @media (max-width: 767px) {
+        @media (max-width: 768px) {
 
             /* ========== ADDON MOBILE CARD ========== */
             .addon-card {
@@ -329,6 +329,15 @@
             .addon-card.active {
                 border-color: #0d6efd;
                 box-shadow: 0 4px 10px rgba(13, 110, 253, .12);
+            }
+        }
+
+        @media (min-width: 768px) {
+            .btn-md-shrink {
+                width: auto !important;
+                flex: 0 0 auto !important;
+                display: inline-flex;
+                align-items: center;
             }
         }
     </style>

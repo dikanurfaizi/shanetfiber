@@ -24,6 +24,8 @@ class DecisionResult
 
         public ?string $prorateMode = null,
         public bool $requireSubscriptionChangeRecord = false,
+        public bool $shouldApplyPackageEntitlement = false,
+
         public array $notes = []
     ) {}
 }

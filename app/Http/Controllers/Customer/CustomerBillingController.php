@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Customer;
 use App\Helpers\LogHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Customers\Customer;
-use App\Services\Customers\Billing\UpdateService as CustomerBillingUpdateService;
+use App\Services\Customers\Billing\UpdateService;
 use DomainException;
 use Exception;
 use Illuminate\Http\Request;
@@ -16,7 +16,7 @@ class CustomerBillingController extends Controller
     public function update(
         Request $request,
         Customer $customer,
-        CustomerBillingUpdateService $customerBillingUpdateService
+        UpdateService $updateService
     ) {
         $startTime = microtime(true);
         $traceId = (string) Str::uuid();
@@ -65,7 +65,7 @@ class CustomerBillingController extends Controller
             $validated['addons'] = $addons;
 
 
-            $customerBillingUpdateService->updateAndRegenerate(
+            $updateService->updateAndRegenerate(
                 $customer,
                 $validated,
                 $traceId,

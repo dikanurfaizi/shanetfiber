@@ -185,21 +185,24 @@ class UpdateService
                 'strategy' => $packageDecision->billingStrategy,
             ], $traceId);
 
-            $this->packageBillingService->applySubscriptionChange(
-                $packageDecision,
-                $customer,
-                $currentBilling,
-                $currentPeriod,
-                $oldSubscription,
-                $newSubscription,
-                $traceId
-            );
+            if ($packageDecision->billingStrategy !== DecisionResult::STRATEGY_NONE) {
+                $this->packageBillingService->applySubscriptionChange(
+                    $packageDecision,
+                    $customer,
+                    $currentBilling,
+                    $currentPeriod,
+                    $oldSubscription,
+                    $newSubscription,
+                    $traceId
+                );
+            }
 
             $this->stepLog('AFTER_PACKAGE_BILLING', [], $traceId);
 
             if (
                 $packageDecision->allowed &&
                 $packageDecision->effectivePeriod === DecisionResult::PERIOD_CURRENT &&
+                $packageDecision->shouldApplyPackageEntitlement &&
                 in_array(
                     $packageDecision->billingStrategy,
                     [

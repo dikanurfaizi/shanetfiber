@@ -28,6 +28,7 @@ class DecisionEngine
                 allowed: true,
                 effectivePeriod: DecisionResult::PERIOD_CURRENT,
                 billingStrategy: DecisionResult::STRATEGY_NONE,
+                shouldApplyPackageEntitlement: false,
                 notes: ['same package']
             );
         }
@@ -40,24 +41,14 @@ class DecisionEngine
             // Tidak ada dampak finansial → tidak ada prorate
             // Tapi perubahan entitlement HARUS tercatat
 
-            if (!$ctx->currentBilling || $ctx->isSettled()) {
-                return new DecisionResult(
-                    allowed: true,
-                    effectivePeriod: DecisionResult::PERIOD_CURRENT,
-                    billingStrategy: DecisionResult::STRATEGY_UPDATE_CURRENT,
-                    requireSubscriptionChangeRecord: true,
-                    prorateMode: DecisionResult::PRORATE_ADJUSTMENT,
-                    notes: ['sidegrade apply current']
-                );
-            }
-
             return new DecisionResult(
                 allowed: true,
-                effectivePeriod: DecisionResult::PERIOD_NEXT,
-                billingStrategy: DecisionResult::STRATEGY_DEFER,
+                effectivePeriod: DecisionResult::PERIOD_CURRENT,
+                billingStrategy: DecisionResult::STRATEGY_UPDATE_CURRENT,
                 requireSubscriptionChangeRecord: true,
                 prorateMode: DecisionResult::PRORATE_ADJUSTMENT,
-                notes: ['sidegrade deferred']
+                shouldApplyPackageEntitlement: true,
+                notes: ['sidegrade apply current']
             );
         }
 
@@ -71,6 +62,7 @@ class DecisionEngine
                     allowed: true,
                     effectivePeriod: DecisionResult::PERIOD_CURRENT,
                     billingStrategy: DecisionResult::STRATEGY_NONE,
+                    shouldApplyPackageEntitlement: true,
                     notes: ['upgrade, no billing yet']
                 );
             }
@@ -81,6 +73,7 @@ class DecisionEngine
                     effectivePeriod: DecisionResult::PERIOD_CURRENT,
                     billingStrategy: DecisionResult::STRATEGY_UPDATE_CURRENT,
                     prorateMode: DecisionResult::PRORATE_ACCUMULATIVE,
+                    shouldApplyPackageEntitlement: true,
                     notes: ['upgrade, unpaid']
                 );
             }
@@ -90,6 +83,7 @@ class DecisionEngine
                 effectivePeriod: DecisionResult::PERIOD_CURRENT,
                 billingStrategy: DecisionResult::STRATEGY_SUPPLEMENTAL,
                 prorateMode: DecisionResult::PRORATE_ADJUSTMENT,
+                shouldApplyPackageEntitlement: true,
                 notes: ['upgrade, settled']
             );
         }
@@ -112,6 +106,7 @@ class DecisionEngine
                     effectivePeriod: DecisionResult::PERIOD_CURRENT,
                     billingStrategy: DecisionResult::STRATEGY_UPDATE_CURRENT,
                     prorateMode: DecisionResult::PRORATE_ACCUMULATIVE,
+                    shouldApplyPackageEntitlement: true,
                     notes: ['downgrade, unpaid']
                 );
             }
@@ -121,6 +116,7 @@ class DecisionEngine
                 effectivePeriod: DecisionResult::PERIOD_NEXT,
                 billingStrategy: DecisionResult::STRATEGY_DEFER,
                 requireSubscriptionChangeRecord: true,
+                shouldApplyPackageEntitlement: false,
                 notes: ['downgrade deferred']
             );
         }
