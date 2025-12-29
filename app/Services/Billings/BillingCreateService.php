@@ -17,9 +17,17 @@ use Illuminate\Support\Str;
 use App\Helpers\LogHelper;
 use App\Helpers\BillingDateResolver;
 use App\Helpers\ExecutionTimer;
+use App\Models\Billings\BillingPayment;
+use App\Services\Receipts\CreateReceiptService;
+use App\Services\Receipts\ReferenceIdGeneratorService;
 
 class BillingCreateService
 {
+    public function __construct(
+        private CreateReceiptService $receiptService,
+        private ReferenceIdGeneratorService $referenceIdGeneratorService
+    ) {}
+
     public function createBilling(
         Websystem $websystem,
         Customer $customer,
@@ -221,28 +229,59 @@ class BillingCreateService
 
 
             /** ----------------------------------------------------
-             * 9. Recalculate Totals
+             * 9. Recalculate Totals (Fixed for FREE package)
              * ---------------------------------------------------- */
-            $subtotal = collect($items)->sum('subtotal');
-            $tax = $this->calculateTax($websystem, $subtotal);
+
+            // 1. Subtotal hanya dari item yang ditagihkan
+            $chargeableSubtotal = collect($items)
+                ->whereIn('item_type', ['package', 'addon'])
+                ->sum('subtotal');
+
+            // 2. Discount (biasanya negatif)
             $discountAmount = collect($items)
                 ->where('item_type', 'discount')
                 ->sum('subtotal');
-            $total = $subtotal + $tax;
 
+            // 3. Pajak hanya dari chargeable subtotal
+            $tax = $this->calculateTax($websystem, $chargeableSubtotal);
+
+            // 4. Total akhir
+            $total = max(0, $chargeableSubtotal + $discountAmount + $tax);
+
+            // 5. Default status
             $status = 'BL';
+
+            // 6. Auto paid jika benar-benar gratis
             if ($total <= 0) {
                 $status = 'LS';
+                $paymentMethod = 'cash';
+
+                $billingPayment = BillingPayment::create([
+                    'billing_id'      => $billing->id,
+                    'amount_paid'     => 0,
+                    'payment_method'  => $paymentMethod,
+                    'reference_id'    => $this->referenceIdGeneratorService->generate('ACT'),
+                    'paid_by_user_id' => auth()->user()->id,
+                    'payment_time'    => now(),
+                ]);
+
+                $this->receiptService->createReceipt(
+                    $customerSubscription,
+                    $billing,
+                    $billingPayment,
+                    ['payment_method' => $paymentMethod],
+                    $traceId
+                );
             }
 
+            // 7. Update billing
             $billing->update([
-                'subtotal'     => $subtotal,
-                'tax_amount'   => $tax,
-                'discount_amount' => $discountAmount,
-                'total_amount' => $total,
-                'status'       => $status
+                'subtotal'         => $chargeableSubtotal,
+                'tax_amount'       => $tax,
+                'discount_amount'  => $discountAmount,
+                'total_amount'     => $total,
+                'status'           => $status,
             ]);
-
 
             /** ----------------------------------------------------
              * 10. Logging

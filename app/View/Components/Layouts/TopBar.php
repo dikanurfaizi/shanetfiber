@@ -37,7 +37,7 @@ class TopBar extends Component
         if ($user->can('view-bill-top-bar-total')) {
             // Admin global: lihat semua billing kecuali LS & NP
             $billingsToShow = $billings->filter(
-                fn($billing) => !in_array($billing->status, ['LS', 'NP'])
+                fn($billing) => !in_array($billing->status, ['LS', 'VD'])
             );
         } elseif ($user->can('investor-billing-total')) {
             // Investor: ambil semua admin yang berelasi dengan investor ini
@@ -53,7 +53,7 @@ class TopBar extends Component
                 fn($billing) =>
                 $billing->customer &&
                     in_array($billing->customer->user_id, $visibleUserIds) &&
-                    !in_array($billing->status, ['LS', 'NP'])
+                    !in_array($billing->status, ['LS', 'VD'])
             );
         } else {
             // Default: user biasa, hanya billing miliknya sendiri
@@ -61,7 +61,7 @@ class TopBar extends Component
                 fn($billing) =>
                 $billing->customer &&
                     $billing->customer->user_id == $user->id &&
-                    !in_array($billing->status, ['LS', 'NP'])
+                    !in_array($billing->status, ['LS', 'VD'])
             );
         }
 
