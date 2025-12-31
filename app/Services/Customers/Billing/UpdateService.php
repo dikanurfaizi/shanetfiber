@@ -267,7 +267,14 @@ class UpdateService
 
                 $this->stepLog('AFTER_MEMBERSHIP_APPLY', [], $traceId);
             } else {
-                // $this->membershipChangeService->scheduleForNextPeriod(...);
+                $this->membershipChangeService->applyMembershipChange(
+                    $membershipDecision,
+                    $customer,
+                    $data,
+                    $currentPeriod,
+                    $currentBilling,
+                    $traceId
+                );
 
                 $this->stepLog('MEMBERSHIP_DEFERRED', [
                     'effective_period' => $membershipDecision->effectivePeriod,

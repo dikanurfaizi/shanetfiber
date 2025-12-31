@@ -7,6 +7,7 @@ use App\Helpers\LogHelper;
 use App\Models\Billings\Billing;
 use App\Models\Billings\BillingPeriode;
 use App\Models\Customers\Customer;
+use Carbon\Carbon;
 
 class MembershipChangeService
 {
@@ -74,14 +75,16 @@ class MembershipChangeService
                 $traceId
             );
 
-            $nextStart = $period->start_date
-                ->copy()
-                ->addMonth()
-                ->startOfMonth();
+            $nextStart = Carbon::createFromFormat(
+                'F Y',
+                $data['billing_periode_name']
+            )->startOfMonth();
 
             $nextEnd = $nextStart
                 ->copy()
                 ->endOfMonth();
+
+            // dd($data, $nextStart, $nextEnd);
 
             $this->membershipResolver->scheduleNext(
                 $customer,
