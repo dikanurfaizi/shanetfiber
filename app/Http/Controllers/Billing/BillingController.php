@@ -259,13 +259,14 @@ class BillingController extends Controller
         if ($paymentMethod === 'not-active-periode') {
 
             $billing->update([
-                'teller_name' => auth()->user()->name,
-                'status'      => 'NP',
+                'updated_by' => auth()->user()->id,
+                'status'      => 'VD',
+                'updated_at' => now()
             ]);
 
             LogHelper::logInfo(null, [
                 'billing_id' => $billing->id,
-                'status'     => 'NP',
+                'status'     => 'VD',
             ], 200, 'payment.marked.no_usage', $traceId, $timer->lap());
 
             return redirect()->back()
