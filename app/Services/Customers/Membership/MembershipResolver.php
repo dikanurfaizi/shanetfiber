@@ -93,7 +93,7 @@ class MembershipResolver
                 'customer_id'   => $customer->id,
                 'membership_id' => $incomingMemberId,
                 'start_date'    => $startDate,
-                'end_date'      => ($data['billing_option'] ?? null) === 'monthly'
+                'end_date'      => $data['billing_option'] === 'monthly'
                     ? null
                     : $endDate,
                 'is_active'     => 1,
@@ -128,7 +128,7 @@ class MembershipResolver
             'end_date'  => now(),
         ]);
 
-        if (($data['billing_option'] ?? null) === 'one_time') {
+        if ($data['billing_option'] === 'one_time') {
 
             if (empty($data['billing_periode_name'])) {
                 throw new InvalidArgumentException(
@@ -168,14 +168,12 @@ class MembershipResolver
                 'end_date'  => now(),
             ]);
 
-        // create new active membership
-        $custMembership = CustomerMembership::create([
-            'customer_id'   => $customer->id,
-            'membership_id' => $data['member_id'],
-            'start_date'    => $period->start_date,
-            'end_date'      => null,
-            'is_active'     => 1,
-        ]);
+        $custMembership = $this->resolve(
+            $customer,
+            $data,
+            $period,
+            $traceId
+        );
 
         // sync discount item into billing_items (idempotent)
         $this->syncMembershipDiscountToBilling(

@@ -221,12 +221,6 @@ class UpdateService
             }
 
             if ($addonDecision->billingStrategy === DecisionResult::STRATEGY_DEFER) {
-                // $this->addonChangeService->scheduleForNextPeriod(
-                //     $customer,
-                //     $incomingAddonMap,
-                //     $addonDiff,
-                //     $traceId
-                // );
                 $this->stepLog('ADDON_DEFERRED', [
                     'effective_period' => $addonDecision->effectivePeriod,
                 ], $traceId);
