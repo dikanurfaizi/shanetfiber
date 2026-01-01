@@ -135,16 +135,6 @@ class CreateReceiptService
                  * ----------------------------------------- */
                 $receipt = Receipt::create($receiptData);
 
-                ReceiptItem::create([
-                    'receipt_id' => $receipt->id,
-                    'type' => 'package',
-                    'ref_id' => $customerSubscription->package_id,
-                    'name' => $customerSubscription->package->name,
-                    'qty' => 1,
-                    'unit_price' => $billing->base_price,
-                    'subtotal' => $billing->base_price,
-                ]);
-
                 foreach ($billing->billingItems as $addon) {
                     ReceiptItem::create([
                         'receipt_id' => $receipt->id,
