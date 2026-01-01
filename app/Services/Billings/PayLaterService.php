@@ -190,7 +190,13 @@ class PayLaterService
             }
 
             $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
-            $customerProfile = $customer->package->profile;
+            $subscription = $customer->activeSubscription;
+
+            $customerProfile = $subscription?->package?->profile;
+
+            if (!$customerProfile) {
+                throw new \DomainException('Active subscription or package profile not found');
+            }
 
             if ($secretProfiles == $customerProfile) {
                 dispatch(new AddPaymentBeforeDueDateJob($router, $commentPayment, $customer->secret_id, $traceId))
