@@ -6,6 +6,19 @@ class DecisionEngine
 {
     public function decidePackageChange(DecisionContext $ctx): DecisionResult
     {
+        if (
+            $ctx->hasActiveSubscription
+            && $ctx->oldPackageId === $ctx->newPackageId
+        ) {
+            return new DecisionResult(
+                allowed: true,
+                effectivePeriod: DecisionResult::PERIOD_CURRENT,
+                billingStrategy: DecisionResult::STRATEGY_NONE,
+                shouldApplyPackageEntitlement: false,
+                notes: ['same package hard-guard']
+            );
+        }
+
         /* ======================================================
      * NEW SUBSCRIPTION
      * ====================================================== */

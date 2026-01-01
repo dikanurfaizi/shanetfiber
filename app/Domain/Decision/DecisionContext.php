@@ -41,8 +41,8 @@ class DecisionContext
 
     public function isSamePackage(): bool
     {
-        return $this->oldPackageId === $this->newPackageId
-            && $this->newPrice === $this->oldPrice;
+        return
+            $this->oldPackageId === $this->newPackageId;
     }
 
     public function isPackageChanged(): bool
