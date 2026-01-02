@@ -100,14 +100,18 @@
             <td>{{ __('billing.invoice.summary.discount') }}</td>
             <td class="right">@moneyIDR(abs($billing->discount_amount))</td>
         </tr>
-        <tr>
+        {{-- <tr>
             <td>{{ __('billing.invoice.summary.tax') }}</td>
             <td class="right">@moneyIDR($billing->tax_amount)</td>
-        </tr>
+        </tr> --}}
         <tr class="total">
             <td>{{ __('billing.invoice.summary.total') }}</td>
             <td class="right">@moneyIDR($billing->total_amount)</td>
         </tr>
+        <div class="summary-note muted" style="font-size:11px;margin-top:4px;">
+            * Total sudah termasuk PPN
+        </div>
+
     </table>
 
     {{-- PAYMENT INSTRUCTION --}}

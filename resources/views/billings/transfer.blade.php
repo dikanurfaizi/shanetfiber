@@ -37,6 +37,7 @@
                             <div class="col-md-6">
                                 <div class="info-item">
                                     <span class="info-label">Billing Number</span>
+                                    <br>
                                     <span class="info-value fw-semibold">
                                         {{ $billing->billing_number }}
                                     </span>
@@ -45,7 +46,7 @@
                                 <div class="info-item">
                                     <span class="info-label">Customer</span>
                                     <span class="info-value">
-                                        {{ $billing->customer->name }}
+                                        {{ $billing->customer->name ?? 'No Data' }}
                                     </span>
                                 </div>
                             </div>
@@ -66,7 +67,7 @@
                                 <div class="info-item">
                                     <span class="info-label">Periode</span>
                                     <span class="info-value">
-                                        {{ $billing->billingSubscription->billingPeriode->name }}
+                                        {{ $billing->billingSubscription->billingPeriode->name ?? 'No Data' }}
                                     </span>
                                 </div>
                             </div>
@@ -75,7 +76,7 @@
                                 <div class="info-item">
                                     <span class="info-label">Package</span>
                                     <span class="info-value">
-                                        {{ $billing->billingSubscription->customerSubscription->package->name }}
+                                        {{ $billing->billingSubscription->customerSubscription->package->name ?? 'No Data' }}
                                     </span>
                                 </div>
                             </div>
@@ -90,7 +91,7 @@
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="badge bg-light text-dark">
                                         <i class="fas fa-user"></i>
-                                        {{ $billing->createdByUser->name }}
+                                        {{ $billing->createdByUser?->name ?? 'No Data' }}
                                     </span>
                                 </div>
                             </div>
@@ -100,7 +101,7 @@
                                 <div>
                                     <span class="badge bg-light text-dark">
                                         <i class="fas fa-id-card me-1"></i>
-                                        {{ $billing->billingPayment->paidByUser->name ?? '-' }}
+                                        {{ $billing->billingPayment->paidByUser->name ?? 'No Data' }}
                                     </span>
                                 </div>
                             </div>
@@ -147,7 +148,7 @@
                                             <option value="">Select Bank</option>
                                             @foreach ($banks as $bank)
                                                 <option value="{{ $bank->id }}">
-                                                    {{ $bank->name }} ({{ $bank->bank }} -
+                                                    {{ $bank->name ?? 'No Data' }} ({{ $bank->bank }} -
                                                     {{ $bank->account_number }})
                                                 </option>
                                             @endforeach

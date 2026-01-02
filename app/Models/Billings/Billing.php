@@ -59,7 +59,7 @@ class Billing extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function CreatedByUser()
+    public function createdByUser()
     {
         return $this->belongsTo(User::class, 'created_by');
     }

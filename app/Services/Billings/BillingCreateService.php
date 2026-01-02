@@ -18,6 +18,7 @@ use App\Helpers\LogHelper;
 use App\Helpers\BillingDateResolver;
 use App\Helpers\ExecutionTimer;
 use App\Models\Billings\BillingPayment;
+use App\Models\User;
 use App\Services\Receipts\CreateReceiptService;
 use App\Services\Receipts\ReferenceIdGeneratorService;
 
@@ -84,6 +85,7 @@ class BillingCreateService
 
             $billingNumber = "INV-{$yearMonth}-{$customer->id}-{$seqFormatted}";
 
+            $userId = auth()->id() ?? User::orderBy('id', 'asc')->value('id');
 
             /** ----------------------------------------------------
              * 4. Create Billing Header
@@ -98,8 +100,8 @@ class BillingCreateService
                 'tax_amount' => 0,
                 'total_amount' => 0,
                 'status' => 'BL',
-                'created_by' => auth()->id() ?? null,
-                'updated_by' => auth()->id() ?? null,
+                'created_by' => $userId,
+                'updated_by' => $userId,
                 'due_date' => $dueDate,
             ]);
 
@@ -261,7 +263,7 @@ class BillingCreateService
                     'amount_paid'     => 0,
                     'payment_method'  => $paymentMethod,
                     'reference_id'    => $this->referenceIdGeneratorService->generate('ACT'),
-                    'paid_by_user_id' => auth()->user()->id,
+                    'paid_by_user_id' => $userId,
                     'payment_time'    => now(),
                 ]);
 

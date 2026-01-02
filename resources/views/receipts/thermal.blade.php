@@ -58,13 +58,13 @@
                 <td class="right">Rp</td>
                 <td class="right">{{ number_format($subtotal, 0, ',', '.') }}</td>
             </tr>
-            <tr>
+            {{-- <tr>
                 <td>PPN</td>
                 <td class="right">Rp</td>
                 <td class="right">{{ number_format($receipt->tax, 0, ',', '.') }}</td>
-            </tr>
+            </tr> --}}
             <tr class="total">
-                <td>TOTAL PAID</td>
+                <td>TOTAL (Incl. PPN)</td>
                 <td class="right">Rp</td>
                 <td class="right">{{ number_format($total, 0, ',', '.') }}</td>
             </tr>
@@ -76,7 +76,7 @@
         <div>
             Paid via : {{ ucfirst($receipt->payment_methode) }}<br>
             Paid at :
-            {{ \Carbon\Carbon::parse($receipt->payment_time)->translatedFormat('d M Y H:i') }}<br>
+            {{ \Carbon\Carbon::parse($receipt->payment_time)->translatedFormat('d M Y H:i') }} WIB<br>
         </div>
 
         @if (in_array($receipt->payment_methode, ['transfer', 'online']))
@@ -90,7 +90,7 @@
         {{-- FOOTER --}}
         <div class="footer">
             Valid proof of payment<br>
-            {{ strtoupper($websystem->title) }}<br>
+            Shanum Network Fiber<br>
             No signature required
         </div>
 
