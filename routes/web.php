@@ -232,7 +232,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('/customers/view/all/data', CustomerTrashedController::class)->name('customers.trashed');
         Route::delete('/customers/{customer:slug}/force-delete', [CustomerTrashedController::class, 'forceDelete'])->name('customers.forceDelete')->withTrashed();
         Route::get('/customers/{customer:slug}/restore/preview', [CustomerRestoreController::class, 'preview'])->name('customers.restore.preview');
-        Route::post('/customers/{customer:slug}/restore/confirm', [CustomerRestoreController::class, 'confirm'])->name('customers.restore.confirm');
+        Route::post('/customers/{slug}/restore/confirm', [CustomerRestoreController::class, 'confirm'])->name('customers.restore.confirm');
 
         // =================== EDIT TAB CUSTOMER DETAIL ===================
         Route::patch('/customers/{customer:slug}/info', [CustomerInfoController::class, 'update'])->name('customers.update.info');

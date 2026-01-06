@@ -104,8 +104,13 @@ class PackageController extends Controller
 
     public function getDiscount(Request $request)
     {
-        $packageId = $request->package_id;
-        $memberId  = $request->member_id;
+        $packageId = $request->filled('package_id')
+            ? (int) $request->member_id
+            : null;
+
+        $memberId = $request->filled('member_id')
+            ? (int) $request->member_id
+            : null;
 
         $discountData = $this->packageGetService->getDiscount($packageId, $memberId);
 

@@ -11,7 +11,7 @@ class BillingUnpaidService
     {
         try {
             $exists = Billing::where('customer_id', $customerId)
-                ->whereNotIn('status', ['NP', 'LS'])
+                ->whereNotIn('status', ['VD', 'LS'])
                 ->exists();
 
             if ($exists) {

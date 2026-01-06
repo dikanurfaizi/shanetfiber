@@ -21,12 +21,12 @@ class PackageGetService
         return $durations;
     }
 
-    public function getDiscount(int $packageId, int $memberId)
+    public function getDiscount(?int $packageId = null, ?int $memberId = null)
     {
-        $package = Package::find($packageId);
-        $member  = Membership::find($memberId);
+        $package = $packageId ? Package::find($packageId) : null;
+        $member  = $memberId ? Membership::find($memberId) : null;
 
-        $packagePrice = $package->price ?? 0;
+        $packagePrice = $package ? $package->price : 0;
 
         if (!$member) {
             return [

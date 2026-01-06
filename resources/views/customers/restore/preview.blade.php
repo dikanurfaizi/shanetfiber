@@ -270,8 +270,8 @@
     @section('custom_styles')
         <style>
             /* ============================
-                                                RESTORE FOOTER ACTION
-                                                ============================ */
+                RESTORE FOOTER ACTION
+                ============================ */
             .restore-footer {
                 border-top: 1px solid #e5e7eb;
                 padding-top: 24px;

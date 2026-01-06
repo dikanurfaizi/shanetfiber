@@ -18,9 +18,23 @@ use InvalidArgumentException;
 
 class CustomerRestoreController extends Controller
 {
-    public function __construct()
-    {
+    private SubscriptionRestoreService $subscriptionRestoreService;
+    private CustomerAddonRestoreService $customerAddonRestoreService;
+    private MembershipRestoreService $membershipRestoreService;
+    private BillingRestoreService $billingRestoreService;
+
+    public function __construct(
+        SubscriptionRestoreService $subscriptionRestoreService,
+        CustomerAddonRestoreService $customerAddonRestoreService,
+        MembershipRestoreService $membershipRestoreService,
+        BillingRestoreService $billingRestoreService
+    ) {
         $this->middleware('permission:view-deleted-customer', ['only' => ['preview', 'confir']]);
+
+        $this->subscriptionRestoreService = $subscriptionRestoreService;
+        $this->customerAddonRestoreService = $customerAddonRestoreService;
+        $this->membershipRestoreService = $membershipRestoreService;
+        $this->billingRestoreService = $billingRestoreService;
     }
 
     /**
@@ -79,7 +93,7 @@ class CustomerRestoreController extends Controller
 
         $payload = $request->payload();
 
-        LogHelper::logWarning(null, [
+        LogHelper::logInfo(null, [
             'slug' => $slug,
         ], 201, 'CustomerRestoreController::confirm - START', $traceId);
 
@@ -91,34 +105,41 @@ class CustomerRestoreController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
+                LogHelper::logInfo(null, ['customer' => $customer], 200, 'Get Data Customer trashed');
+
                 // ==========================
                 // 1. Restore customer
                 // ==========================
                 $customer->restore();
 
+                LogHelper::logInfo(null, ['deleted_at' => $customer->deleted_at], 200, 'Restore Customer');
+
                 // ==========================
                 // 2. Resolve subscription
                 // ==========================
-                app(SubscriptionRestoreService::class)
-                    ->handle($customer, $payload);
+                $this->subscriptionRestoreService->handle($customer, $payload);
+
+                LogHelper::logInfo(null, [], 200, 'SubscriptionRestoreService STEP');
 
                 // ==========================
                 // 3. Resolve membership
                 // ==========================
-                app(MembershipRestoreService::class)
-                    ->handle($customer, $payload);
+                $this->membershipRestoreService->handle($customer, $payload);
+
+                LogHelper::logInfo(null, [], 200, 'MembershipRestoreService STEP');
 
                 // ==========================
                 // 4. Resolve addons
                 // ==========================
-                app(CustomerAddonRestoreService::class)
-                    ->handle($customer, $payload['addons'] ?? []);
+                $this->customerAddonRestoreService->handle($customer, $payload['addons'] ?? []);
+
+                LogHelper::logInfo(null, [], 200, 'CustomerAddonRestoreService STEP');
 
                 // ==========================
                 // 4. Regenerate billing
                 // ==========================
-                app(BillingRestoreService::class)
-                    ->handle($customer);
+                $this->billingRestoreService->handle($customer);
+                LogHelper::logInfo(null, [], 200, 'Regerenerat Billing STEP');
             });
 
             LogHelper::logWarning(null, [

@@ -322,7 +322,7 @@ class CustomerController extends Controller
                             : ['ip_static', 'mac_address', 'interface']
                     ),
                     'customer' => $customer,
-                    'service_result' => $result, // tambahin biar keliatan
+                    'service_result' => $result,
                 ],
                 200,
                 'Successfully updated PPP/IP Static',
