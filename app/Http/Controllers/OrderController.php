@@ -8,7 +8,7 @@ use App\Http\Controllers\PaymentGateway\TripayController;
 use App\Models\Billings\Billing;
 use App\Models\Customers\Customer;
 use App\Models\Midtran;
-use App\Models\Order;
+use App\Models\Billings\Order;
 use App\Models\PaymentGateway;
 use App\Models\Websystem;
 use App\Services\Midtrans\CreateSnapTokenService;

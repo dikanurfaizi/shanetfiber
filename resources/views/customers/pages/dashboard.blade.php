@@ -93,7 +93,7 @@
                                         <tr>
                                             <td>{{ $loop->iteration }}</td>
                                             <td>{{ $billing->billingSubscription->billing_periode }}</td>
-                                            <td>{{ $billing->customer->package->name }}</td>
+                                            <td>{{ $packageName }}</td>
                                             <td class="text-right">
                                                 @moneyIDR($billing->total_amount)
                                             </td>

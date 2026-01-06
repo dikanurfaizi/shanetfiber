@@ -6,7 +6,7 @@ use App\Models\Tripay;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Log;
-use App\Models\Order;
+use App\Models\Billings\Order;
 use App\Traits\TripayHelper;
 use App\Helpers\LogHelper;
 
