@@ -3,6 +3,8 @@
 namespace App\Services\Messaging\Handlers;
 
 use App\Models\Customers\Customer;
+use App\Models\Customers\CustomerSubscription;
+use App\Models\Packages\Package;
 use App\Services\Messaging\Contracts\MessageActionHandler;
 use App\Services\Messaging\MessageBuilder;
 
@@ -30,10 +32,11 @@ class PackageInfoHandler extends BaseBroadcastAwareHandler implements MessageAct
     public function build(string $traceId): array
     {
         $cust    = $this->customer;
-        $package = $cust?->package;
+        $custSubs = CustomerSubscription::where('customer_id', $cust->id)->where('status', 'active')->first();
+        $package = Package::where('id', $custSubs->package_id)->first();
         $cs      = $cust?->user?->contact ?? '-';
 
-        if (!$package) {
+        if (!$package || !$cust) {
             return [
                 'template_slug' => 'no_paket',
                 'to'            => $cust->contact,

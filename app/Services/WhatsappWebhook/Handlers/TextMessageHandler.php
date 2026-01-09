@@ -39,23 +39,35 @@ class TextMessageHandler extends BaseHandler
             $format->formatReceiver($sender, 'display', false)
         ];
 
+        LogHelper::logInfo(null, [
+            'sender' => $sender,
+        ], 200, '[Webhook] Incoming sender', $traceId);
+
         // ===== SELF-MESSAGE CHECK =====
         $gateway = WhatsappNumber::whereIn('number', $normalizedSender)->first();
 
         if ($gateway && $this->isSelfMessage($sender, $gateway, $format)) {
             LogHelper::logInfo(null, [
-                'reason' => 'self_message_detected',
                 'sender' => $sender,
-            ], 200, '[Webhook] Skipped self message', $traceId);
+            ], 200, '[Webhook] Self message skipped', $traceId);
             return;
         }
 
         // ===== CUSTOMER LOOKUP =====
         $customer = Customer::whereIn('contact', $normalizedSender)->first();
 
+        LogHelper::logInfo(null, [
+            'sender' => $sender,
+            'customer_id' => $customer?->id,
+        ], 200, '[Webhook] Customer lookup', $traceId);
+
         // ===== KEYWORD RESOLUTION =====
         $keyword = $this->keywordProcessor->resolveKeyword($text, $customer)
             ?? WhatsappMessage::where('slug', 'unknown_keyword')->first();
+
+        LogHelper::logInfo(null, [
+            'keyword' => $keyword->slug,
+        ], 200, '[Webhook] Keyword resolved', $traceId);
 
         // STOP keyword → opt out
         if ($keyword->slug === 'stop') {
@@ -68,14 +80,23 @@ class TextMessageHandler extends BaseHandler
             'info_paket',
             'lapor_gangguan',
             'hubungi_admin',
-            'unknown_info_paket',
         ]);
 
-        // Customer wajib tapi tidak ditemukan
-        if ($needsCustomer && (!$customer || empty($customer))) {
+        if (!$needsCustomer && (!$customer || empty($customer))) {
+
+            LogHelper::logInfo(null, [
+                'keyword' => $keyword->slug,
+                'sender' => $sender,
+            ], 200, '[Webhook] Unknown customer path', $traceId);
+
             $this->dispatchUnknownCustomer($sender, $keyword, $traceId);
             return;
         }
+
+        LogHelper::logInfo(null, [
+            'keyword' => $keyword->slug,
+            'customer_id' => $customer?->id,
+        ], 200, '[Webhook] Dispatch normal', $traceId);
 
         // ===== DISPATCH NORMAL HANDLER =====
         $this->dispatcher->dispatch(
@@ -88,8 +109,7 @@ class TextMessageHandler extends BaseHandler
         );
 
         LogHelper::logInfo(null, [
-            'sender'  => $sender,
-            'keyword' => $keyword->slug,
+            'sender' => $sender,
         ], 200, '[Webhook] Text processed', $traceId);
     }
 

@@ -70,7 +70,7 @@ class BillingInfoHandler extends BaseBroadcastAwareHandler implements MessageAct
     {
         return $cust->billing()
             ->where('status', 'LS') // Lunas
-            ->orderBy('payment_time', 'desc')
+            ->orderBy('created_at', 'desc')
             ->first();
     }
 
@@ -108,8 +108,8 @@ class BillingInfoHandler extends BaseBroadcastAwareHandler implements MessageAct
     {
         return $billings->map(function ($b) {
 
-            $periode  = $b->billingSubscription?->billing_periode ?? 'Periode';
-            $package  = $b->customer->package->name;
+            $periode  = $b->billingSubscription?->billingPeriode?->name ?? 'Periode';
+            $package  = $b->customer?->activeSubscription?->package?->name;
             $harga    = $this->builder->currency($b->total_amount);
             $status   = $this->translateStatusWithDate($b);
             $deadline = $this->paymentDeadline($b);
@@ -130,13 +130,15 @@ class BillingInfoHandler extends BaseBroadcastAwareHandler implements MessageAct
             'to'            => $cust->contact,
             'replacements'  => [
                 '%name%'         => $cust->name,
-                '%package'       => $cust->package->name,
-                '%periode%'      => $billing->billingSubscription?->billing_periode ?? '-',
+                '%package%'       => $cust?->activeSubscription?->package?->name ?? 'Tidak ada paket',
+                '%periode%'      => $billing->billingSubscription?->billingPeriode?->name ?? '-',
                 '%total%'        => $this->builder->currency($billing->total_amount),
-                '%paid_at%'      => $billing->payment_time
-                    ? Carbon::parse($billing->payment_time)->locale('id')->translatedFormat('d F Y')
+                '%paid_at%' => $billing?->billingPayment?->payment_time
+                    ? Carbon::parse($billing->billingPayment->payment_time)
+                    ->locale('id')
+                    ->translatedFormat('d F Y H:i') . ' WIB'
                     : '-',
-                '%method%'       => $billing->receipt->payment_methode,
+                '%method%' => ucwords(str_replace('_', ' ', $billing?->billingPayment?->receipt?->payment_methode)),
                 '%cs_contact%'   => $cs,
             ],
         ];
@@ -147,7 +149,7 @@ class BillingInfoHandler extends BaseBroadcastAwareHandler implements MessageAct
         $now = Carbon::now();
 
         if ($billing->status === 'PL') {
-            if ($billing->pay_later && $now->gt(Carbon::parse($billing->pay_later))) {
+            if ($billing->paylater_until && $now->gt(Carbon::parse($billing->paylater_until))) {
                 return 'Melewati Masa Bayar';
             }
             return 'Paylater';
@@ -166,7 +168,7 @@ class BillingInfoHandler extends BaseBroadcastAwareHandler implements MessageAct
     private function paymentDeadline($billing): string
     {
         $date = $billing->status === 'PL'
-            ? $billing->pay_later
+            ? $billing->paylater_until
             : $billing->due_date;
 
         return $date

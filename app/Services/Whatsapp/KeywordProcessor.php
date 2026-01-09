@@ -19,26 +19,52 @@ class KeywordProcessor
             ? ['registered', 'both']
             : ['unregistered', 'both'];
 
-        // STOP tetap prioritas
+        // STOP prioritas
         if ($this->normalizer->isStop($normalized)) {
+            LogHelper::logInfo(null, [
+                'text' => $normalized,
+                'scope' => $scope,
+            ], 200, '[KEYWORD] Stop detected');
+
             return WhatsappMessage::where('slug', 'stop')
                 ->whereIn('message_scope', $scope)
                 ->first();
         }
 
-        // 1. Exact match ke incoming_message
-        $msg = WhatsappMessage::where('keywords', $normalized)
+        // Exact match
+        $msg = WhatsappMessage::where('slug', $normalized)
             ->whereIn('message_scope', $scope)
             ->first();
-        if ($msg) return $msg;
 
-        // 2. JSON array match
+        if ($msg) {
+            LogHelper::logInfo(null, [
+                'slug' => $msg->slug,
+                'scope' => $scope,
+            ], 200, '[KEYWORD] Exact match');
+
+            return $msg;
+        }
+
+        // Alias match
         $alias = WhatsappMessage::whereJsonContains('keywords', $normalized)
             ->whereIn('message_scope', $scope)
             ->first();
-        if ($alias) return $alias;
 
-        // 3. Fallback → unknown keyword
+        if ($alias) {
+            LogHelper::logInfo(null, [
+                'slug' => $alias->slug,
+                'scope' => $scope,
+            ], 200, '[KEYWORD] Alias match');
+
+            return $alias;
+        }
+
+        // Fallback
+        LogHelper::logInfo(null, [
+            'text' => $normalized,
+            'scope' => $scope,
+        ], 200, '[KEYWORD] Fallback to unknown');
+
         return WhatsappMessage::where('slug', 'unknown_keyword')
             ->where('message_scope', 'both')
             ->first();

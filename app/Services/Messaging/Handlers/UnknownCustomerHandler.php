@@ -50,15 +50,16 @@ class UnknownCustomerHandler implements MessageActionHandler
                 'packages.name as package_name',
                 'packages.price',
                 'package_categories.name as category_name',
-                'subscription_durations.name_id as duration_name'
+                'duration_labels.name_id as duration_name'
             )
                 ->join('package_categories', 'packages.package_category_id', '=', 'package_categories.id')
-                ->join('subscription_durations', 'packages.id', '=', 'subscription_durations.package_id')
+                ->join('package_durations', 'packages.id', '=', 'package_durations.package_id')
+                ->join('duration_labels', 'package_durations.duration_id', '=', 'duration_labels.id')
                 ->where('packages.display_to_customer', 1)
                 ->where('packages.disabled', 'false')
                 ->where('packages.price', '>', 0)
                 ->where('package_categories.is_active', 1)
-                ->where('subscription_durations.is_active', 1)
+                ->where('package_durations.is_active', 1)
                 ->get();
 
             $list = "";
