@@ -29,16 +29,16 @@ class BillingReportService
                 'tellers' => User::pluck('name', 'name'),
             ];
 
-            LogHelper::logInfo(
-                null,
-                [
-                    'filters_count' => array_map(fn($v) => is_countable($v) ? count($v) : null, $filterData),
-                    'execution_time_ms' => round((microtime(true) - $startTime) * 1000, 2)
-                ],
-                200,
-                "Retrieved filter data for billing report.",
-                $traceId
-            );
+            // LogHelper::logInfo(
+            //     null,
+            //     [
+            //         'filters_count' => array_map(fn($v) => is_countable($v) ? count($v) : null, $filterData),
+            //         'execution_time_ms' => round((microtime(true) - $startTime) * 1000, 2)
+            //     ],
+            //     200,
+            //     "Retrieved filter data for billing report.",
+            //     $traceId
+            // );
 
             return $filterData;
         } catch (\Throwable $e) {

@@ -20,8 +20,7 @@ class BillingQueryService
                 'customer',
                 'billingSubscription.billingPeriode',
                 'billingPayment'
-            ])->where('billings.status', '!=', 'VD');
-
+            ]);
 
         // filter by status
         if ($request->filled('status')) {
@@ -43,6 +42,16 @@ class BillingQueryService
     private function applySearchFilters($query, Request $request, string $traceId, bool $showAllPeriods = false)
     {
         $searchParams = $this->prepareSearchParams($request, $showAllPeriods);
+
+        $hasFilter =
+            $searchParams['name'] ||
+            !is_null($searchParams['status']) ||
+            $searchParams['user_id'] ||
+            $searchParams['customer_slug'];
+
+        if (!$hasFilter) {
+            $query->where('billings.status', '!=', 'VD');
+        }
 
         // Filter berdasarkan kolom di tabel billings
         if ($searchParams['name']) {

@@ -160,7 +160,7 @@
 
                                 <td>
                                     <span
-                                        class="badge bg-success text-white">{{ $item->billingSubscription->customerSubscription->package->name }}</span>
+                                        class="badge bg-success text-white">{{ $item->billingSubscription?->customerSubscription?->package?->name ?? 'No Package' }}</span>
                                 </td>
 
                                 <td>@moneyIDR($item->total_amount)</td>
