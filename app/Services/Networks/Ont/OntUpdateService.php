@@ -35,54 +35,77 @@ class OntUpdateService
             return false;
         }
 
-        // Hapus semua ONT milik OLT tertentu
-        $deletedCount = Ont::where('olt_id', $olt->id)->delete();
+        $existing = Ont::where('olt_id', $olt->id)
+            ->pluck('ont_index')
+            ->toArray();
 
-        // Logging untuk verifikasi
-        LogHelper::logInfo(null, [
-            'olt_id'       => $olt->id,
-            'olt_ip'       => $olt->ip,
-            'deleted_rows' => $deletedCount,
-        ], 200, "Delete Ont Successfully");
+        $existingMap = array_flip($existing);
 
-        $successList = [];
-        $failedList  = [];
+        $insertCount = 0;
+        $updateCount = 0;
+        $rows = [];
 
         foreach ($snmpData as $index => $data) {
-            try {
-                $ontData = [
-                    'olt_id'       => $olt->id,
-                    'ont_index'    => $index,
-                    'pon_group'    => $data['pon_group'] ?? NULL,
-                    'last_updated' => now(),
-                    'name'         => $data['oid_name'] ?? '',
-                    'tx_power'     => trim($data['txpower'] ?? 'N/A', '"'),
-                    'rx_power'     => trim($data['rxpower'] ?? 'N/A', '"'),
-                    'status'       => ($data['status'] ?? '') == '1' ? 'Up' : 'Down',
-                    'mac_address'  => SnmpHelper::formatMacFromSnmp($data['macaddress'] ?? ''),
-                    'temperature' => isset($data['temperature'])
-                        ? (int) round(floatval(trim($data['temperature'], '"'))) . " °C"
-                        : 'N/A',
-                ];
 
-                Ont::create($ontData);
-                $successList[] = $ontData;
-            } catch (\Throwable $e) {
-                $failedList[] = [
-                    'index'   => $index,
-                    'raw'     => $data,
-                    'error'   => $e->getMessage()
-                ];
+            if (isset($existingMap[$index])) {
+                $updateCount++;
+            } else {
+                $insertCount++;
             }
+
+            $rows[] = [
+                'olt_id' => $olt->id,
+                'ont_index' => $index,
+                'pon_group' => $data['pon_group'] ?? null,
+                'name' => $data['oid_name'] ?? '',
+                'tx_power' => trim($data['txpower'] ?? 'N/A', '"'),
+                'rx_power' => trim($data['rxpower'] ?? 'N/A', '"'),
+                'status' => ($data['status'] ?? '') == '1' ? 'Up' : 'Down',
+                'mac_address' => SnmpHelper::formatMacFromSnmp($data['macaddress'] ?? ''),
+                'temperature' => isset($data['temperature'])
+                    ? (int) round(floatval(trim($data['temperature'], '"'))) . " °C"
+                    : 'N/A',
+                'last_updated' => now(),
+                'updated_at' => now(),
+                'created_at' => now(),
+            ];
         }
+
+        try {
+            Ont::upsert(
+                $rows,
+                ['olt_id', 'ont_index'],
+                [
+                    'pon_group',
+                    'name',
+                    'tx_power',
+                    'rx_power',
+                    'status',
+                    'mac_address',
+                    'temperature',
+                    'last_updated',
+                    'updated_at'
+                ]
+            );
+        } catch (\Throwable $e) {
+            LogHelper::logError(null, [
+                'olt_id' => $olt->id,
+                'error' => $e->getMessage()
+            ], 500, "ONT upsert failed");
+
+            return false;
+        }
+
+        $successCount = $insertCount + $updateCount;
+        $failedCount  = 0;
 
         $data = [
             'olt_id'        => $olt->id,
             'updated_at'    => now(),
-            'success_count' => count($successList),
-            'failed_count'  => count($failedList),
+            'success_count' => $successCount,
+            'failed_count'  => $failedCount,
             'details'       => "Update ONT selesai: {$olt->name} ({$olt->ip}:{$olt->port})",
-            'ont_count'     => count($successList),
+            'ont_count'     => $successCount,
             'status'        => 'Up',
             'username'      => $username,
             'duration'      => $duration ?? 0
@@ -91,14 +114,13 @@ class OntUpdateService
 
         // Log summary lengkap sekali di akhir
         LogHelper::logInfo(null, [
-            'olt_id'   => $olt->id,
-            'olt_ip'   => $olt->ip,
-            'total_candidates' => count($snmpData),
-            'inserted' => count($successList),
-            'failed'   => count($failedList),
-            'failed_list'  => $failedList,
+            'olt_id' => $olt->id,
+            'olt_ip' => $olt->ip,
+            'total_rows' => count($rows),
+            'inserted' => $insertCount,
+            'updated' => $updateCount,
             'duration' => $duration,
-        ], 200, "Summary insert ONT");
+        ], 200, "ONT upsert summary");
 
         OltLogService::houseKeep();
         return true;
