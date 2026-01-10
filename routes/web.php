@@ -56,7 +56,7 @@ use App\Http\Controllers\Whatsapp\WhatsappGatewayAccountController;
 use App\Http\Controllers\Whatsapp\WhatsappGatewayController;
 use App\Http\Controllers\Whatsapp\WhatsappMessageController;
 use App\Http\Controllers\Whatsapp\WhatsappNumberController;
-use App\Http\Controllers\Whatsapp\WhatsappTemplateController;
+use App\Http\Controllers\Whatsapp\WhatsappCloudController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -371,10 +371,11 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('settings/whatsappmessage/{whatsappmessage}/delete', [WhatsappMessageController::class, 'delete'])->name('whatsappmessage.delete');
 
         // WhatsApp Templates
-        Route::resource('settings/whatsapptemplate', WhatsappTemplateController::class);
-        Route::put('settings/whatsapptemplate/{whatsapptemplate}/disabled', [WhatsappTemplateController::class, 'disable'])->name('whatsapptemplate.disable');
-        Route::get('settings/whatsapptemplate/{whatsapptemplate}/delete', [WhatsappTemplateController::class, 'delete'])->name('whatsapptemplate.delete');
-        Route::post('settings/whatsapptemplate/sync', [WhatsappTemplateController::class, 'sync'])->name('whatsapptemplate.sync');
+        Route::resource('settings/whatsapptemplate', WhatsappCloudController::class);
+        Route::put('settings/whatsapptemplate/{whatsapptemplate}/disabled', [WhatsappCloudController::class, 'disable'])->name('whatsapptemplate.disable');
+        Route::get('settings/whatsapptemplate/{whatsapptemplate}/delete', [WhatsappCloudController::class, 'delete'])->name('whatsapptemplate.delete');
+        Route::post('settings/whatsapptemplate/action/sync', [WhatsappCloudController::class, 'sync'])->name('whatsapptemplate.sync');
+        Route::post('settings/whatsapptemplate/{id}/sync', [WhatsappCloudController::class, 'syncSingle'])->name('whatsapptemplate.sync.single');
 
         // ==================== TELEGRAM GATEWAY ====================
         Route::get('settings/telegramgateway', [TelegramGatewayController::class, 'index'])->name('telegramgateway.index');

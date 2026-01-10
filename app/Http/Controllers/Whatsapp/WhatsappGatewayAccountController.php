@@ -106,17 +106,31 @@ class WhatsappGatewayAccountController extends Controller
             ]);
 
             // 2. Create multiple phone numbers
+            $existingIds = [];
+
             foreach ($validated['phone_numbers'] as $idx => $num) {
-                $slug = Str::slug($num['number'] ?? $num['meta_phone_number_id']);
-                $account->numbers()->create([
-                    'meta_phone_number_id' => $num['meta_phone_number_id'],
-                    'slug' => $slug,
-                    'name' => 'meta_number_id',
-                    'number' => $num['number'] ?? null,
-                    'country_code' => $num['country_code'] ?? '62',
-                    'is_default' => ($validated['default_phone_number'] == $idx),
-                    'is_enabled' => true,
-                ]);
+
+                $source = $num['number'] ?? $num['meta_phone_number_id'];
+                $clean = preg_replace('/\D/', '', $source);
+                $last4 = substr($clean, -4);
+
+                $slug = Str::slug("cloudapi-{$account->id}-{$last4}");
+
+                $model = $account->numbers()->updateOrCreate(
+                    [
+                        'meta_phone_number_id' => $num['meta_phone_number_id']
+                    ],
+                    [
+                        'slug' => $slug,
+                        'name' => 'meta_number_id',
+                        'number' => $num['number'] ?? null,
+                        'country_code' => $num['country_code'] ?? '62',
+                        'is_default' => ($validated['default_phone_number'] == $idx),
+                        'is_enabled' => true,
+                    ]
+                );
+
+                $existingIds[] = $model->id;
             }
 
             DB::commit();
@@ -313,16 +327,36 @@ class WhatsappGatewayAccountController extends Controller
                     : null,
             ]);
 
-            $account->numbers()->delete();
+            $existingIds = [];
+
             foreach ($validated['phone_numbers'] as $idx => $num) {
-                $account->numbers()->create([
-                    'meta_phone_number_id' => $num['meta_phone_number_id'],
-                    'number' => $num['number'] ?? null,
-                    'country_code' => $num['country_code'] ?? '62',
-                    'is_default' => ($validated['default_phone_number'] == $idx),
-                    'is_enabled' => true,
-                ]);
+
+                $source = $num['number'] ?? $num['meta_phone_number_id'];
+                $clean = preg_replace('/\D/', '', $source);
+                $last4 = substr($clean, -4);
+
+                $slug = Str::slug("cloudapi-{$account->id}-{$last4}");
+
+                $model = $account->numbers()->updateOrCreate(
+                    [
+                        'meta_phone_number_id' => $num['meta_phone_number_id']
+                    ],
+                    [
+                        'slug' => $slug,
+                        'name' => 'meta_number_id',
+                        'number' => $num['number'] ?? null,
+                        'country_code' => $num['country_code'] ?? '62',
+                        'is_default' => ($validated['default_phone_number'] == $idx),
+                        'is_enabled' => true,
+                    ]
+                );
+
+                $existingIds[] = $model->id;
             }
+
+            $account->numbers()
+                ->whereNotIn('id', $existingIds)
+                ->delete();
 
             DB::commit();
 
@@ -403,22 +437,22 @@ class WhatsappGatewayAccountController extends Controller
     /**
      * Test account connection.
      */
-    public function test(Request $request, WhatsappGateway $whatsappgateway)
-    {
-        $request->validate([
-            'receive_number' => 'required|numeric',
-        ]);
+    // public function test(Request $request, WhatsappGateway $whatsappgateway)
+    // {
+    //     $request->validate([
+    //         'receive_number' => 'required|numeric',
+    //     ]);
 
-        if ($whatsappgateway->type === 'onprem') {
+    //     if ($whatsappgateway->type === 'onprem') {
 
-            return app(GowaService::class)
-                ->test($whatsappgateway, $request->receive_number);
-        } else {
+    //         return app(GowaService::class)
+    //             ->test($whatsappgateway, $request->receive_number);
+    //     } else {
 
-            return app(\App\Services\Whatsapp\CloudAPIService::class)
-                ->test($whatsappgateway, $request->receive_number);
-        }
-    }
+    //         return app(\App\Services\Whatsapp\CloudAPIService::class)
+    //             ->test($whatsappgateway, $request->receive_number);
+    //     }
+    // }
 
     /**
      * Test Cloud API connection.

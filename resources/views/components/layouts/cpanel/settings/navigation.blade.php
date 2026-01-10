@@ -136,7 +136,7 @@
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseTelGateway"
             aria-expanded="true" aria-controls="collapseSetting" style="padding-top: inherit;">
             <i class="fab fa-telegram-plane"></i>
-            <span>{{ __(' Telegram Gateways') }}</span>
+            <span>{{ __(' Telegram') }}</span>
         </a>
         <div id="collapseTelGateway" class="collapse collapse @if (request()->routeIs('telegramgateway*') || request()->routeIs('telegrammessage*'))  @endif"
             aria-labelledby="headingBilling" data-parent="#accordionSidebar">
@@ -166,7 +166,7 @@
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseGateway"
             aria-expanded="true" aria-controls="collapseSetting" style="padding-top: inherit;">
             <i class="fab fa-whatsapp"></i>
-            <span>{{ __(' Whatsapp Gateways') }}</span>
+            <span>{{ __(' WhatsApp') }}</span>
         </a>
         <div id="collapseGateway" class="collapse collapse @if (request()->routeIs('whatsappgateway*') || request()->routeIs('whatsappmessage*'))  @endif"
             aria-labelledby="headingBilling" data-parent="#accordionSidebar">

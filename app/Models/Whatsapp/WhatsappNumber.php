@@ -27,11 +27,14 @@ class WhatsappNumber extends Model
 
     public function account()
     {
-        return $this->belongsTo(WhatsappGatewayAccount::class);
+        return $this->belongsTo(
+            WhatsappGatewayAccount::class,
+            'whatsapp_gateway_account_id' // FOREIGN KEY BENAR
+        );
     }
 
     public function getNameNumberAttribute()
     {
-        return $this->name.' - '.$this->number;
+        return $this->name . ' - ' . $this->number;
     }
 }
