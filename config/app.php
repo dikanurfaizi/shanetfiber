@@ -176,6 +176,7 @@ return [
         Maatwebsite\Excel\ExcelServiceProvider::class,
         App\Providers\MessagingServiceProvider::class,
         App\Providers\WhatsAppWebhookServiceProvider::class,
+        App\Providers\WhatsAppServiceProvider::class,
     ])->toArray(),
 
     /*

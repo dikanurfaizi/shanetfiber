@@ -153,7 +153,7 @@ return [
             'save' => 'Create Profile',
             'create' => 'Create Profile',
             'import' => 'Import Profile',
-            'back' => 'Back to Previous Page',
+            'back' => 'Go to All Profile',
             'export_all' => 'Export All Profile',
             'update' => 'Update Profile',
             'delete' => 'Delete Profile',

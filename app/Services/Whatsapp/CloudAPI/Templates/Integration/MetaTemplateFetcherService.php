@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Templates;
+namespace App\Services\Whatsapp\CloudAPI\Templates\Integration;
 
 use App\Helpers\LogHelper;
 use App\Helpers\WhatsappGraph;

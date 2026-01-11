@@ -43,20 +43,18 @@ class PayLaterService
 
         try {
             // === Step 1: Validate ===
-            LogHelper::logInfo('PayLater', [
-                'billing_id' => $billing->id,
+            LogHelper::logInfo('PayLater', array_merge($context, [
                 'step' => 'validation'
-            ], 200, 'Step 1 — Validating input', $traceId);
+            ]), 200, 'Step 1 — Validating input', $traceId);
 
             $request->validate([
                 'pay_later' => ['required', 'date', 'after_or_equal:' . now()->format('Y-m-d')],
             ]);
 
             // === Step 2: Update Billing ===
-            LogHelper::logInfo('PayLater', [
-                'billing_id' => $billing->id,
+            LogHelper::logInfo('PayLater', array_merge($context, [
                 'step' => 'update_billing',
-            ], 200, 'Step 2 — Update billing pay_later', $traceId);
+            ]), 200, 'Step 2 — Update billing pay_later', $traceId);
 
             $billing->update([
                 'paylater_until' => Carbon::parse($request->pay_later),
@@ -66,10 +64,9 @@ class PayLaterService
 
             // === Step 3: Mikrotik Actions (Optional) ===
             if (config('services.shanetfiber.allow_mikrotik_actions')) {
-                LogHelper::logInfo('PayLater', [
-                    'billing_id' => $billing->id,
+                LogHelper::logInfo('PayLater', array_merge($context, [
                     'step' => 'mikrotik_actions'
-                ], 200, 'Step 3 — Processing Mikrotik actions', $traceId);
+                ]), 200, 'Step 3 — Processing Mikrotik actions', $traceId);
 
                 $this->processMikrotikActions($billing->customer, $request->pay_later, $traceId);
             }
@@ -79,7 +76,7 @@ class PayLaterService
 
             LogHelper::logInfo('PayLater', array_merge($context, [
                 'execution_seconds' => $execution,
-            ]), 300, 'Pay-later processed successfully', $traceId);
+            ]), 200, 'Pay-later processed successfully', $traceId);
 
             return [
                 'success' => true,

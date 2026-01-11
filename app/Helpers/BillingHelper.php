@@ -28,7 +28,7 @@ class BillingHelper
             $html .= '<span class="badge bg-success text-white"><i class="fas fa-check-circle"></i> '
                 . __('billing.state.lunas') . '</span>';
         } elseif ($billing->status === 'PL') {
-            $payLaterDate = Carbon::parse($billing->pay_later);
+            $payLaterDate = Carbon::parse($billing->paylater_until);
             $expired = now()->gt($payLaterDate);
             $color = $expired ? 'bg-danger' : 'bg-warning';
             $html .= '<span class="badge ' . $color . ' text-white"><i class="fas fa-ban"></i> '

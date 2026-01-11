@@ -31,13 +31,14 @@ return [
     ],
     'packages' => [
         'nav-item' => 'Packages',
-        'index' => 'Show All Packages',
+        'index' => 'Show All Package',
         'create' => 'Create New Package',
-        'profile' => [
-            'create' => 'Create Profile',
-            'index' => 'Profile',
-        ],
         'package-categories' => 'Package Categories'
+    ],
+    'profiles' => [
+        'nav-item' => 'Profiles',
+        'create' => 'Create New Profile',
+        'index' => 'Show All Profile',
     ],
     'subscriptions' => [
         'nav-item' => 'Subscriptions',
@@ -66,9 +67,9 @@ return [
         ]
     ],
     'membership' => [
-        'nav-item' => 'Memberships',
-        'index' => 'Show All Memberships',
-        'create' => 'Create New Membership',
+        'nav-item' => 'Members',
+        'index' => 'Show All Member',
+        'create' => 'Create New Member',
     ],
     'addons' => [
         'nav-item' => 'Addons',

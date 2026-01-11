@@ -11,8 +11,6 @@ trait LoadsModels
     protected function getCustomerOrFail(int $customerId): Customer
     {
         return Customer::with([
-            'package',
-            'member',
             'user'
         ])->findOrFail($customerId);
     }
@@ -26,9 +24,7 @@ trait LoadsModels
         return Billing::with([
             'billingSubscription',
             'billingSubscription.billingPeriode',
-            'customer',
-            'customer.package',
-            'customer.member'
+            'customer'
         ])->findOrFail($billingId);
     }
 

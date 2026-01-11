@@ -9,11 +9,12 @@ use App\Services\Whatsapp\CloudAPIService;
 use App\Services\Whatsapp\WhatsappGatewayResolver;
 use App\Services\Whatsapp\GowaService;
 use App\Services\Telegrams\TelegramMessageService;
+use App\Services\Whatsapp\CloudAPI\Messages\TemplateMessageService;
 
 class PackageChangesNotificationService
 {
     public function __construct(
-        private CloudAPIService $cloudAPIService,
+        private TemplateMessageService $templateMessageService,
         private GowaService $gowaService,
         private TelegramMessageService $telegramMessageService,
         private WhatsappGatewayResolver $gatewayResolver,
@@ -53,7 +54,7 @@ class PackageChangesNotificationService
             );
 
             // === Ambil paket baru ===
-            $newPackage = $customer->package;
+            $newPackage = $customer->active_package;
 
             if (! $newPackage) {
                 LogHelper::logWarning(null, [

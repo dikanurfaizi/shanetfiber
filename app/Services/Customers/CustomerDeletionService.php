@@ -14,6 +14,8 @@ use App\Services\Routerboard\IpStaticService;
 use App\Services\Customers\CustomerRouterService;
 use App\Services\Billings\BillingUnpaidService;
 use App\Helpers\LogHelper;
+use App\Models\Customers\CustomerSubscription;
+use App\Models\Packages\Package;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class CustomerDeletionService
@@ -41,13 +43,15 @@ class CustomerDeletionService
     public function moveToDeleted(Customer $customer, string $traceId): DeletedCustomer
     {
         try {
+            $subscription = CustomerSubscription::where('customer_id', $customer->id)->orderBy('created_at')->first();
+            $package = Package::where('id', $subscription->package_id)->first();
             $deletedCustomer = DeletedCustomer::create([
                 'id' => $customer->id,
                 'name' => $customer->name,
                 'slug' => $customer->slug,
                 'password' => $customer->password,
                 'email' => $customer->email,
-                'package_id' => $customer->package_id,
+                'package_id' => $package->id,
                 'mikrotik_id' => $customer->mikrotik_id,
                 'internet_service' => $customer->internet_service,
                 'secret_id' => $customer->secret_id,

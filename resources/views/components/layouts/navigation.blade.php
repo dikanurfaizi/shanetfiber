@@ -84,7 +84,7 @@
     @endcanany
 
     <!-- Packages -->
-    @canany(['package-list', 'package-create', 'package-edit'])
+    @canany(['package-list', 'package-create', 'package-edit', 'package-category-list', 'secret-list'])
         <li class="nav-item @if (request()->routeIs('packages*') || request()->routeIs('categories*')) active @endif">
             <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePackages">
                 <i class="fas fa-box"></i>
@@ -109,6 +109,32 @@
                         <a class="collapse-item @if (request()->routeIs('packages.index')) active @endif"
                             href="{{ route('packages.index') }}">
                             {{ __('navigation.packages.index') }}
+                        </a>
+                    @endcan
+                </div>
+            </div>
+        </li>
+    @endcanany
+
+    @canany(['secret-create', 'secret-list'])
+        <li class="nav-item @if (request()->routeIs('ppp-profiles*')) active @endif">
+            <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseProfiles">
+                <i class="fas fa-users"></i>
+                <span>{{ __('navigation.profiles.nav-item') }}</span>
+            </a>
+            <div id="collapseProfiles" class="collapse @if (request()->routeIs('ppp-profiles*')) show @endif"
+                data-parent="#accordionSidebar">
+                <div class="bg-white py-2 collapse-inner rounded">
+                    @can('secret-create')
+                        <a class="collapse-item @if (request()->routeIs('ppp-profiles.create')) active @endif"
+                            href="{{ route('ppp-profiles.create') }}">
+                            {{ __('navigation.profiles.create') }}
+                        </a>
+                    @endcan
+                    @can('secret-list')
+                        <a class="collapse-item @if (request()->routeIs('ppp-profiles.index')) active @endif"
+                            href="{{ route('ppp-profiles.index') }}">
+                            {{ __('navigation.profiles.index') }}
                         </a>
                     @endcan
                 </div>

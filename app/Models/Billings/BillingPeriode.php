@@ -45,4 +45,26 @@ class BillingPeriode extends Model
             ]
         );
     }
+
+    public function getDisplayNameAttribute()
+    {
+        $map = [
+            'January' => 'Januari',
+            'February' => 'Februari',
+            'March' => 'Maret',
+            'April' => 'April',
+            'May' => 'Mei',
+            'June' => 'Juni',
+            'July' => 'Juli',
+            'August' => 'Agustus',
+            'September' => 'September',
+            'October' => 'Oktober',
+            'November' => 'November',
+            'December' => 'Desember',
+        ];
+
+        $month = $map[$this->month] ?? $this->month;
+
+        return $month . ' ' . $this->year;
+    }
 }

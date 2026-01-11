@@ -99,7 +99,7 @@ class CreateReceiptService
                 $receiptData = [
                     'billing_payment_id'   => $billingPayment->id,
                     'slug'                 => str(
-                        'inv-' . $customerSubscription->customer_id . '-' . Str::random(4)
+                        'inv-' . $customerSubscription->customer_id . '-' . Str::random(4) . '-' . Str::random(16)
                     )->slug(),
                     'periode'              => $periode->name,
                     'number'               => $receiptNumber,

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Templates;
+namespace App\Services\Whatsapp\CloudAPI\Templates\Sync;
 
 use App\Models\Whatsapp\Cloud\WhatsappCloudTemplate;
 use App\Models\Whatsapp\Cloud\WhatsappCloudTemplateComponent;
@@ -18,6 +18,12 @@ class TemplateSyncService
         $synced = 0;
         $failed = 0;
 
+        $metaNames = collect($metaTemplates)
+            ->map(fn($t) => $t['name'])
+            ->filter()
+            ->values()
+            ->all();
+
         foreach ($metaTemplates as $tpl) {
             try {
                 DB::transaction(function () use ($account, $tpl, &$synced) {
@@ -29,9 +35,15 @@ class TemplateSyncService
             }
         }
 
+        // 🔥 DELETE TEMPLATE YANG TIDAK ADA DI META
+        WhatsappCloudTemplate::where('account_id', $account->id)
+            ->whereNotIn('name', $metaNames)
+            ->delete();
+
         return [
             'synced' => $synced,
             'failed' => $failed,
+            'deleted' => count($metaNames),
         ];
     }
 

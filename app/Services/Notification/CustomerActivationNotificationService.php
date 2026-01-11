@@ -12,16 +12,15 @@ use App\Models\User;
 use App\Models\Receipt;
 use App\Models\Bank;
 use App\Models\Customers\CustomerSubscription;
-use App\Models\Membership\CustomerMembership;
-use App\Services\Whatsapp\CloudAPIService;
 use App\Services\Whatsapp\WhatsappGatewayResolver;
 use App\Services\Whatsapp\GowaService;
 use App\Services\Telegrams\TelegramMessageService;
+use App\Services\Whatsapp\CloudAPI\Messages\TemplateMessageService;
 
 class CustomerActivationNotificationService
 {
     public function __construct(
-        private CloudAPIService $cloudAPIService,
+        private TemplateMessageService $templateMessageService,
         private GowaService $gowaService,
         private TelegramMessageService $telegramMessageService,
         private WhatsappGatewayResolver $gatewayResolver,
@@ -53,7 +52,7 @@ class CustomerActivationNotificationService
             // Format nomor customer + admin
             $formatter = new FormatReceiver;
 
-            $to = $formatter->formatReceiver($customerSubscription->customer->contact, null, false);
+            $recipient = $formatter->formatReceiver($customerSubscription->customer->contact, null, false);
 
             $user = User::find($customerSubscription->customer->user_id);
 
@@ -84,28 +83,23 @@ class CustomerActivationNotificationService
                 "{$bank->bank} - {$bank->account_number} a.n {$bank->name}"
             )->implode(' | ');
 
-            /** Template Param */
-            $templateParams = [
-                $customerSubscription->customer->name, // {{1}}
-                $customerSubscription->customer_id ?? $customerSubscription->customer->id, // {{2}}
-                $customerSubscription->package->name, // {{3}}
-                'Rp ' . number_format($customerSubscription->package->price, 0, ',', '.'), // {{4}}
-                $customerMembership?->membership->name ?? 'NON MEMBER', // {{5}}
-                $user->name, // {{6}} admin name
-                $adminNumber, // {{7}} admin phone
-                $formattedBanks, // {{8}} daftar bank
+            $customer = $billing->customer;
+
+            $data = [
+                'recipient' => $recipient,
+                'customer_name' => $customer->name,
+                'customer_id' => $customer->customer_id,
+                'package_name' => $customer->active_package->name,
+                'package_price' => $customer->active_package->price,
+                'member_name' => $customer?->activeMembership ? $customer?->activeMembership?->membership?->name : 'Non Member',
+                'admin_name' => $user->name,
+                'admin_contact' => $adminNumber,
+                'bank' => $formattedBanks,
+                'account' => $account,
             ];
 
             if ($gateway->type === 'cloud') {
-                $this->cloudAPIService->sendTemplateMessage(
-                    account: $account,
-                    templateName: 'aktivasi_layanan_pelanggan',
-                    phoneNumberId: $number->meta_phone_number_id,
-                    to: $to,
-                    bodyParams: $templateParams,
-                    buttonParams: [],
-                    traceId: $traceId,
-                );
+                $this->templateMessageService->sendCustomerActivation($data);
             } else {
                 $this->gowaService->activation(
                     $customerMembershipId,

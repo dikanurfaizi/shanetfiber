@@ -33,11 +33,6 @@
                     <i class="fa fa-download"></i>
                     <span class="d-none d-md-inline">{{ __('package.profile.button.import') }}</span>
                 </a>
-
-                <a class="btn btn-sm btn-success" href="{{ route('ppp-profiles.create') }}">
-                    <i class="fa fa-plus"></i>
-                    <span class="d-none d-md-inline">{{ __('package.profile.button.create') }}</span>
-                </a>
             </div>
         </div>
     </div>
@@ -56,7 +51,7 @@
                             <th>{{ __('package.profile.table.only_one') }}</th>
                             <th>{{ __('package.profile.table.comment') }}</th>
                             <th>{{ __('package.profile.table.status') }}</th>
-                            <th class="text-end">{{ __('package.table.action') }}</th>
+                            <th class="text-end">{{ __('table.action') }}</th>
                         </tr>
                     </thead>
                     <tbody>

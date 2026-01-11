@@ -7,8 +7,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Whatsapp\Cloud\WhatsappCloudTemplate;
 use App\Models\Whatsapp\WhatsappGateway;
 use App\Models\Whatsapp\WhatsappGatewayAccount;
-use App\Services\Whatsapp\CloudAPI\Templates\MetaTemplateFetcherService;
-use App\Services\Whatsapp\CloudAPI\Templates\TemplateSyncService;
+use App\Services\Whatsapp\CloudAPI\Templates\Integration\MetaTemplateFetcherService;
+use App\Services\Whatsapp\CloudAPI\Templates\Sync\TemplateSyncService;
 use Illuminate\Support\Str;
 
 class WhatsappCloudController extends Controller

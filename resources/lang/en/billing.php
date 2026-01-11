@@ -157,7 +157,7 @@ return [
             'total' => 'Total Due'
         ],
         'payment_info' => [
-            'instruction' => 'Payment Instruction',
+            'instruction' => 'Instruksi Pembayaran',
             'transfer' => 'Silakan transfer jumlah total ke salah satu rekening berikut:'
         ],
         'footer' => [

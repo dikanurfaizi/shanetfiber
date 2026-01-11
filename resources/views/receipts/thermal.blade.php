@@ -1,9 +1,7 @@
 @extends('layouts.thermal')
 
 @section('content')
-    <div class="watermark">
-        {{ strtoupper($websystem->title) }}
-    </div>
+    <div class="invoice-watermark"></div>
 
     <div class="sheet">
 

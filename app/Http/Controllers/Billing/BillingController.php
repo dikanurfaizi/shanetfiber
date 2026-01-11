@@ -26,6 +26,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -211,6 +212,7 @@ class BillingController extends Controller
     public function post_paylater(Request $request, Billing $billing)
     {
         $traceId = (string) Str::uuid();
+        // dd($request);
         $result = $this->payLaterService->processPayLater($request, $billing, $traceId);
 
         if ($result['success']) {
@@ -567,6 +569,15 @@ class BillingController extends Controller
             abort(403, 'Invoice only available for unpaid billing');
         }
 
+        $data = $this->dataPrint($billing);
+
+        return PDF::loadView('billings.print-invoice', $data)->download(
+            'INVOICE_' . $billing->billing_number . '.pdf'
+        );
+    }
+
+    private function dataPrint(Billing $billing): array
+    {
         $billing->load([
             'customer',
             'billingItems',      // 👈 ini kunci
@@ -579,7 +590,7 @@ class BillingController extends Controller
 
         $items = $billing->billingItems->groupBy('item_type');
 
-        return PDF::loadView('billings.print-invoice', [
+        return [
             'billing'    => $billing,
             'customer'   => $billing->customer,
             'websystem'  => $websystem,
@@ -590,8 +601,40 @@ class BillingController extends Controller
             'discounts' => $items->get('discount', collect()),
 
             'banks'      => $banks,
-        ])->download(
-            'INVOICE_' . $billing->billing_number . '.pdf'
+        ];
+    }
+
+    public function paylaterPreview(string $token)
+    {
+        // dd($token);
+        LogHelper::logInfo(null, ['token' => $token], 200, "Initiate paylaterPreview");
+        try {
+            // kembalikan ke base64 normal
+            $token = str_replace(['-', '_'], ['+', '/'], $token);
+
+            // tambahkan padding =
+            $padding = strlen($token) % 4;
+            if ($padding) {
+                $token .= str_repeat('=', 4 - $padding);
+            }
+
+            $slug = Crypt::decryptString($token);
+        } catch (\Throwable $e) {
+            abort(404);
+        }
+
+        $billing = Billing::where('slug', $slug)->firstOrFail();
+
+        if (!$billing) {
+            abort(404);
+        }
+
+        $data = $this->dataPrint($billing);
+
+        $pdf = PDF::loadView('billings.paylater-preview', $data);
+
+        return $pdf->stream(
+            'paylater_' . str($billing->customer->name)->slug() . '_' . $billing->periode->display_name . '.pdf'
         );
     }
 }

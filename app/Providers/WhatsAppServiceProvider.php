@@ -1,0 +1,37 @@
+<?php
+
+namespace App\Providers;
+
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\CustomerActivationCommand;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPayLaterCommand;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPembayaranCommand;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\CustomerActivationHandler;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\InfoPayLaterHandler;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\InfoPembayaranHandler;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\TemplateHandlerRegistry;
+use Illuminate\Support\ServiceProvider;
+
+class WhatsAppServiceProvider extends ServiceProvider
+{
+    public function register()
+    {
+        $this->app->singleton(TemplateHandlerRegistry::class, function () {
+            $registry = new TemplateHandlerRegistry();
+
+            foreach ($this->handlers() as $command => $handler) {
+                $registry->register($command, $handler);
+            }
+
+            return $registry;
+        });
+    }
+
+    private function handlers(): array
+    {
+        return [
+            InfoPembayaranCommand::class => InfoPembayaranHandler::class,
+            InfoPayLaterCommand::class => InfoPayLaterHandler::class,
+            CustomerActivationCommand::class => CustomerActivationHandler::class
+        ];
+    }
+}

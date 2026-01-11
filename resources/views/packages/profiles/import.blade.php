@@ -54,7 +54,7 @@
                             <th class="text-center align-middle">{{ __('package.profile.table.cir') }}</th>
                             <th class="text-center align-middle">{{ __('package.profile.table.priority') }}</th> --}}
                             <th class="text-center align-middle">{{ __('package.profile.table.server') }}</th>
-                            <th class="text-center align-middle text-end">{{ __('package.table.action') }}</th>
+                            <th class="text-center align-middle text-end">{{ __('table.action') }}</th>
                         </tr>
                     </thead>
                     <tbody></tbody>

@@ -26,16 +26,25 @@
         }
 
         /* WATERMARK */
-        .watermark {
+        .invoice-watermark {
             position: fixed;
-            top: 45%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-30deg);
-            font-size: 16px;
-            font-weight: bold;
-            color: rgba(0, 0, 0, 0.06);
-            white-space: nowrap;
-            z-index: 0;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+
+            background-image: url('{{ public_path('images/favicon/favicon-16x16.png') }}');
+            background-repeat: repeat;
+            background-size: 25px 25px;
+            /* lebih kecil */
+
+            opacity: 0.08;
+
+            transform: none;
+            /* horizontal */
+
+            z-index: -1;
+            pointer-events: none;
         }
 
         .center {

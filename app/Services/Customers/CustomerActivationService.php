@@ -462,7 +462,7 @@ class CustomerActivationService
                 return ['error' => $error];
             }
 
-            $profile = Package::where('id', $customer->package_id)->value('profile');
+            $profile = Package::where('id', $customer->activeSubscription->package_id)->value('profile');
             $comment_payment = $this->getCommentPayment($mikrotikId);
 
             if ($customer->internet_service == 'ppp') {

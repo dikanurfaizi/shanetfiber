@@ -18,7 +18,6 @@ class TelegramMessageService
 
     public function process(TelegramJobDto $dto, string $traceId): void
     {
-        // Context dasar untuk seluruh log
         $context = [
             'action'      => $dto->action,
             'customer_id' => $dto->customerId,
@@ -26,19 +25,12 @@ class TelegramMessageService
             'receipt_id'  => $dto->receiptId,
         ];
 
-        LogHelper::logInfo(
-            null,
-            $context,
-            100,
-            'START Telegram message processing',
-            $traceId
-        );
+        // START
+        LogHelper::logInfo(null, $context, 100, 'Telegram processing started', $traceId);
 
         try {
 
-            // --- Step 1 : Resolve Chat ID ---
-            LogHelper::logInfo(null, $context, 120, 'Step 1 — Resolving chat_id', $traceId);
-
+            // Resolve chat id
             if (!empty($dto->customerId)) {
 
                 $customer = Customer::find($dto->customerId);
@@ -51,22 +43,17 @@ class TelegramMessageService
                     throw new RuntimeException("Chat ID not found for given customer");
                 }
             } else {
+
                 $chatId = $dto->chatId;
                 if (!$chatId) {
                     throw new RuntimeException("Chat ID not provided");
                 }
             }
 
-            // --- Step 2 : Resolve Strategy ---
-            LogHelper::logInfo(null, array_merge($context, [
-                'resolved_chat_id' => $chatId
-            ]), 140, 'Step 2 — Resolving strategy', $traceId);
-
+            // Resolve strategy
             $strategy = $this->resolver->resolve($dto->action);
 
-            // --- Step 3 : Build Placeholders ---
-            LogHelper::logInfo(null, $context, 160, 'Step 3 — Building placeholders', $traceId);
-
+            // Build placeholders
             $placeholders = $strategy->build(
                 $dto->customerId ?? 0,
                 $dto->billingId,
@@ -77,9 +64,7 @@ class TelegramMessageService
                 $placeholders = array_merge($placeholders, $dto->extra);
             }
 
-            // --- Step 4 : Build Message ---
-            LogHelper::logInfo(null, $context, 180, 'Step 4 — Building message', $traceId);
-
+            // Build message
             $message = $this->builder->build(
                 $strategy->slug(),
                 $placeholders,
@@ -90,30 +75,27 @@ class TelegramMessageService
                 throw new RuntimeException("Template not found for slug: " . $strategy->slug());
             }
 
-            // --- Step 5 : Sending Message ---
-            LogHelper::logInfo(null, array_merge($context, [
-                'chat_id' => $chatId,
-                'strategy' => $strategy->slug()
-            ]), 200, 'Step 5 — Sending to Telegram API', $traceId);
-
+            // Send
             $this->handler->send($chatId, $message, $traceId);
 
-            // --- SUCCESS ---
+            // SUCCESS
             LogHelper::logInfo(null, array_merge($context, [
                 'chat_id'  => $chatId,
                 'strategy' => $strategy->slug()
-            ]), 250, 'Telegram message sent successfully', $traceId);
+            ]), 200, 'Telegram message sent', $traceId);
         } catch (\Throwable $e) {
 
             LogHelper::logError(
                 null,
-                $context,
+                array_merge($context, [
+                    'exception' => class_basename($e)
+                ]),
                 500,
-                'Telegram processing error: ' . $e->getMessage(),
+                'Telegram processing failed: ' . $e->getMessage(),
                 $traceId
             );
 
-            throw $e; // biar job retry / DLQ
+            throw $e;
         }
     }
 }

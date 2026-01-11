@@ -6,15 +6,17 @@ use App\Enums\WhatsAppAction;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Models\Receipt;
-use App\Services\Whatsapp\CloudAPIService;
+use App\Services\Whatsapp\CloudAPI\Messages\TemplateMessageService;
 use App\Services\Whatsapp\WhatsappGatewayResolver;
 use App\Services\Whatsapp\GowaService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\URL;
 
 class PaymentNotificationService
 {
     public function __construct(
-        private CloudAPIService $cloudAPIService,
+        private TemplateMessageService $templateMessageService,
         private GowaService $gowaService,
         private WhatsappGatewayResolver $gatewayResolver,
     ) {}
@@ -50,39 +52,39 @@ class PaymentNotificationService
             [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId)
                 ?? [null, null, null];
 
-            if (! $gateway || ! $account || ! $number) {
+            if (!$gateway || !$account || !$number) {
                 return; // sudah dilog di resolver
             }
 
             $formatter = new FormatReceiver;
 
-            $to = $formatter->formatReceiver(
+            $recipient = $formatter->formatReceiver(
                 $receipt->billingPayment->billing->customer->contact,
                 null,
                 false
             );
 
-            $bodyParams = [
-                $receipt->customer_name,
-                $receipt->billingPayment->billing->billingSubscription->billing_periode,
-                'Rp ' . number_format($receipt->price_after_discount, 0, ',', '.00'),
-                Carbon::parse($receipt->payment_time)->format('d F Y'),
-                $receipt->number,
-                $receipt->teller_name,
+            $paymentTime = Carbon::parse($receipt->payment_time)
+                ->setTimezone('Asia/Jakarta')
+                ->locale('id')
+                ->translatedFormat('d F Y, H:i') . ' WIB';
+
+            $token = Crypt::encryptString($receipt->slug);
+            $token = str_replace(['+', '/', '='], ['-', '_', ''], $token);
+
+            $data = [
+                'recipient' => $recipient,
+                'customer_name' => $receipt->customer_name,
+                'period' => $receipt->periode,
+                'amount' => 'Rp ' . number_format($receipt->price_after_discount, 0, ',', '.'),
+                'payment_time' => $paymentTime,
+                'teller_name' => $receipt->teller_name,
+                'receipt_code' => $token,
+                'account' => $account,
             ];
 
             if ($gateway->type === 'cloud') {
-                $this->cloudAPIService->sendTemplateMessage(
-                    account: $account,
-                    templateName: 'info_pembayaran',
-                    phoneNumberId: $account->meta_phone_number_id,
-                    to: $to,
-                    bodyParams: $bodyParams,
-                    buttonParams: [
-                        0 => $receipt->number,
-                    ],
-                    traceId: $traceId,
-                );
+                $this->templateMessageService->sendInfoPembayaran($data);
             } else {
                 $this->gowaService->notifyPaymentCompleted(
                     $receipt->billingPayment->billing,

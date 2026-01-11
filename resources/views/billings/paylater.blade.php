@@ -124,12 +124,7 @@
         <script>
             flatpickr(".flatpickr-date", {
                 dateFormat: "d F Y",
-                defaultDate: "{{ $billing->pay_later ?? now() }}",
                 minDate: "today",
-                onChange: function(selectedDates, dateStr, instance) {
-                    document.querySelector('[name="pay_later_db"]').value =
-                        selectedDates[0].toISOString().slice(0, 19).replace('T', ' ');
-                }
             });
         </script>
     @endsection

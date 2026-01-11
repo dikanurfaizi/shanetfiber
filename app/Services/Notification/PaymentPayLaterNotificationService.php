@@ -9,16 +9,17 @@ use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Models\Billings\Billing;
 use App\Models\Customers\CustomerSubscription;
-use App\Services\Whatsapp\CloudAPIService;
 use App\Services\Whatsapp\WhatsappGatewayResolver;
 use App\Services\Whatsapp\GowaService;
 use App\Services\Telegrams\TelegramMessageService;
+use App\Services\Whatsapp\CloudAPI\Messages\TemplateMessageService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Crypt;
 
 class PaymentPayLaterNotificationService
 {
     public function __construct(
-        private CloudAPIService $cloudAPIService,
+        private TemplateMessageService $templateMessageService,
         private GowaService $gowaService,
         private TelegramMessageService $telegramMessageService,
         private WhatsappGatewayResolver $gatewayResolver,
@@ -58,27 +59,22 @@ class PaymentPayLaterNotificationService
 
             $formatter = new FormatReceiver;
 
-            $to = $formatter->formatReceiver($billing->customer->contact, null, false);
+            $recipient = $formatter->formatReceiver($billing->customer->contact, null, false);
+
+            $token = Crypt::encryptString($billing->slug);
+            $token = str_replace(['+', '/', '='], ['-', '_', ''], $token);
+
+            $data = [
+                'recipient' => $recipient,
+                'customer_name' => $billing->customer->name,
+                'period' => $billing->periode->display_name,
+                'teller_name' => $billing->updatedByUser->name,
+                'account' => $account,
+                'paylater_code' => $token
+            ];
 
             if ($gateway->type === 'cloud') {
-                $this->cloudAPIService->sendTemplateMessage(
-                    account: $account,
-                    templateName: 'pembayaran_paylater',
-                    phoneNumberId: $account->meta_phone_number_id,
-                    to: $to,
-                    bodyParams: [
-                        $billing->customer->name,                                   // {{1}}
-                        $billing->billingSubscription->billing_periode,    // {{2}}
-                        'Rp ' . number_format($billing->amount, 0, ',', '.00'),   // {{3}}
-                        Carbon::parse($billing->pay_later)->format('d F Y'),      // {{4}}
-                        $billing->billing_number,                          // {{5}}
-                        $billing->teller_name,                              // {{6}}
-                    ],
-                    buttonParams: [
-                        0 => $billing->billing_number,   // untuk URL button index 0
-                    ],
-                    traceId: $traceId,
-                );
+                $this->templateMessageService->sendInfoPayLater($data);
             } else {
                 $subscription = CustomerSubscription::where('customer_id', $billing->customer->id)
                     ->where('status', 'active')->first();

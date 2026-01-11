@@ -10,6 +10,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ReceiptsExport;
 use Illuminate\Support\Str;
 use App\Helpers\LogHelper;
+use Illuminate\Support\Facades\Crypt;
 
 //use Barryvdh\DomPDF\PDF;
 
@@ -157,7 +158,7 @@ class ReceiptController extends Controller
         ]);
     }
 
-    public function print(Receipt $receipt)
+    private function dataPrint(Receipt $receipt): array
     {
         $websystem = Websystem::where('slug', 'websystem')->first();
         $receiptItems = $receipt->items;
@@ -171,43 +172,66 @@ class ReceiptController extends Controller
 
         $total = $subtotal + $discount + $receipt->tax;
 
-        $pdf = PDF::loadView('receipts.print', [
+        return [
             'receipt'      => $receipt,
             'receiptItems' => $receiptItems,
             'subtotal'     => $subtotal,
             'discount'     => $discount,
             'total'        => $total,
             'websystem'    => $websystem,
-        ]);
-        return $pdf->download($receipt->number . str($receipt->customer_name)->slug() . '_' . str($receipt->customer_address)->slug() . '_' . str($receipt->month)->slug() . '_' . $receipt->year . '.pdf');
+        ];
+    }
+
+    public function print(Receipt $receipt)
+    {
+        $data = $this->dataPrint($receipt);
+
+        $pdf = PDF::loadView('receipts.print', $data);
+        return $pdf->download('receipt_' . str($receipt->customer_name)->slug() . '_' . $receipt->periode . '.pdf');
+    }
+
+    public function printPreview(string $token)
+    {
+        // dd($token);
+        LogHelper::logInfo(null, ['token' => $token], 200, "Initiate printPreview");
+        try {
+            // kembalikan ke base64 normal
+            $token = str_replace(['-', '_'], ['+', '/'], $token);
+
+            // tambahkan padding =
+            $padding = strlen($token) % 4;
+            if ($padding) {
+                $token .= str_repeat('=', 4 - $padding);
+            }
+
+            $slug = Crypt::decryptString($token);
+        } catch (\Throwable $e) {
+            abort(404);
+        }
+
+        $receipt = Receipt::where('slug', $slug)->firstOrFail();
+
+        if (!$receipt) {
+            abort(404);
+        }
+
+        $data = $this->dataPrint($receipt);
+
+        $pdf = PDF::loadView('receipts.print', $data);
+
+        return $pdf->stream(
+            'receipt_' . str($receipt->customer_name)->slug() . '_' . $receipt->periode . '.pdf'
+        );
     }
 
     public function thermalPrint(Receipt $receipt)
     {
-        $websystem = Websystem::where('slug', 'websystem')->first();
-
-        $receiptItems = $receipt->items;
-        $subtotal = $receiptItems
-            ->where('type', '!=', 'discount')
-            ->sum('subtotal');
-
-        $discount = $receiptItems
-            ->where('type', 'discount')
-            ->sum('subtotal');
-
-        $total = $subtotal + $discount + $receipt->tax;
+        $data = $this->dataPrint($receipt);
 
         // Atur ukuran kertas thermal (58mm x 100mm) dalam satuan milimeter
-        $pdf = PDF::loadView('receipts.thermal', [
-            'receipt'      => $receipt,
-            'receiptItems' => $receiptItems,
-            'subtotal'     => $subtotal,
-            'discount'     => $discount,
-            'total'        => $total,
-            'websystem'    => $websystem,
-        ])->setPaper([0, 0, 155.43, 283.5], 'portrait'); // 55mm x 100mm dalam satuan point
+        $pdf = PDF::loadView('receipts.thermal', $data)
+            ->setPaper([0, 0, 155.43, 283.5], 'portrait'); // 55mm x 100mm dalam satuan point
 
-        //return $pdf->download($receipt->number . '_thermal_' . str($receipt->customer_name)->slug() . '_' . str($receipt->customer_address)->slug() . '_' . str($receipt->month)->slug() . '_' . $receipt->year . '.pdf');
         return $pdf->stream($receipt->number . '_thermal_' . str($receipt->customer_name)->slug() . '_' . str($receipt->customer_address)->slug() . '_' . str($receipt->month)->slug() . '_' . $receipt->year . '.pdf');
     }
 

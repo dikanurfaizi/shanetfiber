@@ -29,7 +29,7 @@ class OtherPaymentMessageStrategy implements TelegramMessageStrategy
             '%billing_number%'   => $billing?->billing_number,
             '%name%'             => $customer->name,
             '%customer_id%'      => $customer->customer_id,
-            '%package%'          => $customer->package->name,
+            '%package%'          => $customer->active_package->name,
             '%periode%'          => $billing?->billingSubscription?->periode_periode,
             '%bill%'             => $billing?->base_price,
             '%discount%'         => $billing?->discount_amount,
