@@ -30,7 +30,7 @@ class SnmpFetchService
         $ontsList  = [];
         foreach ($oids as $key => $baseOid) {
             $walkRes = SnmpCoreService::snmpWalk($olt->ip, $olt->port ?? 161, $olt->community, $baseOid, $olt->version);
-            LogHelper::logInfo(null, ['walkRes' => $walkRes], 200, "walkRes Info");
+            // LogHelper::logInfo(null, ['walkRes' => $walkRes], 200, "walkRes Info");
             $rawSnmp[$key] = $walkRes;
             $count = count((array)$walkRes);
 
@@ -63,8 +63,8 @@ class SnmpFetchService
             'total_ont'   => $totalOnt
         ], 200, "ONT data sample");
 
-        LogHelper::logInfo(null, ['rawSnmp' => $rawSnmp], 200, "SNMP Raw Data (debug only)");
-        LogHelper::logInfo(null, ['ontsList' => $ontsList], 200, "OntsList Raw Data (debug only)");
+        // LogHelper::logInfo(null, ['rawSnmp' => $rawSnmp], 200, "SNMP Raw Data (debug only)");
+        // LogHelper::logInfo(null, ['ontsList' => $ontsList], 200, "OntsList Raw Data (debug only)");
 
         return [
             'snmpData'  => $rawSnmp,

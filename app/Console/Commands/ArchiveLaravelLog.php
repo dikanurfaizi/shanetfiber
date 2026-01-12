@@ -7,76 +7,44 @@ use Illuminate\Support\Facades\File;
 use DateTime;
 use FilesystemIterator;
 
-class ArchiveLaravelLog extends Command
+class CleanupArchivedLogs extends Command
 {
-    protected $signature = 'logs:archive';
-    protected $description = 'Archive laravel.log daily and delete archives older than 30 days';
+    protected $signature = 'logs:cleanup';
+    protected $description = 'Delete archived logs older than 30 days';
 
     public function handle(): int
     {
-        date_default_timezone_set('Asia/Jakarta');
+        $archiveBase = storage_path('logs/archived');
+        $retentionDays = 15;
 
-        $logFile       = storage_path('logs/laravel.log');
-        $archiveBase   = storage_path('logs/archived');
-        $retentionDays = 30;
+        $this->info("=== Cleanup archived logs started @ " . now()->toDateTimeString() . " ===");
 
-        $this->info("=== Archiving Laravel log @ " . now('Asia/Jakarta')->toDateTimeString() . " ===");
-
-        // --- 1. Arsipkan log hari ini ---
-        if (file_exists($logFile) && filesize($logFile) > 0) {
-
-            // simpan owner & group lama jika ada
-            $owner = fileowner($logFile);
-            $group = filegroup($logFile);
-
-            $date        = date('Y-m-d');
-            $timestamp   = date('Y-m-d_H-i-s');
-            $archiveDir  = "{$archiveBase}/{$date}";
-            $archivedLog = "{$archiveDir}/laravel_{$timestamp}.log";
-
-            if (!File::isDirectory($archiveDir)) {
-                File::makeDirectory($archiveDir, 0775, true);
-                @chgrp($archiveDir, $group ?: 'www');
-                @chmod($archiveDir, 0775);
-            }
-
-            if (rename($logFile, $archivedLog)) {
-                $this->info("✅ Log archived to {$archivedLog}");
-                touch($logFile);
-                chmod($logFile, 0664);
-
-                // wariskan owner & group lama (fallback ke 'www')
-                @chown($logFile, $owner ?: 'www');
-                @chgrp($logFile, $group ?: 'www');
-            } else {
-                $this->error("❌ Failed to move log to {$archivedLog}");
-                return Command::FAILURE;
-            }
-        } else {
-            $this->line("ℹ️ Log empty or not found, skipping archive.");
-        }
-
-        // --- 2. Hapus folder arsip lama (>30 hari) ---
-        $cutOff = new DateTime("-{$retentionDays} days");
         if (!File::isDirectory($archiveBase)) {
-            $this->warn("No archived logs found to clean.");
-        } else {
-            $objects = new FilesystemIterator($archiveBase, FilesystemIterator::SKIP_DOTS);
-            foreach ($objects as $object) {
-                if (!$object->isDir()) continue;
+            $this->info("Archive folder not found.");
+            return Command::SUCCESS;
+        }
 
-                $folderName = $object->getBasename();
-                $folderDate = DateTime::createFromFormat('Y-m-d', $folderName);
-                if ($folderDate === false) continue;
+        $cutOff = new DateTime("-{$retentionDays} days");
+        $objects = new FilesystemIterator($archiveBase, FilesystemIterator::SKIP_DOTS);
 
-                if ($folderDate < $cutOff) {
-                    $this->deleteDir($object->getPathname());
-                    $this->warn("🗑️ Deleted archive {$folderName} (older than {$retentionDays} days)");
-                }
+        $deleted = 0;
+
+        foreach ($objects as $object) {
+            if (!$object->isDir()) continue;
+
+            $folderName = $object->getBasename();
+            $folderDate = DateTime::createFromFormat('Y-m-d', $folderName);
+
+            if ($folderDate && $folderDate < $cutOff) {
+                $this->deleteDir($object->getPathname());
+                $deleted++;
+                $this->info("Deleted: {$folderName}");
             }
         }
 
-        $this->info("✅ Archive process completed successfully.");
+        $this->info("Total deleted: {$deleted}");
+        $this->info("=== Cleanup finished ===");
+
         return Command::SUCCESS;
     }
 

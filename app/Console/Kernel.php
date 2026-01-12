@@ -30,7 +30,6 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         $defaultTimezone = 'Asia/Jakarta';
-        $traceId = uniqid('heartbeat_') . Str::random(5);
 
         // === Scheduler Heartbeat ===
         $schedule->command('system:scheduler-heartbeat')
@@ -48,13 +47,14 @@ class Kernel extends ConsoleKernel
         $schedule->command('create_billing:cron')
             ->dailyAt('00:05')
             ->timezone($defaultTimezone)
-            ->when(function () use ($traceId) {
+            ->when(function () {
                 try {
                     return cache()->remember(env('APP_ENV') . ':scheduler:websystem-check', now()->addMinutes(5), function () {
                         $cfg = Websystem::first();
                         return $cfg && $cfg->billing_auto_generate && now()->day == $cfg->billing_auto_day;
                     });
                 } catch (\Throwable $e) {
+                    $traceId = uniqid('scheduler_') . Str::random(5);
                     LogHelper::logWarning(
                         null,
                         ['error' => ['code' => $e->getCode(), 'message' => $e->getMessage()]],
@@ -126,15 +126,21 @@ class Kernel extends ConsoleKernel
         | Dijalankan setiap hari pada pukul 23:59,
         | Jika kondisi tidak terpenuhi, dilewati (tidak error).
         */
-        $schedule->command('logs:archive')
+        $schedule->command('logs:rotate')
+            ->everyFiveMinutes()
+            ->withoutOverlapping()
+            ->onOneServer()
+            ->evenInMaintenanceMode()
+            ->appendOutputTo(storage_path('logs/scheduler-rotate.log'));
+
+        $schedule->command('logs:cleanup')
             ->dailyAt('23:59')
             ->timezone($defaultTimezone)
             ->withoutOverlapping()
             ->onOneServer()
             ->evenInMaintenanceMode()
-            ->onFailure(fn() => LogHelper::logError(null, ['time' => now()], 500, '[Scheduler] logs:archive failed'))
-            ->onSuccess(fn() => LogHelper::logInfo(null, ['time' => now()], 200, '[Scheduler] logs:archive finished successfully'))
-            ->appendOutputTo(storage_path('logs/scheduler-archive.log'));
+            ->appendOutputTo(storage_path('logs/scheduler-cleanup.log'));
+
 
         /*
         |--------------------------------------------------------------------------
