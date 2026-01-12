@@ -24,7 +24,7 @@ class PackageQueryService
         return compact('profiles', 'categories');
     }
 
-    public function getEditData($slug)
+    public function getEditData(Package $package)
     {
         $profiles = PppProfile::where('disabled', 'false')
             ->orderBy('profile_name')
@@ -32,15 +32,13 @@ class PackageQueryService
 
         $categories = PackageCategories::where('is_active', true)->get();
 
-        $package = Package::with('subscriptionDurations')->where('slug', $slug)->firstOrFail();
+        $package = $this->loadData($package);
 
         return compact('package', 'profiles', 'categories');
     }
 
-    public function getDetailBySlug(string $slug)
+    public function loadData(Package $package)
     {
-        return Package::with(['category', 'subscriptionDurations'])
-            ->where('slug', $slug)
-            ->firstOrFail();
+        return $package->load(['category', 'packageDurations']);
     }
 }

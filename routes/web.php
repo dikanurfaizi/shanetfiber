@@ -242,7 +242,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::resource('customer-subscriptions', CustomerSubscriptionController::class)->names('customerSubscriptions');
 
         // ==================== SUBSCRIPTION DURATIONS ====================
-        Route::get('subscription/durations/manage/{packet:slug}', [PackageDurationController::class, 'manage'])->name('subscriptionDurations.manage');
+        Route::get('subscription/durations/manage/{package:slug}', [PackageDurationController::class, 'manage'])->name('subscriptionDurations.manage');
         Route::resource('subscription/durations', PackageDurationController::class)->names('subscriptionDurations');
 
         // ==================== MEMBER MANAGEMENT ====================

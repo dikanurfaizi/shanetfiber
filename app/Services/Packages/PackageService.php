@@ -79,12 +79,11 @@ class PackageService
         }
     }
 
-    public function update($request, $slug)
+    public function update($request, Package $package)
     {
         [$traceId, $startTime] = $this->startTrace();
 
         try {
-            $package = Package::where('slug', $slug)->firstOrFail();
             $data = $request->except(['price_formatted', 'installation_fee_formatted']);
             if (empty($data['name'])) unset($data['name']);
 
@@ -166,16 +165,16 @@ class PackageService
         return $package;
     }
 
-    public function show(string $slug)
+    public function show(Package $package)
     {
         [$traceId, $startTime] = $this->startTrace();
 
         try {
-            $package = $this->query->getDetailBySlug($slug);
+            $package = $this->query->loadData($package);
 
             $this->endTraceSuccess(null, $traceId, $startTime, [
                 'package_id' => $package->id,
-                'slug' => $slug,
+                'slug' => $package->slug,
                 'category' => $package->category->name ?? null,
             ], 'Successfully retrieved package detail');
 

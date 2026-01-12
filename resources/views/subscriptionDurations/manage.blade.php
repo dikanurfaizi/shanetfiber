@@ -24,7 +24,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($subscriptionDurations as $duration)
+                        @foreach ($subscriptionDurations as $packageDuration)
                             <tr>
                                 {{-- No --}}
                                 <td>
@@ -35,29 +35,31 @@
                                 <td>
                                     <span class="badge bg-primary text-white">
                                         <i class="fas fa-clock"></i>
-                                        {{ $duration->name_en }} ({{ $duration->duration_months }} bln)
+                                        {{ $packageDuration->duration->name_en }}
+                                        ({{ $packageDuration->duration->duration_months }}
+                                        bln)
                                     </span>
                                 </td>
 
                                 {{-- Harga Package --}}
                                 <td>
                                     <i class="fas fa-tags text-muted"></i>
-                                    Rp {{ number_format($duration->package->price, 0, ',', '.') }}
+                                    Rp {{ number_format($packageDuration->package->price, 0, ',', '.') }}
                                 </td>
 
                                 {{-- Diskon --}}
-                                @if ($duration->discount_type == 'percent')
+                                @if ($packageDuration->discount_type == 'percent')
                                     <td>
                                         <span class="badge bg-info text-white">
                                             <i class="fas fa-percentage"></i>
-                                            {{ $duration->discount_value }} %
+                                            {{ $packageDuration->discount_value }} %
                                         </span>
                                     </td>
-                                @elseif($duration->discount_type == 'amount')
+                                @elseif($packageDuration->discount_type == 'amount')
                                     <td>
                                         <span class="badge bg-warning text-white">
                                             <i class="fas fa-minus-circle"></i>
-                                            Rp {{ number_format($duration->discount_value, 0, ',', '.') }}
+                                            Rp {{ number_format($packageDuration->discount_value, 0, ',', '.') }}
                                         </span>
                                     </td>
                                 @else
@@ -73,12 +75,12 @@
                                 <td>
                                     <span class="badge bg-success text-white">
                                         <i class="fas fa-check-circle"></i>
-                                        Rp {{ number_format($duration->final_price, 0, ',', '.') }}
+                                        Rp {{ number_format($packageDuration->final_price, 0, ',', '.') }}
                                     </span>
                                 </td>
 
                                 {{-- Status --}}
-                                @if ($duration->is_active)
+                                @if ($packageDuration->is_active)
                                     <td>
                                         <span class="badge bg-success text-white">
                                             <i class="fas fa-toggle-on"></i>
@@ -96,12 +98,11 @@
 
                                 {{-- Action Buttons --}}
                                 <td>
-                                    <a href="{{ route('subscriptionDurations.edit', $duration->id) }}"
+                                    <a href="{{ route('subscriptionDurations.edit', $packageDuration->id) }}"
                                         class="btn btn-warning btn-sm">
                                         <i class="fa fa-edit"></i>
                                     </a>
-                                    <form
-                                        action="{{ route('subscriptionDurations.destroy', $duration->id) }}"
+                                    <form action="{{ route('subscriptionDurations.destroy', $packageDuration->id) }}"
                                         method="POST" style="display:inline-block">
                                         @csrf
                                         @method('DELETE')

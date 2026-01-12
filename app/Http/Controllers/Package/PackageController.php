@@ -50,10 +50,10 @@ class PackageController extends Controller
         return redirect()->route('packages.index')->with('success', 'Package created successfully.');
     }
 
-    public function show($slug)
+    public function show(Package $package)
     {
         try {
-            $data = $this->packageService->show($slug);
+            $data = $this->packageService->show($package);
             return view('packages.show', $data);
         } catch (\Exception $e) {
             return redirect()->route('packages.index')
@@ -61,15 +61,15 @@ class PackageController extends Controller
         }
     }
 
-    public function edit($slug)
+    public function edit(Package $package)
     {
-        $data = $this->queryService->getEditData($slug);
+        $data = $this->queryService->getEditData($package);
         return view('packages.edit', $data);
     }
 
-    public function update(PackageUpdateRequest $request, $slug)
+    public function update(PackageUpdateRequest $request, Package $package)
     {
-        $this->packageService->update($request, $slug);
+        $this->packageService->update($request, $package);
         return redirect()->route('packages.index')->with('success', 'Package updated successfully.');
     }
 

@@ -78,17 +78,14 @@ class PackageDurationController extends Controller
             ->with('success', 'Subscription duration deleted successfully.');
     }
 
-    public function manage($slug)
+    public function manage(Package $package)
     {
         $traceId = (string) Str::uuid();
         $startTime = microtime(true); // ⏱️ Start timing
 
         try {
-            // 🔹 Ambil package berdasarkan slug
-            $package = Package::where('slug', $slug)->firstOrFail();
-
             // 🔹 Ambil dan hitung subscription durations
-            $subscriptionDurations = $package->subscriptionDurations()->get()->map(function ($duration) use ($package) {
+            $subscriptionDurations = $package->packageDurations()->get()->map(function ($duration) use ($package) {
                 $basePrice = $package->price;
                 $finalPrice = $basePrice;
 
@@ -112,7 +109,7 @@ class PackageDurationController extends Controller
             $duration = round(($endTime - $startTime) * 1000, 2); // ms
 
             LogHelper::logInfo(null, [
-                'package_slug' => $slug,
+                'package_slug' => $package->slug,
                 'durations_count' => $subscriptionDurations->count(),
             ], 200, 'Successfully managed subscription durations', $traceId, $duration);
 
@@ -125,11 +122,11 @@ class PackageDurationController extends Controller
             $duration = round(($endTime - $startTime) * 1000, 2);
 
             LogHelper::logError(null, [
-                'error_message' => "Package not found: $slug",
+                'error_message' => "Package not found: $package->slug",
             ], 404, 'Package not found', $traceId, $duration);
 
             return redirect()->route('packages.index')
-                ->withErrors(['msg' => "Package with slug '$slug' not found."]);
+                ->withErrors(['msg' => "Package with slug '$package->slug' not found."]);
         } catch (\Exception $e) {
             $endTime = microtime(true);
             $duration = round(($endTime - $startTime) * 1000, 2);
