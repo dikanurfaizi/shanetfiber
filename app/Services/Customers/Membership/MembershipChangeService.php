@@ -35,7 +35,16 @@ class MembershipChangeService
         );
 
         // Tidak ada perubahan membership
-        if (!array_key_exists('member_id', $data)) {
+        if (!array_key_exists('member_id', $data) || !$data['member_id']) {
+            LogHelper::logInfo(
+                null,
+                [
+                    'member_id' => $data['member_id'] ?? null
+                ],
+                200,
+                "There is set to non member",
+                $traceId
+            );
             return;
         }
 

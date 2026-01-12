@@ -27,7 +27,7 @@ class CustomerBillingController extends Controller
                 'package_id'           => ['required', 'exists:packages,id'],
                 'package_duration_id'  => ['required', 'exists:package_durations,id'],
                 'member_id'            => ['nullable', 'exists:memberships,id'],
-                'billing_option'       => ['required', 'in:monthly,one_time'],
+                'billing_option'       => ['nullable', 'in:monthly,one_time'],
                 'billing_periode_name' => ['nullable', 'string'],
 
                 'addons'               => ['nullable', 'array'],
