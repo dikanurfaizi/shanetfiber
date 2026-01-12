@@ -4,11 +4,10 @@ namespace App\Services\Packages;
 
 use App\Enums\SubscriptionDuration as SubsDurationEnum;
 use App\Models\Packages\Package;
-use App\Models\SubscriptionDuration;
 use Illuminate\Support\Str;
 use App\Services\Packages\PackageQueryService;
 use Illuminate\Support\Facades\DB;
-use App\Helpers\LogHelper;
+use App\Models\Packages\PackageDuration;
 
 class PackageService
 {
@@ -57,7 +56,7 @@ class PackageService
                     throw new \InvalidArgumentException("Invalid duration value: {$durationMonths}");
                 }
 
-                SubscriptionDuration::create([
+                PackageDuration::create([
                     'package_id' => $package->id,
                     'duration_months' => $durationMonths,
                     'name_en' => $enum->labelEn(),
