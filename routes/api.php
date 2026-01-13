@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PaymentGateway\TripayCallbackController;
 use App\Http\Controllers\Mikrotik\MikrotikMessageController;
 use App\Http\Controllers\ReceiptController;
-use App\Http\Controllers\WhatsApp\WhatsAppWebhookController;
+use App\Http\Controllers\Whatsapp\WhatsappWebhookController;
 
 /*
 |--------------------------------------------------------------------------

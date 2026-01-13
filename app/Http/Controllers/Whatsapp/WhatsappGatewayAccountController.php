@@ -437,22 +437,22 @@ class WhatsappGatewayAccountController extends Controller
     /**
      * Test account connection.
      */
-    // public function test(Request $request, WhatsappGateway $whatsappgateway)
-    // {
-    //     $request->validate([
-    //         'receive_number' => 'required|numeric',
-    //     ]);
+    public function test(Request $request, WhatsappGateway $whatsappgateway)
+    {
+        $request->validate([
+            'receive_number' => 'required|numeric',
+        ]);
 
-    //     if ($whatsappgateway->type === 'onprem') {
+        if ($whatsappgateway->type === 'onprem') {
 
-    //         return app(GowaService::class)
-    //             ->test($whatsappgateway, $request->receive_number);
-    //     } else {
+            return app(GowaService::class)
+                ->test($whatsappgateway, $request->receive_number);
+        } else {
 
-    //         return app(\App\Services\Whatsapp\CloudAPIService::class)
-    //             ->test($whatsappgateway, $request->receive_number);
-    //     }
-    // }
+            // return app(\App\Services\Whatsapp\CloudAPIService::class)
+            //     ->test($whatsappgateway, $request->receive_number);
+        }
+    }
 
     /**
      * Test Cloud API connection.
