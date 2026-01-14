@@ -75,26 +75,26 @@ class PackageChangesNotificationService
                 $adminNumber,                                         // {{8}} Nomor admin
             ];
 
-            // === 1. Kirim via WhatsApp ===
-            if ($gateway->type === 'cloud') {
-                $this->cloudAPIService->sendTemplateMessage(
-                    account: $account,
-                    templateName: 'perubahan_paket',
-                    phoneNumberId: $number->meta_phone_number_id,
-                    to: $to,
-                    bodyParams: $templateParams,
-                    buttonParams: [],
-                    traceId: $traceId,
-                );
-            } else {
-                // Fallback ke GOWA
-                $this->gowaService->changesPackage(
-                    customerId: $customer->id,
-                    oldPackageName: $oldPackageName,
-                    oldPackagePrice: $oldPackagePrice,
-                    traceId: $traceId
-                );
-            }
+            // // === 1. Kirim via WhatsApp ===
+            // if ($gateway->type === 'cloud') {
+            //     $this->cloudAPIService->sendTemplateMessage(
+            //         account: $account,
+            //         templateName: 'perubahan_paket',
+            //         phoneNumberId: $number->meta_phone_number_id,
+            //         to: $to,
+            //         bodyParams: $templateParams,
+            //         buttonParams: [],
+            //         traceId: $traceId,
+            //     );
+            // } else {
+            // Fallback ke GOWA
+            $this->gowaService->changesPackage(
+                customerId: $customer->id,
+                oldPackageName: $oldPackageName,
+                oldPackagePrice: $oldPackagePrice,
+                traceId: $traceId
+            );
+            // }
 
             // === 2. Kirim Telegram ===
             // $telegramJobData = new TelegramJobDto(

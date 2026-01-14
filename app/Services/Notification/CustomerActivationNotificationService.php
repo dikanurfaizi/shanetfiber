@@ -98,16 +98,16 @@ class CustomerActivationNotificationService
                 'account' => $account,
             ];
 
-            if ($gateway->type === 'cloud') {
-                $this->templateMessageService->sendCustomerActivation($data);
-            } else {
-                $this->gowaService->activation(
-                    $customerMembershipId,
-                    $customerSubscription,
-                    WhatsAppAction::ACTIVATION->value,
-                    $traceId
-                );
-            }
+            // if ($gateway->type === 'cloud') {
+            //     $this->templateMessageService->sendCustomerActivation($data);
+            // } else {
+            $this->gowaService->activation(
+                $customerMembershipId,
+                $customerSubscription,
+                WhatsAppAction::ACTIVATION->value,
+                $traceId
+            );
+            // }
 
             $telegramJobData = new TelegramJobDto(
                 customerId: $customerSubscription->customer_id,

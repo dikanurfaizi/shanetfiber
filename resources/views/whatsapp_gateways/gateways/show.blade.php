@@ -130,26 +130,26 @@
             </div>
         </div>
 
-        @if ($gateway->type === 'onprem')
-            {{-- Test Gowa REST --}}
-            <div class="col-md-12">
-                <div class="card shadow-sm p-4">
-                    <form action="{{ route('whatsappgateway.accounts.test', $gateway->slug) }}" method="POST">
-                        @csrf
+        {{-- @if ($gateway->type === 'onprem') --}}
+        {{-- Test Gowa REST --}}
+        <div class="col-md-12">
+            <div class="card shadow-sm p-4">
+                <form action="{{ route('whatsappgateway.accounts.test', $gateway->slug) }}" method="POST">
+                    @csrf
 
-                        <div class="mb-3">
-                            <label class="font-weight-bold text-muted">Test Receiver Number</label>
-                            <input type="text" name="receive_number" class="form-control" placeholder="628xxxxxxx"
-                                required>
-                        </div>
+                    <div class="mb-3">
+                        <label class="font-weight-bold text-muted">Connection Test</label>
+                        <input type="text" name="receive_number" class="form-control" placeholder="628xxxxxxx"
+                            required>
+                    </div>
 
-                        <button class="btn btn-primary">
-                            <i class="fa fa-paper-plane"></i> Test Send Message (Gowa REST)
-                        </button>
-                    </form>
-                </div>
+                    <button class="btn btn-primary">
+                        <i class="fa fa-paper-plane"></i> Test Send Message
+                    </button>
+                </form>
             </div>
-        @endif
+        </div>
+        {{-- @endif --}}
 
     </div>
 

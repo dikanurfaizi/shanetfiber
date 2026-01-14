@@ -63,9 +63,11 @@ class ComponentFactory
                 'built_result' => $built,
             ], 200, '[WA-FACTORY] Button built');
 
-            $buttons[] = $built;
+            if ($built !== null) {
+                $buttons[] = $built;
+            }
         }
 
-        return $buttons;
+        return empty($buttons) ? null : $buttons;
     }
 }

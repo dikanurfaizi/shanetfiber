@@ -4,9 +4,11 @@ namespace App\Services\Whatsapp\CloudAPI\Messages;
 
 use App\Helpers\LogHelper;
 use App\Services\Whatsapp\CloudAPI\Messaging\MessageDispatcher;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\BroadcastMidMonthCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\CustomerActivationCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPayLaterCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPembayaranCommand;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\TestMessageCommand;
 
 class TemplateMessageService
 {
@@ -36,6 +38,7 @@ class TemplateMessageService
     {
         $command = new InfoPembayaranCommand(
             recipient: $data['recipient'],
+            customerId: $data['customer_id'],
             customerName: $data['customer_name'],
             period: $data['period'],
             amount: $data['amount'],
@@ -52,11 +55,37 @@ class TemplateMessageService
     {
         $command = new InfoPayLaterCommand(
             recipient: $data['recipient'],
+            customerId: $data['customer_id'],
             customerName: $data['customer_name'],
             period: $data['period'],
             tellerName: $data['teller_name'],
             account: $data['account'],
             paylaterCode: $data['paylater_code']
+        );
+
+        return $this->dispatcher->dispatch($command);
+    }
+
+    public function sendBroadcastMidMonth(array $data)
+    {
+        $command = new BroadcastMidMonthCommand(
+            recipient: $data['recipient'],
+            customerId: $data['customer_id'],
+            customerName: $data['customer_name'],
+            packageName: $data['package_name'],
+            total: $data['total_amount'],
+            dueDate: $data['due_date'],
+            account: $data['account']
+        );
+
+        return $this->dispatcher->dispatch($command);
+    }
+
+    public function sendTestMessage(array $data)
+    {
+        $command = new TestMessageCommand(
+            recipient: $data['recipient'],
+            account: $data['account']
         );
 
         return $this->dispatcher->dispatch($command);

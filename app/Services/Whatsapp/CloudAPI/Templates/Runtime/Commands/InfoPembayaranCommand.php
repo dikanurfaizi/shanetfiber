@@ -8,6 +8,7 @@ class InfoPembayaranCommand
 {
     public function __construct(
         public readonly string $recipient,
+        public readonly string $customerId,
         public readonly string $customerName,
         public readonly string $period,
         public readonly string $amount,

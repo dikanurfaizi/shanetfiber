@@ -2,12 +2,16 @@
 
 namespace App\Providers;
 
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\BroadcastMidMonthCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\CustomerActivationCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPayLaterCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPembayaranCommand;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\TestMessageCommand;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\BroadcastMidMonthHandler as HandlersBroadcastMidMonthHandler;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\CustomerActivationHandler;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\InfoPayLaterHandler;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\InfoPembayaranHandler;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\TestMessageHandler;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\TemplateHandlerRegistry;
 use Illuminate\Support\ServiceProvider;
 
@@ -31,7 +35,9 @@ class WhatsAppServiceProvider extends ServiceProvider
         return [
             InfoPembayaranCommand::class => InfoPembayaranHandler::class,
             InfoPayLaterCommand::class => InfoPayLaterHandler::class,
-            CustomerActivationCommand::class => CustomerActivationHandler::class
+            CustomerActivationCommand::class => CustomerActivationHandler::class,
+            BroadcastMidMonthCommand::class => HandlersBroadcastMidMonthHandler::class,
+            TestMessageCommand::class => TestMessageHandler::class
         ];
     }
 }

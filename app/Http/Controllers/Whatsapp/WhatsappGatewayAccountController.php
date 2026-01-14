@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Whatsapp\WhatsappGateway;
 use App\Models\Whatsapp\WhatsappGatewayAccount;
 use App\Models\Whatsapp\WhatsappNumber;
+use App\Services\Whatsapp\CloudAPI\Single\TestMessage;
 use App\Services\Whatsapp\GowaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -448,9 +449,10 @@ class WhatsappGatewayAccountController extends Controller
             return app(GowaService::class)
                 ->test($whatsappgateway, $request->receive_number);
         } else {
+            $account = $whatsappgateway->accounts->first();
 
-            // return app(\App\Services\Whatsapp\CloudAPIService::class)
-            //     ->test($whatsappgateway, $request->receive_number);
+            return app(TestMessage::class)
+                ->test($account, $request->receive_number);
         }
     }
 

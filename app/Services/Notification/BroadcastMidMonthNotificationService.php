@@ -3,12 +3,14 @@
 namespace App\Services\Notification;
 
 use App\Helpers\LogHelper;
+use App\Services\Whatsapp\CloudAPI\Broadcast\MidMonthBroadcast;
 use App\Services\Whatsapp\GowaService;
 
 class BroadcastMidMonthNotificationService
 {
     public function __construct(
-        private GowaService $gowaService
+        private GowaService $gowaService,
+        private MidMonthBroadcast $midMontBroadcast
     ) {}
 
     public function run(string $traceId): void
@@ -22,7 +24,8 @@ class BroadcastMidMonthNotificationService
                 $traceId
             );
 
-            $this->gowaService->broadcastMidMonth($traceId);
+            // $this->gowaService->broadcastMidMonth($traceId);
+            $this->midMontBroadcast->run($traceId);
 
             LogHelper::logInfo(
                 null,

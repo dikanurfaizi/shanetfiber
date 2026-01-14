@@ -59,10 +59,10 @@ class WhatsappGatewayController extends Controller
         ]);
 
         // Jika provider diaktifkan, nonaktifkan provider lain
-        if ($request->boolean('is_active')) {
-            WhatsappGateway::where('id', '!=', $whatsappgateway->id)
-                ->update(['is_active' => false]);
-        }
+        // if ($request->boolean('is_active')) {
+        //     WhatsappGateway::where('id', '!=', $whatsappgateway->id)
+        //         ->update(['is_active' => false]);
+        // }
 
         $whatsappgateway->update([
             'name' => $validated['name'],

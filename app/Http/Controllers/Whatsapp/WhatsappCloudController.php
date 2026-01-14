@@ -29,17 +29,21 @@ class WhatsappCloudController extends Controller
         $traceId = Str::uuid()->toString();
         LogHelper::logInfo(null, [], 200, "Initiate sync", $traceId);
 
-        $gateway = WhatsappGateway::where('is_active', true)->first();
-        $account = WhatsappGatewayAccount::where('whatsapp_gateway_id', $gateway->id)
-            ->where('is_active', true)->first();
+        $gateway = WhatsappGateway::where('type', 'cloud')
+            ->where('is_active', true)
+            ->with(['accounts' => function ($q) {
+                $q->where('is_active', true);
+            }])
+            ->first();
 
-        if (!$account) {
+        if (!$gateway) {
             return redirect()
                 ->route('whatsapptemplate.index')
                 ->with('error', 'No active WhatsApp gateway account found.');
         }
 
         try {
+            $account = $gateway->accounts->first();
             $templates = $fetcher->fetchAllTemplates($account);
 
             if (empty($templates)) {

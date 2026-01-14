@@ -74,6 +74,7 @@ class PaymentNotificationService
 
             $data = [
                 'recipient' => $recipient,
+                'customer_id' => $receipt->cutomer_id,
                 'customer_name' => $receipt->customer_name,
                 'period' => $receipt->periode,
                 'amount' => 'Rp ' . number_format($receipt->price_after_discount, 0, ',', '.'),
@@ -83,16 +84,16 @@ class PaymentNotificationService
                 'account' => $account,
             ];
 
-            if ($gateway->type === 'cloud') {
-                $this->templateMessageService->sendInfoPembayaran($data);
-            } else {
-                $this->gowaService->notifyPaymentCompleted(
-                    $receipt->billingPayment->billing,
-                    $receipt,          // ⬅️ WAJIB
-                    $receipt->payment_methode,            // cash | transfer | payment_gateway
-                    $traceId
-                );
-            }
+            // if ($gateway->type === 'cloud') {
+            //     $this->templateMessageService->sendInfoPembayaran($data);
+            // } else {
+            $this->gowaService->notifyPaymentCompleted(
+                $receipt->billingPayment->billing,
+                $receipt,          // ⬅️ WAJIB
+                $receipt->payment_methode,            // cash | transfer | payment_gateway
+                $traceId
+            );
+            // }
         } catch (\Throwable $e) {
             LogHelper::logError(
                 null,

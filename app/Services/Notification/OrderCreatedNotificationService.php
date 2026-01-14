@@ -8,7 +8,7 @@ use App\Helpers\LogHelper;
 use App\Models\Customers\Customer;
 use App\Models\Billings\Billing;
 use App\Models\Billings\Order;
-use App\Services\Whatsapp\CloudAPIService;
+// use App\Services\Whatsapp\CloudAPIService;
 use App\Services\Whatsapp\WhatsappGatewayResolver;
 use App\Services\Whatsapp\GowaService;
 use App\Services\Telegrams\TelegramMessageService;
@@ -17,7 +17,7 @@ use Carbon\Carbon;
 class OrderCreatedNotificationService
 {
     public function __construct(
-        private CloudAPIService $cloudAPIService,
+        // private CloudAPIService $cloudAPIService,
         private GowaService $gowaService,
         private TelegramMessageService $telegramMessageService,
         private WhatsappGatewayResolver $gatewayResolver,
@@ -82,26 +82,26 @@ class OrderCreatedNotificationService
                 $expiredAt,                                             // {{7}}
             ];
 
-            // === 1. WA notification ===
-            if ($gateway->type === 'cloud') {
-                $this->cloudAPIService->sendTemplateMessage(
-                    account: $account,
-                    templateName: $templateName,
-                    phoneNumberId: $number->meta_phone_number_id,
-                    to: $to,
-                    bodyParams: $templateParams,
-                    buttonParams: [],
-                    traceId: $traceId
-                );
-            } else {
-                // Fallback GOWA
-                $this->gowaService->orderCreated(
-                    billingId: $billing->id,
-                    orderId: $order->id,
-                    action: WhatsAppAction::ORDER_CREATED->value,
-                    traceId: $traceId
-                );
-            }
+            // // === 1. WA notification ===
+            // if ($gateway->type === 'cloud') {
+            //     $this->cloudAPIService->sendTemplateMessage(
+            //         account: $account,
+            //         templateName: $templateName,
+            //         phoneNumberId: $number->meta_phone_number_id,
+            //         to: $to,
+            //         bodyParams: $templateParams,
+            //         buttonParams: [],
+            //         traceId: $traceId
+            //     );
+            // } else {
+            // Fallback GOWA
+            $this->gowaService->orderCreated(
+                billingId: $billing->id,
+                orderId: $order->id,
+                action: WhatsAppAction::ORDER_CREATED->value,
+                traceId: $traceId
+            );
+            // }
 
             // === Log success ===
             LogHelper::logInfo(

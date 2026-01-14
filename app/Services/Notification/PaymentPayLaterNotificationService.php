@@ -66,6 +66,7 @@ class PaymentPayLaterNotificationService
 
             $data = [
                 'recipient' => $recipient,
+                'customer_id' => $billing->customer_id,
                 'customer_name' => $billing->customer->name,
                 'period' => $billing->periode->display_name,
                 'teller_name' => $billing->updatedByUser->name,
@@ -73,18 +74,18 @@ class PaymentPayLaterNotificationService
                 'paylater_code' => $token
             ];
 
-            if ($gateway->type === 'cloud') {
-                $this->templateMessageService->sendInfoPayLater($data);
-            } else {
-                $subscription = CustomerSubscription::where('customer_id', $billing->customer->id)
-                    ->where('status', 'active')->first();
+            // if ($gateway->type === 'cloud') {
+            //     $this->templateMessageService->sendInfoPayLater($data);
+            // } else {
+            $subscription = CustomerSubscription::where('customer_id', $billing->customer->id)
+                ->where('status', 'active')->first();
 
-                $this->gowaService->notifyPayLater(
-                    $subscription,
-                    $billing,
-                    $traceId
-                );
-            }
+            $this->gowaService->notifyPayLater(
+                $subscription,
+                $billing,
+                $traceId
+            );
+            // }
 
             // TELEGRAM
             $telegramDto = new TelegramJobDto(
