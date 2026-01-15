@@ -64,14 +64,14 @@ class BillingStatusHandler extends BaseBroadcastAwareHandler implements MessageA
                 '%package%'        => $this->customerSubscription->package->name ?? '-',
                 '%periode%'        => $periode ?? '-',
                 '%bill%'           => $this->builder->currency($this->billing->base_price),
-                '%addons%'          => $this->builder->formatAddons($addons),
-                '%discount%'       => $this->builder->discountCurrency($this->billing->discount_amount),
+                '%addons_section%' => $this->builder->addonsSection($addons),
+                '%member_discount_section%' => $this->builder->memberDiscountSection(
+                    optional($cust->activeMembership?->membership)->name,
+                    $this->billing->discount_amount
+                ),
                 '%total%'          => $this->builder->currency($this->billing->total_amount),
                 '%account_bank%'   => $bank,
                 '%admin%'          => $user?->name ?? '-',
-                '%member%' => optional(
-                    $cust->activeMembership?->membership
-                )->name ?? 'Non Member',
                 '%cs_contact%'     => $user?->contact ?? '-',
                 '%teller%'         => $userUpdate->name,
                 '%paylater%'       => $this->billing->paylater_until ? Carbon::parse($this->billing->paylater_until)->locale('id')->translatedFormat('d F Y') : '-',

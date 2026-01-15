@@ -68,10 +68,12 @@ class PaymentHandler extends BaseBroadcastAwareHandler implements MessageActionH
                 '%package%'         => $packageItem?->name ?? '-',
                 '%periode%'         => $this->billing->billingSubscription?->billingPeriode?->name ?? '-',
                 '%bill%'            => $this->builder->currency($packageItem?->unit_price ?? 0),
-                '%addons%'          => $this->builder->formatAddons($addons),
-                '%discount%'        => $this->builder->discountCurrency($this->receipt->discount),
+                '%addons_section%' => $this->builder->addonsSection($addons),
+                '%member_discount_section%' => $this->builder->memberDiscountSection(
+                    optional($cust->activeMembership?->membership)->name,
+                    $this->billing->discount_amount
+                ),
                 '%total%'           => $this->builder->currency($this->receipt->price_after_discount),
-                '%member%'          => $this->receipt->member_type ?? 'Non Member',
                 '%payment_time%'    => optional($this->receipt->payment_time)
                     ? now()->parse($this->receipt->payment_time)
                     ->setTimezone('Asia/Jakarta')

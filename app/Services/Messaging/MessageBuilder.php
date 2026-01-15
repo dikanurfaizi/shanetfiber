@@ -30,20 +30,38 @@ class MessageBuilder
         return $this->currency(abs($amount ?? 0));
     }
 
-    public function formatAddons($addons): string
+    public function addonsSection($addons): string
     {
-        if ($addons->isEmpty()) {
-            return '-';
-        }
+        if ($addons->isEmpty()) return '';
 
-        return $addons->map(function ($item) {
-            return sprintf(
+        $lines = $addons->map(
+            fn($item) =>
+            sprintf(
                 "• %s (%d x %s) = %s",
                 $item->name,
                 $item->qty,
                 $this->currency($item->unit_price),
                 $this->currency($item->subtotal)
-            );
-        })->implode("\n");
+            )
+        )->implode("\n");
+
+        return "\n\n*Addons*:\n" . $lines;
+    }
+
+    public function memberDiscountSection(?string $member, ?float $discount): string
+    {
+        $lines = [];
+
+        if ($discount && $discount > 0) {
+            $lines[] = "• Potongan Harga: " . $this->currency(abs($discount));
+        }
+
+        if ($member && strtolower($member) !== 'non member') {
+            $lines[] = "• Kategori: {$member}";
+        }
+
+        if (empty($lines)) return '';
+
+        return "\n\n*Member dan Diskon*:\n" . implode("\n", $lines);
     }
 }

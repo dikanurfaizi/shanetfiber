@@ -25,6 +25,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::post('tripay/callback', [TripayCallbackController::class, 'handle']);
 Route::middleware('mikrotik.auth')->post('/mikrotik/send-message', [MikrotikMessageController::class, 'send']);
-Route::post('/webhook/whatsapp', [WhatsAppWebhookController::class, 'handle']);
+Route::post('/webhook/whatsapp', [WhatsappWebhookController::class, 'onpremWebhook']);
 Route::get('/public/receipts/download/{token}', [ReceiptController::class, 'printPreview'])->name('public.receipts.download');
 Route::get('/public/paylater/info/{token}', [BillingController::class, 'paylaterPreview'])->name('public.paylater.download');
+Route::post('/meta/whatsapp/webhook', [WhatsappWebhookController::class, 'metaWebhook']);

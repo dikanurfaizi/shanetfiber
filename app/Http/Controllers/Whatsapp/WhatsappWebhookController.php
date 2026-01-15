@@ -12,7 +12,7 @@ use App\Helpers\LogHelper;
 
 class WhatsappWebhookController extends Controller
 {
-    public function handle(
+    public function onpremWebhook(
         Request $request,
         WebhookValidator $validator,
         WebhookEventRouter $router
@@ -58,5 +58,10 @@ class WhatsappWebhookController extends Controller
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
         }
+    }
+
+    public function metaWebhook(Request $request)
+    {
+        LogHelper::logInfo(null, ['request' => $request->all()], 200, "Met Webhook");
     }
 }
