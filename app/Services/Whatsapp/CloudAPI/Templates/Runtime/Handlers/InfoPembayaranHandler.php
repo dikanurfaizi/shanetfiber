@@ -19,15 +19,19 @@ class InfoPembayaranHandler implements ContractsTemplateHandler
             recipient: $command->recipient,
             templateName: 'informasi_bayar',
             language: 'id',
-            values: [
-                'customer_name' => $command->customerName,
-                'period' => $command->period,
-                'amount' => $command->amount,
-                'payment_time' => $command->paymentTime,
-                'teller_name' => $command->tellerName,
-                'receipt_code' => $command->receiptCode,
+            account: $command->account,
+
+            bodyValues: [
+                $command->customerName,
+                $command->period,
+                $command->amount,
+                $command->paymentTime,
+                $command->tellerName,
             ],
-            account: $command->account
+
+            buttonValues: [
+                0 => [$command->receiptCode],
+            ],
         );
     }
 }

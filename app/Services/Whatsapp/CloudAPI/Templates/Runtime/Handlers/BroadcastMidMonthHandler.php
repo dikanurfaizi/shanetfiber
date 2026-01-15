@@ -12,20 +12,21 @@ class BroadcastMidMonthHandler implements ContractsTemplateHandler
     public function buildContext(object $command): TemplateContext
     {
         if (!$command instanceof BroadcastMidMonthCommand) {
-            throw new InvalidArgumentException("Invalid command for InfoPayLaterHandler");
+            throw new InvalidArgumentException("Invalid command for BroadcastMidMonthHandler");
         }
 
         return new TemplateContext(
             recipient: $command->recipient,
             templateName: 'pembayaran_jatuh_tempo_2',
             language: 'id',
-            values: [
-                'customer_name' => $command->customerName,
-                'package' => $command->packageName,
-                'total_amount' => $command->total,
-                'due_date' => $command->dueDate
-            ],
-            account: $command->account
+            account: $command->account,
+
+            bodyValues: [
+                $command->customerName,
+                $command->packageName,
+                $command->total,
+                $command->dueDate,
+            ]
         );
     }
 }

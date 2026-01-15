@@ -29,8 +29,9 @@ class PaymentPayLaterNotificationService
         int $billingId,
         string $traceId
     ): void {
+        $type = 'cloud';
         try {
-            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId)
+            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, $type)
                 ?? [null, null];
 
             if (! $gateway || ! $account || !$number) {
@@ -75,16 +76,16 @@ class PaymentPayLaterNotificationService
             ];
 
             // if ($gateway->type === 'cloud') {
-            //     $this->templateMessageService->sendInfoPayLater($data);
+            $this->templateMessageService->sendInfoPayLater($data);
             // } else {
-            $subscription = CustomerSubscription::where('customer_id', $billing->customer->id)
-                ->where('status', 'active')->first();
+            // $subscription = CustomerSubscription::where('customer_id', $billing->customer->id)
+            //     ->where('status', 'active')->first();
 
-            $this->gowaService->notifyPayLater(
-                $subscription,
-                $billing,
-                $traceId
-            );
+            // $this->gowaService->notifyPayLater(
+            //     $subscription,
+            //     $billing,
+            //     $traceId
+            // );
             // }
 
             // TELEGRAM

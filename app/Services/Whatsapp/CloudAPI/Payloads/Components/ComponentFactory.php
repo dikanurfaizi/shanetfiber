@@ -3,6 +3,7 @@
 namespace App\Services\Whatsapp\CloudAPI\Payloads\Components;
 
 use App\Helpers\LogHelper;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\TemplateContext;
 use RuntimeException;
 
 class ComponentFactory
@@ -13,7 +14,7 @@ class ComponentFactory
         private ButtonComponentBuilder $button
     ) {}
 
-    public function build($component, array $values): ?array
+    public function build($component, TemplateContext $context): ?array
     {
         LogHelper::logInfo(null, [
             'component_id' => $component->id,
@@ -23,11 +24,11 @@ class ComponentFactory
         ], 200, '[WA-FACTORY] Resolve component');
 
         $result = match ($component->type) {
-            'BODY' => $this->body->build($component, $values),
-            'HEADER' => $this->header->build($component, $values),
-            'BUTTONS' => $this->buildButtons($component, $values),
-            'FOOTER' => null,
-            default => throw new RuntimeException("Unsupported component {$component->type}")
+            'BODY'    => $this->body->build($component, $context->bodyValues),
+            'HEADER'  => $this->header->build($component, $context->headerValues),
+            'BUTTONS' => $this->buildButtons($component, $context->buttonValues),
+            'FOOTER'  => null,
+            default   => throw new RuntimeException("Unsupported component {$component->type}")
         };
 
         LogHelper::logInfo(null, [

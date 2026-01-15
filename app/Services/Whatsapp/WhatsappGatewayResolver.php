@@ -9,9 +9,9 @@ use App\Models\Whatsapp\WhatsappNumber;
 
 class WhatsappGatewayResolver
 {
-    public function resolveActiveGatewayAndAccount(string $traceId): ?array
+    public function resolveActiveGatewayAndAccount(string $traceId, string $type): ?array
     {
-        $gateway = WhatsappGateway::where('is_active', true)->first();
+        $gateway = WhatsappGateway::where('is_active', true)->where('type', $type)->first();
 
         if (! $gateway) {
             LogHelper::logWarning(null, [], 400, 'No active WhatsApp gateway found.', $traceId);

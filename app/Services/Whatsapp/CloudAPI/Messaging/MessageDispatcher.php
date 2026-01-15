@@ -36,10 +36,13 @@ class MessageDispatcher
 
         LogHelper::logInfo(null, [
             'template_name' => $context->templateName,
-            'language' => $context->language,
-            'recipient' => $context->recipient,
-            'values' => $context->values,
+            'language'      => $context->language,
+            'recipient'     => $context->recipient,
+            'body_values'   => $context->bodyValues,
+            'header_values' => $context->headerValues,
+            'button_values' => $context->buttonValues,
         ], 200, "[WA-DISPATCH] Context built", $traceId);
+
 
         $dto = $this->builder->build($context);
 

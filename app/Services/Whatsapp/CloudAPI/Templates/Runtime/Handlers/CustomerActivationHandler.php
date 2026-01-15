@@ -19,17 +19,18 @@ class CustomerActivationHandler implements ContractsTemplateHandler
             recipient: $command->recipient,
             templateName: 'aktivasi_layanan_pelanggan',
             language: 'id',
-            values: [
-                'customer_name' => $command->customerName,
-                'customer_id' => $command->customerId,
-                'package_name' => $command->packageName,
-                'package_price' => $command->packagePrice,
-                'member_name' => $command->memberName,
-                'admin_name' => $command->adminName,
-                'admin_contact' => $command->adminContact,
-                'bank' => $command->bank
-            ],
-            account: $command->account
+            account: $command->account,
+
+            bodyValues: [
+                $command->customerName,
+                $command->customerId,
+                $command->packageName,
+                $command->packagePrice,
+                $command->memberName,
+                $command->adminName,
+                $command->adminContact,
+                $command->bank,
+            ]
         );
     }
 }

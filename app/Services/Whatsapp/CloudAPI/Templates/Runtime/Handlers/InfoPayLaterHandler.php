@@ -20,13 +20,18 @@ class InfoPayLaterHandler implements ContractsTemplateHandler
             recipient: $command->recipient,
             templateName: 'informasi_bayar_nanti',
             language: 'id',
-            values: [
-                'customer_name' => $command->customerName,
-                'period' => $command->period,
-                'teller_name' => $command->tellerName,
-                'paylater_code' => $command->paylaterCode
+            account: $command->account,
+
+            bodyValues: [
+                $command->customerName,
+                $command->period,
+                $command->tellerName,
             ],
-            account: $command->account
+
+            // button index 0, param ke-1
+            buttonValues: [
+                0 => [$command->paylaterCode],
+            ]
         );
     }
 }

@@ -48,8 +48,9 @@ class PaymentNotificationService
      */
     public function sendWhatsAppPaymentNotification($receipt, string $traceId): void
     {
+        $type = 'cloud';
         try {
-            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId)
+            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, $type)
                 ?? [null, null, null];
 
             if (!$gateway || !$account || !$number) {
@@ -74,7 +75,7 @@ class PaymentNotificationService
 
             $data = [
                 'recipient' => $recipient,
-                'customer_id' => $receipt->cutomer_id,
+                'customer_id' => $receipt->customer_id,
                 'customer_name' => $receipt->customer_name,
                 'period' => $receipt->periode,
                 'amount' => 'Rp ' . number_format($receipt->price_after_discount, 0, ',', '.'),
@@ -84,15 +85,17 @@ class PaymentNotificationService
                 'account' => $account,
             ];
 
+            LogHelper::logInfo(null, ['data' => $data], 200, "Detail data", $traceId);
+
             // if ($gateway->type === 'cloud') {
-            //     $this->templateMessageService->sendInfoPembayaran($data);
+            $this->templateMessageService->sendInfoPembayaran($data);
             // } else {
-            $this->gowaService->notifyPaymentCompleted(
-                $receipt->billingPayment->billing,
-                $receipt,          // ⬅️ WAJIB
-                $receipt->payment_methode,            // cash | transfer | payment_gateway
-                $traceId
-            );
+            // $this->gowaService->notifyPaymentCompleted(
+            //     $receipt->billingPayment->billing,
+            //     $receipt,          // ⬅️ WAJIB
+            //     $receipt->payment_methode,            // cash | transfer | payment_gateway
+            //     $traceId
+            // );
             // }
         } catch (\Throwable $e) {
             LogHelper::logError(

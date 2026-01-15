@@ -7,6 +7,7 @@ use App\Services\Whatsapp\CloudAPI\Payloads\Components\ComponentFactory;
 use App\Services\Whatsapp\CloudAPI\Payloads\DTO\TemplateMessageDTO;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\TemplateContext;
 use App\Helpers\LogHelper;
+use RuntimeException;
 
 class MessagePayloadBuilder
 {
@@ -18,14 +19,20 @@ class MessagePayloadBuilder
     {
         LogHelper::logInfo(null, [
             'template_name' => $context->templateName,
-            'language' => $context->language,
-            'recipient' => $context->recipient,
-            'values' => $context->values,
+            'language'      => $context->language,
+            'recipient'     => $context->recipient,
+            'body_values'   => $context->bodyValues,
+            'header_values' => $context->headerValues,
+            'button_values' => $context->buttonValues,
         ], 200, '[WA-PAYLOAD] Start build payload');
 
         $template = WhatsappCloudTemplate::where('name', $context->templateName)
             ->where('language', $context->language)
             ->firstOrFail();
+
+        if (!$template) {
+            throw new RuntimeException("Template not found: {$context->templateName}");
+        }
 
         $templateComponents = $template->components()->orderBy('position')->get();
 
@@ -45,9 +52,18 @@ class MessagePayloadBuilder
                 'example_raw' => $component->example,
             ], 200, '[WA-PAYLOAD] Component before build');
 
-            $built = $this->factory->build($component, $context->values);
+            $built = $this->factory->build($component, $context);
 
             if ($built === null) {
+                continue;
+            }
+
+            // ⚠️ khusus BUTTONS: factory kita akan return array of button components
+            // meta API butuh button components dimasukkan sebagai satu object "type":"button"??
+            // pada WA Cloud API, formatnya: components[] berisi object button per index
+            // jadi kita push satu-satu
+            if (isset($built[0]) && is_array($built[0]) && isset($built[0]['type']) && $built[0]['type'] === 'button') {
+                foreach ($built as $b) $components[] = $b;
                 continue;
             }
 
@@ -56,13 +72,8 @@ class MessagePayloadBuilder
                 'built_result' => $built,
             ], 200, '[WA-PAYLOAD] Component after build');
 
-            if (isset($built[0]) && is_array($built[0])) {
-                foreach ($built as $btn) {
-                    $components[] = $btn;
-                }
-            } else {
-                $components[] = $built;
-            }
+
+            $components[] = $built;
         }
 
         LogHelper::logInfo(null, [

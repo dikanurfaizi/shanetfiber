@@ -12,15 +12,18 @@ class TestMessageHandler implements ContractsTemplateHandler
     public function buildContext(object $command): TemplateContext
     {
         if (!$command instanceof TestMessageCommand) {
-            throw new InvalidArgumentException("Invalid command for InfoPayLaterHandler");
+            throw new InvalidArgumentException("Invalid command for TestMessageHandler");
         }
 
         return new TemplateContext(
             recipient: $command->recipient,
             templateName: 'hello_world',
             language: 'en_US',
-            values: [],
-            account: $command->account
+            account: $command->account,
+
+            bodyValues: [],
+            headerValues: [],
+            buttonValues: []
         );
     }
 }

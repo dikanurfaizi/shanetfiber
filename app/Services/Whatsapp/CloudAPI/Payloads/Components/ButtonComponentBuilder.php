@@ -6,26 +6,39 @@ use RuntimeException;
 
 class ButtonComponentBuilder
 {
-    public function build($button, array $values = []): ?array
+    public function build($btn, array $buttonValues): ?array
     {
-        return match ($button->type) {
-            'QUICK_REPLY' => $this->buildQuickReply($button),
-            'URL' => $this->buildUrlButton($button, $values),
-            'PHONE_NUMBER' => $this->buildPhoneButton($button),
-            default => throw new RuntimeException("Unsupported button type {$button->type} for button {$button->id}")
+        $index = (int) $btn->position;
+
+        return match ($btn->type) {
+            'QUICK_REPLY'  => $this->buildQuickReply($btn),
+            'URL'          => $this->buildUrlButton($btn, $buttonValues, $index),
+            'PHONE_NUMBER' => $this->buildPhoneButton($btn),
+            default => throw new RuntimeException(
+                "Unsupported button type {$btn->type} for button {$btn->id}"
+            )
         };
     }
 
     protected function buildQuickReply($button): array
     {
         return [
-            'type' => 'button',
+            'type'     => 'button',
             'sub_type' => 'quick_reply',
-            'index' => (string) $button->position
+            'index'    => (string) $button->position
         ];
     }
 
-    protected function buildUrlButton($button, array $values): ?array
+    protected function buildPhoneButton($button): array
+    {
+        return [
+            'type'     => 'button',
+            'sub_type' => 'phone_number',
+            'index'    => (string) $button->position
+        ];
+    }
+
+    protected function buildUrlButton($button, array $buttonValues, int $index): array
     {
         $urlTemplate = $button->url ?? null;
 
@@ -35,43 +48,28 @@ class ButtonComponentBuilder
 
         // === STATIC URL ===
         if (!str_contains($urlTemplate, '{{')) {
-            return null; // WAJIB skip
+            return [
+                'type'     => 'button',
+                'sub_type' => 'url',
+                'index'    => (string) $index,
+            ];
         }
 
         // === DYNAMIC URL ===
-        $example = is_array($button->example)
-            ? $button->example
-            : json_decode($button->example ?? '{}', true);
+        $params = $buttonValues[$index] ?? null;
 
-        $key = $example['key'] ?? null;
-
-        if (!$key) {
+        if (empty($params) || !is_array($params)) {
             throw new RuntimeException("Dynamic URL key missing for button {$button->id}");
         }
 
-        if (!isset($values[$key])) {
-            throw new RuntimeException("Dynamic URL value missing for key {$key}");
-        }
-
         return [
-            'type' => 'button',
+            'type'     => 'button',
             'sub_type' => 'url',
-            'index' => (string) $button->position,
-            'parameters' => [
-                [
-                    'type' => 'text',
-                    'text' => $values[$key]
-                ]
-            ]
-        ];
-    }
-
-    protected function buildPhoneButton($button): array
-    {
-        return [
-            'type' => 'button',
-            'sub_type' => 'phone_number',
-            'index' => (string) $button->position
+            'index'    => (string) $index,
+            'parameters' => array_map(fn($v) => [
+                'type' => 'text',
+                'text' => (string) $v
+            ], $params),
         ];
     }
 }
