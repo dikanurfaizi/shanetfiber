@@ -18,7 +18,7 @@ class MidMonthBroadcast
     {
         LogHelper::logInfo(null, [], 100, '[MidMonthBroadcast] Start', $traceId);
 
-        $billings = $this->collector->collect(now(), 'payment_due_reminder');
+        $billings = $this->collector->collect(now(), 'pembayaran_jatuh_tempo_2');
 
         LogHelper::logInfo(null, [
             'count' => $billings->count()
