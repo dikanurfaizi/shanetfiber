@@ -29,10 +29,11 @@ class OrderCreatedNotificationService
         Order $order,
         string $traceId
     ): void {
+        $type = 'onprem';
         try {
             // === Resolve WA gateway & account ===
             [$gateway, $account, $number] =
-                $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId)
+                $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, $type)
                 ?? [null, null, null];
 
             if (! $gateway || ! $account || ! $number) {
@@ -82,26 +83,26 @@ class OrderCreatedNotificationService
                 $expiredAt,                                             // {{7}}
             ];
 
-            // // === 1. WA notification ===
-            // if ($gateway->type === 'cloud') {
-            //     $this->cloudAPIService->sendTemplateMessage(
-            //         account: $account,
-            //         templateName: $templateName,
-            //         phoneNumberId: $number->meta_phone_number_id,
-            //         to: $to,
-            //         bodyParams: $templateParams,
-            //         buttonParams: [],
-            //         traceId: $traceId
-            //     );
-            // } else {
-            // Fallback GOWA
-            $this->gowaService->orderCreated(
-                billingId: $billing->id,
-                orderId: $order->id,
-                action: WhatsAppAction::ORDER_CREATED->value,
-                traceId: $traceId
-            );
-            // }
+            // === 1. WA notification ===
+            if ($gateway->type === 'cloud') {
+                // $this->cloudAPIService->sendTemplateMessage(
+                //     account: $account,
+                //     templateName: $templateName,
+                //     phoneNumberId: $number->meta_phone_number_id,
+                //     to: $to,
+                //     bodyParams: $templateParams,
+                //     buttonParams: [],
+                //     traceId: $traceId
+                // );
+            } else {
+                // Fallback GOWA
+                $this->gowaService->orderCreated(
+                    billingId: $billing->id,
+                    orderId: $order->id,
+                    action: WhatsAppAction::ORDER_CREATED->value,
+                    traceId: $traceId
+                );
+            }
 
             // === Log success ===
             LogHelper::logInfo(

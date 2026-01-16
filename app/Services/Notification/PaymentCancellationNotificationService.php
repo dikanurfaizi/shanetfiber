@@ -30,8 +30,9 @@ class PaymentCancellationNotificationService
         ?array $receiptData,
         string $traceId
     ): void {
+        $type = 'onprem';
         try {
-            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId)
+            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, $type)
                 ?? [null, null, null];
 
             if (! $gateway || ! $account || ! $number) {
@@ -65,43 +66,43 @@ class PaymentCancellationNotificationService
                 false
             );
 
-            // if ($gateway->type === 'cloud') {
-            //     $this->cloudAPIService->sendTemplateMessage(
-            //         account: $account,
-            //         templateName: 'pembatalan_pembayaran',
-            //         phoneNumberId: $number->meta_phone_number_id,
-            //         to: $to, // 628xxx
-            //         bodyParams: [
-            //             $billing->customer->name,   // {{1}}
-            //             $billing->customer->customer_id,   // {{2}} mis: SNF02-00220
-            //             $billing->billing_number,  // {{3}} mis: INV-202511-418-401
-            //         ],
-            //         buttonParams: [],    // QUICK_REPLY tidak pakai parameter
-            //         traceId: $traceId,
-            //     );
-            // } else {
-            $receipt = $this->dummyReceipt->createUnpayment(
-                $billing->id,
-                WhatsAppAction::UNPAYMENT->value,
-                $billing->receipt_id,
-                $receiptData,
-                $traceId
-            );
+            if ($gateway->type === 'cloud') {
+                // $this->cloudAPIService->sendTemplateMessage(
+                //     account: $account,
+                //     templateName: 'pembatalan_pembayaran',
+                //     phoneNumberId: $number->meta_phone_number_id,
+                //     to: $to, // 628xxx
+                //     bodyParams: [
+                //         $billing->customer->name,   // {{1}}
+                //         $billing->customer->customer_id,   // {{2}} mis: SNF02-00220
+                //         $billing->billing_number,  // {{3}} mis: INV-202511-418-401
+                //     ],
+                //     buttonParams: [],    // QUICK_REPLY tidak pakai parameter
+                //     traceId: $traceId,
+                // );
+            } else {
+                $receipt = $this->dummyReceipt->createUnpayment(
+                    $billing->id,
+                    WhatsAppAction::UNPAYMENT->value,
+                    $billing->receipt_id,
+                    $receiptData,
+                    $traceId
+                );
 
-            if (! $receipt) {
-                LogHelper::logWarning(null, [
-                    'billing_id' => $billing->id,
-                ], 404, 'No receipt could be resolved for cancel payment', $traceId);
+                if (! $receipt) {
+                    LogHelper::logWarning(null, [
+                        'billing_id' => $billing->id,
+                    ], 404, 'No receipt could be resolved for cancel payment', $traceId);
 
-                return;
+                    return;
+                }
+
+                $this->gowaService->notifyUnpayment(
+                    $billing->billingSubscription->customerSubscription,
+                    $billing,
+                    $traceId
+                );
             }
-
-            $this->gowaService->notifyUnpayment(
-                $billing->billingSubscription->customerSubscription,
-                $billing,
-                $traceId
-            );
-            // }
 
             // === TELEGRAM ===
             $telegramDto = new TelegramJobDto(

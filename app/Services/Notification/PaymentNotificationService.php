@@ -87,16 +87,16 @@ class PaymentNotificationService
 
             LogHelper::logInfo(null, ['data' => $data], 200, "Detail data", $traceId);
 
-            // if ($gateway->type === 'cloud') {
-            $this->templateMessageService->sendInfoPembayaran($data);
-            // } else {
-            // $this->gowaService->notifyPaymentCompleted(
-            //     $receipt->billingPayment->billing,
-            //     $receipt,          // ⬅️ WAJIB
-            //     $receipt->payment_methode,            // cash | transfer | payment_gateway
-            //     $traceId
-            // );
-            // }
+            if ($gateway->type === 'cloud') {
+                $this->templateMessageService->sendInfoPembayaran($data);
+            } else {
+                $this->gowaService->notifyPaymentCompleted(
+                    $receipt->billingPayment->billing,
+                    $receipt,          // ⬅️ WAJIB
+                    $receipt->payment_methode,            // cash | transfer | payment_gateway
+                    $traceId
+                );
+            }
         } catch (\Throwable $e) {
             LogHelper::logError(
                 null,

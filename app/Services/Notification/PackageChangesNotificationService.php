@@ -2,6 +2,8 @@
 
 namespace App\Services\Notification;
 
+use App\DataTransferObjects\TelegramJobDto;
+use App\Enums\TelegramAction;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Models\Customers\Customer;
@@ -26,10 +28,11 @@ class PackageChangesNotificationService
         int $oldPackagePrice,
         string $traceId
     ): void {
+        $type = 'onprem';
         try {
             // === Resolve WA account & gateway ===
             [$gateway, $account, $number] =
-                $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId)
+                $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, $type)
                 ?? [null, null, null];
 
             if (! $gateway || ! $account || ! $number) {
@@ -75,38 +78,38 @@ class PackageChangesNotificationService
                 $adminNumber,                                         // {{8}} Nomor admin
             ];
 
-            // // === 1. Kirim via WhatsApp ===
-            // if ($gateway->type === 'cloud') {
-            //     $this->cloudAPIService->sendTemplateMessage(
-            //         account: $account,
-            //         templateName: 'perubahan_paket',
-            //         phoneNumberId: $number->meta_phone_number_id,
-            //         to: $to,
-            //         bodyParams: $templateParams,
-            //         buttonParams: [],
-            //         traceId: $traceId,
-            //     );
-            // } else {
-            // Fallback ke GOWA
-            $this->gowaService->changesPackage(
-                customerId: $customer->id,
-                oldPackageName: $oldPackageName,
-                oldPackagePrice: $oldPackagePrice,
-                traceId: $traceId
-            );
-            // }
+            // === 1. Kirim via WhatsApp ===
+            if ($gateway->type === 'cloud') {
+                // $this->cloudAPIService->sendTemplateMessage(
+                //     account: $account,
+                //     templateName: 'perubahan_paket',
+                //     phoneNumberId: $number->meta_phone_number_id,
+                //     to: $to,
+                //     bodyParams: $templateParams,
+                //     buttonParams: [],
+                //     traceId: $traceId,
+                // );
+            } else {
+                // Fallback ke GOWA
+                $this->gowaService->changesPackage(
+                    customerId: $customer->id,
+                    oldPackageName: $oldPackageName,
+                    oldPackagePrice: $oldPackagePrice,
+                    traceId: $traceId
+                );
+            }
 
             // === 2. Kirim Telegram ===
-            // $telegramJobData = new TelegramJobDto(
-            //     customerId: $customer->id,
-            //     action: TelegramAction::CHANGES_PACKAGE->value,
-            //     traceId: $traceId,
-            //     billingId: null,
-            //     receiptId: null,
-            //     chatId: null,
-            // );
+            $telegramJobData = new TelegramJobDto(
+                customerId: $customer->id,
+                action: TelegramAction::CHANGES_PACKAGE->value,
+                traceId: $traceId,
+                billingId: null,
+                receiptId: null,
+                chatId: null,
+            );
 
-            // $this->telegramMessageService->process($telegramJobData, $traceId);
+            $this->telegramMessageService->process($telegramJobData, $traceId);
 
             // === Log Success ===
             LogHelper::logInfo(

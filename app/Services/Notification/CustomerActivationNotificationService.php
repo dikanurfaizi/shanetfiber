@@ -33,9 +33,10 @@ class CustomerActivationNotificationService
         Receipt $receipt,
         string $traceId
     ): void {
+        $type = 'onprem';
         try {
             // Resolve WA account & gateway
-            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId)
+            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, $type)
                 ?? [null, null];
 
             if (!$gateway || ! $account || !$number) {
@@ -98,16 +99,16 @@ class CustomerActivationNotificationService
                 'account' => $account,
             ];
 
-            // if ($gateway->type === 'cloud') {
-            //     $this->templateMessageService->sendCustomerActivation($data);
-            // } else {
-            $this->gowaService->activation(
-                $customerMembershipId,
-                $customerSubscription,
-                WhatsAppAction::ACTIVATION->value,
-                $traceId
-            );
-            // }
+            if ($gateway->type === 'cloud') {
+                $this->templateMessageService->sendCustomerActivation($data);
+            } else {
+                $this->gowaService->activation(
+                    $customerMembershipId,
+                    $customerSubscription,
+                    WhatsAppAction::ACTIVATION->value,
+                    $traceId
+                );
+            }
 
             $telegramJobData = new TelegramJobDto(
                 customerId: $customerSubscription->customer_id,
