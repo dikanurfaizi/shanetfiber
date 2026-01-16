@@ -35,13 +35,13 @@ class BillingLookupService
             ->firstOrFail();
     }
 
-    public function hasOutstandingPastBilling(
+    public function hasOutstandingCurrentBilling(
         Customer $customer,
         BillingPeriode $currentPeriod
     ): bool {
         return Billing::where('customer_id', $customer->id)
             ->whereHas('billingSubscription.billingPeriode', function ($q) use ($currentPeriod) {
-                $q->where('start_date', '<', $currentPeriod->start_date);
+                $q->where('id', $currentPeriod->id);
             })
             ->where('status', '!=', 'LS')
             ->exists();

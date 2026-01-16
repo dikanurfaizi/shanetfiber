@@ -2,7 +2,6 @@
 
 namespace App\Services\Customers\Membership;
 
-use App\Domain\Decision\DecisionResult;
 use App\Helpers\LogHelper;
 use App\Models\Billings\Billing;
 use App\Models\Billings\BillingPeriode;
@@ -15,93 +14,82 @@ class MembershipChangeService
         private MembershipResolver $membershipResolver
     ) {}
 
-    public function applyMembershipChange(
-        $decision,
+    public function apply(
         Customer $customer,
         array $data,
         BillingPeriode $period,
         Billing $billing,
-        string $traceId
+        string $traceId,
+        string $mode,
+        bool $updateBilling
     ): void {
 
-        LogHelper::logInfo(
-            null,
-            [
-                'member_id' => $data['member_id'] ?? null
-            ],
-            200,
-            "MembershipChangeService::applyMembershipChange called",
-            $traceId
-        );
+        LogHelper::logInfo(null, [
+            'step' => 'MEMBERSHIP_APPLY_ENTER',
+            'member_id' => $data['member_id'] ?? null,
+            'mode' => $mode,
+            'update_billing' => $updateBilling
+        ], 200, 'Membership Change Flow', $traceId);
 
-        // Tidak ada perubahan membership
-        if (!array_key_exists('member_id', $data) || !$data['member_id']) {
-            LogHelper::logInfo(
-                null,
-                [
-                    'member_id' => $data['member_id'] ?? null
-                ],
-                200,
-                "There is set to non member",
-                $traceId
-            );
-            return;
-        }
+        // ===============================
+        // REMOVE MEMBERSHIP
+        // ===============================
+        if ($mode === 'remove') {
 
-        // APPLY CURRENT PERIOD
-        if ($decision->effectivePeriod === DecisionResult::PERIOD_CURRENT) {
-            LogHelper::logInfo(
-                null,
-                [
-                    'member_id' => $data['member_id'] ?? null
-                ],
-                200,
-                "MembershipChangeService::applyMembershipChange applying to CURRENT period",
-                $traceId
-            );
+            LogHelper::logInfo(null, [
+                'step' => 'MEMBERSHIP_REMOVE'
+            ], 200, 'Membership Change Flow', $traceId);
 
-            $this->membershipResolver->applyNow(
-                $customer,
-                $data,
-                $period,
-                $billing,
-                $traceId
-            );
+            $this->membershipResolver->remove($customer, $traceId);
 
             return;
         }
 
-        // DEFER TO NEXT PERIOD
-        if ($decision->effectivePeriod === DecisionResult::PERIOD_NEXT) {
+        // ===============================
+        // APPLY NEXT PERIOD
+        // ===============================
+        if ($mode === 'next') {
 
-            LogHelper::logInfo(
-                null,
-                [
-                    'member_id' => $data['member_id'] ?? null
-                ],
-                200,
-                'MembershipChangeService::applyMembershipChange deferring to NEXT period',
-                $traceId
-            );
+            $periodeName = $data['billing_periode_name'] ?? null;
 
-            $nextStart = Carbon::createFromFormat(
-                'F Y',
-                $data['billing_periode_name']
-            )->startOfMonth();
+            if (!$periodeName) {
+                throw new \InvalidArgumentException('billing_periode_name required for next membership');
+            }
 
-            $nextEnd = $nextStart
-                ->copy()
-                ->endOfMonth();
+            $targetStart = Carbon::createFromFormat('F Y', $periodeName)->startOfMonth();
+            $targetEnd   = $targetStart->copy()->endOfMonth();
 
-            // dd($data, $nextStart, $nextEnd);
+            LogHelper::logInfo(null, [
+                'step' => 'MEMBERSHIP_SCHEDULE_NEXT',
+                'start' => $targetStart->toDateString(),
+                'end' => $targetEnd->toDateString()
+            ], 200, 'Membership Change Flow', $traceId);
 
             $this->membershipResolver->scheduleNext(
                 $customer,
                 $data,
-                $nextStart,
-                $nextEnd,
+                $targetStart,
+                $targetEnd,
                 $traceId
             );
+
+            return;
         }
+
+        // ===============================
+        // APPLY CURRENT
+        // ===============================
+        LogHelper::logInfo(null, [
+            'step' => 'MEMBERSHIP_APPLY_CURRENT'
+        ], 200, 'Membership Change Flow', $traceId);
+
+        $this->membershipResolver->applyNow(
+            $customer,
+            $data,
+            $period,
+            $billing,
+            $traceId,
+            $updateBilling
+        );
     }
 }

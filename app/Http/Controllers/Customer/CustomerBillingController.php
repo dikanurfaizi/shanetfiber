@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\Customer;
 
+use App\Events\PackageChangesApplied;
 use App\Helpers\LogHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Customers\Customer;
-use App\Services\Customers\Billing\UpdateService;
+use App\Services\Customers\Billing\BillingUpdateService;
 use DomainException;
 use Exception;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ class CustomerBillingController extends Controller
     public function update(
         Request $request,
         Customer $customer,
-        UpdateService $updateService
+        BillingUpdateService $updateService
     ) {
         $startTime = microtime(true);
         $traceId = (string) Str::uuid();
@@ -65,16 +66,15 @@ class CustomerBillingController extends Controller
             $validated['addons'] = $addons;
 
 
-            $updateService->updateAndRegenerate(
+            $result = $updateService->update(
                 $customer,
                 $validated,
-                $traceId,
-                $startTime
+                $traceId
             );
 
             return redirect()
                 ->route('customers.show', [$customer->slug, 'tab' => 'billing'])
-                ->with('success', 'Billing configuration updated and regenerated successfully.');
+                ->with('billing_update_result', $result);
         } catch (DomainException $e) {
             LogHelper::logError($e, [
                 'customer_id' => $customer->id,

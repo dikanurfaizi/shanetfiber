@@ -1,13 +1,11 @@
 <?php
 
-namespace App\Services\Customers\Provisioning;
+namespace App\Services\Customers\Mikrotik;
 
 use App\Helpers\LogHelper;
-use App\Models\Packages\Package;
 use App\Services\Routerboard\TestConnectionService;
-use PHPUnit\Metadata\Test;
 
-class ChangePackageService
+class ActionToMikrotikService
 {
     private TestConnectionService $testConnectionService;
     private PppPackageService $pppPackageService;
@@ -23,7 +21,7 @@ class ChangePackageService
         $this->ipStaticPackageService = $ipStaticPackageService;
     }
 
-    public function applyPackageChange($customer, $oldSubscription, $newSubscription, $traceId)
+    public function apply($customer, $oldSubscription, $newSubscription, $traceId)
     {
         // === STEP 2: Mikrotik — hanya dijalankan jika diizinkan oleh config ===
         if (!config('services.shanetfiber.allow_mikrotik_actions')) {

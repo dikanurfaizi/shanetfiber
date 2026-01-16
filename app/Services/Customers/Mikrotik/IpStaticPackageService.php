@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Customers\Provisioning;
+namespace App\Services\Customers\Mikrotik;
 
 use App\Helpers\LogHelper;
 use App\Models\Customers\Customer;

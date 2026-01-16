@@ -14,7 +14,6 @@ class SubscriptionChangeService
     ) {}
 
     public function applySubscriptionChange(
-        DecisionResult $decision,
         Customer $customer,
         ?CustomerSubscription $oldSub,
         array $data,
@@ -28,32 +27,14 @@ class SubscriptionChangeService
                 ->createNew($customer, $data, $period, $traceId);
         }
 
-        // SAME PACKAGE (extend)
-        if (
-            $decision->effectivePeriod === DecisionResult::PERIOD_CURRENT
-            && $decision->billingStrategy === DecisionResult::STRATEGY_NONE
-        ) {
-            $oldSub->update([
-                'end_date' => $period->end_date,
-            ]);
 
-            return $oldSub;
-        }
+        $oldSub->update([
+            'status'        => 'terminated',
+            'end_date'      => now(),
+            'terminated_at' => now(),
+        ]);
 
-        // APPLY NOW (upgrade / downgrade unpaid)
-        if ($decision->effectivePeriod === DecisionResult::PERIOD_CURRENT) {
-
-            $oldSub->update([
-                'status'        => 'terminated',
-                'end_date'      => now(),
-                'terminated_at' => now(),
-            ]);
-
-            return $this->subscriptionResolver
-                ->createNew($customer, $data, $period, $traceId);
-        }
-
-        // NEXT PERIOD → tidak terminate sekarang
-        return $oldSub;
+        return $this->subscriptionResolver
+            ->createNew($customer, $data, $period, $traceId);
     }
 }

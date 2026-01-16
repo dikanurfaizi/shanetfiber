@@ -8,6 +8,7 @@ use App\Models\Billings\BillingItem;
 use App\Models\Billings\BillingPeriode;
 use App\Models\Customers\Customer;
 use App\Models\Membership\CustomerMembership;
+use App\Models\Websystem;
 use App\Services\Billings\BillingCreateService;
 use App\Services\Customers\Provisioning\PackageBillingService;
 use Carbon\Carbon;
@@ -18,148 +19,23 @@ use InvalidArgumentException;
 class MembershipResolver
 {
     public function __construct(
-        private BillingCreateService $billingCreateService,
-        private PackageBillingService $packageBillingService
+        private BillingCreateService $billingCreateService
     ) {}
-
-    /* ==========================================================
-     * Helpers: Membership compare (pre-rotate)
-     * ========================================================== */
-    public function resolve(
-        Customer $customer,
-        array $data,
-        BillingPeriode $billingPeriode,
-        string $traceId
-    ): ?CustomerMembership {
-
-        $incomingMemberId = (int) ($data['member_id'] ?? 0);
-
-        // Ambil membership aktif saat ini (jika ada)
-        $activeMembership = CustomerMembership::where('customer_id', $customer->id)
-            ->where('is_active', 1)
-            ->latest('id')
-            ->first();
-
-        LogHelper::logInfo(null, [
-            'customer_id'          => $customer->id,
-            'active_membership_id' => $activeMembership?->id,
-            'incoming_member_id'   => $incomingMemberId,
-        ], 200, 'Resolving membership', $traceId);
-
-        /**
-         * ==========================================================
-         * CASE 0 — Tidak ada member_id di payload
-         * ==========================================================
-         * Artinya: jangan ubah apa pun
-         */
-        if (!array_key_exists('member_id', $data)) {
-            return $activeMembership;
-        }
-
-        /**
-         * ==========================================================
-         * CASE 1 — Incoming member_id = 0 → REMOVE MEMBERSHIP
-         * ==========================================================
-         */
-        if ($incomingMemberId === 0) {
-
-            if ($activeMembership) {
-                $activeMembership->update([
-                    'is_active' => 0,
-                    'end_date'  => now(),
-                ]);
-
-                LogHelper::logInfo(null, [
-                    'customer_id' => $customer->id,
-                    'membership_id' => $activeMembership->membership_id,
-                ], 200, 'Membership removed', $traceId);
-            }
-
-            return null;
-        }
-
-        // Tentukan periode default
-        $startDate = $billingPeriode->start_date;
-        $endDate   = $billingPeriode->end_date;
-
-        /**
-         * ==========================================================
-         * CASE 2 — Belum pernah punya membership
-         * ==========================================================
-         */
-        if (!$activeMembership) {
-
-            return CustomerMembership::create([
-                'customer_id'   => $customer->id,
-                'membership_id' => $incomingMemberId,
-                'start_date'    => $startDate,
-                'end_date'      => $data['billing_option'] === 'monthly'
-                    ? null
-                    : $endDate,
-                'is_active'     => 1,
-            ]);
-        }
-
-        /**
-         * ==========================================================
-         * CASE 3 — Membership SAMA → UPDATE PERIODE
-         * ==========================================================
-         */
-        if ((int) $activeMembership->membership_id === $incomingMemberId) {
-
-            $activeMembership->update([
-                'start_date' => $startDate,
-                'end_date'   => ($data['billing_option'] ?? null) === 'monthly'
-                    ? null
-                    : $endDate,
-                'is_active'  => 1,
-            ]);
-
-            return $activeMembership;
-        }
-
-        /**
-         * ==========================================================
-         * CASE 4 — Membership BERUBAH → ROTATE
-         * ==========================================================
-         */
-        $activeMembership->update([
-            'is_active' => 0,
-            'end_date'  => now(),
-        ]);
-
-        if ($data['billing_option'] === 'one_time') {
-
-            if (empty($data['billing_periode_name'])) {
-                throw new InvalidArgumentException(
-                    'billing_periode_name is required for one_time billing'
-                );
-            }
-
-            $startDate = Carbon::createFromFormat(
-                'F Y',
-                $data['billing_periode_name']
-            )->startOfMonth();
-
-            $endDate = $startDate->copy()->endOfMonth();
-        }
-
-        return CustomerMembership::create([
-            'customer_id'   => $customer->id,
-            'membership_id' => $incomingMemberId,
-            'start_date'    => $startDate,
-            'end_date'      => $endDate,
-            'is_active'     => 1,
-        ]);
-    }
 
     public function applyNow(
         Customer $customer,
         array $data,
         BillingPeriode $period,
         Billing $billing,
-        string $traceId
+        string $traceId,
+        bool $updateBilling
     ): void {
+
+        LogHelper::logInfo(null, [
+            'step' => 'MEMBERSHIP_APPLY_NOW',
+            'update_billing' => $updateBilling
+        ], 200, 'Membership Resolver', $traceId);
+
         // deactivate existing
         CustomerMembership::where('customer_id', $customer->id)
             ->where('is_active', 1)
@@ -168,21 +44,29 @@ class MembershipResolver
                 'end_date'  => now(),
             ]);
 
-        $custMembership = $this->resolve(
-            $customer,
-            $data,
-            $period,
-            $traceId
-        );
+        $custMembership = CustomerMembership::create([
+            'customer_id'   => $customer->id,
+            'membership_id' => $data['member_id'],
+            'start_date'    => $period->start_date,
+            'end_date'      => ($data['billing_option'] ?? 'monthly') === 'monthly'
+                ? null
+                : $period->end_date,
+            'is_active'     => 1,
+        ]);
 
-        // sync discount item into billing_items (idempotent)
-        $this->syncMembershipDiscountToBilling(
-            $billing,
-            $customer,
-            $period,
-            $custMembership,
-            $traceId
-        );
+        if ($updateBilling) {
+            $this->syncMembershipDiscountToBilling(
+                $billing,
+                $customer,
+                $period,
+                $custMembership,
+                $traceId
+            );
+        } else {
+            LogHelper::logInfo(null, [
+                'step' => 'MEMBERSHIP_BILLING_SYNC_SKIPPED'
+            ], 200, 'Membership Resolver', $traceId);
+        }
     }
 
     private function syncMembershipDiscountToBilling(
@@ -257,7 +141,7 @@ class MembershipResolver
         // kalau kamu punya BillingCreateService/calc tax di tempat lain, panggil itu.
         // Minimal patch:
 
-        $taxAmount  = $this->billingCreateService->calculateTax($this->packageBillingService->resolveWebsystem(), $subtotal);
+        $taxAmount  = $this->billingCreateService->calculateTax(Websystem::where('slug', 'websystem')->first(), $subtotal);
 
         $billing->update([
             'subtotal'     => $subtotal,
@@ -269,17 +153,37 @@ class MembershipResolver
     public function scheduleNext(
         Customer $customer,
         array $data,
-        Carbon $nextPeriod_start_date,
-        Carbon $nextPeriod_end_date,
+        Carbon $start,
+        Carbon $end,
         string $traceId
     ): void {
 
+        LogHelper::logInfo(null, [
+            'step' => 'MEMBERSHIP_SCHEDULE_NEXT',
+            'start' => $start->toDateString(),
+            'end' => $end->toDateString()
+        ], 200, 'Membership Resolver', $traceId);
+
         CustomerMembership::create([
-            'customer_id'  => $customer->id,
+            'customer_id'   => $customer->id,
             'membership_id' => $data['member_id'],
-            'start_date'   => $nextPeriod_start_date,
-            'end_date'     => $nextPeriod_end_date,
-            'is_active'    => 1,
+            'start_date'    => $start,
+            'end_date'      => $end,
+            'is_active'     => 0, // ❗ belum aktif
         ]);
+    }
+
+    public function remove(Customer $customer, string $traceId): void
+    {
+        LogHelper::logInfo(null, [
+            'step' => 'MEMBERSHIP_REMOVE_RESOLVER'
+        ], 200, 'Membership Resolver', $traceId);
+
+        CustomerMembership::where('customer_id', $customer->id)
+            ->where('is_active', 1)
+            ->update([
+                'is_active' => 0,
+                'end_date'  => now(),
+            ]);
     }
 }

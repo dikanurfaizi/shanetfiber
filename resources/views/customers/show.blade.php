@@ -12,6 +12,35 @@
             </a>
         </div>
 
+        @if (session('billing_update_result'))
+            <div class="alert alert-info">
+                <strong>Billing Update Result:</strong>
+                <ul class="mb-0 mt-2">
+                    @foreach (session('billing_update_result') as $key => $item)
+                        <li>
+                            <strong>{{ ucfirst($key) }}:</strong>
+
+                            @if ($item['status'] === 'SUCCESS')
+                                <span class="badge bg-success text-white">Success</span>
+                            @elseif($item['status'] === 'SKIPPED')
+                                <span class="badge bg-secondary text-white">Skipped</span>
+                            @elseif($item['status'] === 'BLOCKED')
+                                <span class="badge bg-warning text-white">Blocked</span>
+                                <div class="small text-muted ms-2">
+                                    {{ $item['reason'] ?? '' }}
+                                </div>
+                            @elseif($item['status'] === 'FAILED')
+                                <span class="badge bg-danger">Failed</span>
+                                <div class="small text-danger ms-2">
+                                    {{ $item['reason'] ?? '' }}
+                                </div>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <div class="card-body">
 
             {{-- TAB HEADER --}}
@@ -167,8 +196,8 @@
 
 
             /* ============================
-                                                                                                   BLUE BUTTON (EDIT)
-                                                                                                   ============================ */
+                                                                                                                                   BLUE BUTTON (EDIT)
+                                                                                                                                   ============================ */
             .btn-blue {
                 background-color: #0d6efd !important;
                 /* base blue */
@@ -187,8 +216,8 @@
             }
 
             /* ============================
-                                                                                           GREEN BUTTON (Activation / Enable)
-                                                                                           ============================ */
+                                                                                                                           GREEN BUTTON (Activation / Enable)
+                                                                                                                           ============================ */
             .btn-green {
                 background-color: #28a745 !important;
                 /* iOS-green */
@@ -204,8 +233,8 @@
 
 
             /* ============================
-                                                                                           RED BUTTON (Disable)
-                                                                                           ============================ */
+                                                                                                                           RED BUTTON (Disable)
+                                                                                                                           ============================ */
             .btn-red {
                 background-color: #dc3545 !important;
                 /* Bootstrap red */
@@ -221,8 +250,8 @@
 
 
             /* ============================
-                                                                                           GRAY BUTTON (Unavailable / Secondary)
-                                                                                           ============================ */
+                                                                                                                           GRAY BUTTON (Unavailable / Secondary)
+                                                                                                                           ============================ */
             .btn-gray {
                 background-color: #7f8c8d !important;
                 /* soft gray */
@@ -242,8 +271,8 @@
             }
 
             /* ======================================
-                                                                    BUTTON / ACTION GROUP SPACING
-                                                                    ====================================== */
+                                                                                                    BUTTON / ACTION GROUP SPACING
+                                                                                                    ====================================== */
             .action-group>* {
                 margin-right: 12px;
             }

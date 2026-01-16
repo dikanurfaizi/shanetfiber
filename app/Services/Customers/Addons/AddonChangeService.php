@@ -2,7 +2,7 @@
 
 namespace App\Services\Customers\Addons;
 
-use App\Domain\Decision\DecisionResult;
+use App\Helpers\LogHelper;
 use App\Models\Billings\Billing;
 use App\Models\Billings\BillingPeriode;
 use App\Models\Customers\Customer;
@@ -11,11 +11,10 @@ class AddonChangeService
 {
     public function __construct(
         private AddonStateService $addonStateService,
-        private AddonBillingSyncService $addonBillingSyncService
+        private AddonBillingSyncService $addonBillingSyncService,
     ) {}
 
     public function applyAddonChange(
-        $decision,
         Customer $customer,
         ?Billing $billing,
         BillingPeriode $period,
@@ -24,71 +23,41 @@ class AddonChangeService
         string $traceId
     ): void {
 
+        LogHelper::logInfo(null, [
+            'step' => 'ADDON_APPLY_ENTER',
+            'incoming_type' => gettype($incomingAddonMap),
+            'incoming_count' => is_array($incomingAddonMap) ? count($incomingAddonMap) : null,
+            'has_diff' => $addonDiff['has_change'] ?? null,
+        ], 200, 'Addon Change Flow', $traceId);
+
         if (!$addonDiff || empty($addonDiff['has_change'])) {
+            LogHelper::logInfo(null, [
+                'step' => 'ADDON_APPLY_SKIPPED',
+                'reason' => 'no_change'
+            ], 200, 'Addon Change Flow', $traceId);
             return;
         }
 
-        // DEFER REMOVE → apply ke periode berikutnya
-        if ($decision->billingStrategy === DecisionResult::STRATEGY_DEFER) {
+        $this->addonStateService->apply(
+            $customer,
+            $incomingAddonMap,
+            $addonDiff,
+            $period,
+            $traceId
+        );
 
-            $nextPeriod = $period->next();
+        LogHelper::logInfo(null, [
+            'step' => 'ADDON_STATE_APPLIED'
+        ], 200, 'Addon Change Flow', $traceId);
 
-            $this->addonStateService->apply(
-                $customer,
-                $incomingAddonMap,
-                $addonDiff,
-                $nextPeriod,
-                $traceId
-            );
+        $this->addonBillingSyncService->sync(
+            $billing,
+            $incomingAddonMap,
+            $addonDiff
+        );
 
-            return;
-        }
-
-        // sisanya SAMA dengan Step 6B
-        if ($decision->billingStrategy === DecisionResult::STRATEGY_NONE) {
-            $this->addonStateService->apply(
-                $customer,
-                $incomingAddonMap,
-                $addonDiff,
-                $period,
-                $traceId
-            );
-            return;
-        }
-
-        if ($decision->billingStrategy === DecisionResult::STRATEGY_UPDATE_CURRENT) {
-
-            $this->addonStateService->apply(
-                $customer,
-                $incomingAddonMap,
-                $addonDiff,
-                $period,
-                $traceId
-            );
-
-            $this->addonBillingSyncService->sync(
-                $billing,
-                $incomingAddonMap,
-                $addonDiff
-            );
-            return;
-        }
-
-        if ($decision->billingStrategy === DecisionResult::STRATEGY_SUPPLEMENTAL) {
-
-            $this->addonStateService->apply(
-                $customer,
-                $incomingAddonMap,
-                $addonDiff,
-                $period,
-                $traceId
-            );
-
-            $this->addonBillingSyncService->sync(
-                $billing,
-                $incomingAddonMap,
-                $addonDiff
-            );
-        }
+        LogHelper::logInfo(null, [
+            'step' => 'ADDON_BILLING_SYNCED'
+        ], 200, 'Addon Change Flow', $traceId);
     }
 }
