@@ -17,15 +17,15 @@ class BroadcastMidMonthHandler implements ContractsTemplateHandler
 
         return new TemplateContext(
             recipient: $command->recipient,
-            templateName: 'pembayaran_jatuh_tempo_2',
+            templateName: $command->templateName,
             language: 'id',
             account: $command->account,
 
             bodyValues: [
-                $command->customerName,
-                $command->packageName,
+                $command->accountData,
                 $command->total,
                 $command->dueDate,
+                $command->note
             ]
         );
     }

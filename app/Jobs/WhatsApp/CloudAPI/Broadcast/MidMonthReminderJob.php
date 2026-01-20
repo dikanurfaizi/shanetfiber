@@ -19,8 +19,11 @@ class MidMonthReminderJob implements ShouldQueue
     private string $customerId;
     private string $customerName;
     private string $packageName;
+    private string $accountData;
     private string $totalAmount;
     private string $dueDate;
+    private string $note;
+    private string $templateName;
     private WhatsappGatewayAccount $account;
 
     public function __construct(
@@ -28,17 +31,23 @@ class MidMonthReminderJob implements ShouldQueue
         string $customerId,
         string $customerName,
         string $packageName,
+        string $accountData,
         string $totalAmount,
         string $dueDate,
+        string $note,
+        string $templateName,
         string $contact
     ) {
         $this->account = $account;
         $this->customerId = $customerId;
         $this->customerName = $customerName;
         $this->packageName = $packageName;
+        $this->accountData = $accountData;
         $this->totalAmount = $totalAmount;
         $this->dueDate = $dueDate;
         $this->contact = $contact;
+        $this->note = $note;
+        $this->templateName = $templateName;
     }
 
     public function handle(TemplateMessageService $templateMessageService): void
@@ -48,18 +57,25 @@ class MidMonthReminderJob implements ShouldQueue
             'customer_id' => $this->customerId,
             'customer_name' => $this->customerName,
             'package_name' => $this->packageName,
+            'account_data' => $this->accountData,
             'total_amount' => $this->totalAmount,
             'due_date' => $this->dueDate,
+            'note' => $this->note,
+            'templateName' => $this->templateName,
             'account' => $this->account
         ]);
 
         LogHelper::logInfo(null, [
             'recipient' => $this->contact,
-            'recipient_Name' => $this->customerName,
+            'customer_id' => $this->customerId,
+            'customer_name' => $this->customerName,
             'package_name' => $this->packageName,
+            'account_data' => $this->accountData,
             'total_amount' => $this->totalAmount,
             'due_date' => $this->dueDate,
-            'account' => $this->account->id
+            'note' => $this->note,
+            'templateName' => $this->templateName,
+            'account' => $this->account
         ], 200, "[Mid Month Reminder Job] Executed");
     }
 }

@@ -7,6 +7,7 @@ use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 use App\Helpers\UserAuth;
+use App\Models\InvestorAdmin;
 
 class TopBar extends Component
 {
@@ -41,7 +42,7 @@ class TopBar extends Component
             );
         } elseif ($user->can('investor-billing-total')) {
             // Investor: ambil semua admin yang berelasi dengan investor ini
-            $linkedAdminIds = \App\Models\InvestorAdmin::where('investor_id', $user->id)
+            $linkedAdminIds = InvestorAdmin::where('investor_id', $user->id)
                 ->pluck('admin_id')
                 ->toArray();
 

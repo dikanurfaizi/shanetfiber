@@ -119,7 +119,9 @@ class TemplateSyncService
                     'type' => $btn['type'] ?? 'UNKNOWN',
                     'text' => $btn['text'] ?? null,
                     'url' => $btn['url'] ?? null,
-                    'example' => $btn['example'] ?? null,
+                    'phone_number' => $btn['phone_number'] ?? null,
+                    'payload' => $btn['payload'] ?? null,
+                    'code' => $btn['code'] ?? null,
                     'raw_button' => $btn,
                 ]
             );

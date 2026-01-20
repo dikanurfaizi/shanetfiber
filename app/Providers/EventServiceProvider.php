@@ -10,6 +10,7 @@ use App\Events\OrderCreated;
 use App\Events\PackageChangesApplied;
 use App\Events\BroadcastMidMonthTriggered;
 use App\Events\MonthlyKickoffBroadcastTriggered;
+use App\Events\OverdueBroadcastTriggered;
 use App\Listeners\QueueCustomerActivationNotification;
 use App\Listeners\QueueOrderCreatedNotification;
 use App\Listeners\QueuePayLaterNotification;
@@ -18,6 +19,7 @@ use App\Listeners\QueuePaymentNotification;
 use App\Listeners\QueuePackageChangesNotification;
 use App\Listeners\QueueBroadcastMidMonthProcess;
 use App\Listeners\QueueMonthlyKickoffBroadcast;
+use App\Listeners\QueueOverdueBroadcastNotification;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -56,6 +58,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         MonthlyKickoffBroadcastTriggered::class => [
             QueueMonthlyKickoffBroadcast::class,
+        ],
+        OverdueBroadcastTriggered::class => [
+            QueueOverdueBroadcastNotification::class,
         ],
     ];
 

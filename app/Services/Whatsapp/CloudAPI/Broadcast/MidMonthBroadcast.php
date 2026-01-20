@@ -4,6 +4,7 @@ namespace App\Services\Whatsapp\CloudAPI\Broadcast;
 
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
+use App\Helpers\MaskCustomerName;
 use App\Jobs\Whatsapp\CloudAPI\Broadcast\MidMonthReminderJob;
 use App\Models\Whatsapp\WhatsappGateway;
 use App\Services\Whatsapp\CloudAPI\Collectors\BillingReminderCollector;
@@ -18,7 +19,10 @@ class MidMonthBroadcast
     {
         LogHelper::logInfo(null, [], 100, '[MidMonthBroadcast] Start', $traceId);
 
-        $billings = $this->collector->collect(now(), 'pembayaran_jatuh_tempo_2');
+        $templateName = 'pengingat_pembayaran_3';
+
+        // $billings = $this->collector->collect(now(), 'pembayaran_jatuh_tempo_2');
+        $billings = $this->collector->collect(now(), $templateName);
 
         LogHelper::logInfo(null, [
             'count' => $billings->count()
@@ -82,13 +86,18 @@ class MidMonthBroadcast
                 'delay_at'      => $delay->toDateTimeString(),
             ], 200, '[MidMonthBroadcast] Dispatch job', $traceId);
 
+            $accountData = MaskCustomerName::buildAccountData($data->customer_name, $data->package_name);
+
             MidMonthReminderJob::dispatch(
                 contact: $recipient,
                 customerId: $data->customer_id,
                 customerName: $data->customer_name,
                 packageName: $data->package_name,
+                accountData: $accountData,
                 totalAmount: $this->currency($data->total),
                 dueDate: $due_date_formatted,
+                note: 'gangguan layanan internet',
+                templateName: $templateName,
                 account: $account
             )
                 ->delay($delay)

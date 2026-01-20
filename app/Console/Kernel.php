@@ -113,7 +113,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('reminder:messages-send')
             ->everyFifteenMinutes()
             ->timezone($defaultTimezone)
-            ->when(fn() => now()->day == 15 && now()->hour >= 8 && now()->hour < 22)
+            ->when(fn() => now()->hour >= 8 && now()->hour < 22)
             ->onFailure(fn() => LogHelper::logError(null, ['time' => now()], 500, '[Scheduler] reminder:messages-send failed'))
             ->onSuccess(fn() => LogHelper::logInfo(null, ['time' => now()], 200, '[Scheduler] reminder:messages-send finished successfully'))
             ->withoutOverlapping(30)
@@ -121,7 +121,25 @@ class Kernel extends ConsoleKernel
 
         /*
         |--------------------------------------------------------------------------
-        | 5. ARCHIVE LARAVEL LOGS
+        | 5. OVERDUE REMINDER WHATSAPP MESSAGES
+        |--------------------------------------------------------------------------
+        | Dijalankan setiap 15 menit hanya pada tanggal 25,
+        | serta hanya antara jam 08:00 - 22:00 (WIB).
+        | Jika kondisi tidak terpenuhi, dilewati (tidak error).
+        */
+        $schedule->command('reminder:overdue-messages-send')
+            ->everyFifteenMinutes()
+            ->timezone($defaultTimezone)
+            ->when(fn() => now()->day == 25 && now()->hour >= 8 && now()->hour < 22)
+            ->onFailure(fn() => LogHelper::logError(null, ['time' => now()], 500, '[Scheduler] reminder:overdue-messages-send failed'))
+            ->onSuccess(fn() => LogHelper::logInfo(null, ['time' => now()], 200, '[Scheduler] reminder:overdue-messages-send finished successfully'))
+            ->withoutOverlapping(30)
+            ->appendOutputTo(storage_path('logs/scheduler-reminder.log'));
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | 6. ARCHIVE LARAVEL LOGS
         |--------------------------------------------------------------------------
         | Dijalankan setiap hari pada pukul 23:59,
         | Jika kondisi tidak terpenuhi, dilewati (tidak error).
@@ -144,7 +162,7 @@ class Kernel extends ConsoleKernel
 
         /*
         |--------------------------------------------------------------------------
-        | 6. DELETE OLD MESSAGE LOGS
+        | 7. DELETE OLD MESSAGE LOGS
         |--------------------------------------------------------------------------
         | Dijalankan setiap hari pada pukul 00:30,
         | Jika kondisi tidak terpenuhi, dilewati (tidak error).
@@ -160,7 +178,7 @@ class Kernel extends ConsoleKernel
 
         /*
         |--------------------------------------------------------------------------
-        | 7. FETCH MIKROTIK INFO
+        | 8. FETCH MIKROTIK INFO
         |--------------------------------------------------------------------------
         | Dijalankan setiap 30 menit antara jam 06:00 - 22:00 (WIB).
         */
@@ -175,7 +193,7 @@ class Kernel extends ConsoleKernel
 
         /*
         |--------------------------------------------------------------------------
-        | 8. SCAN OLTS
+        | 9. SCAN OLTS
         |--------------------------------------------------------------------------
         | Dijalankan setiap 15 menit antara jam 06:00 - 22:00 (WIB).
         */
@@ -190,15 +208,15 @@ class Kernel extends ConsoleKernel
 
         /*
         |--------------------------------------------------------------------------
-        | 9. APPLY SCHEDULED SUBSCRIPTION CHANGES
+        | 10. APPLY SCHEDULED SUBSCRIPTION CHANGES
         |--------------------------------------------------------------------------
         | Dijalankan setiap hari pada pukul 01:00,
         */
-        $schedule->command('subscriptions:apply-scheduled')
-            ->dailyAt('00:01')
-            ->withoutOverlapping()
-            ->onOneServer()
-            ->appendOutputTo(storage_path('logs/scheduler-subscriptions.log'));
+        // $schedule->command('subscriptions:apply-scheduled')
+        //     ->dailyAt('00:01')
+        //     ->withoutOverlapping()
+        //     ->onOneServer()
+        //     ->appendOutputTo(storage_path('logs/scheduler-subscriptions.log'));
     }
 
     /**
