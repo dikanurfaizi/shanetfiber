@@ -146,6 +146,7 @@ class Kernel extends ConsoleKernel
         */
         $schedule->command('logs:rotate')
             ->everyFiveMinutes()
+            ->timezone($defaultTimezone)
             ->withoutOverlapping()
             ->onOneServer()
             ->evenInMaintenanceMode()
