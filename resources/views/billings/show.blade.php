@@ -178,7 +178,7 @@
                                             {{-- =====================
                                             PAY / PRINT
                                             ===================== --}}
-                                            @if ($item->status === 'BL' || $item->status === 'PL')
+                                            @if ($item->status === 'BL' || $item->status === 'PL' || $item->status === 'VD')
                                                 {!! Form::model($item, [
                                                     'method' => 'PATCH',
                                                     'route' => ['billings.payment', $item->slug],
