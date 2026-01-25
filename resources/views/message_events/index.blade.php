@@ -102,8 +102,21 @@
 
                             <tr class="collapse bg-light" id="detail-{{ $event->id }}">
                                 <td colspan="8" class="p-3">
-                                    <strong>Response:</strong>
-                                    <code>{{ $event->response_summary }}</code>
+                                    <div class="mb-2">
+                                        <strong>Response:</strong><br>
+                                        <code>{{ $event->response_summary }}</code>
+                                    </div>
+
+                                    <div class="small text-muted">
+                                        <div>
+                                            <strong>Trace ID:</strong>
+                                            <code>{{ $event->trace_id ?? '-' }}</code>
+                                        </div>
+                                        <div>
+                                            <strong>Message ID:</strong>
+                                            <code>{{ $event->message_id ?? '-' }}</code>
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -158,8 +171,24 @@
 
                         <div class="collapse mt-2" id="detail-mobile-{{ $event->id }}">
                             <div class="bg-light p-2 rounded small">
-                                <strong>Response:</strong><br>
-                                <code>{{ $event->response_summary }}</code>
+
+                                <div class="mb-2">
+                                    <strong>Response:</strong><br>
+                                    <code>{{ $event->response_summary }}</code>
+                                </div>
+
+                                <div class="text-muted">
+                                    <div>
+                                        <strong>Trace ID:</strong><br>
+                                        <code>{{ $event->trace_id ?? '-' }}</code>
+                                    </div>
+
+                                    <div class="mt-1">
+                                        <strong>Message ID:</strong><br>
+                                        <code>{{ $event->message_id ?? '-' }}</code>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
 
