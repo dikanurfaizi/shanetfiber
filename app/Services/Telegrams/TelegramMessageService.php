@@ -6,6 +6,7 @@ use App\Helpers\LogHelper;
 use App\Models\Customers\Customer;
 use App\Models\Telegram\TelegramChatId;
 use App\DataTransferObjects\TelegramJobDto;
+use App\Models\Messaging\MessageEvent;
 use RuntimeException;
 
 class TelegramMessageService
@@ -25,35 +26,30 @@ class TelegramMessageService
             'receipt_id'  => $dto->receiptId,
         ];
 
-        // START
-        LogHelper::logInfo(null, $context, 100, 'Telegram processing started', $traceId);
+        $event = null;
 
         try {
-
             // Resolve chat id
-            if (!empty($dto->customerId)) {
-
+            if ($dto->customerId) {
                 $customer = Customer::find($dto->customerId);
                 if (!$customer) {
-                    throw new RuntimeException("Customer not found");
+                    throw new RuntimeException('Customer not found');
                 }
 
                 $chatId = TelegramChatId::where('user_id', $customer->user_id)->value('chat_id');
                 if (!$chatId) {
-                    throw new RuntimeException("Chat ID not found for given customer");
+                    throw new RuntimeException('Chat ID not found');
                 }
             } else {
-
                 $chatId = $dto->chatId;
                 if (!$chatId) {
-                    throw new RuntimeException("Chat ID not provided");
+                    throw new RuntimeException('Chat ID not provided');
                 }
             }
 
-            // Resolve strategy
+            // Resolve & build message
             $strategy = $this->resolver->resolve($dto->action);
 
-            // Build placeholders
             $placeholders = $strategy->build(
                 $dto->customerId ?? 0,
                 $dto->billingId,
@@ -64,7 +60,6 @@ class TelegramMessageService
                 $placeholders = array_merge($placeholders, $dto->extra);
             }
 
-            // Build message
             $message = $this->builder->build(
                 $strategy->slug(),
                 $placeholders,
@@ -72,26 +67,53 @@ class TelegramMessageService
             );
 
             if (!$message) {
-                throw new RuntimeException("Template not found for slug: " . $strategy->slug());
+                throw new RuntimeException('Template not found: ' . $strategy->slug());
             }
 
-            // Send
-            $this->handler->send($chatId, $message, $traceId);
+            // Create audit event (pending)
+            $event = MessageEvent::create([
+                'customer_id'  => $dto->customerId,
+                'channel'      => 'telegram',
+                'message_type' => $dto->action,
+                'meta'         => [
+                    'chat_id' => $chatId,
+                ],
+                'status'       => 'pending',
+                'trace_id'     => $traceId,
+            ]);
 
-            // SUCCESS
-            LogHelper::logInfo(null, array_merge($context, [
-                'chat_id'  => $chatId,
-                'strategy' => $strategy->slug()
-            ]), 200, 'Telegram message sent', $traceId);
+            // Send
+            $response = $this->handler->send($chatId, $message, $traceId);
+
+            // Update audit event (success)
+            $event->update([
+                'gateway_id'       => 1,
+                'status'           => 'success',
+                'sent_at'          => now(),
+                'response_code'    => $response['status'],
+                'response_message' => json_encode($response['raw']),
+                'message_id'       => $response['message_id'],
+            ]);
         } catch (\Throwable $e) {
 
+            if ($event) {
+                $event->update([
+                    'status'           => 'failed',
+                    'sent_at'          => now(),
+                    'response_code'    => 'FAILED',
+                    'response_message' => $e->getMessage(),
+                ]);
+            }
+
+            // ❗ LOG HANYA ERROR PENTING
             LogHelper::logError(
                 null,
                 array_merge($context, [
-                    'exception' => class_basename($e)
+                    'trace_id'  => $traceId,
+                    'exception' => class_basename($e),
                 ]),
                 500,
-                'Telegram processing failed: ' . $e->getMessage(),
+                'Telegram send failed',
                 $traceId
             );
 

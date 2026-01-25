@@ -24,6 +24,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\IsolirController;
 use App\Http\Controllers\Memberships\MembershipController;
+use App\Http\Controllers\Messages\MessageEventController;
 use App\Http\Controllers\Midtran\PaymentCallbackController;
 use App\Http\Controllers\Mikrotik\MikrotikController;
 use App\Http\Controllers\Mikrotik\Ppp\ProfileController as MikrotikProfileController;
@@ -378,6 +379,9 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('settings/whatsapptemplate/{whatsapptemplate}/delete', [WhatsappCloudController::class, 'delete'])->name('whatsapptemplate.delete');
         Route::post('settings/whatsapptemplate/action/sync', [WhatsappCloudController::class, 'sync'])->name('whatsapptemplate.sync');
         Route::post('settings/whatsapptemplate/{id}/sync', [WhatsappCloudController::class, 'syncSingle'])->name('whatsapptemplate.sync.single');
+
+        // ==================== MESSAGE EVENTS ====================
+        Route::get('settings/message/events', [MessageEventController::class, 'index'])->name('messageevents.index');
 
         // ==================== TELEGRAM GATEWAY ====================
         Route::get('settings/telegramgateway', [TelegramGatewayController::class, 'index'])->name('telegramgateway.index');

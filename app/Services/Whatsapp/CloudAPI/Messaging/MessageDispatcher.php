@@ -20,89 +20,69 @@ class MessageDispatcher
     public function dispatch(object $command): MessageResult
     {
         $traceId = $command->traceId ?? Str::uuid()->toString();
+        $event = null;
 
-        LogHelper::logInfo(null, [
-            'command_class' => get_class($command),
-            'command' => $command,
-        ], 200, "[WA-DISPATCH] Start", $traceId);
+        try {
+            // Resolve handler & context
+            $handler = $this->registry->resolve($command);
+            $context = $handler->buildContext($command);
 
-        $handler = $this->registry->resolve($command);
+            // Build payload
+            $dto = $this->builder->build($context);
+            $payload = $dto->toArray();
 
-        LogHelper::logInfo(null, [
-            'handler_class' => get_class($handler),
-        ], 200, "[WA-DISPATCH] Handler resolved", $traceId);
+            // Create audit event (pending)
+            $event = MessageEvent::create([
+                'customer_id'  => $command->customerId ?? null,
+                'gateway_id'   => $context->account->id,
+                'channel'      => 'meta_api',
+                'message_type' => $context->templateName,
+                'meta'         => $payload,
+                'status'       => 'pending',
+                'trace_id'     => $traceId,
+            ]);
 
-        $context = $handler->buildContext($command);
+            // Send to Meta
+            $response = $this->client->send($context->account, $dto);
 
-        LogHelper::logInfo(null, [
-            'template_name' => $context->templateName,
-            'language'      => $context->language,
-            'recipient'     => $context->recipient,
-            'body_values'   => $context->bodyValues,
-            'header_values' => $context->headerValues,
-            'button_values' => $context->buttonValues,
-        ], 200, "[WA-DISPATCH] Context built", $traceId);
+            // Update audit event
+            $status = ($response['status'] ?? 0) === 200 ? 'success' : 'failed';
+            $messageId = data_get($response, 'body.messages.0.id');
 
+            $event->update([
+                'status'            => $status,
+                'response_code'     => $response['status'] ?? null,
+                'response_message'  => $response,
+                'message_id'        => $messageId,
+                'sent_at'           => now(),
+            ]);
 
-        $dto = $this->builder->build($context);
+            return new MessageResult($dto, $response);
+        } catch (\Throwable $e) {
 
-        LogHelper::logInfo(null, [
-            'dto' => $dto->toLogArray(),
-        ], 200, "[WA-DISPATCH] DTO built", $traceId);
+            if ($event) {
+                $event->update([
+                    'status'           => 'failed',
+                    'sent_at'          => now(),
+                    'response_code'    => 'EXCEPTION',
+                    'response_message' => $e->getMessage(),
+                ]);
+            }
 
-        $payload = $dto->toArray();
+            // 🔔 LOG HANYA ERROR
+            LogHelper::logError(
+                null,
+                [
+                    'trace_id' => $traceId,
+                    'command'  => class_basename($command),
+                    'error'    => $e->getMessage(),
+                ],
+                500,
+                '[WA-DISPATCH] Dispatch failed',
+                $traceId
+            );
 
-        LogHelper::logInfo(null, [
-            'payload' => $payload,
-        ], 200, "[WA-DISPATCH] Payload built", $traceId);
-
-        // ======================================================
-        // SAVE EVENT BEFORE SEND
-        // ======================================================
-        $event = MessageEvent::create([
-            'customer_id'  => $command->customerId ?? null,
-            'channel'      => 'meta_api',
-            'message_type' => $context->templateName, // action dari template
-            'meta'         => $payload,
-            'status'       => 'pending',
-            'trace_id'     => $traceId,
-        ]);
-
-        LogHelper::logInfo(null, [
-            'event_id' => $event->id,
-            'status' => 'pending'
-        ], 200, "[WA-DISPATCH] MessageEvent created", $traceId);
-
-        // ======================================================
-        // SEND TO META
-        // ======================================================
-        $response = $this->client->send($context->account, $dto);
-
-        LogHelper::logInfo(null, [
-            'response' => $response,
-        ], 200, "[WA-DISPATCH] Meta response", $traceId);
-
-        // ======================================================
-        // UPDATE EVENT AFTER RESPONSE
-        // ======================================================
-        $status = $response['status'] == 200 ? 'success' : 'failed';
-
-        $messageId = data_get($response, 'body.messages.0.id');
-
-        $event->update([
-            'status'       => $status,
-            'response_code' => $response['status'],
-            'response_message' => $response,
-            'message_id'   => $messageId,
-            'sent_at' => now()
-        ]);
-
-        LogHelper::logInfo(null, [
-            'event_id' => $event->id,
-            'status' => $status,
-            'message_id' => $messageId
-        ], 200, "[WA-DISPATCH] MessageEvent updated", $traceId);
-
-        return new MessageResult($dto, $response);
+            throw $e;
+        }
     }
 }

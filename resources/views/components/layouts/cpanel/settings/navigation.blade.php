@@ -192,6 +192,26 @@
     </li>
 @endcan
 @can('is-admin')
+    <li class="nav-item @if (request()->routeIs('messageevents*')) active @endif">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseMessageEvents"
+            aria-expanded="true" aria-controls="collapseSetting" style="padding-top: inherit;">
+            <i class="fas fa-bell"></i>
+            <span>{{ __(' Message Events') }}</span>
+        </a>
+        <div id="collapseMessageEvents" class="collapse collapse @if (request()->routeIs('messageevents*'))  @endif"
+            aria-labelledby="headingBilling" data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+
+                <a class="collapse-item @if (request()->routeIs('messageevents*')) active @endif"
+                    href="{{ route('messageevents.index') }}">
+                    <i class="fas fa-bell"></i>
+                    <span> {{ __(' Message Events') }}</span>
+                </a>
+            </div>
+        </div>
+    </li>
+@endcan
+@can('is-admin')
     <li class="nav-item @if (request()->routeIs('paymentgateway*')) active @endif">
         <a class="nav-link collapsed" href="{{ route('paymentgateway.index') }}" aria-expanded="true"
             aria-controls="collapseSetting" style="padding-top: inherit;">

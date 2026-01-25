@@ -10,7 +10,7 @@ use Telegram\Bot\Api;
 
 class DispatchMessageService
 {
-    public function send($chatId, $message, $traceId)
+    public function send($chatId, $message, $traceId): array
     {
         $botToken = TelegramGateway::where('disabled', 0)->value('token');
 
@@ -22,11 +22,17 @@ class DispatchMessageService
         $telegram = new Api($botToken, false, $httpClient);
 
         $payload = [
-            'chat_id' => $chatId,
-            'text' => $message,
+            'chat_id'    => $chatId,
+            'text'       => $message,
             'parse_mode' => 'HTML',
         ];
 
-        return $telegram->sendMessage($payload);
+        $response = $telegram->sendMessage($payload);
+
+        return [
+            'status'      => 'SUCCESS',
+            'message_id'  => $response->getMessageId() ?? null,
+            'raw'         => $response,
+        ];
     }
 }
