@@ -161,6 +161,29 @@
     </li>
 @endcanany
 
+<!-- Reports -->
+@canany(['report-view'])
+    <li class="nav-item @if (request()->routeIs('reports*')) active @endif">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseReports">
+            <i class="fas fa-chart-bar"></i>
+            <span>{{ __('navigation.reports.nav-item') }}</span>
+        </a>
+        <div id="collapseReports" class="collapse @if (request()->routeIs('reports*')) show @endif"
+            data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                <a class="collapse-item @if (request()->routeIs('reports.kpi')) active @endif"
+                    href="{{ route('reports.kpi') }}">
+                    {{ __('navigation.reports.kpi.index') }}
+                </a>
+                <a class="collapse-item @if (request()->routeIs('reports.internet.monthly')) active @endif"
+                    href="{{ route('reports.internet.monthly') }}">
+                    {{ __('navigation.reports.internet-monthly.index') }}
+                </a>
+            </div>
+        </div>
+    </li>
+@endcanany
+
 <hr class="sidebar-divider">
 
 <!-- ======================

@@ -76,4 +76,13 @@ return [
         'index' => 'Show All Addons',
         'create' => 'Create New Addon',
     ],
+    'reports' => [
+        'nav-item' => 'Reports',
+        'kpi' => [
+            'index' => 'KPI Report',
+        ],
+        'internet-monthly' => [
+            'index' => 'Monthly Internet Report',
+        ],
+    ],
 ];

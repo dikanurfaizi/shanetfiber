@@ -266,6 +266,16 @@ class BillingController extends Controller
                 'updated_at' => now()
             ]);
 
+            $billing->billingSubscription->update([
+                'updated_by' => auth()->user()->id,
+                'status'      => 'expired'
+            ]);
+
+            $billing->billingSubscription->customerSubscription->update([
+                'status' => 'paused',
+                'terminated_at' => now(),
+            ]);
+
             LogHelper::logInfo(null, [
                 'billing_id' => $billing->id,
                 'status'     => 'VD',

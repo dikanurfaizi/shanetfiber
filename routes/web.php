@@ -41,6 +41,8 @@ use App\Http\Controllers\PaymentGateway\PaymentGatewayController;
 use App\Http\Controllers\PaymentGateway\TripayController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReceiptController;
+use App\Http\Controllers\Reports\InternetMonthlyReportController;
+use App\Http\Controllers\Reports\KpiController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\RouterController;
 use App\Http\Controllers\ServerController;
@@ -427,6 +429,10 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::resource('addons', AddonController::class)->names('addons');
         Route::put('/addons/{addon:slug}/disable', [AddonController::class, 'disable'])->name('addon.disable');
         Route::put('/addons/{addon:slug}/enable', [AddonController::class, 'enable'])->name('addon.enable');
+
+        // ==================== REPORTS ====================
+        Route::get('reports/internet-monthly', [InternetMonthlyReportController::class, 'index'])->name('reports.internet.monthly');
+        Route::get('reports/kpi', [KpiController::class, 'index'])->name('reports.kpi');
     });
 });
 
