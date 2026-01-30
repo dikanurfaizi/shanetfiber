@@ -402,9 +402,7 @@ class BillingController extends Controller
 
         // Membership & Subscription
         $customerMembership = CustomerMembership::where('customer_id', $billing->customer_id)->first();
-        $customerSubscription = CustomerSubscription::where('customer_id', $billing->customer_id)
-            ->where('status', 'active')
-            ->first();
+        $customerSubscription = $billing?->billingSubscription?->customerSubscription;
 
         // Membership Logic
         if ($customerMembership !== null) {

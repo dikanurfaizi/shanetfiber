@@ -40,23 +40,23 @@
         <table class="table table-sm table-borderless align-middle">
             <tr>
                 <th style="width: 30%" class="text-muted">Package</th>
-                <td>{{ $customerSubscription->package->name ?? '-' }}</td>
+                <td>{{ $customerSubscription?->package?->name ?? '-' }}</td>
             </tr>
 
             <tr>
                 <th class="text-muted">Price</th>
                 <td>
-                    @if ($customerSubscription->package->price == 0)
+                    @if ($customerSubscription?->package?->price == 0)
                         Free
                     @else
-                        @moneyIDR($customerSubscription->package->price)
+                        @moneyIDR($customerSubscription?->package?->price)
                     @endif
                 </td>
             </tr>
 
             <tr>
                 <th class="text-muted">Subscription</th>
-                <td>{{ $customerSubscription->packageDuration->duration->name_en }}</td>
+                <td>{{ $customerSubscription?->packageDuration?->duration?->name_en ?? '-' }}</td>
             </tr>
         </table>
 

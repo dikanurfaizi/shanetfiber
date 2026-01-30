@@ -24,6 +24,15 @@
 
     <div class="card-body">
 
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>Active Customers Trend – {{ $year }}</strong>
+            </div>
+            <div class="card-body">
+                <canvas id="activeCustomerChart" height="100"></canvas>
+            </div>
+        </div>
+
         <div class="accordion" id="kpiAccordion">
 
             @foreach ($mikrotiks as $idx => $m)
@@ -127,5 +136,59 @@
         </div>
 
     </div>
+
+    @php
+        $labels = collect($mikrotiks[0]['months'])->pluck('label');
+
+        $datasets = collect($mikrotiks)->map(function ($m) {
+            return [
+                'label' => $m['mikrotik_name'],
+                'data' => collect($m['months'])->pluck('subscription.cust'),
+            ];
+        });
+    @endphp
+
+    @section('custom_scripts')
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+        <script>
+            const ctx = document.getElementById('activeCustomerChart');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: @json($labels),
+                    datasets: @json($datasets).map(ds => ({
+                        ...ds,
+                        tension: 0.3,
+                        fill: false,
+                        borderWidth: 2
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y} customers`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Active Customers'
+                            }
+                        }
+                    }
+                }
+            });
+        </script>
+    @endsection
 
 </x-layouts.app-layout>

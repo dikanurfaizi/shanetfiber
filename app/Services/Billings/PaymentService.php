@@ -45,6 +45,23 @@ class PaymentService
         try {
             DB::beginTransaction();
 
+            $billing = Billing::query()
+                ->whereKey($billing->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($billing->status === 'VD') {
+                $billing->billingSubscription->update([
+                    'updated_by' => auth()->user()->id,
+                    'status'      => 'active'
+                ]);
+
+                $billing->billingSubscription->customerSubscription->update([
+                    'status' => 'active',
+                    'terminated_at' => null,
+                ]);
+            }
+
             $subscription = CustomerSubscription::query()
                 ->with(['customer', 'package'])
                 ->where('customer_id', $billing->customer_id)

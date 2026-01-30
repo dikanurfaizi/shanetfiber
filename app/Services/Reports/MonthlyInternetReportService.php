@@ -55,11 +55,20 @@ class MonthlyInternetReportService
             $rows[] = $this->buildPackageRow($package->id, $package->name, (float) $package->price, $userId, $mikrotikId, $billingPeriodeId);
         }
 
+        $totals   = $this->calculateTotals($rows);
+        $billingPeriode = BillingsBillingPeriode::where('id', $billingPeriodeId)->first();
+        $expenses = $this->buildExpenses($mikrotikId, $billingPeriode);
+
         return [
-            'mikrotik_id' => $mikrotikId,
+            'mikrotik_id'   => $mikrotikId,
             'mikrotik_name' => $mikrotikName,
-            'rows' => $rows,
-            'totals' => $this->calculateTotals($rows),
+
+            'rows'   => $rows,
+            'totals' => $totals,
+
+            'expenses'      => $expenses['items'],
+            'expense_total' => $expenses['total'],
+            'net_income'    => $totals['payment_amount'] - $expenses['total'],
         ];
     }
 
@@ -224,5 +233,46 @@ class MonthlyInternetReportService
         }
 
         return $this->calculateTotals($grandRows);
+    }
+
+    protected function buildExpenses(
+        int $mikrotikId,
+        BillingsBillingPeriode $periode
+    ): array {
+
+        $rows = DB::table('expenses as e')
+            ->join('expense_items as ei', 'e.id', '=', 'ei.expense_id')
+            ->select(
+                'e.title as label',
+                DB::raw('SUM(e.amount) as amount')
+            )
+            ->whereBetween('e.expense_date', [
+                $periode->start_date,
+                $periode->end_date,
+            ])
+            ->where(function ($q) use ($mikrotikId) {
+                $q->where('ei.mikrotik_id', $mikrotikId)
+                    ->orWhereNull('ei.mikrotik_id'); // kolektif
+            })
+            ->groupBy('e.title')
+            ->orderBy('e.title')
+            ->get();
+
+        $items = [];
+        $total = 0;
+
+        foreach ($rows as $r) {
+            $items[] = [
+                'label'  => $r->label,
+                'amount' => (float) $r->amount,
+            ];
+
+            $total += (float) $r->amount;
+        }
+
+        return [
+            'items' => $items,
+            'total' => $total,
+        ];
     }
 }

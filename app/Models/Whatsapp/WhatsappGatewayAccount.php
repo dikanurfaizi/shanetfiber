@@ -15,7 +15,7 @@ class WhatsappGatewayAccount extends Model
 
     public function gateway()
     {
-        return $this->belongsTo(WhatsappGateway::class);
+        return $this->belongsTo(WhatsappGateway::class, 'whatsapp_gateway_id');
     }
 
     public function numbers()

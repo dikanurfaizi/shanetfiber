@@ -51,15 +51,20 @@
 
                         <thead>
                             <tr class="table-secondary text-center">
-                                <th rowspan="2"><span class="badge bg-danger-soft text-primary">No</span></th>
-                                <th rowspan="2"><span class="badge bg-danger-soft text-primary">PAKET INTERNET</span>
+                                <th rowspan="2" class="align-middle"><span
+                                        class="badge bg-danger-soft text-primary">No</span></th>
+                                <th rowspan="2" class="align-middle"><span
+                                        class="badge bg-danger-soft text-primary">PAKET INTERNET</span>
                                 </th>
-                                <th rowspan="2"><span class="badge bg-danger-soft text-primary">HARGA PAKET</span>
+                                <th rowspan="2" class="align-middle"><span
+                                        class="badge bg-danger-soft text-primary">HARGA PAKET</span>
                                 </th>
-                                <th rowspan="2"><span class="badge bg-danger-soft text-primary">Responsibility</span>
+                                <th rowspan="2" class="align-middle"><span
+                                        class="badge bg-danger-soft text-primary">Responsibility</span>
                                 </th>
 
-                                <th rowspan="2"><span class="badge bg-danger-soft text-primary">Total Cust</span>
+                                <th rowspan="2" class="align-middle"><span
+                                        class="badge bg-danger-soft text-primary">Total Cust</span>
                                 </th>
 
                                 <th colspan="8"><span class="badge bg-danger-soft text-primary">Billing</span></th>
@@ -245,6 +250,48 @@
                                 </th>
                                 <th class="text-end">
                                     Rp {{ number_format($m['totals']['unsubscription_nominal'], 0, ',', '.') }}
+                                </th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-6 offset-md-6">
+                    <table class="table table-bordered table-sm">
+                        <thead class="table-secondary text-center">
+                            <tr>
+                                <th colspan="3">Monthly Expenses — {{ $m['mikrotik_name'] }}</th>
+                            </tr>
+                            <tr>
+                                <th>No</th>
+                                <th>Description</th>
+                                <th>Nominal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($m['expenses'] as $i => $e)
+                                <tr>
+                                    <td class="text-center">{{ $i + 1 }}</td>
+                                    <td>{{ $e['label'] }}</td>
+                                    <td class="text-end">
+                                        Rp {{ number_format($e['amount'], 0, ',', '.') }}
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot class="table-secondary">
+                            <tr>
+                                <th colspan="2" class="text-end">Total Expense</th>
+                                <th class="text-end">
+                                    Rp {{ number_format($m['expense_total'], 0, ',', '.') }}
+                                </th>
+                            </tr>
+                            <tr>
+                                <th colspan="2" class="text-end">Net Income This Month</th>
+                                <th class="text-end {{ $m['net_income'] < 0 ? 'text-danger' : 'text-success' }}">
+                                    Rp {{ number_format($m['net_income'], 0, ',', '.') }}
                                 </th>
                             </tr>
                         </tfoot>
