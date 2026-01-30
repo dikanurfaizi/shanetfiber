@@ -8,8 +8,11 @@ class TelegramHandler
 {
     public function __construct(private DispatchMessageService $dispatchMessageService) {}
 
-    public function send(int $chatId, string $message, string $traceId): void
+    /**
+     * @return array{status:int|string, raw:mixed, message_id:?string}
+     */
+    public function send(int $chatId, string $message, string $traceId): array
     {
-        $this->dispatchMessageService->send($chatId, $message, $traceId);
+        return $this->dispatchMessageService->send($chatId, $message, $traceId);
     }
 }

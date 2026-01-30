@@ -114,8 +114,8 @@ class CustomerActivationNotificationService
                 customerId: $customerSubscription->customer_id,
                 action: TelegramAction::ACTIVATION->value,
                 traceId: $traceId,
-                billingId: null,
-                receiptId: null,
+                billingId: $billing->id,
+                receiptId: $billing->billingPayment?->receipt?->id,
                 chatId: null
             );
 
