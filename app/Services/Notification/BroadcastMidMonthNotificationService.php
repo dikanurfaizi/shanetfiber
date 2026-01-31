@@ -4,12 +4,10 @@ namespace App\Services\Notification;
 
 use App\Helpers\LogHelper;
 use App\Services\Whatsapp\CloudAPI\Broadcast\MidMonthBroadcast;
-use App\Services\Whatsapp\GowaService;
 
 class BroadcastMidMonthNotificationService
 {
     public function __construct(
-        private GowaService $gowaService,
         private MidMonthBroadcast $midMontBroadcast
     ) {}
 

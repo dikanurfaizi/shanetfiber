@@ -28,11 +28,10 @@ class PackageChangesNotificationService
         int $oldPackagePrice,
         string $traceId
     ): void {
-        $type = 'onprem';
         try {
             // === Resolve WA account & gateway ===
             [$gateway, $account, $number] =
-                $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, $type)
+                $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, 'perubahan_paket')
                 ?? [null, null, null];
 
             if (! $gateway || ! $account || ! $number) {

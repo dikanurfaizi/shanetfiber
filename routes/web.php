@@ -60,6 +60,7 @@ use App\Http\Controllers\Whatsapp\WhatsappGatewayController;
 use App\Http\Controllers\Whatsapp\WhatsappMessageController;
 use App\Http\Controllers\Whatsapp\WhatsappNumberController;
 use App\Http\Controllers\Whatsapp\WhatsappCloudController;
+use App\Http\Controllers\Whatsapp\WhatsappFeatureController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -379,6 +380,10 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('settings/whatsapptemplate/{whatsapptemplate}/delete', [WhatsappCloudController::class, 'delete'])->name('whatsapptemplate.delete');
         Route::post('settings/whatsapptemplate/action/sync', [WhatsappCloudController::class, 'sync'])->name('whatsapptemplate.sync');
         Route::post('settings/whatsapptemplate/{id}/sync', [WhatsappCloudController::class, 'syncSingle'])->name('whatsapptemplate.sync.single');
+
+        // WhatsApp Features
+        Route::resource('settings/whatsappfeature', WhatsappFeatureController::class);
+        Route::get('settings/whatsappfeature/{whatsappfeature}/delete', [WhatsappFeatureController::class, 'delete'])->name('whatsappfeature.delete');
 
         // ==================== MESSAGE EVENTS ====================
         Route::get('settings/message/events', [MessageEventController::class, 'index'])->name('messageevents.index');

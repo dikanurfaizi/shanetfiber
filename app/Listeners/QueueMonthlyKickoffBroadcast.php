@@ -13,6 +13,7 @@ class QueueMonthlyKickoffBroadcast
         $start   = $event->startDate;
         $end     = $event->endDate;
         $action  = $event->action;
+        $gatewayType = $event->gatewayType;
         $traceId = $event->traceId;
 
         LogHelper::logInfo(
@@ -31,6 +32,7 @@ class QueueMonthlyKickoffBroadcast
             $start,
             $end,
             $action,
+            $gatewayType,
             $traceId
         )->onQueue('notification');
     }

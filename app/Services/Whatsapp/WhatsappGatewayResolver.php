@@ -3,17 +3,26 @@
 namespace App\Services\Whatsapp;
 
 use App\Helpers\LogHelper;
+use App\Models\Whatsapp\WhatsappFeature;
 use App\Models\Whatsapp\WhatsappGateway;
 use App\Models\Whatsapp\WhatsappGatewayAccount;
 use App\Models\Whatsapp\WhatsappNumber;
 
 class WhatsappGatewayResolver
 {
-    public function resolveActiveGatewayAndAccount(string $traceId, string $type): ?array
+    public function resolveActiveGatewayAndAccount(string $traceId, string $alias): ?array
     {
-        $gateway = WhatsappGateway::where('is_active', true)->where('type', $type)->first();
+        $feature = WhatsappFeature::where('alias', $alias)->where('is_active', true)->first();
 
-        if (! $gateway) {
+        if (!$feature) {
+            LogHelper::logWarning(null, [], 400, 'No active WhatsApp feature found for alias: ' . $alias, $traceId);
+
+            return null;
+        }
+
+        $gateway = WhatsappGateway::where('is_active', true)->where('type', $feature->type)->first();
+
+        if (!$gateway) {
             LogHelper::logWarning(null, [], 400, 'No active WhatsApp gateway found.', $traceId);
 
             return null;

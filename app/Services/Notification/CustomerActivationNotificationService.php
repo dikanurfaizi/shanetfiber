@@ -33,10 +33,9 @@ class CustomerActivationNotificationService
         Receipt $receipt,
         string $traceId
     ): void {
-        $type = 'onprem';
         try {
             // Resolve WA account & gateway
-            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, $type)
+            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, 'aktivasi')
                 ?? [null, null];
 
             if (!$gateway || ! $account || !$number) {

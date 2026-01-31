@@ -9,197 +9,124 @@ use App\Models\Billings\BillingPeriode;
 use App\Helpers\LogHelper;
 use App\Enums\WhatsAppAction;
 use App\Events\MonthlyKickoffBroadcastTriggered;
+use App\Models\Whatsapp\WhatsappFeature;
 
 class InitialPayment extends Command
 {
     protected $signature   = 'initial-payment:messages-send';
-    protected $description = 'Send WhatsApp messages on 1-3 each month between 08:00–21:59 WIB for initial payment reminders';
+    protected $description = 'Send WhatsApp initial payment broadcast based on DB schedule';
 
     public function handle(): int
     {
-        $traceId    = (string) Str::uuid();
-        $startTime  = microtime(true);
-        $now        = Carbon::now('Asia/Jakarta');
+        $traceId   = (string) Str::uuid();
+        $startedAt = microtime(true);
+        $testMode  = config('messaging.initial_payment_allow_test', false);
 
-        $allowedDays   = [1, 2, 3];
-        $allowedHours  = range(8, 21); // 08:00–21:59
-        $allowTestMode = config('messaging.initial_payment_allow_test', false);
+        // ===============================================================
+        // LOAD FEATURE
+        // ===============================================================
+        $feature = WhatsappFeature::where('alias', 'broadcast_awal_bulan')->first();
 
-        $this->line("──────────────────────────────────────────────");
-        $this->info("📨 Initial Payment Job Started");
-        $this->line("• Date/Time : {$now->toDateTimeString()} WIB");
-        $this->line("• Trace ID  : {$traceId}");
-        $this->line("• Test Mode : " . ($allowTestMode ? 'ENABLED' : 'DISABLED'));
-        $this->line("──────────────────────────────────────────────");
+        if (!$feature || !$feature->is_active || $feature->type !== 'cloud' || !$feature->is_scheduled) {
+            $this->warn('⏩ Initial payment broadcast skipped (feature disabled / invalid).');
+            return Command::SUCCESS;
+        }
+
+        if (empty($feature->schedule)) {
+            $this->warn('⛔ Schedule config empty. Job skipped.');
+            return Command::SUCCESS;
+        }
+
+        // ===============================================================
+        // PREPARE SCHEDULE
+        // ===============================================================
+        $schedule  = $feature->schedule;
+        $timezone  = data_get($schedule, 'timezone', 'Asia/Jakarta');
+        $days      = data_get($schedule, 'days', []);
+        $timeStart = data_get($schedule, 'time_window.start', '08:00');
+        $timeEnd   = data_get($schedule, 'time_window.end', '21:00');
+
+        if (empty($days)) {
+            $this->warn('⛔ No scheduled days configured.');
+            return Command::SUCCESS;
+        }
+
+        $now = Carbon::now($timezone);
+
+        $this->info('📨 Initial Payment Job');
+        $this->line("• Time     : {$now->toDateTimeString()} ({$timezone})");
+        $this->line("• Trace ID : {$traceId}");
+        $this->line("• TestMode : " . ($testMode ? 'ON' : 'OFF'));
 
         LogHelper::logInfo(
             'InitialPayment',
             [
-                'trace_id'        => $traceId,
-                'timestamp'       => $now->toDateTimeString(),
-                'step'            => 'start_command',
-                'allow_test_mode' => $allowTestMode,
+                'feature_id' => $feature->id,
+                'timestamp' => $now->toDateTimeString(),
+                'test_mode' => $testMode,
             ],
             200,
-            'Initial payment command started',
+            'Initial payment scheduler started',
             $traceId
         );
 
         try {
             // ===============================================================
-            // STEP 1 — VALIDASI TANGGAL & JAM (SKIP JIKA TEST MODE)
+            // DATE & TIME VALIDATION
             // ===============================================================
-            if (! $allowTestMode) {
-                // ---- Validasi tanggal ----
-                if (! in_array($now->day, $allowedDays, true)) {
-                    $this->warn("⏩ Skipped: today ({$now->day}) not in allowed days [1,2,3].");
+            $lastDay = $now->copy()->endOfMonth()->day;
+            $effectiveDays = array_map(fn($d) => min($d, $lastDay), $days);
 
-                    LogHelper::logInfo(
-                        'InitialPayment',
-                        [
-                            'trace_id'     => $traceId,
-                            'step'         => 'validate_date',
-                            'day'          => $now->day,
-                            'allowed_days' => $allowedDays,
-                        ],
-                        200,
-                        'Skipped — not an allowed date',
-                        $traceId
-                    );
-
+            if (!$testMode) {
+                if (!in_array($now->day, $effectiveDays, true)) {
+                    $this->warn('⏩ Skipped: today not in scheduled days.');
                     return Command::SUCCESS;
                 }
 
-                // ---- Validasi jam ----
-                if (! in_array($now->hour, $allowedHours, true)) {
-                    $this->warn("⏩ Skipped: current hour {$now->hour}:00 outside range 08–21 WIB.");
-
-                    LogHelper::logInfo(
-                        'InitialPayment',
-                        [
-                            'trace_id'      => $traceId,
-                            'step'          => 'validate_hour',
-                            'hour'          => $now->hour,
-                            'allowed_hours' => $allowedHours,
-                        ],
-                        200,
-                        'Skipped — outside allowed hour range',
-                        $traceId
-                    );
-
+                $currentTime = $now->format('H:i');
+                if ($currentTime < $timeStart || $currentTime > $timeEnd) {
+                    $this->warn('⏩ Skipped: outside time window.');
                     return Command::SUCCESS;
                 }
-            } else {
-                $this->warn('🧪 TEST MODE ENABLED — skipping date/hour validation.');
-
-                LogHelper::logInfo(
-                    'InitialPayment',
-                    [
-                        'trace_id' => $traceId,
-                        'step'     => 'validation_skipped_test_mode',
-                    ],
-                    200,
-                    'Initial payment date/hour validation skipped (test mode)',
-                    $traceId
-                );
             }
 
             // ===============================================================
-            // STEP 2 — CEK PERIODE BILLING
+            // BILLING PERIOD
             // ===============================================================
-            $currentPeriod = $now->format('F Y');
-            $billing       = BillingPeriode::where('name', $currentPeriod)->first();
+            $periodName = $now->format('F Y');
+            $billing = BillingPeriode::where('name', $periodName)->first();
 
-            if (! $billing) {
-                $this->error("No billing period found for {$currentPeriod} — job aborted.");
-
-                LogHelper::logError(
-                    'InitialPayment',
-                    [
-                        'trace_id' => $traceId,
-                        'step'     => 'check_billing_period',
-                        'period'   => $currentPeriod,
-                    ],
-                    404,
-                    'Billing period not found',
-                    $traceId
-                );
-
-                return Command::FAILURE;
+            if (!$billing) {
+                throw new \RuntimeException("Billing period '{$periodName}' not found.");
             }
 
-            LogHelper::logInfo(
-                'InitialPayment',
-                [
-                    'trace_id' => $traceId,
-                    'step'     => 'billing_period_found',
-                    'period'   => $currentPeriod,
-                    'billing_id' => $billing->id,
-                ],
-                200,
-                'Billing period found for initial payment',
-                $traceId
-            );
-
             // ===============================================================
-            // STEP 3 — HITUNG RANGE 1–3
+            // DATE RANGE & DISPATCH
             // ===============================================================
-            [$startDate, $endDate] = $this->getAllowedDateRange($allowedDays, $now);
-
-            LogHelper::logInfo(
-                'InitialPayment',
-                [
-                    'trace_id'   => $traceId,
-                    'step'       => 'calculate_date_range',
-                    'start_date' => $startDate->toDateTimeString(),
-                    'end_date'   => $endDate->toDateTimeString(),
-                ],
-                200,
-                'Calculated allowed date range for broadcast',
-                $traceId
-            );
-
-            // ===============================================================
-            // STEP 4 — DISPATCH EVENT
-            // ===============================================================
-            $this->info('📤 Dispatching MonthlyKickoffBroadcastTriggered event...');
-
-            LogHelper::logInfo(
-                'InitialPayment',
-                [
-                    'trace_id' => $traceId,
-                    'step'     => 'dispatch_event',
-                ],
-                200,
-                'Dispatching MonthlyKickoffBroadcastTriggered event',
-                $traceId
-            );
+            [$startDate, $endDate] = $this->getAllowedDateRange($effectiveDays, $now);
 
             event(new MonthlyKickoffBroadcastTriggered(
                 $startDate,
                 $endDate,
                 WhatsAppAction::CREATE_NEW_BILL->value,
+                $feature->type,
                 $traceId
             ));
 
-            // ===============================================================
-            // STEP 5 — FINISH
-            // ===============================================================
-            $execTime = round(microtime(true) - $startTime, 3);
+            $duration = round(microtime(true) - $startedAt, 3);
 
-            $this->info("✅ WhatsApp broadcast dispatched successfully in {$execTime}s");
-            $this->line("──────────────────────────────────────────────");
+            $this->info("✅ Broadcast dispatched ({$duration}s)");
 
             LogHelper::logInfo(
                 'InitialPayment',
                 [
-                    'trace_id'        => $traceId,
-                    'step'            => 'finish',
-                    'period'          => $currentPeriod,
-                    'execution_time'  => $execTime,
-                    'start_range'     => $startDate->toDateTimeString(),
-                    'end_range'       => $endDate->toDateTimeString(),
-                    'allow_test_mode' => $allowTestMode,
+                    'trace_id' => $traceId,
+                    'billing_id' => $billing->id,
+                    'range' => [
+                        'start' => $startDate->toDateTimeString(),
+                        'end' => $endDate->toDateTimeString(),
+                    ],
+                    'execution_time' => $duration,
                 ],
                 200,
                 'Initial payment broadcast dispatched',
@@ -208,26 +135,20 @@ class InitialPayment extends Command
 
             return Command::SUCCESS;
         } catch (\Throwable $e) {
-            $execTime = round(microtime(true) - $startTime, 3);
 
-            $this->error("❌ Initial payment job failed: {$e->getMessage()}");
-            $this->line("• Exec Time: {$execTime}s");
-            $this->line("──────────────────────────────────────────────");
+            $this->error('❌ Initial payment job failed.');
 
             LogHelper::logError(
                 'InitialPayment',
                 [
-                    'trace_id'       => $traceId,
-                    'step'           => 'exception',
-                    'exception'      => get_class($e),
-                    'error_message'  => $e->getMessage(),
-                    'file'           => $e->getFile(),
-                    'line'           => $e->getLine(),
-                    'execution_time' => $execTime,
-                    'trace'          => $e->getTraceAsString(),
+                    'trace_id' => $traceId,
+                    'exception' => get_class($e),
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
                 ],
                 500,
-                'Initial payment job failed',
+                'Initial payment scheduler failed',
                 $traceId
             );
 
@@ -235,12 +156,12 @@ class InitialPayment extends Command
         }
     }
 
-    private function getAllowedDateRange(array $allowedDays, Carbon $base): array
+    private function getAllowedDateRange(array $days, Carbon $base): array
     {
         $month = $base->copy()->startOfMonth();
-        $start = $month->copy()->day(min($allowedDays))->startOfDay();
-        // end: hari max + 1 di pukul 00:00 (range [1,3] → [1, 4))
-        $end   = $month->copy()->day(max($allowedDays))->addDay()->startOfDay();
+
+        $start = $month->copy()->day(min($days))->startOfDay();
+        $end   = $month->copy()->day(max($days))->addDay()->startOfDay();
 
         return [$start, $end];
     }

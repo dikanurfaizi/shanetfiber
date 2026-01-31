@@ -48,9 +48,8 @@ class PaymentNotificationService
      */
     public function sendWhatsAppPaymentNotification($receipt, string $traceId): void
     {
-        $type = 'onprem';
         try {
-            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, $type)
+            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, 'pembayaran')
                 ?? [null, null, null];
 
             if (!$gateway || !$account || !$number) {

@@ -187,6 +187,11 @@
                     <i class="fas fa-puzzle-piece"></i>
                     <span> {{ __(' Templates') }}</span>
                 </a>
+                <a class="collapse-item @if (request()->routeIs('whatsappfeature*')) active @endif"
+                    href="{{ route('whatsappfeature.index') }}">
+                    <i class="fas fa-cogs"></i>
+                    <span> {{ __(' Features') }}</span>
+                </a>
             </div>
         </div>
     </li>

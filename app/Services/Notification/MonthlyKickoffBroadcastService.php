@@ -16,25 +16,15 @@ class MonthlyKickoffBroadcastService
         Carbon $startDate,
         Carbon $endDate,
         string $action,
+        string $gatewayType,
         string $traceId
     ): void {
-        LogHelper::logInfo(
-            null,
-            [
-                'start_date' => $startDate->toDateTimeString(),
-                'end_date'   => $endDate->toDateTimeString(),
-                'action'     => $action,
-            ],
-            200,
-            'Sending monthly kickoff broadcast...',
-            $traceId
-        );
-
         try {
             $result = $this->gowaService->broadcastMonthly(
                 $startDate,
                 $endDate,
                 $action,
+                $gatewayType,
                 $traceId
             );
 

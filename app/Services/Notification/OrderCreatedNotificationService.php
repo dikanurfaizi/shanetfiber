@@ -29,11 +29,10 @@ class OrderCreatedNotificationService
         Order $order,
         string $traceId
     ): void {
-        $type = 'onprem';
         try {
             // === Resolve WA gateway & account ===
             [$gateway, $account, $number] =
-                $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, $type)
+                $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, 'pembayaran_online')
                 ?? [null, null, null];
 
             if (! $gateway || ! $account || ! $number) {

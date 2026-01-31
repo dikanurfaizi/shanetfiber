@@ -30,9 +30,8 @@ class PaymentCancellationNotificationService
         ?array $receiptData,
         string $traceId
     ): void {
-        $type = 'onprem';
         try {
-            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, $type)
+            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, 'pembatalan_pembayaran')
                 ?? [null, null, null];
 
             if (! $gateway || ! $account || ! $number) {

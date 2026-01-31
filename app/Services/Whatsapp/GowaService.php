@@ -301,7 +301,7 @@ class GowaService
     // ==================================================
     // ===== Broadcast at the beginning of the month ====
 
-    public function broadcastMonthly(Carbon $startDate, Carbon $endDate, string $action, string $traceId): void
+    public function broadcastMonthly(Carbon $startDate, Carbon $endDate, string $action, string $gatewayType, string $traceId): void
     {
         $startTime = microtime(true);
         $queueName = 'notification';

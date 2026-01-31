@@ -29,9 +29,8 @@ class PaymentPayLaterNotificationService
         int $billingId,
         string $traceId
     ): void {
-        $type = 'onprem';
         try {
-            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, $type)
+            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, 'paylater')
                 ?? [null, null];
 
             if (! $gateway || ! $account || !$number) {
