@@ -8,27 +8,72 @@
         <div class="card-body border-bottom">
             <form method="GET" action="{{ route('messageevents.index') }}">
 
-                {{-- ROW 1: INPUT FILTER --}}
+                {{-- BASIC FILTER --}}
                 <div class="form-row">
-                    <div class="col-12 col-md-3 mb-2">
+
+                    <div class="col-12 col-md-4 mb-2">
                         <input type="text" name="q" class="form-control" placeholder="Nama / Nomor"
                             value="{{ request('q') }}">
                     </div>
 
-                    <div class="col-6 col-md-2 mb-2">
-                        <input type="date" name="date" class="form-control" value="{{ request('date') }}">
+                    <div class="col-12 col-md-4 mb-2">
+                        <select name="channel" class="form-control">
+                            <option value="">All Channel</option>
+                            @foreach ($channels as $channel)
+                                <option value="{{ $channel }}" @selected(request('channel') === $channel)>
+                                    {{ strtoupper($channel) }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
-                    <div class="col-6 col-md-2 mb-2">
-                        <input type="time" name="time_from" class="form-control" value="{{ request('time_from') }}">
+                    <div class="col-12 col-md-4 mb-2">
+                        <select name="message_type" class="form-control">
+                            <option value="">All Message Type</option>
+                            @foreach ($messageTypes as $type)
+                                <option value="{{ $type }}" @selected(request('message_type') === $type)>
+                                    {{ $type }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
-                    <div class="col-6 col-md-2 mb-2">
-                        <input type="time" name="time_to" class="form-control" value="{{ request('time_to') }}">
+                </div>
+
+                <div class="mb-2">
+                    <a class="text-decoration-none" data-toggle="collapse" href="#advancedFilter" role="button"
+                        aria-expanded="{{ request()->filled('date') || request()->filled('time_from') || request()->filled('time_to') ? 'true' : 'false' }}"
+                        aria-controls="advancedFilter">
+
+                        <small>
+                            <i class="fas fa-sliders-h mr-1"></i>
+                            Advanced Filter
+                        </small>
+                    </a>
+                </div>
+
+                <div class="collapse {{ request()->filled('date') || request()->filled('time_from') || request()->filled('time_to') ? 'show' : '' }}"
+                    id="advancedFilter">
+
+                    <div class="form-row">
+
+                        <div class="col-12 col-md-4 mb-2">
+                            <input type="date" name="date" class="form-control" value="{{ request('date') }}">
+                        </div>
+
+                        <div class="col-6 col-md-4 mb-2">
+                            <input type="time" name="time_from" class="form-control"
+                                value="{{ request('time_from') }}">
+                        </div>
+
+                        <div class="col-6 col-md-4 mb-2">
+                            <input type="time" name="time_to" class="form-control" value="{{ request('time_to') }}">
+                        </div>
+
                     </div>
                 </div>
 
-                {{-- ROW 2: BUTTON --}}
+                {{-- ROW 3: BUTTON --}}
                 <div class="form-row">
                     <div class="col-12 text-left">
 
@@ -56,6 +101,35 @@
                 </div>
 
             </form>
+        </div>
+
+        <div class="card-body border-bottom">
+            {{-- QUICK FILTER --}}
+            <div class="mb-3">
+
+                <span class="text-muted small mr-2">Quick Filter:</span>
+
+                <a href="{{ route('messageevents.index', array_merge(request()->except('status'), ['status' => 'failed'])) }}"
+                    class="btn btn-sm btn-outline-danger mr-1 {{ request('status') === 'failed' ? 'active' : '' }}">
+                    ❌ Failed
+                </a>
+
+                <a href="{{ route('messageevents.index', array_merge(request()->except('status'), ['status' => 'pending'])) }}"
+                    class="btn btn-sm btn-outline-warning mr-1 {{ request('status') === 'pending' ? 'active' : '' }}">
+                    ⏳ Pending
+                </a>
+
+                <a href="{{ route('messageevents.index', array_merge(request()->except('status'), ['status' => 'success'])) }}"
+                    class="btn btn-sm btn-outline-success mr-1 {{ request('status') === 'success' ? 'active' : '' }}">
+                    ✅ Success
+                </a>
+
+                <a href="{{ route('messageevents.index', request()->except('status')) }}"
+                    class="btn btn-sm btn-outline-secondary">
+                    🔄 All
+                </a>
+
+            </div>
         </div>
 
         {{-- DESKTOP TABLE --}}

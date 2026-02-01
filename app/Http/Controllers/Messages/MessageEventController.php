@@ -14,14 +14,23 @@ class MessageEventController extends Controller
         $query = MessageEvent::query()
             ->with(['customer:id,name,contact']);
 
-        // 🔍 Search nama / nomor
+        // 🔍 Search nama / nomor customer
         if ($request->filled('q')) {
             $q = $request->q;
-
             $query->whereHas('customer', function ($sub) use ($q) {
                 $sub->where('name', 'like', "%{$q}%")
                     ->orWhere('contact', 'like', "%{$q}%");
             });
+        }
+
+        // 📡 Filter channel
+        if ($request->filled('channel')) {
+            $query->where('channel', $request->channel);
+        }
+
+        // 🏷 Filter message type
+        if ($request->filled('message_type')) {
+            $query->where('message_type', $request->message_type);
         }
 
         // 📅 Filter tanggal
@@ -38,19 +47,46 @@ class MessageEventController extends Controller
             $query->whereTime('sent_at', '<=', $request->time_to);
         }
 
+        // 🚦 Filter status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
         $events = $query
             ->orderByDesc('sent_at')
             ->paginate(20)
             ->withQueryString();
 
-        // ✅ NORMALIZE TIDAK DIHILANGKAN
+        // 🧠 Normalize response (tidak dihilangkan)
         $events->getCollection()->transform(function ($event) {
-            $event->response_summary =
-                MessageResponseNormalizer::summarize($event->response_message);
-
+            $event->response_summary = MessageResponseNormalizer::summarize(
+                $event->response_message
+            );
             return $event;
         });
 
-        return view('message_events.index', compact('events'));
+        // 📦 Dropdown options (ambil dari DB)
+        $channels = MessageEvent::query()
+            ->select('channel')
+            ->distinct()
+            ->orderBy('channel')
+            ->pluck('channel');
+
+        $messageTypes = MessageEvent::query()
+            ->select('message_type')
+            ->distinct()
+            ->orderBy('message_type')
+            ->pluck('message_type');
+
+        $statuses = MessageEvent::query()
+            ->select('status')
+            ->distinct()
+            ->orderBy('status')
+            ->pluck('status');
+
+        return view(
+            'message_events.index',
+            compact('events', 'channels', 'messageTypes', 'statuses')
+        );
     }
 }
