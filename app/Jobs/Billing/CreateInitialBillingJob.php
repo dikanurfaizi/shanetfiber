@@ -19,12 +19,13 @@ class CreateInitialBillingJob implements ShouldQueue
 
     public function __construct(
         protected ?string $periodName = null,
-        protected ?Auth $auth = null
+        protected ?Auth $auth = null,
+        protected ?string $traceId = null,
     ) {}
 
     public function handle(BillingService $billingService): void
     {
-        $traceId = (string) Str::uuid();
+        $traceId = $this->traceId ?: (string) Str::uuid();
         $period  = $this->periodName ?: now()->format('F Y');
 
         // 1) Create / get BillingPeriode

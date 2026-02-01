@@ -23,13 +23,16 @@ class BillingService
 {
     private BillingCreateService $billingCreateService;
     private BillingUpdateCommentService $billingUpdateCommentService;
+    private BillingExtensionService $billingExtensionService;
 
     public function __construct(
         BillingCreateService $billingCreateService,
-        BillingUpdateCommentService $billingUpdateCommentService
+        BillingUpdateCommentService $billingUpdateCommentService,
+        BillingExtensionService $billingExtensionService
     ) {
         $this->billingCreateService = $billingCreateService;
         $this->billingUpdateCommentService = $billingUpdateCommentService;
+        $this->billingExtensionService = $billingExtensionService;
     }
 
     public function createBillingPeriode(string $periode): BillingPeriode
@@ -67,7 +70,6 @@ class BillingService
         string $traceId
     ): int {
         $timer = new ExecutionTimer();
-        $totalBillingCreated = 0;
 
         $context = [
             'billing_periode_id'   => $billingPeriode->id,
@@ -75,27 +77,35 @@ class BillingService
             'action'               => 'generate_billings_for_period',
         ];
 
-        LogHelper::logInfo(null, $context, 200, '[G1] Start billing generation', $traceId, 0);
+        LogHelper::logInfo(null, $context, 200, 'BILLING.START', $traceId, 0);
 
         try {
             $routers   = Mikrotik::where('disabled', 'false')->get();
             $websystem = Websystem::where('slug', 'websystem')->first();
 
             if ($routers->isEmpty()) {
-                LogHelper::logWarning(null, $context, 200, '[Step 1] No active routers found', $traceId, $timer->lap());
+                LogHelper::logInfo(
+                    null,
+                    $context,
+                    200,
+                    'BILLING.NO_ACTIVE_ROUTERS',
+                    $traceId,
+                    $timer->lap()
+                );
                 return 0;
             }
 
+            $stats = [
+                'created'              => 0,
+                'skip_no_subscription' => 0,
+                'skip_not_eligible'    => 0,
+            ];
+
             foreach ($routers as $router) {
 
-                $routerContext = array_merge($context, [
-                    'router_id' => $router->id,
-                ]);
-
-                $customers = Customer::where('disabled', 'false')
+                $customers = Customer::where('mikrotik_id', $router->id)
+                    ->where('disabled', 'false')
                     ->where('activation', 'true')
-                    ->whereNotNull('activation_date')
-                    ->where('mikrotik_id', $router->id)
                     ->get();
 
                 foreach ($customers as $customer) {
@@ -103,54 +113,112 @@ class BillingService
                     DB::transaction(function () use (
                         $customer,
                         $router,
-                        $routerContext,
                         $billingPeriode,
                         $websystem,
                         $traceId,
-                        &$totalBillingCreated,
+                        &$stats
                     ) {
-                        $timer = new ExecutionTimer();
+                        $txTimer = new ExecutionTimer();
+
+                        // Lock customer
+                        $customer = Customer::where('id', $customer->id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        // Latest subscription
                         $sub = CustomerSubscription::where('customer_id', $customer->id)
-                            ->where('status', 'active')
+                            ->orderByDesc('created_at')
                             ->lockForUpdate()
                             ->first();
 
                         if (!$sub) {
+                            $stats['skip_no_subscription']++;
+                            return;
+                        }
+
+                        // 🔄 Auto-reactivate subscription jika customer masih aktif
+                        if ($sub->shouldBeReactivated($customer)) {
+
+                            $oldStatus = $sub->status;
+
+                            $sub->update([
+                                'status'        => 'active',
+                                'terminated_at' => null,
+                            ]);
+
                             LogHelper::logInfo(
                                 null,
-                                $routerContext,
+                                [
+                                    'customer_id'        => $customer->id,
+                                    'subscription_id'    => $sub->id,
+                                    'old_status'         => $oldStatus,
+                                    'new_status'         => 'active',
+                                    'reason'             => 'CUSTOMER_STILL_ACTIVE',
+                                ],
                                 200,
-                                '[R2.1] No active subscription for customer',
+                                'SUBSCRIPTION.REACTIVATED',
                                 $traceId,
-                                $timer->lap()
+                                $txTimer->lap()
+                            );
+                        }
+
+                        if (!$sub->eligibleForBilling($customer)) {
+                            $stats['skip_not_eligible']++;
+
+                            LogHelper::logInfo(
+                                null,
+                                [
+                                    'router_id'       => $router->id,
+                                    'customer_id'     => $customer->id,
+                                    'subscription_id' => $sub->id,
+                                    'reason'          => 'NOT_ELIGIBLE',
+                                ],
+                                200,
+                                'BILLING.SKIP.CUSTOMER_NOT_ACTIVE',
+                                $traceId,
+                                $txTimer->lap()
                             );
                             return;
                         }
 
-                        $subContext = array_merge($routerContext, [
-                            'customer_id'              => $customer->id,
-                            'customer_subscription_id' => $sub->id,
-                        ]);
-
+                        // Active BSP (idempotency guard)
                         $oldBsp = BillingSubscriptionPeriode::where('customer_subscription_id', $sub->id)
                             ->where('status', 'active')
+                            ->orderByDesc('billing_periode_id')
                             ->lockForUpdate()
                             ->first();
 
-                        if ($oldBsp && $oldBsp->billing_periode_id == $billingPeriode->id) {
+                        if ($oldBsp?->billing_periode_id === $billingPeriode->id) {
                             LogHelper::logInfo(
                                 null,
-                                $subContext,
+                                [
+                                    'router_id'          => $router->id,
+                                    'customer_id'        => $customer->id,
+                                    'subscription_id'    => $sub->id,
+                                    'billing_periode_id' => $billingPeriode->id,
+                                ],
                                 200,
-                                '[S3.1] BSP already exists for current period',
+                                'BILLING.SKIP.BSP_ALREADY_EXISTS',
                                 $traceId,
-                                $timer->lap()
+                                $txTimer->lap()
                             );
                             return;
                         }
 
                         if ($oldBsp) {
                             $oldBsp->update(['status' => 'expired']);
+
+                            LogHelper::logInfo(
+                                null,
+                                [
+                                    'customer_subscription_id' => $sub->id,
+                                    'expired_bsp_id'           => $oldBsp->id,
+                                ],
+                                200,
+                                'BILLING.BSP.EXPIRED',
+                                $traceId,
+                                $txTimer->lap()
+                            );
                         }
 
                         $newBsp = BillingSubscriptionPeriode::create([
@@ -159,18 +227,17 @@ class BillingService
                             'status'                   => 'active',
                         ]);
 
-                        $this->extendSubscriptionEndDate($sub, $billingPeriode);
-
-                        $this->extendCustomerAddons($customer, $billingPeriode);
-
                         if (Billing::where('billing_subscription_id', $newBsp->id)->exists()) {
                             LogHelper::logWarning(
                                 null,
-                                array_merge($subContext, ['bsp_id' => $newBsp->id]),
+                                [
+                                    'customer_id' => $customer->id,
+                                    'bsp_id'      => $newBsp->id,
+                                ],
                                 409,
-                                '[B4.1] Billing already exists',
+                                'BILLING.SKIP.BILLING_ALREADY_EXISTS',
                                 $traceId,
-                                $timer->lap()
+                                $txTimer->lap()
                             );
                             return;
                         }
@@ -184,14 +251,42 @@ class BillingService
                             $traceId
                         );
 
-                        $totalBillingCreated++;
+                        LogHelper::logInfo(
+                            null,
+                            [
+                                'router_id'          => $router->id,
+                                'customer_id'        => $customer->id,
+                                'subscription_id'    => $sub->id,
+                                'billing_periode_id' => $billingPeriode->id,
+                            ],
+                            201,
+                            'BILLING.CREATE.SUCCESS',
+                            $traceId,
+                            $txTimer->lap()
+                        );
 
-                        // Dispatch Mikrotik job AFTER commit
+                        $stats['created']++;
+
+                        // Extend only after billing success
+                        $this->billingExtensionService
+                            ->extendSubscription($sub, $billingPeriode);
+
+                        $this->billingExtensionService
+                            ->extendCustomerAddons($customer, $billingPeriode);
+
+                        // Dispatch AFTER COMMIT
                         $autoIsolir = AutoIsolir::where('mikrotik_id', $router->id)->first();
 
                         if ($autoIsolir) {
-                            $priceFinal =  $sub->price_final;
-                            DB::afterCommit(function () use ($customer, $router, $autoIsolir, $priceFinal, $traceId) {
+                            $priceFinal = $sub->price_final;
+
+                            DB::afterCommit(function () use (
+                                $customer,
+                                $router,
+                                $autoIsolir,
+                                $priceFinal,
+                                $traceId
+                            ) {
                                 $this->billingUpdateCommentService
                                     ->dispatchBillingJobForCustomer(
                                         $customer,
@@ -208,14 +303,18 @@ class BillingService
 
             LogHelper::logInfo(
                 null,
-                array_merge($context, ['totalBillingCreated' => $totalBillingCreated]),
+                [
+                    'billing_periode_id' => $billingPeriode->id,
+                    'summary' => $stats,
+                ],
                 200,
-                '[FINISH] Billing created successfully',
+                'BILLING.FINISH',
                 $traceId,
                 $timer->lap()
             );
 
-            return $totalBillingCreated;
+            // 🔑 RETURN SELARAS DENGAN SUMMARY
+            return $stats['created'];
         } catch (\Throwable $e) {
             LogHelper::logError(
                 null,
@@ -227,67 +326,12 @@ class BillingService
                     ],
                 ]),
                 500,
-                'Failed generating billings',
+                'BILLING.FAILED',
                 $traceId,
                 $timer->lap()
             );
 
             throw $e;
-        }
-    }
-
-    private function extendSubscriptionEndDate(
-        CustomerSubscription $sub,
-        BillingPeriode $billingPeriode
-    ): void {
-        $newEndDate = $this->resolveBillingPeriodeEndDate($billingPeriode);
-
-        if ($sub->end_date) {
-            $currentEnd = Carbon::parse($sub->end_date)->endOfDay();
-
-            if ($currentEnd->gte($newEndDate)) {
-                return; // tidak perlu extend
-            }
-        }
-
-        $sub->update([
-            'end_date' => $newEndDate,
-        ]);
-    }
-
-    private function resolveBillingPeriodeEndDate(
-        BillingPeriode $billingPeriode
-    ): Carbon {
-        if ($billingPeriode->end_date) {
-            return Carbon::parse($billingPeriode->end_date)->endOfDay();
-        }
-
-        try {
-            return Carbon::createFromFormat('F Y', $billingPeriode->name)
-                ->endOfMonth()
-                ->endOfDay();
-        } catch (\Throwable $e) {
-            throw new DomainException(
-                "Invalid billing period format: {$billingPeriode->name}",
-                previous: $e
-            );
-        }
-    }
-
-    private function extendCustomerAddons(Customer $customer, BillingPeriode $billingPeriode): void
-    {
-        $custAddons = CustomerAddon::where('customer_id', $customer->id)
-            ->where('is_active', true)->get();
-
-        $newEnd = Carbon::parse($billingPeriode->end_date)->endOfDay();
-
-        if ($custAddons) {
-
-            foreach ($custAddons as $custAddon) {
-                if (!$custAddon->end_date || Carbon::parse($custAddon->end_date)->endOfDay()->lt($newEnd)) {
-                    $custAddon->update(['end_date' => $newEnd]);
-                }
-            }
         }
     }
 }

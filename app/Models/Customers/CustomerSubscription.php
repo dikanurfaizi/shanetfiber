@@ -81,4 +81,43 @@ class CustomerSubscription extends Model
 
         return strtoupper($this->status); // ACTIVE / PAUSED
     }
+
+    public static function latestForCustomer(int $customerId): ?self
+    {
+        return self::where('customer_id', $customerId)
+            ->orderByDesc('created_at')
+            ->lockForUpdate()
+            ->first();
+    }
+
+    public function eligibleForBilling(Customer $customer): bool
+    {
+        // intent utama dari customer
+        if ($customer->disabled !== 'false' || $customer->activation !== 'true') {
+            return false;
+        }
+
+        // status apapun selama customer aktif → lanjut
+        return true;
+    }
+
+    public function shouldBeReactivated(Customer $customer): bool
+    {
+        if ($customer->disabled !== 'false' || $customer->activation !== 'true') {
+            return false;
+        }
+
+        return in_array($this->status, ['paused', 'terminated'], true);
+    }
+
+    public function isContractExpired(): bool
+    {
+        if (!$this->end_date) {
+            return false;
+        }
+
+        // hanya dianggap expired kalau status active & lewat
+        return $this->status === 'active'
+            && Carbon::parse($this->end_date)->isPast();
+    }
 }

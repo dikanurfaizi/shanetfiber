@@ -12,47 +12,103 @@ use Illuminate\Support\Str;
 class CreateBillingCron extends Command
 {
     protected $signature   = 'create_billing:cron';
-    protected $description = 'Automatically create billing if conditions are met';
+    protected $description = 'Automatically create billing for new period';
 
-    public function __construct()
-    {
-        parent::__construct();
-    }
-
-    public function handle(): void
+    public function handle(): int
     {
         $traceId   = (string) Str::uuid();
         $startedAt = now('Asia/Jakarta');
-        $this->info("Starting CreateBillingCron at {$startedAt->toDateTimeString()}");
+
+        // ===== CONSOLE (human) =====
+        $this->info("▶ CreateBillingCron started at {$startedAt->toDateTimeString()}");
+
+        // ===== LOG (system) =====
+        LogHelper::logInfo(
+            null,
+            [
+                'started_at' => $startedAt->toDateTimeString(),
+            ],
+            200,
+            'BILLING_CRON.START',
+            $traceId
+        );
 
         try {
             $currentPeriod  = $startedAt->format('F Y');
             $lastPeriodName = BillingPeriode::latest('created_at')->value('name');
             $cfg            = Websystem::firstOrFail();
 
+            // ===== Skip: period already exists =====
             if ($currentPeriod === $lastPeriodName) {
-                LogHelper::logInfo(null, [], 202, "Billing period '{$currentPeriod}' already exists.", $traceId);
-                return;
+
+                $this->warn("⏭ Billing period '{$currentPeriod}' already exists. Skipping.");
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'current_period' => $currentPeriod,
+                        'last_period'    => $lastPeriodName,
+                    ],
+                    202,
+                    'BILLING_CRON.SKIP.PERIOD_EXISTS',
+                    $traceId
+                );
+
+                return Command::SUCCESS;
             }
 
+            // ===== Skip: auto-generate disabled =====
             if (!$cfg->billing_auto_generate) {
-                LogHelper::logInfo(null, [], 202, "Billing auto-generation is disabled.", $traceId);
-                return;
+
+                $this->warn("⏭ Billing auto-generation is disabled. Skipping.");
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'current_period' => $currentPeriod,
+                    ],
+                    202,
+                    'BILLING_CRON.SKIP.AUTO_GENERATE_DISABLED',
+                    $traceId
+                );
+
+                return Command::SUCCESS;
             }
 
-            // ===== CALL JOB =====
-            CreateInitialBillingJob::dispatch($currentPeriod, null)->onQueue('default');
-            LogHelper::logInfo(null, [], 200, "Create Initial Billing Job for {$currentPeriod}", $traceId);
-            $this->info("✅ Billing for {$currentPeriod} has been successfully dispatched.");
-        } catch (\Throwable $e) {
-            LogHelper::logError(
+            // ===== Dispatch Job =====
+            CreateInitialBillingJob::dispatch($currentPeriod, null, $traceId)
+                ->onQueue('default');
+
+            $this->info("✅ Billing job for '{$currentPeriod}' dispatched.");
+
+            LogHelper::logInfo(
                 null,
-                ['error' => $e->getMessage()],
-                500,
-                'CreateBillingCron execution failed.',
+                [
+                    'billing_period' => $currentPeriod,
+                    'queue'          => 'default',
+                ],
+                200,
+                'BILLING_CRON.JOB_DISPATCHED',
                 $traceId
             );
-            $this->error("❌ Failed: {$e->getMessage()}");
+
+            return Command::SUCCESS;
+        } catch (\Throwable $e) {
+
+            $this->error("❌ CreateBillingCron failed: {$e->getMessage()}");
+
+            LogHelper::logError(
+                null,
+                [
+                    'exception' => get_class($e),
+                    'message'   => $e->getMessage(),
+                ],
+                500,
+                'BILLING_CRON.FAILED',
+                $traceId
+            );
+
+            return Command::FAILURE;
         }
     }
 }

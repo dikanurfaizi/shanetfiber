@@ -94,7 +94,7 @@ class CustomerBillingInfoService
 
             // 3. Hitung unpaid (tanpa load semua billing)
             $unpaidSum = Billing::where('customer_id', $customer->id)
-                ->whereNotIn('status', ['LS'])
+                ->whereNotIn('status', ['LS', 'VD'])
                 ->sum('total_amount');
 
             // Build result
