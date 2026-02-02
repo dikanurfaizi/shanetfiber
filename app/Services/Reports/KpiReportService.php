@@ -11,6 +11,7 @@ class KpiReportService
         // ambil semua mikrotik yang punya customer
         $mikrotiks = DB::table('mikrotiks')
             ->select('id', 'name')
+            ->where('disabled', 'false')
             ->whereExists(function ($q) {
                 $q->select(DB::raw(1))
                     ->from('customers')
