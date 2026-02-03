@@ -32,7 +32,6 @@ class DeleteOldMessageLogs extends Command
     {
         $deleted = DB::table('message_events')
             ->where('created_at', '<', $thresholdDate)
-            ->where('status', '=','success')
             ->delete();
 
         $this->info("✅ $deleted old message log(s) deleted (before {$thresholdDate->toDateTimeString()})");
