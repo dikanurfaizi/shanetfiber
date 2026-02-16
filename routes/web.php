@@ -395,6 +395,7 @@ Route::group(['prefix' => 'cpanel'], function () {
 
         // ==================== MESSAGE EVENTS ====================
         Route::get('settings/message/events', [MessageEventController::class, 'index'])->name('messageevents.index');
+        Route::post('settings/message/events/{event}/resend', [MessageEventController::class, 'resend'])->name('messageevents.resend');
 
         // ==================== TELEGRAM GATEWAY ====================
         Route::get('settings/telegramgateway', [TelegramGatewayController::class, 'index'])->name('telegramgateway.index');

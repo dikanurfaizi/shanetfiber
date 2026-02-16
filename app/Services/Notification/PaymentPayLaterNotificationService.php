@@ -27,6 +27,7 @@ class PaymentPayLaterNotificationService
 
     public function send(
         int $billingId,
+        ?int $eventId,
         string $traceId
     ): void {
         try {
@@ -71,7 +72,8 @@ class PaymentPayLaterNotificationService
                 'period' => $billing->periode->display_name,
                 'teller_name' => $billing->updatedByUser->name,
                 'account' => $account,
-                'paylater_code' => $token
+                'paylater_code' => $token,
+                'event_id' => $eventId
             ];
 
             if ($gateway->type === 'cloud') {
@@ -83,6 +85,7 @@ class PaymentPayLaterNotificationService
                 $this->gowaService->notifyPayLater(
                     $subscription,
                     $billing,
+                    $eventId,
                     $traceId
                 );
             }

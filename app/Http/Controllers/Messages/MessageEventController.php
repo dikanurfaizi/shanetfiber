@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Messages;
 use App\Helpers\MessageResponseNormalizer;
 use App\Models\Messaging\MessageEvent;
 use App\Http\Controllers\Controller;
+use App\Jobs\SendResentMessageJob;
+use App\Services\MessageEvent\ResendEventService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class MessageEventController extends Controller
 {
@@ -88,5 +91,20 @@ class MessageEventController extends Controller
             'message_events.index',
             compact('events', 'channels', 'messageTypes', 'statuses')
         );
+    }
+
+    public function resend(MessageEvent $event)
+    {
+        $traceId = (string) Str::uuid();
+        if ($event->status !== 'failed') {
+            return back()->with('error', 'Event not eligible for resend.');
+        }
+
+        SendResentMessageJob::dispatch(
+            $event->id,
+            $traceId
+        )->onQueue('default');
+
+        return back()->with('success', 'Event queued for resend.');
     }
 }

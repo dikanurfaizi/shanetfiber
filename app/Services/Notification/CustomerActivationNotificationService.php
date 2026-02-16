@@ -31,6 +31,7 @@ class CustomerActivationNotificationService
         CustomerSubscription $customerSubscription,
         Billing $billing,
         Receipt $receipt,
+        ?int $eventId,
         string $traceId
     ): void {
         try {
@@ -95,6 +96,7 @@ class CustomerActivationNotificationService
                 'admin_name' => $user->name,
                 'admin_contact' => $adminNumber,
                 'bank' => $formattedBanks,
+                'event_id' => $eventId,
                 'account' => $account,
             ];
 
@@ -105,6 +107,7 @@ class CustomerActivationNotificationService
                     $customerMembershipId,
                     $customerSubscription,
                     WhatsAppAction::ACTIVATION->value,
+                    $eventId,
                     $traceId
                 );
             }

@@ -55,8 +55,13 @@ class GowaService
     // ============================================
     // =====             Activation           =====
 
-    public function activation(?int $customerMembershipId, CustomerSubscription $customerSubscription, string $action, string $traceId): void
-    {
+    public function activation(
+        ?int $customerMembershipId,
+        CustomerSubscription $customerSubscription,
+        string $action,
+        ?int $eventId,
+        string $traceId
+    ): void {
         $queueName = 'notification';
         $globalIndex = 0;
         try {
@@ -93,7 +98,8 @@ class GowaService
                 ),
                 queue: $queueName,
                 traceId: $traceId,
-                delay: $delayTime
+                delay: $delayTime,
+                eventId: $eventId
             );
         } catch (\Throwable $e) {
             LogHelper::logError(null, [
@@ -170,6 +176,7 @@ class GowaService
         Billing $billing,
         Receipt $receipt,          // ⬅️ WAJIB
         string $channel,            // cash | transfer | payment_gateway
+        ?string $eventId,
         string $traceId
     ): void {
         $queueName = 'notification';
@@ -189,7 +196,8 @@ class GowaService
                 ),
                 queue: $queueName,
                 traceId: $traceId,
-                delay: $delayTime
+                delay: $delayTime,
+                eventId: $eventId
             );
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -212,6 +220,7 @@ class GowaService
     public function notifyPayLater(
         CustomerSubscription $customerSubscription,
         Billing $billing,
+        ?int $eventId,
         string $traceId
     ): void {
         $queueName = 'notification';
@@ -233,7 +242,8 @@ class GowaService
                 ),
                 queue: $queueName,
                 traceId: $traceId,
-                delay: $delayTime
+                delay: $delayTime,
+                eventId: $eventId
             );
         } catch (\Throwable $e) {
             LogHelper::logError(

@@ -201,7 +201,7 @@
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseMessageEvents"
             aria-expanded="true" aria-controls="collapseSetting" style="padding-top: inherit;">
             <i class="fas fa-bell"></i>
-            <span>{{ __(' Message Events') }}</span>
+            <span>{{ __(' Events') }}</span>
         </a>
         <div id="collapseMessageEvents" class="collapse collapse @if (request()->routeIs('messageevents*'))  @endif"
             aria-labelledby="headingBilling" data-parent="#accordionSidebar">
@@ -210,7 +210,7 @@
                 <a class="collapse-item @if (request()->routeIs('messageevents*')) active @endif"
                     href="{{ route('messageevents.index') }}">
                     <i class="fas fa-bell"></i>
-                    <span> {{ __(' Message Events') }}</span>
+                    <span> {{ __(' Messaging') }}</span>
                 </a>
             </div>
         </div>

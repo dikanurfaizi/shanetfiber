@@ -169,8 +169,18 @@
                                 <td>
                                     <button class="btn btn-sm btn-outline-primary" data-toggle="collapse"
                                         data-target="#detail-{{ $event->id }}">
-                                        Detail
+                                        <i class="fas fa-eye"></i> Detail
                                     </button>
+
+                                    @if ($event->status === 'failed')
+                                        <form action="{{ route('messageevents.resend', $event->id) }}" method="POST"
+                                            style="display:inline;">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="fas fa-redo-alt"></i> Retry
+                                            </button>
+                                        </form>
+                                    @endif
                                 </td>
                             </tr>
 

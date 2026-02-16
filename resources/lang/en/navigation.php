@@ -86,6 +86,7 @@ return [
         ],
     ],
     'conversations' => [
-        'nav-item' => 'Conversations'
+        'nav-item' => 'Conversations',
+        'index' => 'WhatsApp'
     ]
 ];

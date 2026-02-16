@@ -11,7 +11,6 @@ use App\Services\Whatsapp\WhatsappGatewayResolver;
 use App\Services\Whatsapp\GowaService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Facades\URL;
 
 class PaymentNotificationService
 {
@@ -24,7 +23,7 @@ class PaymentNotificationService
     /**
      * Dipanggil dari Job: load receipt, lalu kirim WA.
      */
-    public function sendWhatsAppPaymentNotificationByReceiptId(int $receiptId, string $traceId): void
+    public function sendWhatsAppPaymentNotificationByReceiptId(int $receiptId, string $traceId, ?int $eventId = null): void
     {
         $receipt = Receipt::with([
             'billingPayment.billing.customer',
@@ -40,13 +39,13 @@ class PaymentNotificationService
             return;
         }
 
-        $this->sendWhatsAppPaymentNotification($receipt, $traceId);
+        $this->sendWhatsAppPaymentNotification($receipt, $traceId, $eventId);
     }
 
     /**
      * Core WA notification logic (boleh dipakai juga sync kalau perlu).
      */
-    public function sendWhatsAppPaymentNotification($receipt, string $traceId): void
+    public function sendWhatsAppPaymentNotification(Receipt $receipt, string $traceId, ?int $eventId): void
     {
         try {
             [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, 'pembayaran')
@@ -82,6 +81,7 @@ class PaymentNotificationService
                 'teller_name' => $receipt->teller_name,
                 'receipt_code' => $token,
                 'account' => $account,
+                'event_id' => $eventId
             ];
 
             LogHelper::logInfo(null, ['data' => $data], 200, "Detail data", $traceId);
@@ -91,9 +91,10 @@ class PaymentNotificationService
             } else {
                 $this->gowaService->notifyPaymentCompleted(
                     $receipt->billingPayment->billing,
-                    $receipt,          // ⬅️ WAJIB
-                    $receipt->payment_methode,            // cash | transfer | payment_gateway
-                    $traceId
+                    $receipt,
+                    $receipt->payment_methode, // cash | transfer | payment_gateway
+                    $eventId,
+                    $traceId,
                 );
             }
         } catch (\Throwable $e) {

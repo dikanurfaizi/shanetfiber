@@ -32,7 +32,7 @@ class TemplateMessageService
             account: $data['account']
         );
 
-        return $this->dispatcher->dispatch($command);
+        return $this->dispatcher->dispatch($command, $data['event_id']);
     }
 
     public function sendInfoPembayaran(array $data)
@@ -49,7 +49,7 @@ class TemplateMessageService
             account: $data['account']
         );
 
-        return $this->dispatcher->dispatch($command);
+        $this->dispatcher->dispatch($command, $data['event_id']);
     }
 
     public function sendInfoPayLater(array $data)
@@ -64,7 +64,7 @@ class TemplateMessageService
             paylaterCode: $data['paylater_code']
         );
 
-        return $this->dispatcher->dispatch($command);
+        return $this->dispatcher->dispatch($command, $data['event_id']);
     }
 
     public function sendBroadcastMidMonth(array $data)
@@ -82,7 +82,7 @@ class TemplateMessageService
             account: $data['account']
         );
 
-        return $this->dispatcher->dispatch($command);
+        return $this->dispatcher->dispatch($command, null);
     }
 
     public function sendTestMessage(array $data)
@@ -92,7 +92,7 @@ class TemplateMessageService
             account: $data['account']
         );
 
-        return $this->dispatcher->dispatch($command);
+        return $this->dispatcher->dispatch($command, null);
     }
 
     public function sendOverdueBroadcast(array $data)
@@ -108,6 +108,6 @@ class TemplateMessageService
             account: $data['account']
         );
 
-        return $this->dispatcher->dispatch($command);
+        return $this->dispatcher->dispatch($command, null);
     }
 }

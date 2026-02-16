@@ -23,7 +23,8 @@ class MessageDispatcher
         callable $handlerFactory,
         ?string $queue = 'default',
         ?string $traceId = null,
-        ?Carbon $delay = null
+        ?Carbon $delay = null,
+        ?int $eventId = null
     ): void {
         $stage = 'INIT';
         $startTime = microtime(true);
@@ -58,15 +59,26 @@ class MessageDispatcher
                 'message' => $message,
             ];
 
-            $event = MessageEvent::create([
-                'customer_id'  => $built['customer_id'] ?? null,
-                'channel'      => 'go_whatsapp',
-                'message_type' => $action,
-                'meta'         => $payload,
-                'status'       => 'pending',
-                'trace_id'     => $traceId,
-                'stage'        => 'SENDING JOB'
-            ]);
+            if ($eventId) {
+                $event = MessageEvent::findOrFail($eventId);
+
+                $event->update([
+                    'status' => 'pending',
+                    'stage'  => 'SENDING JOB',
+                    'trace_id' => $traceId,
+                    'payload' => $payload
+                ]);
+            } else {
+                $event = MessageEvent::create([
+                    'customer_id'  => $built['customer_id'] ?? null,
+                    'channel'      => 'go_whatsapp',
+                    'message_type' => $action,
+                    'meta'         => $payload,
+                    'status'       => 'pending',
+                    'trace_id'     => $traceId,
+                    'stage'        => 'SENDING JOB'
+                ]);
+            }
 
             // Dispatch job
             $job = SendWhatsappMessageJob::dispatch(
