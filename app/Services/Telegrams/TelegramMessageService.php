@@ -70,42 +70,71 @@ class TelegramMessageService
                 throw new RuntimeException('Template not found: ' . $strategy->slug());
             }
 
-            // Create audit event (pending)
+            // =====================
+            // CREATE EVENT (PENDING)
+            // =====================
             $event = MessageEvent::create([
-                'customer_id'  => $dto->customerId,
-                'channel'      => 'telegram',
-                'message_type' => $dto->action,
-                'meta'         => [
+                'customer_id'     => $dto->customerId,
+                'channel'         => 'telegram',
+                'message_type'    => $dto->action,
+                'meta'            => [
                     'chat_id' => $chatId,
                 ],
-                'status'       => 'pending',
-                'trace_id'     => $traceId,
+                'status'          => 'pending',
+                'stage'           => 'INIT',
+                'request_payload' => [
+                    'chat_id' => $chatId,
+                    'message' => $message,
+                ],
+                'retry_count'     => 0,
+                'trace_id'        => $traceId,
             ]);
 
-            // Send
+            // =====================
+            // SET PROCESSING
+            // =====================
+            $event->update([
+                'stage'  => 'SEND_REQUEST',
+            ]);
+
+            // =====================
+            // SEND
+            // =====================
             $response = $this->handler->send($chatId, $message, $traceId);
 
-            // Update audit event (success)
+            // =====================
+            // SUCCESS UPDATE
+            // =====================
             $event->update([
-                'gateway_id'       => 1,
+                'gateway_id'       => 1, // Telegram gateway static
                 'status'           => 'success',
+                'stage'            => 'SUCCESS',
                 'sent_at'          => now(),
                 'response_code'    => $response['status'],
                 'response_message' => json_encode($response['raw']),
+                'response_payload' => $response,
                 'message_id'       => $response['message_id'],
+                'retry_count'      => $event->retry_count + 1,
+                'last_error_at'    => null,
             ]);
         } catch (\Throwable $e) {
 
             if ($event) {
                 $event->update([
                     'status'           => 'failed',
+                    'stage'            => 'FAILED_EXCEPTION',
                     'sent_at'          => now(),
                     'response_code'    => 'FAILED',
                     'response_message' => $e->getMessage(),
+                    'response_payload' => [
+                        'exception' => true,
+                        'message'   => $e->getMessage(),
+                    ],
+                    'retry_count'   => $event->retry_count + 1,
+                    'last_error_at' => now(),
                 ]);
             }
 
-            // ❗ LOG HANYA ERROR PENTING
             LogHelper::logError(
                 null,
                 array_merge($context, [

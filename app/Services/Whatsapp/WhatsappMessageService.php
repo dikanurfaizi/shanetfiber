@@ -19,8 +19,19 @@ class WhatsappMessageService
         string $traceId,
         ?int $messageEventId = null
     ): void {
-        $stage = 'INIT';
-        $start = microtime(true);
+
+        if (!$messageEventId) {
+            return;
+        }
+
+        /** @var MessageEvent $event */
+        $event = MessageEvent::find($messageEventId);
+
+        if (!$event) {
+            return;
+        }
+
+        $start     = microtime(true);
         $gatewayId = null;
 
         LogHelper::logInfo(
@@ -34,30 +45,37 @@ class WhatsappMessageService
         try {
 
             // =====================
-            // 1. RESOLVE GATEWAY
+            // INIT
             // =====================
-            $stage = 'RESOLVE_GATEWAY';
+            $payload = [
+                'phone'   => $receiver,
+                'message' => $message,
+            ];
+
+            $event->update([
+                'stage'           => 'INIT',
+                'request_payload' => $payload,
+            ]);
+
+            // =====================
+            // RESOLVE GATEWAY
+            // =====================
+            $event->update(['stage' => 'RESOLVE_GATEWAY']);
 
             $gateway = WhatsappGateway::where('slug', 'gowa')
                 ->where('is_active', true)
                 ->first();
 
-            if (! $gateway) {
-                MessageEvent::where('id', $messageEventId)->update([
-                    'gateway_id' => null,
-                    'status' => 'failed',
-                    'response_code' => 'NO_GATEWAY',
-                    'response_message' => 'No active gateway found',
-                    'sent_at' => now(),
-                ]);
+            if (!$gateway) {
 
-                LogHelper::logWarning(
-                    null,
-                    compact('traceId', 'receiver', 'messageType'),
-                    404,
-                    '[WhatsappMessageService] No active gateway found',
-                    $traceId
-                );
+                $event->update([
+                    'stage'            => 'FAILED_NO_GATEWAY',
+                    'status'           => 'failed',
+                    'response_code'    => 'NO_GATEWAY',
+                    'response_message' => 'No active gateway found',
+                    'sent_at'          => now(),
+                    'last_error_at'    => now(),
+                ]);
 
                 return;
             }
@@ -65,51 +83,52 @@ class WhatsappMessageService
             $gatewayId = $gateway->id;
 
             // =====================
-            // 2. PREPARE REQUEST
+            // SEND REQUEST
             // =====================
-            $stage = 'SEND_REQUEST';
+            $event->update(['stage' => 'SEND_REQUEST']);
 
             $resolved = app(GatewayHelper::class)->resolve($gateway);
-            $url = rtrim($resolved['base_url'], '/') . '/send/message';
+            $url      = rtrim($resolved['base_url'], '/') . '/send/message';
 
             $response = Http::withOptions($resolved['options'])
-                ->post($url, [
-                    'phone' => $receiver,
-                    'message' => $message,
-                ]);
+                ->timeout(30)
+                ->post($url, $payload);
 
-            $decoded = json_decode($response->getBody()->getContents(), true);
+            $decoded = $response->json();
 
-            $responseCode = $decoded['code'] ?? null;
+            $responseCode    = $decoded['code'] ?? null;
             $responseMessage = $decoded['message'] ?? null;
-            $messageId = $decoded['results']['message_id'] ?? null;
+            $messageId       = $decoded['results']['message_id'] ?? null;
 
-            // =====================
-            // 3. UPDATE MESSAGE EVENT
-            // =====================
-            $stage = 'UPDATE_EVENT';
+            $isSuccess = $responseCode === 'SUCCESS';
 
-            MessageEvent::where('id', $messageEventId)->update([
-                'gateway_id'     => $gatewayId,
-                'status'         => $responseCode === 'SUCCESS' ? 'success' : 'failed',
-                'sent_at'        => now(),
-                'response_code'  => $responseCode,
+            $event->update([
+                'gateway_id'       => $gatewayId,
+                'stage'            => $isSuccess ? 'SUCCESS' : 'FAILED',
+                'status'           => $isSuccess ? 'success' : 'failed',
+                'sent_at'          => now(),
+                'response_code'    => $responseCode,
                 'response_message' => $responseMessage,
-                'message_id'     => $responseCode === 'SUCCESS' ? $messageId : null,
+                'response_payload' => $decoded,
+                'message_id'       => $isSuccess ? $messageId : null,
+                'retry_count'      => $event->retry_count + 1,
+                'last_error_at'    => $isSuccess ? null : now(),
             ]);
-
-            $stage = 'COMPLETE';
         } catch (Throwable $e) {
 
-            // =====================
-            // 4. HANDLE FAILURE
-            // =====================
-            MessageEvent::where('id', $messageEventId)->update([
+            $event->update([
                 'gateway_id'       => $gatewayId,
+                'stage'            => 'FAILED_EXCEPTION',
                 'status'           => 'failed',
                 'sent_at'          => now(),
-                'response_code'    => $e->getCode(),
+                'response_code'    => $e->getCode() ?: 'EXCEPTION',
                 'response_message' => $e->getMessage(),
+                'response_payload' => [
+                    'exception' => true,
+                    'message'   => $e->getMessage(),
+                ],
+                'retry_count'   => $event->retry_count + 1,
+                'last_error_at' => now(),
             ]);
 
             LogHelper::logError(
@@ -117,12 +136,12 @@ class WhatsappMessageService
                 [
                     'receiver' => $receiver,
                     'error' => [
-                        'code' => $e->getCode(),
-                        'message' => $e->getMessage()
+                        'code'    => $e->getCode(),
+                        'message' => $e->getMessage(),
                     ]
                 ],
                 500,
-                "[WhatsappMessageService] Exception at stage {$stage}",
+                "[WhatsappMessageService] Exception occurred",
                 $traceId
             );
         }
@@ -130,10 +149,10 @@ class WhatsappMessageService
         LogHelper::logInfo(
             null,
             [
-                'trace_id' => $traceId,
+                'trace_id'   => $traceId,
                 'gateway_id' => $gatewayId,
-                'stage' => $stage,
-                'duration' => round(microtime(true) - $start, 3)
+                'final_stage' => $event->fresh()->stage,
+                'duration'   => round(microtime(true) - $start, 3)
             ],
             200,
             "[WhatsappMessageService] Completed",

@@ -53,15 +53,19 @@ class MessageDispatcher
                 true
             );
 
+            $payload = [
+                'phone'   => $formattedReceiver,
+                'message' => $message,
+            ];
+
             $event = MessageEvent::create([
                 'customer_id'  => $built['customer_id'] ?? null,
                 'channel'      => 'go_whatsapp',
                 'message_type' => $action,
-                'meta'         => [
-                    'phone' => $formattedReceiver,
-                ],
+                'meta'         => $payload,
                 'status'       => 'pending',
                 'trace_id'     => $traceId,
+                'stage'        => 'SENDING JOB'
             ]);
 
             // Dispatch job
