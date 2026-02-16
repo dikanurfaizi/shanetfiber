@@ -29,10 +29,16 @@ class CloudApiClientProcess
 
         $response = $this->apiClient->handle($url, $account->meta_user_access_token, $payload);
 
+        if (!$response['ok']) {
+            throw new RuntimeException(
+                "Cloud API request failed with status {$response['status']}: {$response['raw']}"
+            );
+        }
+
         return [
             'status' => $response['status'],
             'body' => $response['json'],
-            'raw' => $response['body'],
+            'raw' => $response['raw'],
         ];
     }
 }

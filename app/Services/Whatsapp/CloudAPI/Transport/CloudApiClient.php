@@ -15,9 +15,10 @@ class CloudApiClient
             ->post($url, $payload);
 
         return [
+            'ok'     => $response->successful(),
             'status' => $response->status(),
-            'body' => $response->json(),
-            'raw' => $response->body(),
+            'json'   => $response->json(),
+            'raw'    => $response->body(),
         ];
     }
 }

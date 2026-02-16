@@ -229,7 +229,7 @@
         </li>
     @endcanany
 
-    @canany(['conversations-list', 'conversations-show'])
+    @canany(['conversation-list'])
         <li class="nav-item @if (request()->routeIs('conversations*')) active @endif">
             <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseConversations">
                 <i class="fab fa-telegram-plane"></i>

@@ -5,6 +5,7 @@ namespace App\Services\Whatsapp\Meta;
 use App\Models\Whatsapp\WhatsappWebhookMessage;
 use App\Models\Whatsapp\WhatsappMessageStatus;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class HandleStatusUpdateWhatsappWebhook
 {
@@ -23,7 +24,7 @@ class HandleStatusUpdateWhatsappWebhook
                 ? Carbon::createFromTimestamp($statusData['timestamp'])
                 : now();
 
-            // Append-only audit
+            // Append-only audit (idempotent)
             WhatsappMessageStatus::firstOrCreate(
                 [
                     'wa_message_id' => $waMessageId,
@@ -35,41 +36,36 @@ class HandleStatusUpdateWhatsappWebhook
                 ]
             );
 
-            $message = WhatsappWebhookMessage::where('wa_message_id', $waMessageId)
-                ->lockForUpdate()
-                ->first();
-
-            if (!$message) {
-                // Status datang duluan? skip snapshot update
-                continue;
-            }
-
-            $this->updateMessageSnapshot($message, $status, $statusAt);
+            $this->updateSnapshotAtomically($waMessageId, $status, $statusAt);
         }
     }
 
-    private function updateMessageSnapshot($message, string $status, Carbon $statusAt): void
+    private function updateSnapshotAtomically(string $waMessageId, string $status, Carbon $statusAt): void
     {
+        $fields = [
+            'last_status' => $status,
+        ];
+
         switch ($status) {
 
             case 'sent':
-                $message->sent_at ??= $statusAt;
+                $fields['sent_at'] = DB::raw("IFNULL(sent_at, '{$statusAt->toDateTimeString()}')");
                 break;
 
             case 'delivered':
-                $message->delivered_at ??= $statusAt;
+                $fields['delivered_at'] = DB::raw("IFNULL(delivered_at, '{$statusAt->toDateTimeString()}')");
                 break;
 
             case 'read':
-                $message->read_at ??= $statusAt;
+                $fields['read_at'] = DB::raw("IFNULL(read_at, '{$statusAt->toDateTimeString()}')");
                 break;
 
             case 'failed':
-                $message->failed_at ??= $statusAt;
+                $fields['failed_at'] = DB::raw("IFNULL(failed_at, '{$statusAt->toDateTimeString()}')");
                 break;
         }
 
-        $message->last_status = $status;
-        $message->save();
+        WhatsappWebhookMessage::where('wa_message_id', $waMessageId)
+            ->update($fields);
     }
 }
