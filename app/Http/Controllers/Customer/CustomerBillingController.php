@@ -78,6 +78,10 @@ class CustomerBillingController extends Controller
         } catch (DomainException $e) {
             LogHelper::logError($e, [
                 'customer_id' => $customer->id,
+                'error' => [
+                    'code' => $e->getCode(),
+                    'message' => $e->getMessage()
+                ]
             ], 422, 'Failed to update customer billing', $traceId);
 
             return redirect()
@@ -87,6 +91,10 @@ class CustomerBillingController extends Controller
         } catch (Exception $e) {
             LogHelper::logError($e, [
                 'customer_id' => $customer->id,
+                'error' => [
+                    'code' => $e->getCode(),
+                    'message' => $e->getMessage()
+                ]
             ], 500, 'Failed to update customer billing', $traceId);
 
             return redirect()

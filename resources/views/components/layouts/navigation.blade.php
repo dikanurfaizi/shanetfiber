@@ -229,6 +229,24 @@
         </li>
     @endcanany
 
+    @canany(['converstaions-list', 'conversations-show'])
+        <li class="nav-item @if (request()->routeIs('conversations*')) active @endif">
+            <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseConversations">
+                <i class="fas fa-server"></i>
+                <span>{{ __('navigation.converstaions.nav-item') }}</span>
+            </a>
+            <div id="collapseConversations" class="collapse @if (request()->routeIs('conversations*')) show @endif"
+                data-parent="#accordionSidebar">
+                <div class="bg-white py-2 collapse-inner rounded">
+                    <a class="collapse-item @if (request()->routeIs('whatsapp.conversations.index')) active @endif"
+                        href="{{ route('whatsapp.conversations.index') }}">
+                        {{ __('navigation.conversations.index') }}
+                    </a>
+                </div>
+            </div>
+        </li>
+    @endcanany
+
     <hr class="sidebar-divider">
 
     <!-- ======================

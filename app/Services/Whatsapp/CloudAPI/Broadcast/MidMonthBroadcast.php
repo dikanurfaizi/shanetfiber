@@ -8,12 +8,13 @@ use App\Helpers\MaskCustomerName;
 use App\Jobs\Whatsapp\CloudAPI\Broadcast\MidMonthReminderJob;
 use App\Models\Whatsapp\WhatsappGateway;
 use App\Services\Whatsapp\CloudAPI\Collectors\BillingReminderCollector;
+use App\Services\Whatsapp\CloudAPI\Messages\TemplateMessageService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class MidMonthBroadcast
 {
-    public function __construct(private BillingReminderCollector $collector) {}
+    public function __construct(private BillingReminderCollector $collector, private TemplateMessageService $templateMessageService) {}
 
     public function run(string $traceId)
     {
@@ -61,7 +62,7 @@ class MidMonthBroadcast
             'account_id' => $account->id
         ], 130, '[MidMonthBroadcast] Gateway resolved', $traceId);
 
-        $delay = $this->getNextDelay('notification', $traceId);
+        // $delay = $this->getNextDelay('notification', $traceId);
 
         foreach ($billings as $idx => $data) {
 
@@ -75,38 +76,51 @@ class MidMonthBroadcast
                 ? Carbon::parse($data->final_due_date)->translatedFormat('d F Y')
                 : '-';
 
-            LogHelper::logInfo(null, [
-                'index'         => $idx,
-                'customer_id'   => $data->customer_id,
-                'customer_name' => $data->customer_name,
-                'recipient'     => $recipient,
-                'package'       => $data->package_name,
-                'total'         => $this->currency($data->total),
-                'due_date'      => $due_date_formatted,
-                'delay_at'      => $delay->toDateTimeString(),
-            ], 200, '[MidMonthBroadcast] Dispatch job', $traceId);
+            // LogHelper::logInfo(null, [
+            //     'index'         => $idx,
+            //     'customer_id'   => $data->customer_id,
+            //     'customer_name' => $data->customer_name,
+            //     'recipient'     => $recipient,
+            //     'package'       => $data->package_name,
+            //     'total'         => $this->currency($data->total),
+            //     'due_date'      => $due_date_formatted,
+            //     'delay_at'      => $delay->toDateTimeString(),
+            // ], 200, '[MidMonthBroadcast] Dispatch job', $traceId);
 
             $accountData = MaskCustomerName::buildAccountData($data->customer_name, $data->package_name);
 
-            MidMonthReminderJob::dispatch(
-                contact: $recipient,
-                customerId: $data->customer_id,
-                customerName: $data->customer_name,
-                packageName: $data->package_name,
-                accountData: $accountData,
-                totalAmount: $this->currency($data->total),
-                dueDate: $due_date_formatted,
-                note: 'gangguan layanan internet',
-                templateName: $templateName,
-                account: $account
-            )
-                ->delay($delay)
-                ->onQueue('notification');
+            // MidMonthReminderJob::dispatch(
+            //     contact: $recipient,
+            //     customerId: $data->customer_id,
+            //     customerName: $data->customer_name,
+            //     packageName: $data->package_name,
+            //     accountData: $accountData,
+            //     totalAmount: $this->currency($data->total),
+            //     dueDate: $due_date_formatted,
+            //     note: 'gangguan layanan internet',
+            //     templateName: $templateName,
+            //     account: $account
+            // )
+            //     ->delay($delay)
+            //     ->onQueue('notification');
 
-            $delay = $delay->addMinute();
+            $this->templateMessageService->sendBroadcastMidMonth([
+                'recipient' => $recipient,
+                'customer_id' => $data->customer_id,
+                'customer_name' => $data->customer_name,
+                'package_name' => $data->package_name,
+                'account_data' => $accountData,
+                'total_amount' => $this->currency($data->total),
+                'due_date' => $due_date_formatted,
+                'note' => 'gangguan layanan internet',
+                'templateName' => $templateName,
+                'account' => $account
+            ]);
+
+            // $delay = $delay->addMinute();
         }
 
-        LogHelper::logInfo(null, [], 900, '[MidMonthBroadcast] Finished dispatch loop', $traceId);
+        LogHelper::logInfo(null, [], 900, '[MidMonthBroadcast] Finished dispatch', $traceId);
     }
 
     private function getNextDelay(string $queue, string $traceId): Carbon

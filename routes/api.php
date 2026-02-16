@@ -28,4 +28,5 @@ Route::middleware('mikrotik.auth')->post('/mikrotik/send-message', [MikrotikMess
 Route::post('/webhook/whatsapp', [WhatsappWebhookController::class, 'onpremWebhook']);
 Route::get('/public/receipts/download/{token}', [ReceiptController::class, 'printPreview'])->name('public.receipts.download');
 Route::get('/public/paylater/info/{token}', [BillingController::class, 'paylaterPreview'])->name('public.paylater.download');
-Route::post('/meta/whatsapp/webhook', [WhatsappWebhookController::class, 'metaWebhook']);
+Route::get('/webhook/meta/whatsapp/verify', [WhatsappWebhookController::class, 'metaVerify']);
+Route::post('/webhook/meta/whatsapp', [WhatsappWebhookController::class, 'metaWebhook']);

@@ -43,4 +43,9 @@ return [
         'allow_mikrotik_actions' => env('ALLOW_MIKROTIK_ACTIONS', false),
     ],
 
+    'meta' => [
+        'verify_token' => env('META_VERIFY_TOKEN'),
+        'app_secret' => env('META_APP_SECRET'),
+    ],
+
 ];

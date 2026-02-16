@@ -7,6 +7,7 @@ use App\Models\Messaging\MessageEvent;
 use App\Services\Whatsapp\CloudAPI\Payloads\MessagePayloadBuilder;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\TemplateHandlerRegistry;
 use App\Services\Whatsapp\CloudAPI\Transport\CloudApiClient;
+use App\Services\Whatsapp\Meta\HandleOutgoingWhatsappMessage;
 use Illuminate\Support\Str;
 
 class MessageDispatcher
@@ -14,7 +15,8 @@ class MessageDispatcher
     public function __construct(
         private MessagePayloadBuilder $builder,
         private CloudApiClient $client,
-        private TemplateHandlerRegistry $registry
+        private TemplateHandlerRegistry $registry,
+        private HandleOutgoingWhatsappMessage $outgoingWhatsappMessage
     ) {}
 
     public function dispatch(object $command): MessageResult
@@ -48,6 +50,18 @@ class MessageDispatcher
             // Update audit event
             $status = ($response['status'] ?? 0) === 200 ? 'success' : 'failed';
             $messageId = data_get($response, 'body.messages.0.id');
+
+            if ($status === 'success' && $messageId) {
+
+                $this->outgoingWhatsappMessage
+                    ->handle(
+                        null,
+                        $command->recipient, // nomor customer
+                        $context->account->defaultNumber->number, // nomor bisnis
+                        $messageId,
+                        $payload
+                    );
+            }
 
             $event->update([
                 'status'            => $status,

@@ -100,6 +100,7 @@
     <script src="{{ asset('assets/notify/notify.min.js') }}"></script>
     <script src="{{ asset('assets/sweet-alert/sweet-alert.min.js') }}"></script>
     <script src="{{ asset('assets/vendor/datatables/datatables.min.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <!-- Page level custom scripts -->
     @yield('custom_scripts')
     @stack('scripts')

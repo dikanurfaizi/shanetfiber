@@ -19,6 +19,7 @@ use App\Http\Controllers\Customer\CustomerBillingController;
 use App\Http\Controllers\Customer\CustomerRestoreController;
 use App\Http\Controllers\Customer\CustomerTrashedController;
 use App\Http\Controllers\DropdownController;
+use App\Http\Controllers\ExpensesController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InstallController;
@@ -60,6 +61,7 @@ use App\Http\Controllers\Whatsapp\WhatsappGatewayController;
 use App\Http\Controllers\Whatsapp\WhatsappMessageController;
 use App\Http\Controllers\Whatsapp\WhatsappNumberController;
 use App\Http\Controllers\Whatsapp\WhatsappCloudController;
+use App\Http\Controllers\Whatsapp\WhatsappConversationController;
 use App\Http\Controllers\Whatsapp\WhatsappFeatureController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -385,6 +387,12 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::resource('settings/whatsappfeature', WhatsappFeatureController::class);
         Route::get('settings/whatsappfeature/{whatsappfeature}/delete', [WhatsappFeatureController::class, 'delete'])->name('whatsappfeature.delete');
 
+        // WhatsApp Conversations
+        Route::prefix('whatsapp/conversations')->group(function () {
+            Route::get('/', [WhatsappConversationController::class, 'index'])->name('whatsapp.conversations.index');
+            Route::get('/{id}', [WhatsappConversationController::class, 'show'])->name('whatsapp.conversations.show');
+        });
+
         // ==================== MESSAGE EVENTS ====================
         Route::get('settings/message/events', [MessageEventController::class, 'index'])->name('messageevents.index');
 
@@ -442,6 +450,9 @@ Route::group(['prefix' => 'cpanel'], function () {
         // ==================== REPORTS ====================
         Route::get('reports/internet-monthly', [InternetMonthlyReportController::class, 'index'])->name('reports.internet.monthly');
         Route::get('reports/kpi', [KpiController::class, 'index'])->name('reports.kpi');
+
+        // ==================== EXPENSES ===================
+        Route::resource('expenses', ExpensesController::class)->names('expenses');
     });
 });
 

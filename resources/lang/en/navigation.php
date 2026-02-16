@@ -85,4 +85,7 @@ return [
             'index' => 'Monthly Internet Report',
         ],
     ],
+    'conversations' => [
+        'nav-item' => 'Conversations'
+    ]
 ];

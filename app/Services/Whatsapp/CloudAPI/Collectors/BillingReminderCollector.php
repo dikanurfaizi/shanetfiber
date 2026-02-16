@@ -35,7 +35,7 @@ class BillingReminderCollector
                 $join->on('billings.customer_id', '=', 'me.customer_id')
                     ->where('me.message_type', $slug)
                     ->whereDate('me.created_at', $today)
-                    ->whereIn('me.status', ['success', 'failed']);
+                    ->whereIn('me.status', ['success', 'failed', 'pending']);
             })
 
             ->whereNull('me.id')
