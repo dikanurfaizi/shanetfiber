@@ -15,9 +15,14 @@ class MessageEvent extends Model
         'message_type',
         'meta',
         'status',
+        'stage',
         'response_code',
         'response_message',
         'message_id',
+        'request_payload',
+        'response_payload',
+        'retry_count',
+        'last_error_at',
         'trace_id',
         'sent_at',
     ];
@@ -25,6 +30,8 @@ class MessageEvent extends Model
     protected $casts = [
         'meta' => 'array',
         'sent_at' => 'datetime',
+        'last_error_at' => 'datetime',
+        'retry_count' => 'integer',
     ];
 
     public function gateway()
