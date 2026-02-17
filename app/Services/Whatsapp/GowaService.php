@@ -60,6 +60,7 @@ class GowaService
         CustomerSubscription $customerSubscription,
         string $action,
         ?int $eventId,
+        string $deviceId,
         string $traceId
     ): void {
         $queueName = 'notification';
@@ -99,7 +100,8 @@ class GowaService
                 queue: $queueName,
                 traceId: $traceId,
                 delay: $delayTime,
-                eventId: $eventId
+                eventId: $eventId,
+                deviceId: $deviceId
             );
         } catch (\Throwable $e) {
             LogHelper::logError(null, [
@@ -117,7 +119,7 @@ class GowaService
     // ============================================
     // =====            Create Order          =====
 
-    public function orderCreated(int $billingId, int $orderId, string $action, string $traceId): void
+    public function orderCreated(int $billingId, int $orderId, string $action, string $eventId, string $deviceId, string $traceId): void
     {
         $queueName = 'notification';
         $globalIndex = 0;
@@ -148,7 +150,9 @@ class GowaService
                 ),
                 queue: $queueName,
                 traceId: $traceId,
-                delay: $delayTime
+                delay: $delayTime,
+                eventId: $eventId,
+                deviceId: $deviceId
             );
 
             LogHelper::logInfo(null, [
@@ -177,6 +181,7 @@ class GowaService
         Receipt $receipt,          // ⬅️ WAJIB
         string $channel,            // cash | transfer | payment_gateway
         ?string $eventId,
+        string $deviceId,
         string $traceId
     ): void {
         $queueName = 'notification';
@@ -197,7 +202,8 @@ class GowaService
                 queue: $queueName,
                 traceId: $traceId,
                 delay: $delayTime,
-                eventId: $eventId
+                eventId: $eventId,
+                deviceId: $deviceId
             );
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -221,6 +227,7 @@ class GowaService
         CustomerSubscription $customerSubscription,
         Billing $billing,
         ?int $eventId,
+        string $deviceId,
         string $traceId
     ): void {
         $queueName = 'notification';
@@ -243,7 +250,8 @@ class GowaService
                 queue: $queueName,
                 traceId: $traceId,
                 delay: $delayTime,
-                eventId: $eventId
+                eventId: $eventId,
+                deviceId: $deviceId
             );
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -266,6 +274,8 @@ class GowaService
     public function notifyUnpayment(
         CustomerSubscription $customerSubscription,
         Billing $billing,
+        ?int $eventId,
+        string $deviceId,
         string $traceId
     ): void {
         $queueName = 'notification';
@@ -287,7 +297,9 @@ class GowaService
                 ),
                 queue: $queueName,
                 traceId: $traceId,
-                delay: $delayTime
+                delay: $delayTime,
+                eventId: $eventId,
+                deviceId: $deviceId
             );
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -311,8 +323,14 @@ class GowaService
     // ==================================================
     // ===== Broadcast at the beginning of the month ====
 
-    public function broadcastMonthly(Carbon $startDate, Carbon $endDate, string $action, string $gatewayType, string $traceId): void
-    {
+    public function broadcastMonthly(
+        Carbon $startDate,
+        Carbon $endDate,
+        string $action,
+        ?int $eventId,
+        string $deviceId,
+        string $traceId
+    ): void {
         $startTime = microtime(true);
         $queueName = 'notification';
         $globalIndex = 0;
@@ -344,7 +362,9 @@ class GowaService
                     ),
                     queue: $queueName,
                     traceId: $traceId,
-                    delay: $delayTime
+                    delay: $delayTime,
+                    eventId: $eventId,
+                    deviceId: $deviceId
                 );
 
                 $globalIndex++;
@@ -366,7 +386,7 @@ class GowaService
     // ==================================================
     // ===== Broadcast at the middle of the month =======
 
-    public function broadcastMidMonth(string $traceId): void
+    public function broadcastMidMonth(?int $eventId, string $deviceId, string $traceId): void
     {
         $queueName = 'notification';
         $globalIndex = 0;
@@ -402,7 +422,9 @@ class GowaService
                         ),
                         queue: $queueName,
                         traceId: $traceId,
-                        delay: $delayTime
+                        delay: $delayTime,
+                        eventId: $eventId,
+                        deviceId: $deviceId
                     );
                     $globalIndex++;
                 }
@@ -428,8 +450,14 @@ class GowaService
     // ==================================================
     // =====          Changes package         ===========
 
-    public function changesPackage(int $customerId, ?string $oldPackageName, ?int $oldPackagePrice, string $traceId): void
-    {
+    public function changesPackage(
+        int $customerId,
+        ?string $oldPackageName,
+        ?int $oldPackagePrice,
+        ?int $eventId,
+        string $deviceId,
+        string $traceId
+    ): void {
         $queueName = 'notification';
         $globalIndex = 0;
         try {
@@ -447,7 +475,9 @@ class GowaService
                 ),
                 queue: $queueName,
                 traceId: $traceId,
-                delay: $delayTime
+                delay: $delayTime,
+                eventId: $eventId,
+                deviceId: $deviceId
             );
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -506,7 +536,9 @@ class GowaService
                 ),
                 queue: $queueName,
                 traceId: $traceId,
-                delay: $delayTime
+                delay: $delayTime,
+                eventId: null,
+                deviceId: $activeAccount->defaultNumber?->device_id
             );
 
             LogHelper::logInfo(null, [
@@ -530,9 +562,12 @@ class GowaService
         }
     }
 
-    public function menu($custName, $custContact, $traceId)
+    public function menu($custName, $custContact, ?int $eventId, string $deviceId, string $traceId)
     {
+        $queueName = 'notification';
+        $globalIndex = 0;
         try {
+            $delayTime = $this->delayMessage($globalIndex, 'interactive', $queueName);
             $this->dispatcher->dispatch(
                 'changes_package',
                 fn(string $category) => new MenuHandler(
@@ -543,7 +578,10 @@ class GowaService
                     category: $category
                 ),
                 'default',
-                $traceId
+                $traceId,
+                $delayTime,
+                $eventId,
+                $deviceId
             );
         } catch (\Throwable $e) {
             LogHelper::logError(

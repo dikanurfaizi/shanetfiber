@@ -22,32 +22,87 @@ class WebhookEventRouter
     {
         $payload = WebhookPayload::fromArray($data);
 
-        // Message ACK
-        if ($payload->event === 'message.ack') {
-            $this->ackHandler->handle($payload, $traceId);
+        // ===== BASIC TRACE LOG (1 BARIS SAJA) =====
+        LogHelper::logInfo(
+            null,
+            [
+                'trace_id'  => $traceId,
+                'event'     => $payload->event,
+                'device_id' => $payload->deviceId,
+            ],
+            200,
+            '[Webhook] Event received',
+            $traceId
+        );
+
+        // ===== DEVICE VALIDATION =====
+        if (!$payload->deviceId) {
+            LogHelper::logWarning(
+                null,
+                [
+                    'trace_id' => $traceId,
+                    'event'    => $payload->event,
+                ],
+                400,
+                '[Webhook] Missing device_id',
+                $traceId
+            );
             return;
         }
 
-        // Group event
-        if ($payload->event === 'group.participants') {
-            $this->groupHandler->handle($payload, $traceId);
-            return;
-        }
+        match ($payload->event) {
 
-        // Text message
-        if ($payload->text() !== null) {
+            'message.ack' => $this->ackHandler->handle($payload, $traceId),
+
+            'group.participants' => $this->groupHandler->handle($payload, $traceId),
+
+            'message' => $this->handleMessage($payload, $traceId),
+
+            default => $this->logUnhandled($payload, $traceId),
+        };
+    }
+
+    private function handleMessage(WebhookPayload $payload, string $traceId): void
+    {
+        if ($payload->isText()) {
             $this->textHandler->handle($payload, $traceId);
             return;
         }
 
-        // Media
-        if ($payload->media() !== null) {
+        if (
+            $payload->isImage() ||
+            $payload->isVideo() ||
+            $payload->isDocument()
+        ) {
             $this->mediaHandler->handle($payload, $traceId);
             return;
         }
 
-        LogHelper::logInfo(null, [
-            'raw' => $data,
-        ], 400, '[Webhook] Unhandled event type', $traceId);
+        LogHelper::logWarning(
+            null,
+            [
+                'trace_id'  => $traceId,
+                'device_id' => $payload->deviceId,
+                'event'     => 'message',
+            ],
+            400,
+            '[Webhook] Unsupported message type',
+            $traceId
+        );
+    }
+
+    private function logUnhandled(WebhookPayload $payload, string $traceId): void
+    {
+        LogHelper::logWarning(
+            null,
+            [
+                'trace_id'  => $traceId,
+                'device_id' => $payload->deviceId,
+                'event'     => $payload->event,
+            ],
+            400,
+            '[Webhook] Unhandled event',
+            $traceId
+        );
     }
 }

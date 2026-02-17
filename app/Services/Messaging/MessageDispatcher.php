@@ -24,10 +24,12 @@ class MessageDispatcher
         ?string $queue = 'default',
         ?string $traceId = null,
         ?Carbon $delay = null,
-        ?int $eventId = null
+        ?int $eventId = null,
+        string $deviceId
     ): void {
-        $stage = 'INIT';
+
         $startTime = microtime(true);
+        $stage = 'INIT';
 
         try {
             // Resolve handler
@@ -46,7 +48,7 @@ class MessageDispatcher
                 $traceId
             );
 
-            // Create MessageEvent (audit source of truth)
+            // Format receiver
             $formatter = new FormatReceiver();
             $formattedReceiver = $formatter->formatReceiver(
                 $built['to'],
@@ -59,16 +61,20 @@ class MessageDispatcher
                 'message' => $message,
             ];
 
+            // Create / Update event
             if ($eventId) {
+
                 $event = MessageEvent::findOrFail($eventId);
 
                 $event->update([
-                    'status' => 'pending',
-                    'stage'  => 'SENDING JOB',
-                    'trace_id' => $traceId,
-                    'payload' => $payload
+                    'status'    => 'pending',
+                    'stage'     => 'SENDING JOB',
+                    'trace_id'  => $traceId,
+                    'payload'   => $payload,
+                    'device_id' => $deviceId,
                 ]);
             } else {
+
                 $event = MessageEvent::create([
                     'customer_id'  => $built['customer_id'] ?? null,
                     'channel'      => 'go_whatsapp',
@@ -76,7 +82,8 @@ class MessageDispatcher
                     'meta'         => $payload,
                     'status'       => 'pending',
                     'trace_id'     => $traceId,
-                    'stage'        => 'SENDING JOB'
+                    'stage'        => 'SENDING JOB',
+                    'device_id'    => $deviceId,
                 ]);
             }
 
@@ -87,30 +94,46 @@ class MessageDispatcher
                 $message,
                 $built['customer_id'] ?? null,
                 $traceId,
-                $event->id
+                $event->id,
+                $deviceId
             )->onQueue($queue ?? 'default');
 
             if ($delay) {
                 $job->delay($delay);
             }
+
+            // ✅ SUCCESS LOG (RINGKAS & TRACEABLE)
+            LogHelper::logInfo(
+                null,
+                [
+                    'trace_id'    => $traceId,
+                    'event_id'    => $event->id,
+                    'action'      => $action,
+                    'channel'     => 'go_whatsapp',
+                    'device_id'   => $deviceId,
+                    'receiver'    => $formattedReceiver,
+                    'queue'       => $queue ?? 'default',
+                ],
+                200,
+                '[MessageDispatcher] Dispatched',
+                $traceId,
+                round(microtime(true) - $startTime, 4)
+            );
         } catch (Throwable $e) {
 
-            $duration = round(microtime(true) - $startTime, 4);
-
-            // 🔔 LOG HANYA ERROR
             LogHelper::logError(
                 null,
                 [
-                    'action' => $action,
-                    'queue'  => $queue ?? 'default',
-                    'stage'  => $stage,
                     'trace_id' => $traceId,
-                    'error'  => $e->getMessage(),
+                    'action'   => $action,
+                    'stage'    => $stage,
+                    'device_id' => $deviceId,
+                    'error'    => $e->getMessage(),
                 ],
                 500,
                 '[MessageDispatcher] Dispatch failed',
                 $traceId,
-                $duration
+                round(microtime(true) - $startTime, 4)
             );
 
             throw $e;

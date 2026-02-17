@@ -76,6 +76,7 @@ class WhatsappNumberController extends Controller
             [
                 'name'          => 'required|max:255|unique:whatsapp_numbers',
                 'number'        => 'required|numeric|unique:whatsapp_numbers',
+                'device_id'     => 'nullable|unique:whatsapp_numbers',
                 // 'header_name'   => 'required',
                 // 'wa_secret'     => 'required',
             ],
@@ -97,6 +98,7 @@ class WhatsappNumberController extends Controller
             'webhook_client_header'        => $header_name,
             'webhook_client_secret'        => str(Str::random(15)),
             'description'   => $request->input('description'),
+            'device_id'     => $request->input('device_id'),
         ]);
 
         return redirect()->route('whatsappnumber.index')
@@ -138,6 +140,7 @@ class WhatsappNumberController extends Controller
             [
                 'name'      => ['required', Rule::unique('whatsapp_numbers')->ignore($whatsappnumber->slug, 'slug')],
                 'number'     => ['required', Rule::unique('whatsapp_numbers')->ignore($whatsappnumber->slug, 'slug')],
+                'device_id'  => ['nullable', Rule::unique('whatsapp_numbers')->ignore($whatsappnumber->slug, 'slug')],
             ],
             [
                 'name.unique' => 'Name ' . $request->name . ' already exist.'
@@ -148,6 +151,7 @@ class WhatsappNumberController extends Controller
         $number = $this->formatPhoneNumber($request->input('number'), $gateway);
         $whatsappnumber->name = $request->input('name');
         $whatsappnumber->number = $number;
+        $whatsappnumber->device_id = $request->input('device_id');
         $whatsappnumber->description = $request->input('description');
         $whatsappnumber->save();
         return redirect()->route('whatsappnumber.index')

@@ -89,11 +89,13 @@ class PaymentNotificationService
             if ($gateway->type === 'cloud') {
                 $this->templateMessageService->sendInfoPembayaran($data);
             } else {
+                $deviceId = $number->device_id;
                 $this->gowaService->notifyPaymentCompleted(
                     $receipt->billingPayment->billing,
                     $receipt,
                     $receipt->payment_methode, // cash | transfer | payment_gateway
                     $eventId,
+                    $deviceId,
                     $traceId,
                 );
             }

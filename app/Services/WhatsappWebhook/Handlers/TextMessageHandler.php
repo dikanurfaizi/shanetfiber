@@ -33,48 +33,39 @@ class TextMessageHandler extends BaseHandler
 
         $sender = $format->normalizeSender($payload->sender());
         $text   = strtolower(trim($payload->text() ?? ''));
+        $deviceId = $payload->deviceId();
 
         $normalizedSender = [
             $format->formatReceiver($sender, null, false),
             $format->formatReceiver($sender, 'display', false)
         ];
 
-        LogHelper::logInfo(null, [
-            'sender' => $sender,
-        ], 200, '[Webhook] Incoming sender', $traceId);
-
-        // ===== SELF-MESSAGE CHECK =====
+        // ===== SELF MESSAGE =====
         $gateway = WhatsappNumber::whereIn('number', $normalizedSender)->first();
 
         if ($gateway && $this->isSelfMessage($sender, $gateway, $format)) {
+
             LogHelper::logInfo(null, [
-                'sender' => $sender,
+                'trace_id'  => $traceId,
+                'sender'    => $sender,
+                'device_id' => $deviceId,
             ], 200, '[Webhook] Self message skipped', $traceId);
+
             return;
         }
 
         // ===== CUSTOMER LOOKUP =====
         $customer = Customer::whereIn('contact', $normalizedSender)->first();
 
-        LogHelper::logInfo(null, [
-            'sender' => $sender,
-            'customer_id' => $customer?->id,
-        ], 200, '[Webhook] Customer lookup', $traceId);
-
         // ===== KEYWORD RESOLUTION =====
         $keyword = $this->keywordProcessor->resolveKeyword($text, $customer)
             ?? WhatsappMessage::where('slug', 'unknown_keyword')->first();
 
-        LogHelper::logInfo(null, [
-            'keyword' => $keyword->slug,
-        ], 200, '[Webhook] Keyword resolved', $traceId);
-
-        // STOP keyword → opt out
+        // STOP keyword
         if ($keyword->slug === 'stop') {
             $this->optOut->store($sender, $traceId);
         }
 
-        // Handler yang memerlukan customer
         $needsCustomer = in_array($keyword->slug, [
             'info_tagihan',
             'info_paket',
@@ -82,35 +73,38 @@ class TextMessageHandler extends BaseHandler
             'hubungi_admin',
         ]);
 
-        if (!$needsCustomer && (!$customer || empty($customer))) {
+        if (!$needsCustomer && !$customer) {
 
             LogHelper::logInfo(null, [
-                'keyword' => $keyword->slug,
-                'sender' => $sender,
-            ], 200, '[Webhook] Unknown customer path', $traceId);
+                'trace_id'  => $traceId,
+                'sender'    => $sender,
+                'keyword'   => $keyword->slug,
+                'device_id' => $deviceId,
+            ], 200, '[Webhook] Unknown customer dispatch', $traceId);
 
-            $this->dispatchUnknownCustomer($sender, $keyword, $traceId);
+            $this->dispatchUnknownCustomer($sender, $keyword, $deviceId, $traceId);
             return;
         }
 
+        // ===== NORMAL DISPATCH =====
         LogHelper::logInfo(null, [
-            'keyword' => $keyword->slug,
+            'trace_id'    => $traceId,
+            'sender'      => $sender,
             'customer_id' => $customer?->id,
-        ], 200, '[Webhook] Dispatch normal', $traceId);
+            'keyword'     => $keyword->slug,
+            'device_id'   => $deviceId,
+        ], 200, '[Webhook] Dispatching message', $traceId);
 
-        // ===== DISPATCH NORMAL HANDLER =====
         $this->dispatcher->dispatch(
             action: $keyword->slug,
             handlerFactory: fn(string $category) =>
             $this->makeHandler($keyword, $sender, $customer, $category),
             queue: 'notification',
             traceId: $traceId,
-            delay: now()->addSeconds(1)
+            delay: now()->addSeconds(1),
+            eventId: null,
+            deviceId: $deviceId
         );
-
-        LogHelper::logInfo(null, [
-            'sender' => $sender,
-        ], 200, '[Webhook] Text processed', $traceId);
     }
 
     // ===============================================
@@ -128,7 +122,7 @@ class TextMessageHandler extends BaseHandler
         return in_array($sender, $variants, true);
     }
 
-    private function dispatchUnknownCustomer(string $sender, $keyword, string $traceId): void
+    private function dispatchUnknownCustomer(string $sender, $keyword, string $deviceId, string $traceId): void
     {
         $this->dispatcher->dispatch(
             action: 'unknown_customer',
@@ -141,7 +135,9 @@ class TextMessageHandler extends BaseHandler
             ),
             queue: 'notification',
             traceId: $traceId,
-            delay: now()->addSeconds(1)
+            delay: now()->addSeconds(1),
+            eventId: null,
+            deviceId: $deviceId
         );
     }
 

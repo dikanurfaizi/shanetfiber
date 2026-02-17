@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Whatsapp;
 
+use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Whatsapp\WhatsappGateway;
@@ -171,7 +172,17 @@ class WhatsappGatewayAccountController extends Controller
             // number
             'number' => 'required|string',
             'country_code' => 'nullable|string|max:5',
+            'device_id' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:whatsapp_numbers,device_id'
+            ],
         ]);
+
+        $formatted = new FormatReceiver();
+        $formattedNumber = $formatted->formatReceiver($validated['number'], null, false);
+        $jid = $formatted->formatReceiver($validated['number'], null, true);
 
         try {
             DB::beginTransaction();
@@ -202,9 +213,11 @@ class WhatsappGatewayAccountController extends Controller
             $slug = Str::slug($validated['number']);
             $account->numbers()->create([
                 'number' => $validated['number'],
+                'jid' => $jid,
                 'slug' => $slug,
                 'name' => 'gowa_phone_number',
                 'country_code' => $validated['country_code'] ?? '62',
+                'device_id' => $formattedNumber,
                 'is_default' => true,
                 'is_enabled' => true,
             ]);
@@ -245,7 +258,7 @@ class WhatsappGatewayAccountController extends Controller
 
         return view($view, [
             'whatsappgateway' => $whatsappgateway,
-            'account' => $account,
+            'account' => $account
         ]);
     }
 
@@ -385,7 +398,23 @@ class WhatsappGatewayAccountController extends Controller
             'basic_auth_username' => 'nullable|string',
             'basic_auth_password' => 'nullable|string',
             'cert_file' => 'nullable|string',
+
+            // number
+            'number' => 'required|string',
+            'country_code' => 'nullable|string|max:5',
+            'device_id' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:whatsapp_numbers,device_id'
+            ],
         ]);
+
+        $formatted = new FormatReceiver();
+        $formattedNumber = $formatted->formatReceiver($validated['number'], null, false);
+        $jid = $formatted->formatReceiver($validated['number'], null, true);
+
+        DB::beginTransaction();
 
         $validated['auth_enabled'] = $request->has('auth_enabled');
 
@@ -401,6 +430,16 @@ class WhatsappGatewayAccountController extends Controller
         $validated['is_active'] = $request->has('is_active');
 
         $account->update($validated);
+
+        $account->numbers()->update([
+            'number' => $formattedNumber,
+            'country_code' => $validated['country_code'] ?? '62',
+            'device_id' => $validated['device_id'],
+            'jid' => $jid,
+            'is_enabled' => true,
+        ]);
+
+        DB::commit();
 
         return redirect()->route('whatsappgateway.show', $gateway->slug)
             ->with('success', 'Gowa account updated successfully');

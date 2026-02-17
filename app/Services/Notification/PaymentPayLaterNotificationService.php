@@ -82,10 +82,12 @@ class PaymentPayLaterNotificationService
                 $subscription = CustomerSubscription::where('customer_id', $billing->customer->id)
                     ->where('status', 'active')->first();
 
+                $deviceId = $number->device_id;
                 $this->gowaService->notifyPayLater(
                     $subscription,
                     $billing,
                     $eventId,
+                    $deviceId,
                     $traceId
                 );
             }

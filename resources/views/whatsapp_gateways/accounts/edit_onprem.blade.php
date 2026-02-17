@@ -43,6 +43,43 @@
 
             <hr class="my-4">
 
+            <h6 class="font-weight-bold text-muted mb-3">WhatsApp Number</h6>
+
+            <div class="mb-3 row">
+                <label class="col-md-3 col-form-label text-muted">
+                    Phone Number <span class="text-danger">*</span>
+                </label>
+                <div class="col-md-9">
+                    <input type="text" name="number" class="form-control"
+                        value="{{ old('number', $account->numbers()->first()->number ?? '') }}" required>
+                </div>
+            </div>
+
+            <div class="mb-3 row">
+                <label class="col-md-3 col-form-label text-muted">
+                    Country Code <span class="text-danger">*</span>
+                </label>
+                <div class="col-md-9">
+                    <input type="text" name="country_code" class="form-control"
+                        value="{{ old('country_code', $account->numbers()->first()->country_code ?? '') }}" required>
+                </div>
+            </div>
+
+            <div class="mb-3 row">
+                <label class="col-md-3 col-form-label text-muted">
+                    Device ID <span class="text-danger">*</span>
+                </label>
+                <div class="col-md-9">
+                    <input type="text" name="device_id" class="form-control"
+                        value="{{ old('device_id', $account->numbers()->first()->device_id ?? '') }}" required>
+                    <small class="text-muted">
+                        Harus sesuai dengan Device ID dari Gowa (/devices)
+                    </small>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
             {{-- Gowa On-Prem Settings --}}
             <h6 class="font-weight-bold text-muted mb-3">Gowa On-Prem Settings</h6>
 

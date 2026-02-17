@@ -12,6 +12,7 @@ class MessageEvent extends Model
         'gateway_id',
         'customer_id',
         'channel',
+        'device_id',
         'message_type',
         'meta',
         'status',

@@ -19,7 +19,8 @@ class SendWhatsappMessageJob implements ShouldQueue
         private string $message,
         private ?string $customerId,
         private string $traceId,
-        private ?int $messageEventId = null
+        private ?int $messageEventId = null,
+        private ?string $deviceId = null,
     ) {}
 
     public function handle(WhatsappMessageService $service): void
@@ -31,6 +32,7 @@ class SendWhatsappMessageJob implements ShouldQueue
             customerId: $this->customerId,
             traceId: $this->traceId,
             messageEventId: $this->messageEventId,
+            deviceId: $this->deviceId,
         );
     }
 }

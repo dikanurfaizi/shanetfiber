@@ -7,6 +7,7 @@ use App\Helpers\LogHelper;
 use App\Models\Messaging\MessageEvent;
 use App\Models\Whatsapp\WhatsappGateway;
 use Illuminate\Support\Facades\Http;
+use RuntimeException;
 use Throwable;
 
 class WhatsappMessageService
@@ -17,26 +18,40 @@ class WhatsappMessageService
         string $message,
         ?string $customerId,
         string $traceId,
-        ?int $messageEventId = null
+        ?int $messageEventId,
+        string $deviceId,
     ): void {
 
-        if (!$messageEventId) {
-            return;
-        }
-
-        /** @var MessageEvent $event */
         $event = MessageEvent::find($messageEventId);
 
         if (!$event) {
-            return;
+            LogHelper::logError(
+                null,
+                ['message_event_id' => $messageEventId],
+                404,
+                "MessageEvent not found",
+                $traceId
+            );
+            throw new RuntimeException("MessageEvent not found");
         }
 
-        $start     = microtime(true);
+        if (empty($deviceId)) {
+            LogHelper::logError(
+                null,
+                ['message_event_id' => $messageEventId],
+                400,
+                "Device ID is required for Gowa multi-device support",
+                $traceId
+            );
+            throw new RuntimeException("Device ID is required for Gowa multi-device support");
+        }
+
+        $start = microtime(true);
         $gatewayId = null;
 
         LogHelper::logInfo(
             null,
-            compact('messageType', 'receiver', 'traceId'),
+            compact('messageType', 'receiver', 'deviceId'),
             200,
             "[WhatsappMessageService] Started",
             $traceId
@@ -55,6 +70,7 @@ class WhatsappMessageService
             $event->update([
                 'stage'           => 'INIT',
                 'request_payload' => $payload,
+                'device_id'       => $deviceId, // persist device
             ]);
 
             // =====================
@@ -91,6 +107,9 @@ class WhatsappMessageService
             $url      = rtrim($resolved['base_url'], '/') . '/send/message';
 
             $response = Http::withOptions($resolved['options'])
+                ->withHeaders([
+                    'X-Device-Id' => $deviceId, // ❗ WAJIB
+                ])
                 ->timeout(30)
                 ->post($url, $payload);
 
@@ -135,6 +154,7 @@ class WhatsappMessageService
                 null,
                 [
                     'receiver' => $receiver,
+                    'device_id' => $deviceId,
                     'error' => [
                         'code'    => $e->getCode(),
                         'message' => $e->getMessage(),
@@ -149,10 +169,11 @@ class WhatsappMessageService
         LogHelper::logInfo(
             null,
             [
-                'trace_id'   => $traceId,
-                'gateway_id' => $gatewayId,
+                'trace_id'    => $traceId,
+                'gateway_id'  => $gatewayId,
+                'device_id'   => $deviceId,
                 'final_stage' => $event->fresh()->stage,
-                'duration'   => round(microtime(true) - $start, 3)
+                'duration'    => round(microtime(true) - $start, 3)
             ],
             200,
             "[WhatsappMessageService] Completed",

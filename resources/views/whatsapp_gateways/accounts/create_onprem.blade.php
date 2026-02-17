@@ -56,11 +56,25 @@
                 </div>
             </div>
 
+            <div class="mb-3 row">
+                <label class="col-md-3 col-form-label text-muted">
+                    Device ID <span class="text-danger">*</span>
+                </label>
+                <div class="col-md-9">
+                    <input type="text" name="device_id" class="form-control"
+                        placeholder="62851xxxxxxxx@s.whatsapp.net" value="{{ old('device_id') }}" required>
+                    <small class="text-muted">
+                        Ambil dari Gowa Device Management API (/devices)
+                    </small>
+                </div>
+            </div>
+
+
             {{-- Gowa Settings --}}
             <h6 class="font-weight-bold text-muted mb-3 mt-4">Gowa On-Prem Settings</h6>
 
             <div class="mb-3 row">
-                <label class="col-md-3 col-form-label text-muted">Base URL</label>
+                <label class="col-md-3 col-form-label text-muted">Base URL <span class="text-danger">*</span></label>
                 <div class="col-md-9">
                     <input type="text" name="base_url" class="form-control" placeholder="https://gowa.local/api"
                         value="{{ old('base_url') }}">

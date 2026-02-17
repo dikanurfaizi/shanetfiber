@@ -27,7 +27,8 @@ class OrderCreatedNotificationService
         Customer $customer,
         Billing $billing,
         Order $order,
-        string $traceId
+        string $traceId,
+        ?int $eventId = null
     ): void {
         try {
             // === Resolve WA gateway & account ===
@@ -99,6 +100,8 @@ class OrderCreatedNotificationService
                     billingId: $billing->id,
                     orderId: $order->id,
                     action: WhatsAppAction::ORDER_CREATED->value,
+                    eventId: $eventId,
+                    deviceId: $number->device_id, // wajib untuk Gowa
                     traceId: $traceId
                 );
             }

@@ -103,11 +103,13 @@ class CustomerActivationNotificationService
             if ($gateway->type === 'cloud') {
                 $this->templateMessageService->sendCustomerActivation($data);
             } else {
+                $deviceId = $number->device_id; // wajib untuk Gowa multi-device
                 $this->gowaService->activation(
                     $customerMembershipId,
                     $customerSubscription,
                     WhatsAppAction::ACTIVATION->value,
                     $eventId,
+                    $deviceId,
                     $traceId
                 );
             }

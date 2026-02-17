@@ -2,49 +2,82 @@
 
 namespace App\Services\WhatsappWebhook\DTO;
 
+use App\Models\Whatsapp\WhatsappNumber;
+
 class WebhookPayload
 {
     public function __construct(
+        public readonly ?string $deviceId,
         public readonly ?string $event,
-        public readonly ?array  $payload,
-        public readonly ?array  $message,
-        public readonly ?array  $image,
-        public readonly ?array  $video,
-        public readonly ?array  $document,
-        public readonly ?string $from,
-        public readonly ?string $senderId,
-        public readonly ?int    $timestamp,
+        public readonly array   $payload,
         public readonly array   $raw,
     ) {}
 
     public static function fromArray(array $data): self
     {
         return new self(
+            deviceId: $data['device_id'] ?? null,
             event: $data['event'] ?? $data['action'] ?? null,
-            payload: $data['payload'] ?? null,
-            message: $data['message'] ?? null,
-            image: $data['image'] ?? null,
-            video: $data['video'] ?? null,
-            document: $data['document'] ?? null,
-            from: $data['from'] ?? null,
-            senderId: $data['sender_id'] ?? null,
-            timestamp: isset($data['timestamp']) ? (int) $data['timestamp'] : null,
+            payload: $data['payload'] ?? [],
             raw: $data,
         );
     }
 
+    // ===== Accessors =====
+
     public function sender(): ?string
     {
-        return $this->from ?? $this->senderId;
+        return $this->payload['from'] ?? null;
+    }
+
+    public function timestamp(): ?int
+    {
+        if (!isset($this->payload['timestamp'])) {
+            return null;
+        }
+
+        return strtotime($this->payload['timestamp']);
+    }
+
+    public function isText(): bool
+    {
+        return isset($this->payload['body']);
     }
 
     public function text(): ?string
     {
-        return $this->message['text'] ?? null;
+        return $this->payload['body'] ?? null;
     }
 
-    public function media(): ?array
+    public function isImage(): bool
     {
-        return $this->image ?? $this->video ?? $this->document ?? null;
+        return isset($this->payload['image']);
+    }
+
+    public function isVideo(): bool
+    {
+        return isset($this->payload['video']);
+    }
+
+    public function isDocument(): bool
+    {
+        return isset($this->payload['document']);
+    }
+
+    public function mediaPath(): ?string
+    {
+        return $this->payload['image']
+            ?? $this->payload['video']
+            ?? $this->payload['document']
+            ?? null;
+    }
+
+    public function deviceId(): ?string
+    {
+        $numbers = WhatsappNumber::where('jid', $this->deviceId)->first();
+        if ($numbers) {
+            return $numbers->device_id;
+        }
+        return $this->deviceId;
     }
 }
