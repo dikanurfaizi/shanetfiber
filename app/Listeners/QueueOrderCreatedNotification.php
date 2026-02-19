@@ -13,6 +13,7 @@ class QueueOrderCreatedNotification
             customer: $event->customer,
             billing: $event->billing,
             order: $event->order,
+            eventId: $event->eventId,
             traceId: $event->traceId
         )->onQueue('notification');
     }

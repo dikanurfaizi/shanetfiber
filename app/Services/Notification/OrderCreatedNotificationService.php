@@ -27,8 +27,8 @@ class OrderCreatedNotificationService
         Customer $customer,
         Billing $billing,
         Order $order,
-        string $traceId,
-        ?int $eventId = null
+        ?int $eventId = null,
+        string $traceId
     ): void {
         try {
             // === Resolve WA gateway & account ===

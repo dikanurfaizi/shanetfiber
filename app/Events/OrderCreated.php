@@ -16,6 +16,7 @@ class OrderCreated
         public Customer $customer,
         public Billing $billing,
         public Order $order,
+        public ?int $eventId = null,
         public string $traceId
     ) {}
 }

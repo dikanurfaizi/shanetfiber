@@ -15,6 +15,7 @@ class QueueCustomerActivationNotification
             customerSubscription: $event->customerSubscription,
             billing: $event->billing,
             receipt: $event->receipt,
+            eventId: $event->eventId,
             traceId: $event->traceId
         )->onQueue('notification');
     }

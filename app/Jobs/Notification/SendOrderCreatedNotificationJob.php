@@ -20,6 +20,7 @@ class SendOrderCreatedNotificationJob implements ShouldQueue
         public Customer $customer,
         public Billing $billing,
         public Order $order,
+        public ?int $eventId = null,
         public string $traceId
     ) {}
 
@@ -29,6 +30,7 @@ class SendOrderCreatedNotificationJob implements ShouldQueue
             customer: $this->customer,
             billing: $this->billing,
             order: $this->order,
+            eventId: $this->eventId,
             traceId: $this->traceId
         );
     }

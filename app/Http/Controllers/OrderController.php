@@ -404,7 +404,7 @@ class OrderController extends Controller
 
         $order->fresh();
 
-        event(new OrderCreated($customer, $billing, $order, $traceId));
+        event(new OrderCreated($customer, $billing, $order, null, $traceId));
 
         return redirect()->route('customer.pages.order.tripays.show', $order->id)
             ->with('success', 'Order created successfully.');

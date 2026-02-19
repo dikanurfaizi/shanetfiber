@@ -30,6 +30,8 @@ class MessageEvent extends Model
 
     protected $casts = [
         'meta' => 'array',
+        'request_payload' => 'array',
+        'response_payload' => 'array',
         'sent_at' => 'datetime',
         'last_error_at' => 'datetime',
         'retry_count' => 'integer',

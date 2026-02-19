@@ -22,6 +22,7 @@ class SendCustomerActivationNotificationJob implements ShouldQueue
         public CustomerSubscription $customerSubscription,
         public Billing $billing,
         public Receipt $receipt,
+        public ?int $eventId,
         public string $traceId
     ) {}
 
@@ -32,6 +33,7 @@ class SendCustomerActivationNotificationJob implements ShouldQueue
             customerSubscription: $this->customerSubscription,
             billing: $this->billing,
             receipt: $this->receipt,
+            eventId: $this->eventId,
             traceId: $this->traceId
         );
     }

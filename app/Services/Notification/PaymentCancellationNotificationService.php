@@ -28,6 +28,7 @@ class PaymentCancellationNotificationService
         ?int $receiptId,
         int $billingId,
         ?array $receiptData,
+        ?int $eventId,
         string $traceId
     ): void {
         try {
@@ -65,6 +66,8 @@ class PaymentCancellationNotificationService
                 false
             );
 
+            $deviceId = $number->device_id;
+
             if ($gateway->type === 'cloud') {
                 // $this->cloudAPIService->sendTemplateMessage(
                 //     account: $account,
@@ -99,6 +102,8 @@ class PaymentCancellationNotificationService
                 $this->gowaService->notifyUnpayment(
                     $billing->billingSubscription->customerSubscription,
                     $billing,
+                    $eventId,
+                    $deviceId,
                     $traceId
                 );
             }

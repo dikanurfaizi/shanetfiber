@@ -26,6 +26,7 @@ class PackageChangesNotificationService
         Customer $customer,
         string $oldPackageName,
         int $oldPackagePrice,
+        ?int $eventId,
         string $traceId
     ): void {
         try {
@@ -94,6 +95,8 @@ class PackageChangesNotificationService
                     customerId: $customer->id,
                     oldPackageName: $oldPackageName,
                     oldPackagePrice: $oldPackagePrice,
+                    eventId: $eventId,
+                    deviceId: $number->device_id,
                     traceId: $traceId
                 );
             }

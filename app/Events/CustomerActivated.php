@@ -17,6 +17,7 @@ class CustomerActivated
     public CustomerSubscription $customerSubscription;
     public Billing $billing;
     public Receipt $receipt;
+    public ?int $eventId = null;
     public string $traceId;
 
     public function __construct(
@@ -24,12 +25,14 @@ class CustomerActivated
         CustomerSubscription $customerSubscription,
         Billing $billing,
         Receipt $receipt,
+        ?int $eventId,
         string $traceId
     ) {
         $this->customerMembershipId = $customerMembershipId;
         $this->customerSubscription = $customerSubscription;
         $this->billing = $billing;
         $this->receipt = $receipt;
+        $this->eventId = $eventId;
         $this->traceId = $traceId;
     }
 }

@@ -467,6 +467,7 @@ class CustomerController extends Controller
                     $result['subscription'],
                     $result['billing'],
                     $result['receipt'],
+                    null,
                     $result['traceId']
                 )
             );
