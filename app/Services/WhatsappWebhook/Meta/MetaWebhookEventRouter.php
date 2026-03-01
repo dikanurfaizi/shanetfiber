@@ -2,7 +2,7 @@
 
 namespace App\Services\WhatsappWebhook\Meta;
 
-use Illuminate\Support\Facades\DB;
+use App\Helpers\LogHelper;
 use App\Services\Whatsapp\Meta\HandleIncomingWhatsappWebhook;
 use App\Services\Whatsapp\Meta\HandleStatusUpdateWhatsappWebhook;
 
@@ -17,6 +17,14 @@ class MetaWebhookEventRouter
     {
         foreach ($payload['entry'] ?? [] as $entry) {
 
+            LogHelper::logInfo(
+                null,
+                ['entry' => $entry],
+                200,
+                "Processing WhatsApp Meta Webhook Event",
+                $traceId
+            );
+
             foreach ($entry['changes'] ?? [] as $change) {
 
                 $value = $change['value'] ?? [];
@@ -25,18 +33,15 @@ class MetaWebhookEventRouter
                     continue;
                 }
 
-                DB::transaction(function () use ($value) {
+                // 1️⃣ Incoming Messages
+                if (!empty($value['messages'])) {
+                    $this->incomingHandler->handleMessages($value, $traceId);
+                }
 
-                    // 1️⃣ Incoming Messages
-                    if (!empty($value['messages'])) {
-                        $this->incomingHandler->handleMessages($value);
-                    }
-
-                    // 2️⃣ Status Updates
-                    if (!empty($value['statuses'])) {
-                        $this->statusHandler->handleStatuses($value);
-                    }
-                });
+                // 2️⃣ Status Updates
+                if (!empty($value['statuses'])) {
+                    $this->statusHandler->handleStatuses($value, $traceId);
+                }
             }
         }
     }

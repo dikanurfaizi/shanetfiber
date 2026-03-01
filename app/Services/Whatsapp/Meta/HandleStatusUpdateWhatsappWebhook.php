@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 
 class HandleStatusUpdateWhatsappWebhook
 {
-    public function handleStatuses(array $value): void
+    public function handleStatuses(array $value, string $traceId): void
     {
         foreach ($value['statuses'] ?? [] as $statusData) {
 

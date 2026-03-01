@@ -8,16 +8,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('whatsapp_numbers', function (Blueprint $table) {
+        if (!Schema::hasColumn('whatsapp_numbers', 'device_id')) {
+            Schema::table('whatsapp_numbers', function (Blueprint $table) {
 
-            // device_id dari Gowa multi-device
-            $table->string('device_id')
-                ->nullable() // sementara nullable untuk safe deployment
-                ->after('number');
+                // device_id dari Gowa multi-device
+                $table->string('device_id')
+                    ->nullable() // sementara nullable untuk safe deployment
+                    ->after('number');
 
-            // optional: enforce unique kalau 1 device hanya boleh 1 nomor
-            $table->unique('device_id');
-        });
+                // optional: enforce unique kalau 1 device hanya boleh 1 nomor
+                $table->unique('device_id');
+            });
+        }
     }
 
     public function down(): void

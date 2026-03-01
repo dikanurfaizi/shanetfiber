@@ -3,15 +3,17 @@
 namespace App\Services\Whatsapp\Meta;
 
 use App\Models\Whatsapp\WhatsappConversation;
+use App\Models\Whatsapp\WhatsappMessageMedia;
 use App\Models\Whatsapp\WhatsappWebhookMessage;
 use App\Models\Whatsapp\WhatsappMessageStatus;
+use App\Jobs\Whatsapp\DownloadWhatsappMediaJob;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 
 class HandleIncomingWhatsappWebhook
 {
-    public function handleMessages(array $value): void
+    public function handleMessages(array $value, string $traceId): void
     {
         foreach ($value['messages'] ?? [] as $messageData) {
 
@@ -26,10 +28,10 @@ class HandleIncomingWhatsappWebhook
 
             try {
                 // Insert langsung — biarkan unique index handle duplikasi
-                WhatsappWebhookMessage::create([
+                $message = WhatsappWebhookMessage::create([
                     'conversation_id' => $conversation->id,
                     'wa_message_id'   => $waMessageId,
-                    'trace_id'        => Str::uuid(),
+                    'trace_id'        => $traceId,
                     'direction'       => 'incoming',
                     'from_number'     => $fromNumber,
                     'type'            => $messageData['type'] ?? 'text',
@@ -40,6 +42,8 @@ class HandleIncomingWhatsappWebhook
                     'last_status'     => 'received',
                     'payload'         => $messageData,
                 ]);
+
+                $this->handleMediaIfExists($message, $messageData, $traceId);
             } catch (QueryException $e) {
 
                 // Duplicate key? artinya webhook retry → aman, skip
@@ -85,5 +89,39 @@ class HandleIncomingWhatsappWebhook
     private function isDuplicateKey(QueryException $e): bool
     {
         return str_contains($e->getMessage(), 'Duplicate entry');
+    }
+
+    private function handleMediaIfExists(
+        WhatsappWebhookMessage $message,
+        array $messageData,
+        string $traceId
+    ): void {
+
+        $type = $messageData['type'] ?? null;
+
+        if (!in_array($type, ['image', 'document', 'audio', 'video'])) {
+            return;
+        }
+
+        $mediaData = $messageData[$type] ?? null;
+
+        if (!$mediaData || empty($mediaData['id'])) {
+            return;
+        }
+
+        $media = WhatsappMessageMedia::create([
+            'message_id'      => $message->id,
+            'wa_media_id'     => $mediaData['id'],
+            'file_name'       => $mediaData['filename'] ?? null,
+            'mime_type'       => $mediaData['mime_type'] ?? 'application/octet-stream',
+            'sha256'          => $mediaData['sha256'] ?? null,
+            'storage_path'    => '',
+            'download_status' => 'pending',
+        ]);
+
+        // Dispatch async download
+        DownloadWhatsappMediaJob::dispatch($media->id, $traceId)
+            ->onQueue('default')
+            ->delay(now()->addSeconds(5)); // kasih jeda dikit biar WhatsApp siapin media-nya dulu
     }
 }
