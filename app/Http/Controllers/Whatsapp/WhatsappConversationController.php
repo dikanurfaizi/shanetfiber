@@ -11,8 +11,11 @@ class WhatsappConversationController extends Controller
 {
     public function index()
     {
-        $conversations = WhatsappConversation::with(['messages', 'customer'])
-            ->orderBy('last_message_at', 'desc')
+        $conversations = WhatsappConversation::with([
+            'customer',
+            'messages.media'
+        ])
+            ->orderByDesc('last_message_at')
             ->get();
 
         $selectedConversation = $conversations->first() ?? null;
@@ -30,11 +33,21 @@ class WhatsappConversationController extends Controller
                         'text_body' => $m->text_body,
                         'direction' => $m->direction,
                         'timestamp_wa' => $m->timestamp_wa?->timestamp,
+                        'media' => $m->media->map(function ($media) {
+                            return [
+                                'id' => $media->id,
+                                'file_name' => $media->file_name,
+                                'mime_type' => $media->mime_type,
+                                'url' => route('whatsapp.media.show', $media->id),
+                            ];
+                        })->values()->all(),
                     ];
                 })->values()->all(),
             ];
         })->values()->all();
 
-        return view('whatsapp.conversations.index', compact('conversations', 'selectedConversation', 'conversationsJson'));
+        return view('whatsapp.conversations.index', [
+            'conversationsJson' => $conversationsJson,
+        ]);
     }
 }

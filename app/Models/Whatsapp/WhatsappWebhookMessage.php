@@ -77,4 +77,13 @@ class WhatsappWebhookMessage extends Model
             'last_status' => $status
         ]);
     }
+
+    public function media()
+    {
+        return $this->hasMany(
+            WhatsappMessageMedia::class,
+            'message_id',   // foreign key di tabel whatsapp_message_media
+            'id'            // local key di tabel parent (biasanya id)
+        )->where('download_status', 'downloaded');
+    }
 }

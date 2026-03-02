@@ -63,6 +63,7 @@ use App\Http\Controllers\Whatsapp\WhatsappNumberController;
 use App\Http\Controllers\Whatsapp\WhatsappCloudController;
 use App\Http\Controllers\Whatsapp\WhatsappConversationController;
 use App\Http\Controllers\Whatsapp\WhatsappFeatureController;
+use App\Http\Controllers\Whatsapp\WhatsappMediaController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -473,3 +474,12 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('api/fetch-routers', [HomeController::class, 'getDashboardCache'])->name('dashboard.cache');
     Route::post('api/customer-registration-churn-data', [HomeController::class, 'getCustomerRegistrationChurnData'])->name('customer.registration');
 });
+
+Route::middleware(['auth'])
+    ->prefix('whatsapp')
+    ->group(function () {
+
+        Route::middleware('permission:conversation-list')
+            ->get('/media/{media}', [WhatsappMediaController::class, 'show'])
+            ->name('whatsapp.media.show');
+    });
