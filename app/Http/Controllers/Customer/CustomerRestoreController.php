@@ -95,6 +95,7 @@ class CustomerRestoreController extends Controller
 
         LogHelper::logInfo(null, [
             'slug' => $slug,
+            'payload' => $payload,
         ], 201, 'CustomerRestoreController::confirm - START', $traceId);
 
         try {
@@ -105,7 +106,15 @@ class CustomerRestoreController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                LogHelper::logInfo(null, ['customer' => $customer], 200, 'Get Data Customer trashed');
+                LogHelper::logInfo(null, [
+                    'id' => $customer->id,
+                    'customer_id' => $customer->customer_id,
+                    'customer_name' => $customer->name,
+                    'disable_status' => $customer->disabled,
+                    'activation_status' => $customer->activation,
+                    'deleted_at' => $customer->deleted_at,
+                    'mikrotik_id' => $customer->mikrotik_id,
+                ], 200, 'Get Data Customer trashed');
 
                 // ==========================
                 // 1. Restore customer
@@ -117,9 +126,9 @@ class CustomerRestoreController extends Controller
                 // ==========================
                 // 2. Resolve subscription
                 // ==========================
-                $this->subscriptionRestoreService->handle($customer, $payload);
+                $subscription = $this->subscriptionRestoreService->handle($customer, $payload);
 
-                LogHelper::logInfo(null, [], 200, 'SubscriptionRestoreService STEP');
+                LogHelper::logInfo(null, ['subscription_id' => $subscription->id], 200, 'SubscriptionRestoreService STEP');
 
                 // ==========================
                 // 3. Resolve membership
