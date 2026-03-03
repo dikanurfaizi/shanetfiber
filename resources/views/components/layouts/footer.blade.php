@@ -1,11 +1,11 @@
-<footer class="sticky-footer bg-white">
-    <div class="container my-auto">
-        <div class="copyright text-center my-auto">
-            <span>Customer Management V{{ $websystem->version }}</span>
+<footer class="sticky-footer bg-light py-3 border-top">
+    <div class="container">
+        <div class="text-center text-muted small">
             <div>
-                <span>
-                    {{ $websystem->title }} &#64;{{ Carbon\Carbon::now()->format('Y') }}
-                </span>
+                Customer Management V{{ $websystem->version }}
+            </div>
+            <div class="mt-1">
+                {{ $websystem->title }} © {{ Carbon\Carbon::now()->format('Y') }}
             </div>
         </div>
     </div>

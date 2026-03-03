@@ -25,7 +25,9 @@ async function fetchMonthlySummary() {
             return;
         }
 
-        const months = [...new Set(billingSummary.map((item) => item.month_name || ""))];
+        const months = [
+            ...new Set(billingSummary.map((item) => item.month_name || "")),
+        ];
         const isInvestor = permissions.includes("investor-billing-chart");
 
         let series = [];
@@ -89,8 +91,8 @@ async function fetchMonthlySummary() {
 
         const maxValue = Math.max(
             ...billingSummary.map((x) =>
-                Math.max(x.total_paid || 0, x.total_unpaid || 0)
-            )
+                Math.max(x.total_paid || 0, x.total_unpaid || 0),
+            ),
         );
         const yAxisMax = maxValue * 1.25;
 
@@ -127,7 +129,7 @@ async function fetchMonthlySummary() {
                                 "view-billings-chart-nominal-total",
                                 "view-billings-chart-nominal-related",
                                 "investor-billing-chart",
-                            ].includes(p)
+                            ].includes(p),
                         )
                             ? "Rp " + value.toLocaleString()
                             : `${Math.round(value)} customers`,
@@ -141,7 +143,7 @@ async function fetchMonthlySummary() {
                                 "view-billings-chart-nominal-total",
                                 "view-billings-chart-nominal-related",
                                 "investor-billing-chart",
-                            ].includes(p)
+                            ].includes(p),
                         )
                             ? "Rp " + value.toLocaleString()
                             : `${Math.round(value)} customers`,
@@ -155,7 +157,10 @@ async function fetchMonthlySummary() {
         };
 
         if (chart) chart.destroy();
-        chart = new ApexCharts(document.querySelector("#chartWrapper1"), options);
+        chart = new ApexCharts(
+            document.querySelector("#chartWrapper1"),
+            options,
+        );
         chart.render();
     } catch (error) {
         console.error("Error fetching data: ", error);
@@ -177,7 +182,7 @@ function triggerUpdateCache(routerSlug) {
         },
         function (res) {
             // console.log("[CACHE UPDATED]", res);
-        }
+        },
     ).fail(function (err) {
         // console.error("[CACHE UPDATE ERROR]", err);
     });
@@ -193,11 +198,15 @@ function pollResource(routerSlug) {
                 if (res.resources?.length > 0) {
                     updateSystemResources(routerSlug, res.resources[0]);
                 }
-            }
+            },
         ).fail(function (err) {
             // console.error("[CACHE ERROR]", err);
         });
     }, 10000); // tiap 10 detik
+}
+
+function cleanBoardName(name) {
+    return name.replace(/To be filled by O\.E\.M\./gi, "").trim();
 }
 
 function updateSystemResources(routerSlug, r) {
@@ -220,13 +229,32 @@ function updateSystemResources(routerSlug, r) {
     $("#hdd-" + routerSlug).text(r.hddUsage + "/" + r.totalHddSpace);
 
     // Board & uptime
-    $("#boardname-" + routerSlug).text(r.boardName);
-    $("#uptime-" + routerSlug).text(r.uptime);
+    $("#boardname-" + routerSlug).text(cleanBoardName(r.boardName));
+    $("#uptime-" + routerSlug).text(formatUptime(r.uptime));
 
     // Status
     $("#status-" + routerSlug)
         .removeClass("text-danger")
         .addClass("text-success");
+}
+
+function formatUptime(uptime) {
+    const regex = /(?:(\d+)w)?(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/;
+    const match = uptime.match(regex);
+
+    const weeks = parseInt(match[1]) || 0;
+    const days = parseInt(match[2]) || 0;
+    const hours = parseInt(match[3]) || 0;
+    const minutes = parseInt(match[4]) || 0;
+
+    let parts = [];
+
+    if (weeks) parts.push(weeks + " week" + (weeks > 1 ? "s" : ""));
+    if (days) parts.push(days + " day" + (days > 1 ? "s" : ""));
+    if (hours) parts.push(hours + " hour" + (hours > 1 ? "s" : ""));
+    if (minutes) parts.push(minutes + " minute" + (minutes > 1 ? "s" : ""));
+
+    return parts.length ? parts.join(", ") : "Less than a minute";
 }
 
 // init
@@ -249,7 +277,7 @@ async function fetchCustomerRegistrationChurnData() {
             headers: {
                 "Content-Type": "application/json",
                 "X-CSRF-TOKEN": document.querySelector(
-                    'meta[name="csrf-token"]'
+                    'meta[name="csrf-token"]',
                 ).content,
                 Accept: "application/json",
             },
@@ -284,7 +312,13 @@ async function fetchCustomerRegistrationChurnData() {
 
 function renderCustomerRegistrationChurnChart(data) {
     try {
-        const { months, registrationData, churnData, isSuperAdmin, isInvestor } = data;
+        const {
+            months,
+            registrationData,
+            churnData,
+            isSuperAdmin,
+            isInvestor,
+        } = data;
 
         if (!months || !registrationData) {
             console.error("Invalid chart data:", { months, registrationData });
@@ -447,7 +481,7 @@ function renderCustomerRegistrationChurnChart(data) {
         };
 
         const chartEl = document.getElementById(
-            "customerRegistrationChurnChart"
+            "customerRegistrationChurnChart",
         );
         if (!chartEl) {
             console.error("Chart container not found!");
@@ -610,7 +644,7 @@ function renderPackageChart() {
 
     window.packageChart = new ApexCharts(
         document.querySelector("#popularPackagesChart"),
-        options
+        options,
     );
     window.packageChart.render();
 }
@@ -637,17 +671,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
             if (this.dataset.viewType === "table") {
                 document.getElementById(
-                    "customerMovementChartView"
+                    "customerMovementChartView",
                 ).style.display = "none";
                 document.getElementById(
-                    "customerMovementTableView"
+                    "customerMovementTableView",
                 ).style.display = "block";
             } else {
                 document.getElementById(
-                    "customerMovementChartView"
+                    "customerMovementChartView",
                 ).style.display = "block";
                 document.getElementById(
-                    "customerMovementTableView"
+                    "customerMovementTableView",
                 ).style.display = "none";
             }
         });
@@ -694,10 +728,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function setLoadingRouters() {
         $("#routerOnline").html(
-            '<i class="fas fa-spinner fa-spin text-muted"></i>'
+            '<i class="fas fa-spinner fa-spin text-muted"></i>',
         );
         $("#routerOffline").html(
-            '<i class="fas fa-spinner fa-spin text-muted"></i>'
+            '<i class="fas fa-spinner fa-spin text-muted"></i>',
         );
     }
 
@@ -723,7 +757,7 @@ document.addEventListener("DOMContentLoaded", function () {
         },
         function (err) {
             console.error("[DASHBOARD TRIGGER ERROR]", err);
-        }
+        },
     );
 });
 

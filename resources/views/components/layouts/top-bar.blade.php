@@ -1,7 +1,7 @@
-<nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+<nav class="navbar navbar-expand navbar-light topbar-premium mb-4 static-top">
     <!-- Link Donasi (Pindahkan ke posisi paling kiri) -->
-    <a class="nav-link" href="/cpanel/home">
-        <img src="/images/donate.png" alt="Saweria" style="height: 30px !important;">
+    <a class="nav-link pr-3 border-right" href="/cpanel/home">
+        <img src="/images/donate.png" style="height:22px;">
     </a>
 
     <!-- Topbar Navbar -->
@@ -24,24 +24,31 @@
             <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
                 aria-labelledby="mobileMenuDropdown">
                 <!-- Link Billings -->
-                <a class="nav-link" href="{{ route('billings.index', ['search_status' => '!LS-!VD']) }}">
-                    <span class="badge text-white {{ $billingsToShow->count() > 0 ? 'bg-danger' : 'bg-success' }}">
-                        {{ $billingsToShow->count() > 0 ? "You have {$billingsToShow->count()} bill in all period" : 'No outstanding bills at this time.' }}
+                <a class="nav-link d-flex align-items-center"
+                    href="{{ route('billings.index', ['search_status' => '!LS-!VD']) }}">
+                    <span class="mr-2 text-muted small">Outstanding</span>
+                    <span
+                        class="badge badge-pill {{ $billingsToShow->count() > 0 ? 'badge-danger' : 'badge-success' }}">
+                        {{ $billingsToShow->count() }}
                     </span>
                 </a>
             </div>
         </li>
 
-        <!-- Divider -->
-        <div class="topbar-divider d-none d-sm-block"></div>
-
         <!-- Nav Item - User Information -->
         <li class="nav-item dropdown no-arrow">
-            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown"
-                aria-haspopup="true" aria-expanded="false">
-                <span class="mr-2 d-none d-lg-inline text-gray-600 small">{{ Auth::user()->name }}
-                    <div>{{ Carbon\Carbon::now()->format('d F Y') }}</div>
-                </span>
+            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown"
+                role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+
+                <div class="mr-3 text-right d-none d-lg-block">
+                    <div class="font-weight-600 text-dark small">
+                        {{ Auth::user()->name }}
+                    </div>
+                    <div class="text-muted" style="font-size: 0.75rem;">
+                        {{ Carbon\Carbon::now()->format('d F Y') }}
+                    </div>
+                </div>
+
                 <img class="img-profile rounded-circle" src="{{ asset('images/undraw_profile.svg') }}">
             </a>
             <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
