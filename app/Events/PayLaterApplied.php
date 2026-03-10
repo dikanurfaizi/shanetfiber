@@ -10,6 +10,7 @@ class PayLaterApplied
 
     public function __construct(
         public int $billingId,
+        public ?int $eventId,
         public string $traceId
     ) {}
 }

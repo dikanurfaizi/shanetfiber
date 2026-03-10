@@ -11,6 +11,7 @@ class QueuePayLaterNotification
     {
         SendPayLaterNotificationJob::dispatch(
             $event->billingId,
+            $event->eventId,
             $event->traceId
         )->onQueue('notification');
     }

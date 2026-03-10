@@ -15,6 +15,7 @@ class SendPayLaterNotificationJob implements ShouldQueue
 
     public function __construct(
         public int $billingId,
+        public ?int $eventId,
         public string $traceId
     ) {}
 
@@ -22,6 +23,7 @@ class SendPayLaterNotificationJob implements ShouldQueue
     {
         $service->send(
             billingId: $this->billingId,
+            eventId: $this->eventId ?? null,
             traceId: $this->traceId
         );
     }

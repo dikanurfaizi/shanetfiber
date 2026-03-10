@@ -218,6 +218,7 @@ class BillingController extends Controller
         if ($result['success']) {
             event(new PayLaterApplied(
                 billingId: $billing->id,
+                eventId: $result['event_id'] ?? null,
                 traceId: $traceId
             ));
             return redirect()->back()->with('success', $result['message']);
