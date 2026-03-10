@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Customer;
 
+use App\Helpers\FormatReceiver;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -14,6 +15,7 @@ use App\Models\Packages\Addon;
 use App\Models\Membership\Membership;
 use App\Models\Billings\BillingPeriode;
 use App\Services\Customers\CustomerCreateService;
+use Illuminate\Support\Facades\Validator;
 
 class CustomerWizardController extends Controller
 {
@@ -31,25 +33,76 @@ class CustomerWizardController extends Controller
         return view('wizard.customer_step1', compact('users'));
     }
 
-    public function step1Post(Request $request)
+    public function step1Post(Request $request, FormatReceiver $formatter)
     {
-        $validated = $request->validate([
-            'user_id'               => 'required|exists:users,id',
-            'name'                  => 'required|string|min:3',
-            'email'                 => 'required|email',
-            'contact'               => 'required|string',
-            'address'               => 'nullable|string|max:255',
-            'password'              => 'nullable|min:8|confirmed',
+        $request->merge([
+            'contact' => $formatter->normalize($request->input('contact'))
         ]);
 
-        // Ambil nama admin berdasarkan user_id
-        $validated['user_name'] = User::find($validated['user_id'])->name;
+        $validated = $request->validate(
+            [
+                'user_id' => [
+                    'required',
+                    'exists:users,id'
+                ],
+
+                'name' => [
+                    'required',
+                    'string',
+                    'min:3'
+                ],
+
+                'email' => [
+                    'required',
+                    'email'
+                ],
+
+                'contact' => [
+                    'required',
+                    'regex:/^62[0-9]{8,14}$/',
+                    'unique:customers,contact'
+                ],
+
+                'address' => [
+                    'nullable',
+                    'string',
+                    'max:255'
+                ],
+
+                'password' => [
+                    'nullable',
+                    'min:8',
+                    'confirmed'
+                ]
+            ],
+
+            [
+                'user_id.required' => 'Admin harus dipilih.',
+                'user_id.exists' => 'Admin yang dipilih tidak ditemukan.',
+
+                'name.required' => 'Nama customer wajib diisi.',
+                'name.min' => 'Nama customer minimal 3 karakter.',
+
+                'email.required' => 'Email wajib diisi.',
+                'email.email' => 'Format email tidak valid.',
+
+                'contact.required' => 'Nomor WhatsApp wajib diisi.',
+                'contact.regex' => 'Nomor harus menggunakan format Indonesia yang valid.',
+                'contact.unique' => 'Nomor WhatsApp sudah terdaftar.',
+
+                'password.min' => 'Password minimal 8 karakter.',
+                'password.confirmed' => 'Konfirmasi password tidak sama.',
+            ]
+        );
+
+        $user = User::select('name')->find($validated['user_id']);
+
+        $validated['user_name'] = $user->name;
 
         session(['wizard.step1' => $validated]);
 
         return redirect()->route('wizard.step2');
     }
-
 
     public function step2()
     {
@@ -250,18 +303,46 @@ class CustomerWizardController extends Controller
 
     public function process()
     {
+        if (
+            !session()->has('wizard.step1') ||
+            !session()->has('wizard.step2') ||
+            !session()->has('wizard.step3')
+        ) {
+            return redirect()
+                ->route('wizard.step1')
+                ->withErrors('Data wizard tidak lengkap. Silakan ulangi proses.');
+        }
+
         $payload = array_merge(
-            session('wizard.step1'),
-            session('wizard.step2'),
-            session('wizard.step3'),
-            ['addons' => session('wizard.step4')]
+            session('wizard.step1', []),
+            session('wizard.step2', []),
+            session('wizard.step3', []),
+            ['addons' => session('wizard.step4', [])]
         );
+
+        $validator = Validator::make($payload, [
+
+            'name' => 'required|string|min:3',
+
+            'email' => 'required|email',
+
+            'contact' => 'required|regex:/^62[0-9]{8,14}$/',
+
+            'user_id' => 'required|exists:users,id',
+
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()
+                ->route('wizard.step1')
+                ->withErrors($validator);
+        }
 
         $traceId = (string) Str::uuid();
 
-        $customer = $this->customerCreateService->createCustomer($payload, $traceId);
+        $customer = $this->customerCreateService
+            ->createCustomer($payload, $traceId);
 
-        // Clear wizard session
         session()->forget('wizard');
 
         return redirect()

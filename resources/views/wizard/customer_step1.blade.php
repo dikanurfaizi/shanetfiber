@@ -13,39 +13,60 @@
                 {{-- Admin --}}
                 <div class="form-group mb-3">
                     <label><strong>PIC / Responsibility</strong> <span class="text-danger">*</span></label>
-                    <select name="user_id" class="form-control" required>
+                    <select name="user_id" class="form-control @error('user_id') is-invalid @enderror" required>
                         <option value="">-- Select PIC / Responsibility --</option>
                         @foreach ($users as $u)
                             <option value="{{ $u->id }}">{{ $u->name }}</option>
                         @endforeach
                     </select>
+
+                    @error('user_id')
+                        <div class="invalid-feedback">
+                            {{ $message }}
+                        </div>
+                    @enderror
                 </div>
 
                 {{-- Name --}}
                 <div class="form-group mb-3">
                     <label><strong>Name</strong> <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" name="name"
+                    <input type="text" class="form-control @error('name') is-invalid @enderror" name="name"
                         value="{{ old('name', session('wizard.step1.name')) }}">
+
                     @error('name')
-                        <small class="text-danger">{{ $message }}</small>
+                        <div class="invalid-feedback">
+                            {{ $message }}
+                        </div>
                     @enderror
                 </div>
 
                 {{-- Email --}}
                 <div class="form-group mb-3">
                     <label><strong>Email</strong> <span class="text-danger">*</span></label>
-                    <input type="email" class="form-control" name="email"
+                    <input type="email" class="form-control @error('email') is-invalid @enderror" name="email"
                         value="{{ old('email', session('wizard.step1.email')) }}">
+
                     @error('email')
-                        <small class="text-danger">{{ $message }}</small>
+                        <div class="invalid-feedback">
+                            {{ $message }}
+                        </div>
                     @enderror
                 </div>
 
                 {{-- Contact --}}
                 <div class="form-group mb-3">
                     <label><strong>Contact Number</strong> <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" name="contact"
+
+                    <input type="tel" class="form-control @error('contact') is-invalid @enderror" name="contact"
+                        inputmode="numeric" pattern="[0-9]*" maxlength="15"
+                        oninput="this.value=this.value.replace(/[^0-9]/g,'')"
                         value="{{ old('contact', session('wizard.step1.contact')) }}">
+
+                    @error('contact')
+                        <div class="invalid-feedback">
+                            {{ $message }}
+                        </div>
+                    @enderror
                 </div>
 
                 {{-- Address --}}
