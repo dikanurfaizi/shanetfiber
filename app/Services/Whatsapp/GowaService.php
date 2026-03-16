@@ -11,6 +11,7 @@ use App\Models\Receipt;
 use App\Models\Whatsapp\WhatsappGateway;
 use App\Models\Customers\CustomerSubscription;
 use App\Models\Membership\CustomerMembership;
+use App\Models\Messaging\MessageEvent;
 use App\Services\Messaging\Collectors\BankInfoCollector;
 use App\Services\Messaging\Collectors\BillingEligibleCollector;
 use App\Services\Messaging\Collectors\BillingPackageCollector;
@@ -64,7 +65,7 @@ class GowaService
         string $traceId
     ): void {
         $queueName = 'notification';
-        $globalIndex = 0;
+        $globalIndex = 1;
         try {
             LogHelper::logInfo(
                 null,
@@ -86,7 +87,7 @@ class GowaService
                 return;
             }
 
-            $delayTime = $this->delayMessage($globalIndex, 'interactive', $queueName);
+            $delayTime = $this->delayMessage($globalIndex, 'interactive');
 
             $this->dispatcher->dispatch(
                 $action,
@@ -122,7 +123,7 @@ class GowaService
     public function orderCreated(int $billingId, int $orderId, string $action, string $eventId, string $deviceId, string $traceId): void
     {
         $queueName = 'notification';
-        $globalIndex = 0;
+        $globalIndex = 1;
         try {
             $billing = Billing::with(['customer.user', 'billingSubscription.customerSubscription.package'])
                 ->find($billingId);
@@ -138,7 +139,7 @@ class GowaService
                 return;
             }
 
-            $delayTime = $this->delayMessage($globalIndex, 'interactive', $queueName);
+            $delayTime = $this->delayMessage($globalIndex, 'interactive');
 
             $this->dispatcher->dispatch(
                 $action,
@@ -185,10 +186,10 @@ class GowaService
         string $traceId
     ): void {
         $queueName = 'notification';
-        $globalIndex = 0;
+        $globalIndex = 1;
         try {
 
-            $delayTime = $this->delayMessage($globalIndex, 'interactive', $queueName);
+            $delayTime = $this->delayMessage($globalIndex, 'interactive');
 
             $this->dispatcher->dispatch(
                 'payment',
@@ -231,11 +232,11 @@ class GowaService
         string $traceId
     ): void {
         $queueName = 'notification';
-        $globalIndex = 0;
+        $globalIndex = 1;
         try {
             $action = 'paylater';
 
-            $delayTime = $this->delayMessage($globalIndex, 'interactive', $queueName);
+            $delayTime = $this->delayMessage($globalIndex, 'interactive');
 
             $this->dispatcher->dispatch(
                 $action,
@@ -279,11 +280,11 @@ class GowaService
         string $traceId
     ): void {
         $queueName = 'notification';
-        $globalIndex = 0;
+        $globalIndex = 1;
         try {
             $action = 'unpayment';
 
-            $delayTime = $this->delayMessage($globalIndex, 'interactive', $queueName);
+            $delayTime = $this->delayMessage($globalIndex, 'interactive');
 
             $this->dispatcher->dispatch(
                 $action,
@@ -333,7 +334,7 @@ class GowaService
     ): void {
         $startTime = microtime(true);
         $queueName = 'notification';
-        $globalIndex = 0;
+        $globalIndex = 1;
         try {
             $periode = $this->periodCollector->getLastBillingPeriod($traceId);
             if (! $periode) {
@@ -347,9 +348,8 @@ class GowaService
                 return;
             }
 
-            $delaySeconds = 0;
             foreach ($billings as $billing) {
-                $delayTime = $this->delayMessage($globalIndex, 'broadcast', $queueName);
+                $delayTime = $this->delayMessage($globalIndex, 'broadcast');
                 $this->dispatcher->dispatch(
                     $action,
                     fn(string $category) => new BroadcastMonthlyHandler(
@@ -389,7 +389,7 @@ class GowaService
     public function broadcastMidMonth(?int $eventId, string $deviceId, string $traceId): void
     {
         $queueName = 'notification';
-        $globalIndex = 0;
+        $globalIndex = 1;
         try {
             $today = Carbon::today();
             $types = ['past_due', 'due_today', 'upcoming'];
@@ -407,7 +407,7 @@ class GowaService
                 };
 
                 foreach ($billings as $billing) {
-                    $delayTime = $this->delayMessage($globalIndex, 'broadcast', $queueName);
+                    $delayTime = $this->delayMessage($globalIndex, 'broadcast');
                     $this->dispatcher->dispatch(
                         $slug,
                         fn(string $category) => new BroadcastMidMonthHandler(
@@ -459,9 +459,9 @@ class GowaService
         string $traceId
     ): void {
         $queueName = 'notification';
-        $globalIndex = 0;
+        $globalIndex = 1;
         try {
-            $delayTime = $this->delayMessage($globalIndex, 'interactive', $queueName);
+            $delayTime = $this->delayMessage($globalIndex, 'interactive');
             $this->dispatcher->dispatch(
                 'changes_package',
                 fn(string $category) => new ChangesPackageHandler(
@@ -507,9 +507,9 @@ class GowaService
     {
         $traceId = (string) Str::uuid();
         $queueName = 'notification';
-        $globalIndex = 0;
+        $globalIndex = 1;
         try {
-            $delayTime = $this->delayMessage($globalIndex, 'test', $queueName);
+            $delayTime = $this->delayMessage($globalIndex, 'test');
             $activeAccount = $gateway->accounts()->where('is_active', true)->first();
 
             LogHelper::logInfo(null, [
@@ -565,9 +565,9 @@ class GowaService
     public function menu($custName, $custContact, ?int $eventId, string $deviceId, string $traceId)
     {
         $queueName = 'notification';
-        $globalIndex = 0;
+        $globalIndex = 1;
         try {
-            $delayTime = $this->delayMessage($globalIndex, 'interactive', $queueName);
+            $delayTime = $this->delayMessage($globalIndex, 'interactive');
             $this->dispatcher->dispatch(
                 'changes_package',
                 fn(string $category) => new MenuHandler(
@@ -577,7 +577,7 @@ class GowaService
                     custName: $custName,
                     category: $category
                 ),
-                'default',
+                $queueName,
                 $traceId,
                 $delayTime,
                 $eventId,
@@ -602,16 +602,14 @@ class GowaService
         }
     }
 
-    private function delayMessage($globalIndex, $type, $queueName)
+    private function delayMessage($globalIndex, $type)
     {
-        $lastJob = DB::table('jobs')
-            ->where('queue', $queueName)
-            ->where('payload', 'like', '%SendWhatsappMessageJob%')
-            ->orderByDesc('available_at')
+        $lastJob = MessageEvent::where('channel', 'whatsapp')
+            ->orderByDesc('created_at')
             ->first();
 
         if ($lastJob) {
-            $baseTime = Carbon::createFromTimestamp($lastJob->available_at);
+            $baseTime = $lastJob->created_at;
         } else {
             $baseTime = now();
         }

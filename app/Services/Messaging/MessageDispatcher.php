@@ -88,7 +88,7 @@ class MessageDispatcher
             }
 
             // Dispatch job
-            $job = SendWhatsappMessageJob::dispatch(
+            SendWhatsappMessageJob::dispatch(
                 $action,
                 $formattedReceiver,
                 $message,
@@ -96,11 +96,9 @@ class MessageDispatcher
                 $traceId,
                 $event->id,
                 $deviceId
-            )->onQueue($queue ?? 'default');
-
-            if ($delay) {
-                $job->delay($delay);
-            }
+            )
+                ->onQueue($queue ?? 'default')
+                ->delay($delay ?? now()->addSeconds(30));
 
             // ✅ SUCCESS LOG (RINGKAS & TRACEABLE)
             LogHelper::logInfo(
