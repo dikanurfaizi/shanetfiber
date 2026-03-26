@@ -91,8 +91,9 @@ use Illuminate\Support\Facades\Route;
 
 // Route::resource('test-command', TestCommandController::class);
 Route::get('/isolir', [IsolirController::class, 'index'])->name('isolir');
-Route::redirect('/', '/customer/login');
+Route::redirect('/', '/homepage');
 Route::post('payments/midtrans-notification', [PaymentCallbackController::class, 'receive']);
+Route::get('/homepage', [HomeController::class, 'home'])->name('homepage');
 Route::group(['prefix' => 'customer', 'namespace' => 'Customer'], function () {
     Route::group(['middleware' => 'guest'], function () {
         Route::get('/login', [CustomerLoginController::class, 'login'])->name('customerLogin');

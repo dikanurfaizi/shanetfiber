@@ -14,6 +14,7 @@ class PackageChangesApplied
         public Customer $customer,
         public string $oldPackageName,
         public int $oldPackagePrice,
+        public ?int $eventId = null,
         public string $traceId
     ) {}
 }

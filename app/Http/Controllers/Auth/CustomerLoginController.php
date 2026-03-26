@@ -18,8 +18,8 @@ class CustomerLoginController extends Controller
 
     public function login()
     {
-        $data = $this->authService->getLoginData();
-        return view('customers.auth.login', $data);
+        // $data = $this->authService->getLoginData();
+        return view('customers.auth.login');
     }
 
     public function postLogin(Request $request)

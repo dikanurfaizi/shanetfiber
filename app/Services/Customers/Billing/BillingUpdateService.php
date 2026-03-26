@@ -248,6 +248,7 @@ class BillingUpdateService
                     $customer,
                     $oldPackageName,
                     $oldPackagePrice,
+                    null,
                     $traceId
                 ));
             }

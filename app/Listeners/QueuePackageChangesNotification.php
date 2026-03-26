@@ -13,6 +13,7 @@ class QueuePackageChangesNotification
             customer: $event->customer,
             oldPackageName: $event->oldPackageName,
             oldPackagePrice: $event->oldPackagePrice,
+            eventId: $event->eventId ?? null,
             traceId: $event->traceId
         )->onQueue('notification');
     }

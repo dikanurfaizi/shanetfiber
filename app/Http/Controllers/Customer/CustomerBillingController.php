@@ -65,7 +65,6 @@ class CustomerBillingController extends Controller
 
             $validated['addons'] = $addons;
 
-
             $result = $updateService->update(
                 $customer,
                 $validated,

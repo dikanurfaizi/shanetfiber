@@ -18,6 +18,7 @@ class SendPackageChangesNotificationJob implements ShouldQueue
         public Customer $customer,
         public string $oldPackageName,
         public int $oldPackagePrice,
+        public ?int $eventId = null,
         public string $traceId
     ) {}
 
@@ -27,6 +28,7 @@ class SendPackageChangesNotificationJob implements ShouldQueue
             customer: $this->customer,
             oldPackageName: $this->oldPackageName,
             oldPackagePrice: $this->oldPackagePrice,
+            eventId: $this->eventId ?? null,
             traceId: $this->traceId
         );
     }

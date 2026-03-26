@@ -13,6 +13,7 @@ use App\Models\Websystem;
 use App\Models\User;
 use App\Models\InvestorAdmin;
 use App\Services\Dashboard\DashboardService;
+use App\Services\Auth\CustomerAuthService;
 use Illuminate\Support\Facades\Log;
 use App\Helpers\LogHelper;
 use App\Helpers\UserAuth;
@@ -25,9 +26,11 @@ class HomeController extends Controller
     private DashboardService $dashboardService;
     protected $newVersion;
     protected $version;
+    protected $authService;
 
-    public function __construct(DashboardService $dashboardService)
+    public function __construct(DashboardService $dashboardService, CustomerAuthService $authService)
     {
+        $this->authService = $authService;
         $this->dashboardService = $dashboardService;
 
         $this->middleware('permission:server-edit', ['only' => ['index', 'update']]);
@@ -41,6 +44,12 @@ class HomeController extends Controller
     private function getUserAuthData()
     {
         return UserAuth::getUserDetails();
+    }
+
+    public function home()
+    {
+        $data = $this->authService->getLoginData();
+        return view('customers.auth.homepage', $data);
     }
 
     /**
