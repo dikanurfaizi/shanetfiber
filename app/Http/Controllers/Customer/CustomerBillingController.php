@@ -71,9 +71,13 @@ class CustomerBillingController extends Controller
                 $traceId
             );
 
+            foreach ($result['events'] as $event) {
+                event($event);
+            }
+
             return redirect()
                 ->route('customers.show', [$customer->slug, 'tab' => 'billing'])
-                ->with('billing_update_result', $result);
+                ->with('billing_update_result', $result['results']);
         } catch (DomainException $e) {
             LogHelper::logError($e, [
                 'customer_id' => $customer->id,

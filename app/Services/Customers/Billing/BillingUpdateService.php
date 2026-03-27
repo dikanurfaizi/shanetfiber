@@ -107,6 +107,13 @@ class BillingUpdateService
                         );
 
                     if (!$ok) {
+                        LogHelper::logInfo(null, [
+                            'step' => 'MEMBERSHIP_BLOCKED',
+                            'reason' => $reason,
+                            'member_id' => $memberId,
+                            'periode_scope' => $periodeScope,
+                        ], 200, 'Billing Update Flow', $traceId);
+
                         return ['status' => 'BLOCKED', 'reason' => $reason];
                     }
 
@@ -145,6 +152,10 @@ class BillingUpdateService
                     $diff = $this->addonDiffService->diff($customer, $normalized);
 
                     if (!$diff['has_change']) {
+                        LogHelper::logInfo(null, [
+                            'step' => 'ADDON_NO_CHANGE',
+                        ], 200, 'Billing Update Flow', $traceId);
+
                         return ['status' => 'SKIPPED'];
                     }
 
@@ -179,12 +190,21 @@ class BillingUpdateService
                     if ($this->billingRuleGuardService
                         ->isSamePackage($oldSubscription, (int)$data['package_id'])
                     ) {
+                        LogHelper::logInfo(null, [
+                            'step' => 'PACKAGE_NO_CHANGE',
+                        ], 200, 'Billing Update Flow', $traceId);
+
                         return ['status' => 'SKIPPED'];
                     }
 
                     [$ok, $reason] = $this->billingRuleGuardService->canChangePackage($currentBilling);
 
                     if (!$ok) {
+                        LogHelper::logInfo(null, [
+                            'step' => 'PACKAGE_BLOCKED',
+                            'reason' => $reason,
+                        ], 200, 'Billing Update Flow', $traceId);
+
                         return ['status' => 'BLOCKED', 'reason' => $reason];
                     }
 
@@ -230,28 +250,28 @@ class BillingUpdateService
                 'results' => $results,
             ], 200, 'Billing Update Flow', $traceId);
 
-            return $results;
-        });
+            $events = [];
 
-        // ==========================
-        // AFTER COMMIT EVENT
-        // ==========================
-        DB::afterCommit(function () use (
-            $customer,
-            $packageChanged,
-            $oldPackageName,
-            $oldPackagePrice,
-            $traceId
-        ) {
-            if ($packageChanged && $oldPackageName !== null && $oldPackagePrice !== null) {
-                event(new PackageChangesApplied(
+            if ($packageChanged && $oldPackageName && $oldPackagePrice) {
+                $events[] = new PackageChangesApplied(
                     $customer,
                     $oldPackageName,
                     $oldPackagePrice,
                     null,
                     $traceId
-                ));
+                );
             }
+
+            LogHelper::logInfo(null, [
+                'step' => 'EVENT_PREPARED',
+                'package_changed' => $packageChanged,
+                'event_count' => count($events)
+            ], 200, 'Billing Update Flow', $traceId);
+
+            return [
+                'results' => $results,
+                'events' => $events
+            ];
         });
 
         return $results;
@@ -265,6 +285,7 @@ class BillingUpdateService
             LogHelper::logError(null, [
                 'step' => $step,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ], 500, 'Billing Update Flow', $traceId);
 
             return [
