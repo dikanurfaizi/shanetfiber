@@ -4,6 +4,7 @@ namespace App\Services\Notification;
 
 use App\DataTransferObjects\TelegramJobDto;
 use App\Enums\TelegramAction;
+use App\Enums\WhatsAppAction;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Models\Customers\Customer;
@@ -97,6 +98,7 @@ class PackageChangesNotificationService
                     oldPackagePrice: $oldPackagePrice,
                     eventId: $eventId,
                     deviceId: $number->device_id,
+                    action: WhatsAppAction::CHANGES_PACKAGE->value,
                     traceId: $traceId
                 );
             }

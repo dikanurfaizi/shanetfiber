@@ -88,6 +88,7 @@ class PaymentPayLaterNotificationService
                     $billing,
                     $eventId,
                     $deviceId,
+                    WhatsAppAction::PAYLATER->value,
                     $traceId
                 );
             }

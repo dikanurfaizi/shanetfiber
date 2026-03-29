@@ -104,6 +104,7 @@ class PaymentCancellationNotificationService
                     $billing,
                     $eventId,
                     $deviceId,
+                    WhatsAppAction::UNPAYMENT->value,
                     $traceId
                 );
             }
