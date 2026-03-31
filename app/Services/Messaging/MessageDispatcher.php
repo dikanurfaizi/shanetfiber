@@ -60,40 +60,42 @@ class MessageDispatcher
                 'message' => $message,
             ];
 
+            $delay = $this->delayMessage($action);
+
             // Create / Update event
             if ($eventId) {
 
                 $event = MessageEvent::findOrFail($eventId);
 
                 $event->update([
-                    'status'    => 'pending',
-                    'stage'     => 'SENDING JOB',
-                    'trace_id'  => $traceId,
-                    'payload'   => $payload,
-                    'device_id' => $deviceId,
+                    'status'        => 'pending',
+                    'stage'         => 'SENDING JOB',
+                    'trace_id'      => $traceId,
+                    'payload'       => $payload,
+                    'device_id'     => $deviceId,
+                    'scheduled_at'  => $delay,
                 ]);
             } else {
 
                 $event = MessageEvent::create([
-                    'customer_id'  => $built['customer_id'] ?? null,
-                    'channel'      => 'go_whatsapp',
-                    'message_type' => $action,
-                    'meta'         => $payload,
-                    'status'       => 'pending',
-                    'trace_id'     => $traceId,
-                    'stage'        => 'SENDING JOB',
-                    'device_id'    => $deviceId,
+                    'customer_id'   => $built['customer_id'] ?? null,
+                    'channel'       => 'go_whatsapp',
+                    'message_type'  => $action,
+                    'meta'          => $payload,
+                    'status'        => 'pending',
+                    'trace_id'      => $traceId,
+                    'stage'         => 'SENDING JOB',
+                    'device_id'     => $deviceId,
+                    'scheduled_at'  => $delay,
                 ]);
             }
 
-            $delay = $this->delayMessage($action);
             $queue = $queue ?? 'notification';
 
             // === LOG BEFORE DISPATCH (RINGKAS & TRACEABLE) ===
             LogHelper::logInfo(
                 null,
                 [
-                    'trace_id'    => $traceId,
                     'event_id'    => $event->id,
                     'action'      => $action,
                     'channel'     => 'go_whatsapp',
@@ -124,13 +126,12 @@ class MessageDispatcher
             LogHelper::logInfo(
                 null,
                 [
-                    'trace_id'    => $traceId,
                     'event_id'    => $event->id,
                     'action'      => $action,
                     'channel'     => 'go_whatsapp',
                     'device_id'   => $deviceId,
                     'receiver'    => $formattedReceiver,
-                    'queue'       => $queue ?? 'default',
+                    'queue'       => $queue,
                 ],
                 200,
                 '[MessageDispatcher] Dispatched',
@@ -175,15 +176,23 @@ class MessageDispatcher
         } else {
             // 2. fallback ke message_events
             $lastEvent = MessageEvent::where('channel', 'go_whatsapp')
-                ->orderByDesc('sent_at')
+                ->orderByDesc('created_at')
                 ->first();
 
-            if ($lastEvent && $lastEvent->sent_at) {
-                // kalau sent_at bukan datetime (misal string / int)
-                $baseTime = Carbon::parse($lastEvent->sent_at);
-                $source = 'message_events';
+            if ($lastEvent && ($lastEvent->scheduled_at || $lastEvent->sent_at)) {
+                $scheduled = $lastEvent->scheduled_at ? Carbon::parse($lastEvent->scheduled_at) : null;
+                $sent = $lastEvent->sent_at ? Carbon::parse($lastEvent->sent_at) : null;
+
+                // Ambil yang paling baru (max) di antara keduanya
+                // Jika salah satu null, max() akan mengambil yang tersedia
+                if ($scheduled && $sent) {
+                    $baseTime = $scheduled->greaterThan($sent) ? $scheduled : $sent;
+                    $source = $scheduled->greaterThan($sent) ? 'message_events_scheduled' : 'message_events_sent';
+                } else {
+                    $baseTime = $scheduled ?? $sent;
+                    $source = $scheduled ? 'message_events_scheduled' : 'message_events_sent';
+                }
             } else {
-                // 3. fallback terakhir
                 $baseTime = now();
                 $source = 'fallback_now';
             }
