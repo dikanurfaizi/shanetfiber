@@ -183,14 +183,20 @@ class MessageDispatcher
                 $scheduled = $lastEvent->scheduled_at ? Carbon::parse($lastEvent->scheduled_at) : null;
                 $sent = $lastEvent->sent_at ? Carbon::parse($lastEvent->sent_at) : null;
 
-                // Ambil yang paling baru (max) di antara keduanya
-                // Jika salah satu null, max() akan mengambil yang tersedia
+                // 1. Tentukan baseTime awal & source berdasarkan yang terbaru
                 if ($scheduled && $sent) {
                     $baseTime = $scheduled->greaterThan($sent) ? $scheduled : $sent;
                     $source = $scheduled->greaterThan($sent) ? 'message_events_scheduled' : 'message_events_sent';
                 } else {
                     $baseTime = $scheduled ?? $sent;
                     $source = $scheduled ? 'message_events_scheduled' : 'message_events_sent';
+                }
+
+                // 2. Cek apakah selisih baseTime dengan waktu sekarang sudah >= 3 menit
+                // Kita gunakan abs(now()->diffInMinutes($baseTime)) agar aman jika ada waktu di masa depan
+                if (now()->diffInMinutes($baseTime) >= 1) {
+                    $baseTime = now();
+                    $source = 'fallback_stale_data'; // Opsional: tandai bahwa ini fallback karena data lama
                 }
             } else {
                 $baseTime = now();

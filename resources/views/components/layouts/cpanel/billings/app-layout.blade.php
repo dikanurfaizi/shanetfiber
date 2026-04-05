@@ -118,11 +118,14 @@
     </script>
     <script>
         $(document).ready(function() {
-            // Ketika tombol bayar diklik
             $(document).on('click', '.billing-submit-btn', function() {
-                const $row = $(this).closest('tr'); // atau '.billing-row'
+                const $row = $(this).closest('tr');
                 const $select = $row.find('.billing-method-select');
                 const paymentMethod = $select.val();
+
+                // Ambil data berdasarkan class spesifik yang kita buat tadi
+                const customerName = $row.find('.js-customer-name').text().trim();
+                const customerAddress = $row.find('.js-customer-address').text().trim();
 
                 if (!paymentMethod) {
                     Swal.fire({
@@ -135,7 +138,14 @@
 
                 Swal.fire({
                     title: 'Konfirmasi Pembayaran?',
-                    text: 'Metode pembayaran: ' + paymentMethod.toUpperCase(),
+                    // Gunakan properti 'html' agar bisa pakai tag <br> untuk baris baru
+                    html: `
+        <div style="text-align: center; line-height: 1.5;">
+            Metode: <b>${paymentMethod.toUpperCase()}</b><br>
+            Nama: <b>${customerName}</b><br>
+            Alamat: <b>${customerAddress}</b>
+        </div>
+    `,
                     icon: 'question',
                     showCancelButton: true,
                     confirmButtonText: 'Ya, bayar',
@@ -144,7 +154,7 @@
                 }).then((result) => {
                     if (!result.isConfirmed) return;
 
-                    const slug = $(this).data('slug'); // Masih boleh pakai slug statis
+                    const slug = $(this).data('slug');
                     const token = $('meta[name="csrf-token"]').attr('content');
 
                     const form = $('<form>', {

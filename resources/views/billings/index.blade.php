@@ -161,10 +161,10 @@
                                 <td><a href="{{ route('billings.show', $billing->slug) }}" data-bs-toggle="tooltip"
                                         data-bs-placement="top" title="Show Billing">
                                         <span
-                                            class="badge text-primary">{{ $billing->customer->name ?? 'no name' }}</span></a>
+                                            class="badge text-primary js-customer-name">{{ $billing->customer->name ?? 'no name' }}</span></a>
                                 </td>
                                 <td><span
-                                        class="badge text-primary">{{ $billing->customer->address ?? 'no address' }}</span>
+                                        class="badge text-primary js-customer-address">{{ $billing->customer->address ?? 'no address' }}</span>
                                 </td>
                                 <td><span class="badge text-primary">{{ $periodeText ?? 'no periode' }}</span>
                                 </td>
