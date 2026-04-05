@@ -192,7 +192,7 @@
                                     <div class="mobile-row-parent">
                                         <div>
                                             <strong>#{{ $i }}</strong> - <span
-                                                class="text-primary">{{ $billing->customer->name }}</span><br>
+                                                class="text-primary js-customer-name">{{ $billing->customer->name }}</span><br>
                                             <small>{!! \App\Helpers\BillingHelper::getBillingStatusBadge($billing, $data) !!}</small>
                                         </div>
                                         <div>
@@ -208,7 +208,9 @@
                                 <td colspan="8">
                                     <div class="mobile-expand-row">
                                         <strong>{{ __('billing.table.address') }}:</strong><br>
-                                        {{ $billing->customer->address ?? 'no address' }}<br><br>
+                                        <span class="js-customer-address">
+                                            {{ $billing->customer->address ?? 'no address' }}
+                                        </span><br><br>
 
                                         <div
                                             style="display: flex; gap: 10px; justify-content: space-between; flex-wrap: wrap; align-items: center;">

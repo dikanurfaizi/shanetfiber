@@ -119,13 +119,26 @@
     <script>
         $(document).ready(function() {
             $(document).on('click', '.billing-submit-btn', function() {
-                const $row = $(this).closest('tr');
-                const $select = $row.find('.billing-method-select');
-                const paymentMethod = $select.val();
+                const $btn = $(this);
+                const $currentRow = $btn.closest('tr');
+                const slug = $btn.data('slug'); // Mengambil slug dari tombol
 
-                // Ambil data berdasarkan class spesifik yang kita buat tadi
-                const customerName = $row.find('.js-customer-name').text().trim();
-                const customerAddress = $row.find('.js-customer-address').text().trim();
+                // 1. Ambil Alamat (Selalu di baris yang sama dengan tombol)
+                const customerAddress = $currentRow.find('.js-customer-address').text().trim();
+
+                // 2. Ambil Nama
+                // Cek di baris ini dulu (Desktop)
+                let customerName = $currentRow.find('.js-customer-name').text().trim();
+
+                // Jika tidak ketemu (Mobile), cari di baris manapun yang punya class js-customer-name 
+                // tapi kita batasi pencariannya di area tabel agar tidak nyasar
+                if (!customerName) {
+                    // Kita cari baris sebelumnya yang bukan baris expand
+                    customerName = $currentRow.prevAll().find('.js-customer-name').first().text().trim();
+                }
+
+                const $select = $currentRow.find('.billing-method-select');
+                const paymentMethod = $select.val();
 
                 if (!paymentMethod) {
                     Swal.fire({
@@ -135,7 +148,6 @@
                     });
                     return;
                 }
-
                 Swal.fire({
                     title: 'Konfirmasi Pembayaran?',
                     // Gunakan properti 'html' agar bisa pakai tag <br> untuk baris baru
