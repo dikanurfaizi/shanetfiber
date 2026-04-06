@@ -121,20 +121,25 @@
             $(document).on('click', '.billing-submit-btn', function() {
                 const $btn = $(this);
                 const $currentRow = $btn.closest('tr');
-                const slug = $btn.data('slug'); // Mengambil slug dari tombol
+                const slug = $btn.data('slug');
 
-                // 1. Ambil Alamat (Selalu di baris yang sama dengan tombol)
-                const customerAddress = $currentRow.find('.js-customer-address').text().trim();
-
-                // 2. Ambil Nama
-                // Cek di baris ini dulu (Desktop)
+                // 1. Ambil Nama
+                // Cek di baris ini (Desktop)
                 let customerName = $currentRow.find('.js-customer-name').text().trim();
 
-                // Jika tidak ketemu (Mobile), cari di baris manapun yang punya class js-customer-name 
-                // tapi kita batasi pencariannya di area tabel agar tidak nyasar
+                // Jika tidak ketemu (Mobile), Nama ada di baris tepat SEBELUMNYA (Parent Row)
                 if (!customerName) {
-                    // Kita cari baris sebelumnya yang bukan baris expand
-                    customerName = $currentRow.prevAll().find('.js-customer-name').first().text().trim();
+                    customerName = $currentRow.prev('tr').find('.js-customer-name').text().trim();
+                }
+
+                // 2. Ambil Alamat
+                // Cek di baris ini (Mobile Expand Row)
+                let customerAddress = $currentRow.find('.js-customer-address').text().trim();
+
+                // Jika tidak ketemu (Desktop), Alamat ada di baris yang sama (sudah tercover di atas)
+                // Namun jika tombol diklik di desktop, kita pastikan ambil dari baris tersebut
+                if (!customerAddress) {
+                    customerAddress = $currentRow.find('.js-customer-address').text().trim();
                 }
 
                 const $select = $currentRow.find('.billing-method-select');
@@ -148,16 +153,16 @@
                     });
                     return;
                 }
+
                 Swal.fire({
                     title: 'Konfirmasi Pembayaran?',
-                    // Gunakan properti 'html' agar bisa pakai tag <br> untuk baris baru
                     html: `
-        <div style="text-align: center; line-height: 1.5;">
-            Metode: <b>${paymentMethod.toUpperCase()}</b><br>
-            Nama: <b>${customerName}</b><br>
-            Alamat: <b>${customerAddress}</b>
-        </div>
-    `,
+                <div style="text-align: center; line-height: 1.5;">
+                    Metode: <b>${paymentMethod.toUpperCase()}</b><br>
+                    Nama: <b>${customerName}</b><br>
+                    Alamat: <b>${customerAddress}</b>
+                </div>
+            `,
                     icon: 'question',
                     showCancelButton: true,
                     confirmButtonText: 'Ya, bayar',
@@ -166,9 +171,7 @@
                 }).then((result) => {
                     if (!result.isConfirmed) return;
 
-                    const slug = $(this).data('slug');
                     const token = $('meta[name="csrf-token"]').attr('content');
-
                     const form = $('<form>', {
                         method: 'POST',
                         action: '/cpanel/billings/' + slug + '/payment/',
