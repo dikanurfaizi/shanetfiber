@@ -59,12 +59,12 @@ class BillingHistoryController extends Controller
         // pagination
         $data = $billingsQuery->paginate($paginate)->appends($request->all());
 
-        // dd($billingsQuery->toSql(), $billingsQuery->getBindings());
-
         // ambil periode dari item pertama yang sedang ditampilkan (periode terakhir)
         $periode = BillingPeriode::orderBy('id', 'ASC')->pluck('name', 'id');
 
         $filterData = $this->billingReportService->getFilterData($traceId);
+
+        // dd($data);
 
         return view('billings.billing_histories.index', array_merge(
             [

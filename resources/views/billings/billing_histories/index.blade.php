@@ -78,20 +78,23 @@
 
     <div class="card-body">
         {{-- Controls (atas tabel) --}}
-        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
             {{-- Pagination --}}
-            <div>
+            <div class="mb-2">
                 {{ $data->withQueryString()->links('vendor.pagination.simple-numeric') }}
             </div>
 
             @canany(['billing-export-selected', 'billing-export-all'])
-                {{-- Export actions --}}
-                <div class="d-flex" style="gap: 10px;">
+                {{-- Container Export dengan Margin Left otomatis di Desktop agar ke kanan --}}
+                <div class="d-flex flex-wrap align-items-center">
+
                     @can('billing-export-selected')
-                        {{-- Filter Periode --}}
+                        {{-- Form Filter Periode --}}
                         <form action="{{ route('billingHistory.index') }}" method="GET" id="periodeForm"
-                            class="d-flex align-items-center">
-                            <label for="periode_id" class="fw-bold text-primary me-2 mb-0 mr-1">Periode</label>
+                            class="form-inline mb-2 mr-3"> {{-- mr-3: Jarak dropdown ke button --}}
+
+                            <label for="periode_id" class="font-weight-bold text-primary mb-0 mr-2">Periode</label>
+
                             {!! Form::select('periode_id', $periode, request('periode_id'), [
                                 'placeholder' => __('All Periode'),
                                 'class' => 'form-control form-control-sm w-auto',
@@ -100,18 +103,21 @@
                             ]) !!}
                         </form>
 
-                        <form action="{{ route('billingHistory.export.selected') }}" method="GET">
+                        {{-- Form Export Selected --}}
+                        <form action="{{ route('billingHistory.export.selected') }}" method="GET" class="mb-2 mr-2">
                             <input type="hidden" name="status" value="{{ request('status') }}">
                             <input type="hidden" name="periode_id" value="{{ request('periode_id') }}">
-                            <button type="submit" class="btn btn-sm btn-success">Export Selected</button>
+                            <button type="submit" class="btn btn-sm btn-success text-nowrap">Export Selected</button>
                         </form>
                     @endcan
 
                     @can('billing-export-all')
-                        <form action="{{ route('billingHistory.export.all') }}" method="GET">
-                            <button type="submit" class="btn btn-sm btn-dark">Export All</button>
+                        {{-- Form Export All --}}
+                        <form action="{{ route('billingHistory.export.all') }}" method="GET" class="mb-2">
+                            <button type="submit" class="btn btn-sm btn-dark text-nowrap">Export All</button>
                         </form>
                     @endcan
+
                 </div>
             @endcanany
         </div>
@@ -142,9 +148,9 @@
                             @php
                                 $i++;
                                 $periodeText = $billing->billingSubscription?->billingPeriode->name
-                                    ? \Carbon\Carbon::parse($billing->billingSubscription->billing_periode)->format(
-                                        'M Y',
-                                    )
+                                    ? \Carbon\Carbon::parse(
+                                        $billing->billingSubscription->billingPeriode->name,
+                                    )->format('M Y')
                                     : 'No Periode';
 
                                 $billAmount = (float) ($billing->total_amount ?? $billing->base_price);
@@ -191,7 +197,7 @@
                                     <div class="mobile-row-parent">
                                         <div>
                                             <strong>#{{ $i }}</strong> - <span
-                                                class="text-primary">{{ $billing->customer_name }}</span><br>
+                                                class="text-primary">{{ $billing->customer->name }}</span><br>
                                             <small>{!! \App\Helpers\BillingHelper::getBillingStatusBadge($billing, $data) !!}</small>
                                         </div>
                                         <div>
