@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Whatsapp\WhatsappMessageMedia;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Filesystem\FilesystemAdapter;
+use App\Helpers\LogHelper;
 
 class WhatsappMediaController extends Controller
 {
@@ -24,6 +25,13 @@ class WhatsappMediaController extends Controller
         // 3️⃣ Stream file (protected)
         /** @var FilesystemAdapter $disk */
         $disk = Storage::disk($media->storage_disk);
+
+        if (!$disk->exists($media->storage_path)) {
+            // Log ini akan memberitahu Anda Laravel nyari ke mana
+            LogHelper::logError(null, ['disk' => $media->storage_disk, 'path' => $media->storage_path], 404, "File Hilang!");
+            LogHelper::logError(null, ['full_path' => $disk->path($media->storage_path)], 404, "Full Path yang dicari ");
+            abort(404, "File tidak ditemukan di storage.");
+        }
 
         return $disk->response(
             $media->storage_path,

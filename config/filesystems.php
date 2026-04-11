@@ -59,7 +59,7 @@ return [
         'whatsapp_private' => [
             'driver' => 'local',
             'root' => storage_path('app/whatsapp'),
-            'visibility' => 'private',
+            'throw' => false,
         ],
 
     ],

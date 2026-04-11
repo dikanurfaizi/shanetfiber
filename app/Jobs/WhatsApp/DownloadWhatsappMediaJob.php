@@ -103,6 +103,7 @@ class DownloadWhatsappMediaJob implements ShouldQueue
             $media->update([
                 'file_name'         => empty($media->file_name) ? $generatedName : $media->file_name,
                 'file_size'         => $fileSize,
+                'storage_disk'      => 'whatsapp_private',
                 'storage_path'      => $storagePath,
                 'download_status'   => 'downloaded',
                 'download_error'    => null,
