@@ -16,6 +16,9 @@ class TemplateContext
         public array $bodyValues = [],     // e.g. ["Rasna", "Jan 2026", ...]
         public array $headerValues = [],   // e.g. ["Pembayaran diterima"] OR media meta
         public array $buttonValues = [],   // e.g. [0 => ["<receipt_code>"]]
+
+        public ?string $text = null,
+        public ?string $messageId = null
     ) {}
 
     /**

@@ -4,11 +4,21 @@ namespace App\Http\Controllers\Whatsapp;
 
 use App\Http\Controllers\Controller;
 use App\Models\Whatsapp\WhatsappConversation;
+use App\Models\Whatsapp\WhatsappWebhookMessage;
+use App\Services\Whatsapp\CloudAPI\Single\ReplyMessage;
+use App\Services\Whatsapp\WhatsappGatewayResolver;
+use App\Helpers\LogHelper;
+use App\Helpers\FormatReceiver;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class WhatsappConversationController extends Controller
 {
+    public function __construct(
+        private ReplyMessage $replyMessageService,
+        private WhatsappGatewayResolver $gatewayResolver,
+    ) {}
+
     public function index()
     {
         $conversations = WhatsappConversation::with([
@@ -18,20 +28,20 @@ class WhatsappConversationController extends Controller
             ->orderByDesc('last_message_at')
             ->get();
 
-        $selectedConversation = $conversations->first() ?? null;
-
         $conversationsJson = $conversations->map(function ($c) {
             return [
                 'id' => $c->id,
-                'customer_name' => $c->customer_name, // accessor
+                'customer_name' => $c->customer_name,
                 'customer_number' => $c->customer_number,
                 'last_message_at' => $c->last_message_at?->timestamp,
                 'has_unread' => $c->has_unread,
                 'messages' => $c->messages->map(function ($m) {
                     return [
                         'id' => $m->id,
+                        'wa_message_id' => $m->wa_message_id, // PENTING: Harus ada untuk Reply
                         'text_body' => $m->text_body,
                         'direction' => $m->direction,
+                        'status' => $m->status, // PENTING: Untuk statusClass()
                         'timestamp_wa' => $m->timestamp_wa?->timestamp,
                         'media' => $m->media->map(function ($media) {
                             return [
@@ -49,5 +59,91 @@ class WhatsappConversationController extends Controller
         return view('whatsapp.conversations.index', [
             'conversationsJson' => $conversationsJson,
         ]);
+    }
+
+    public function sendMessage(Request $request)
+    {
+        $traceId = Str::uuid()->toString();
+
+        // 1. Validasi Input Awal
+        $validated = $request->validate([
+            'conversation_id' => 'required|exists:whatsapp_conversations,id',
+            'message'         => 'required|string|max:4000', // Batas karakter WA
+            'reply_to_id'     => 'nullable|string',
+        ]);
+
+        try {
+            LogHelper::logInfo(null, ['validated' => $validated], 200, "[ChatController] Initializing send message", $traceId);
+
+            // 2. Resolve Gateway & Account
+            $resolved = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, 'meta_reply');
+
+            if (!$resolved || empty($resolved[1])) {
+                throw new \RuntimeException("No active gateway or account found for meta_reply");
+            }
+
+            [$gateway, $account, $number] = $resolved;
+
+            // 3. Cari Data Conversation
+            $conversation = WhatsappConversation::findOrFail($validated['conversation_id']);
+            $customerContact = $conversation->customer_number;
+
+            if (!$customerContact) {
+                throw new \RuntimeException("Customer contact not found for conversation ID: {$validated['conversation_id']}");
+            }
+
+            // 4. Format Recipient
+            $formatter = new FormatReceiver;
+            $recipient = $formatter->formatReceiver($customerContact, null, false);
+
+            // 5. Logic Context (Reply) - Full Control from Frontend
+            $waMessageId = $request->input('reply_to_id') ?: null;
+
+            if ($waMessageId) {
+                LogHelper::logInfo(null, ['wa_message_id' => $waMessageId], 200, "[ChatController] Replying to specific message", $traceId);
+            } else {
+                LogHelper::logInfo(null, ['recipient' => $recipient], 200, "[ChatController] Sending regular text message (no quote)", $traceId);
+            }
+
+            // 6. Eksekusi Pengiriman
+            $result = $this->replyMessageService->send(
+                account: $account,
+                contact: $recipient,
+                text: $validated['message'],
+                replyToMessageId: $waMessageId // Bisa berisi ID spesifik atau null (pesan biasa)
+            );
+
+            // 7. Ambil WA ID dari Response Meta
+            $metaMessageId = data_get($result->response, 'body.messages.0.id');
+
+            LogHelper::logInfo(null, [
+                'recipient' => $recipient,
+                'wa_id' => $metaMessageId,
+                'gateway' => $account->name
+            ], 200, "[ChatController] Message dispatched successfully", $traceId);
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Pesan berhasil dikirim',
+                'wa_id'   => $metaMessageId
+            ]);
+        } catch (\Throwable $e) {
+            // 8. Error Handling & Traceable Log
+            LogHelper::logError(null, [
+                'conversation_id' => $request->conversation_id,
+                'exception' => get_class($e),
+                'error'     => $e->getMessage(),
+                'file'      => $e->getFile(),
+                'line'      => $e->getLine(),
+            ], 500, "[ChatController] Critical error in sendMessage", $traceId);
+
+            // Berikan pesan yang user-friendly di production
+            $errorMessage = config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan sistem saat mengirim pesan.';
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal mengirim pesan: ' . $errorMessage
+            ], 500);
+        }
     }
 }

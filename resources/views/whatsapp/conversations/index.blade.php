@@ -49,7 +49,18 @@
                                     'justify-content-end': msg.direction === 'outgoing'
                                 }">
 
-                                <div class="p-2 rounded message-bubble" :class="msg.direction" style="max-width:65%;">
+                                <div class="p-2 rounded message-bubble shadow-sm" :class="msg.direction"
+                                    style="max-width:70%;">
+
+                                    {{-- Tombol Reply --}}
+                                    <button type="button" class="reply-btn position-absolute" @click="setReply(msg)">
+                                        <div class="d-flex align-items-center">
+                                            {{-- Ikon panah reply --}}
+                                            <i class="fas fa-reply mr-2"></i>
+                                            {{-- Label teks --}}
+                                            <span style="font-size: 0.75rem; font-weight: 600;">Reply</span>
+                                        </div>
+                                    </button>
 
                                     {{-- TEXT --}}
                                     <template x-if="msg.text_body">
@@ -106,11 +117,41 @@
 
                     {{-- ================= INPUT ================= --}}
                     <div class="p-3 border-top bg-white">
-                        <form class="d-flex" @submit.prevent="sendMessage">
-                            <input type="text" class="form-control me-2" placeholder="Type a message..."
-                                x-model="newMessage">
-                            <button class="btn btn-success" :disabled="!newMessage.trim()">
-                                Send
+
+                        {{-- Quote Preview --}}
+                        <template x-if="replyingTo">
+                            <div
+                                class="d-flex align-items-center p-2 mb-2 border-start border-success border-4 bg-light rounded shadow-sm">
+                                <div class="flex-grow-1 text-truncate">
+                                    <small class="text-success fw-bold"
+                                        x-text="replyingTo.direction === 'incoming' ? selectedConversation.customer_name : 'You'"></small>
+                                    <div class="text-muted small text-truncate" x-text="replyingTo.text_body"></div>
+                                </div>
+                                <button type="button" class="btn-close btn-sm ms-2" @click="cancelReply()"></button>
+                            </div>
+                        </template>
+
+                        <form class="d-flex align-items-center p-2 bg-light" @submit.prevent="sendMessage">
+                            {{-- Container Input --}}
+                            <div class="flex-grow-1 mr-3"> {{-- mr-3 memberikan jarak horizontal yang lebih pas --}}
+                                <input type="text" id="chatInput"
+                                    class="form-control rounded-pill border-0 shadow-sm" placeholder="Type a message..."
+                                    x-model="newMessage" style="height: 45px; padding: 0 20px; line-height: 45px;">
+                            </div>
+
+                            {{-- Tombol Kirim --}}
+                            <button type="submit"
+                                class="btn btn-whatsapp-send rounded-circle d-flex align-items-center justify-content-center"
+                                :disabled="!newMessage.trim() || isSending"
+                                style="width: 45px; height: 45px; min-width: 45px; padding: 0;">
+
+                                {{-- Ikon Pesawat Kertas --}}
+                                <span x-show="!isSending" class="d-flex align-items-center justify-content-center">
+                                    <i class="fas fa-paper-plane" style="font-size: 1.2rem;"></i>
+                                </span>
+
+                                {{-- Spinner saat loading --}}
+                                <span x-show="isSending" class="spinner-border spinner-border-sm" role="status"></span>
                             </button>
                         </form>
                     </div>
@@ -149,6 +190,150 @@
                 margin-top: 4px;
                 color: #777;
             }
+
+            .message-bubble {
+                position: relative;
+            }
+
+            .reply-btn {
+                opacity: 0;
+                transition: opacity 0.2s;
+                background: rgba(255, 255, 255, 0.8);
+                border-radius: 50%;
+                width: 25px;
+                height: 25px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            }
+
+            .message-bubble:hover .reply-btn {
+                opacity: 1;
+            }
+
+            /* Agar tombol reply tidak keluar layar pada pesan outgoing */
+            .outgoing .reply-btn {
+                left: -35px;
+                right: auto;
+            }
+
+            .incoming .reply-btn {
+                right: -35px;
+                left: auto;
+            }
+
+            .btn-close {
+                box-sizing: content-box;
+                width: 0.5em;
+                height: 0.5em;
+                padding: 0.25em 0.25em;
+                color: #000;
+                background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3e%3cpath d='M.293.293a1 1 0 011.414 0L8 6.586 14.293.293a1 1 0 111.414 1.414L9.414 8l6.293 6.293a1 1 0 01-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 01-1.414-1.414L6.586 8 .293 1.707a1 1 0 010-1.414z'/%3e%3c/svg%3e") center/0.5em auto no-repeat;
+                border: 0;
+                border-radius: 0.25rem;
+                opacity: 0.5;
+            }
+
+            .btn-close:hover {
+                opacity: 0.75;
+            }
+
+            .btn-whatsapp-send {
+                background-color: #00a884;
+                /* Hijau WhatsApp Modern */
+                border: none;
+                color: white;
+                transition: all 0.2s ease;
+                padding: 0;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            }
+
+            .btn-whatsapp-send:hover {
+                background-color: #008f6f;
+                color: white;
+                transform: scale(1.05);
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            }
+
+            .btn-whatsapp-send:active {
+                transform: scale(0.95);
+            }
+
+            .btn-whatsapp-send:disabled {
+                background-color: #aebac1;
+                /* Warna abu-abu saat disabled */
+                opacity: 0.8;
+            }
+
+            /* Memperbaiki posisi ikon agar benar-benar di tengah */
+            .btn-whatsapp-send i {
+                margin-left: -2px;
+                /* Geser sedikit agar center secara optik */
+            }
+
+            /* Gunakan selector yang lebih spesifik agar menang dari sisa-sisa CSS lama */
+            .wa-chat-messages .message-bubble .reply-btn {
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.2s ease-in-out;
+
+                /* WARNA: Abu-abu WhatsApp */
+                background-color: #3b4a54 !important;
+                color: #ffffff !important;
+
+                /* BENTUK: Kapsul */
+                border-radius: 20px !important;
+                width: auto !important;
+                height: auto !important;
+                padding: 6px 14px !important;
+
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+                white-space: nowrap;
+                border: none !important;
+                cursor: pointer;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            }
+
+            /* Hover state */
+            .wa-chat-messages .message-bubble:hover .reply-btn {
+                opacity: 1 !important;
+                visibility: visible !important;
+            }
+
+            /* POSISI PESAN MASUK (Tombol di Kanan Bubble) */
+            .wa-chat-messages .incoming .reply-btn {
+                position: absolute !important;
+                left: 100% !important;
+                right: auto !important;
+                /* Paksa mematikan right: -35px lama */
+                top: 50% !important;
+                transform: translateY(-50%) !important;
+                margin-left: 15px !important;
+                /* JARAK: Spasi antara bubble dan icon */
+            }
+
+            /* POSISI PESAN KELUAR (Tombol di Kiri Bubble) */
+            .wa-chat-messages .outgoing .reply-btn {
+                position: absolute !important;
+                right: 100% !important;
+                left: auto !important;
+                /* Paksa mematikan left: -35px lama */
+                top: 50% !important;
+                transform: translateY(-50%) !important;
+                margin-right: 15px !important;
+                /* JARAK: Spasi antara bubble dan icon */
+            }
+
+            /* Style Ikon */
+            .wa-chat-messages .reply-btn i {
+                font-size: 0.8rem !important;
+                margin-right: 8px !important;
+                /* Jarak antara ikon panah dan teks 'Reply' */
+            }
         </style>
     @endsection
 
@@ -156,17 +341,16 @@
     {{-- ================= SCRIPT ================= --}}
     @push('scripts')
         <script>
-            function waApp() {
+            window.waApp = function() {
                 return {
-
                     conversations: @json($conversationsJson),
-
                     search: '',
                     selectedConversation: null,
                     newMessage: '',
+                    isSending: false,
+                    replyingTo: null,
                     mobileView: window.innerWidth < 768 ? 'list' : null,
 
-                    /* ================= INIT ================= */
                     init() {
                         window.addEventListener('resize', () => {
                             if (window.innerWidth >= 768) {
@@ -177,7 +361,6 @@
                         });
                     },
 
-                    /* ================= COMPUTED ================= */
                     get isListVisible() {
                         return this.mobileView === null || this.mobileView === 'list';
                     },
@@ -187,22 +370,18 @@
                     },
 
                     get filteredConversations() {
-                        if (!this.search.trim()) return this.conversations;
-
+                        if (!this.search || !this.search.trim()) return this.conversations;
                         return this.conversations.filter(c =>
-                            c.customer_name?.toLowerCase()
-                            .includes(this.search.toLowerCase())
+                            c.customer_name?.toLowerCase().includes(this.search.toLowerCase())
                         );
                     },
 
                     get sortedMessages() {
-                        if (!this.selectedConversation) return [];
-
+                        if (!this.selectedConversation || !this.selectedConversation.messages) return [];
                         return [...this.selectedConversation.messages]
                             .sort((a, b) => a.timestamp_wa - b.timestamp_wa);
                     },
 
-                    /* ================= METHODS ================= */
                     selectConversation(conv) {
                         this.selectedConversation = conv;
                         if (window.innerWidth < 768) this.mobileView = 'chat';
@@ -214,20 +393,45 @@
                     },
 
                     sendMessage() {
-                        if (!this.newMessage.trim()) return;
+                        if (!this.newMessage.trim() || this.isSending) return;
+                        this.isSending = true;
 
-                        this.selectedConversation.messages.push({
-                            id: Date.now(),
-                            text_body: this.newMessage,
-                            direction: 'outgoing',
-                            timestamp_wa: Math.floor(Date.now() / 1000),
-                            status: 'sent',
-                            media: []
-                        });
+                        const payload = {
+                            conversation_id: this.selectedConversation.id,
+                            message: this.newMessage,
+                            reply_to_id: this.replyingTo ? this.replyingTo.wa_message_id : null
+                        };
 
-                        this.newMessage = '';
-                        this.$nextTick(() => this.scrollToBottom());
-                    },
+                        fetch("{{ route('whatsapp.conversations.send') }}", {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Accept': 'application/json'
+                                },
+                                body: JSON.stringify(payload)
+                            })
+                            .then(async response => {
+                                const data = await response.json();
+                                if (!response.ok) throw new Error(data.message || 'Error sending message');
+
+                                this.selectedConversation.messages.push({
+                                    id: Date.now(),
+                                    wa_message_id: data.wa_id,
+                                    text_body: this.newMessage,
+                                    direction: 'outgoing',
+                                    timestamp_wa: Math.floor(Date.now() / 1000),
+                                    status: 'sent',
+                                    media: []
+                                });
+
+                                this.newMessage = '';
+                                this.replyingTo = null;
+                                this.$nextTick(() => this.scrollToBottom());
+                            })
+                            .catch(error => alert(error.message))
+                            .finally(() => this.isSending = false);
+                    }, // <-- KOMA SUDAH DITAMBAHKAN
 
                     scrollToBottom() {
                         const el = this.$refs.chatContainer;
@@ -248,9 +452,20 @@
                     statusClass(status) {
                         if (status === 'read') return 'text-primary';
                         return 'text-muted';
-                    }
+                    },
 
-                }
+                    setReply(msg) {
+                        this.replyingTo = msg;
+                        this.$nextTick(() => {
+                            const input = document.getElementById('chatInput');
+                            if (input) input.focus();
+                        });
+                    },
+
+                    cancelReply() {
+                        this.replyingTo = null;
+                    }
+                };
             }
         </script>
     @endpush

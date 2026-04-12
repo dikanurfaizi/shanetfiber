@@ -393,6 +393,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::prefix('whatsapp/conversations')->group(function () {
             Route::get('/', [WhatsappConversationController::class, 'index'])->name('whatsapp.conversations.index');
             Route::get('/{id}', [WhatsappConversationController::class, 'show'])->name('whatsapp.conversations.show');
+            Route::post('/send', [WhatsappConversationController::class, 'sendMessage'])->name('whatsapp.conversations.send');
         });
 
         // ==================== MESSAGE EVENTS ====================

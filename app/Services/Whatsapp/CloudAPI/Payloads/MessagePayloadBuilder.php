@@ -8,6 +8,7 @@ use App\Services\Whatsapp\CloudAPI\Payloads\DTO\TemplateMessageDTO;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\TemplateContext;
 use App\Helpers\LogHelper;
 use RuntimeException;
+use Throwable;
 
 class MessagePayloadBuilder
 {
@@ -17,74 +18,109 @@ class MessagePayloadBuilder
 
     public function build(TemplateContext $context): TemplateMessageDTO
     {
+        try {
+            // Jalur 1: Pesan Reply / Freeform Text
+            if ($context->templateName === 'REPLY_TEXT') {
+                return $this->buildReplyPayload($context);
+            }
+
+            // Jalur 2: Pesan Template
+            return $this->buildTemplatePayload($context);
+        } catch (Throwable $e) {
+            LogHelper::logError(null, [
+                'template_name' => $context->templateName,
+                'recipient'     => $context->recipient,
+                'error'         => $e->getMessage(),
+                'trace'         => $e->getTraceAsString()
+            ], 500, '[WA-PAYLOAD] Critical failure during build');
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Membangun payload untuk balasan teks biasa.
+     */
+    private function buildReplyPayload(TemplateContext $context): TemplateMessageDTO
+    {
+        LogHelper::logInfo(null, [
+            'recipient'  => $context->recipient,
+            'has_context_id' => !empty($context->messageId),
+            'text_length' => strlen($context->text ?? '')
+        ], 200, '[WA-PAYLOAD] Building Reply Text payload');
+
+        return new TemplateMessageDTO(
+            recipient: $context->recipient,
+            text: $context->text,
+            messageId: $context->messageId
+        );
+    }
+
+    /**
+     * Membangun payload untuk pesan berbasis template Meta.
+     */
+    private function buildTemplatePayload(TemplateContext $context): TemplateMessageDTO
+    {
         LogHelper::logInfo(null, [
             'template_name' => $context->templateName,
             'language'      => $context->language,
             'recipient'     => $context->recipient,
-            'body_values'   => $context->bodyValues,
-            'header_values' => $context->headerValues,
-            'button_values' => $context->buttonValues,
-        ], 200, '[WA-PAYLOAD] Start build payload');
+            'values'        => [
+                'body'   => $context->bodyValues,
+                'header' => $context->headerValues,
+                'button' => $context->buttonValues,
+            ]
+        ], 200, '[WA-PAYLOAD] Start building Template payload');
 
         $template = WhatsappCloudTemplate::where('name', $context->templateName)
             ->where('language', $context->language)
-            ->firstOrFail();
+            ->first();
 
         if (!$template) {
-            throw new RuntimeException("Template not found: {$context->templateName}");
+            throw new RuntimeException("Template [{$context->templateName}] with language [{$context->language}] not found in database.");
         }
 
         $templateComponents = $template->components()->orderBy('position')->get();
-
-        LogHelper::logInfo(null, [
-            'template_id' => $template->id,
-            'components_count' => $templateComponents->count(),
-        ], 200, '[WA-PAYLOAD] Template loaded');
-
-        $components = [];
+        $builtComponents = [];
 
         foreach ($templateComponents as $component) {
-
-            LogHelper::logInfo(null, [
-                'component_id' => $component->id,
-                'type' => $component->type,
-                'position' => $component->position,
-                'example_raw' => $component->example,
-            ], 200, '[WA-PAYLOAD] Component before build');
-
             $built = $this->factory->build($component, $context);
 
             if ($built === null) {
+                LogHelper::logInfo(null, ['component_id' => $component->id], 200, '[WA-PAYLOAD] Component factory returned null, skipping');
                 continue;
             }
 
-            // ⚠️ khusus BUTTONS: factory kita akan return array of button components
-            // meta API butuh button components dimasukkan sebagai satu object "type":"button"??
-            // pada WA Cloud API, formatnya: components[] berisi object button per index
-            // jadi kita push satu-satu
-            if (isset($built[0]) && is_array($built[0]) && isset($built[0]['type']) && $built[0]['type'] === 'button') {
-                foreach ($built as $b) $components[] = $b;
+            // Handle khusus untuk Buttons (Meta butuh array flattened untuk button components)
+            if ($this->isButtonComponent($built)) {
+                foreach ($built as $button) {
+                    $builtComponents[] = $button;
+                }
                 continue;
             }
 
-            LogHelper::logInfo(null, [
-                'component_id' => $component->id,
-                'built_result' => $built,
-            ], 200, '[WA-PAYLOAD] Component after build');
-
-
-            $components[] = $built;
+            $builtComponents[] = $built;
         }
 
         LogHelper::logInfo(null, [
-            'final_components' => $components,
-        ], 200, '[WA-PAYLOAD] Final components built');
+            'template_id' => $template->id,
+            'total_built' => count($builtComponents)
+        ], 200, '[WA-PAYLOAD] Template payload successfully built');
 
         return new TemplateMessageDTO(
             recipient: $context->recipient,
             templateName: $context->templateName,
             language: $context->language,
-            components: $components
+            components: $builtComponents
         );
+    }
+
+    /**
+     * Helper untuk mendeteksi struktur button
+     */
+    private function isButtonComponent(mixed $built): bool
+    {
+        return isset($built[0]) && is_array($built[0]) &&
+            isset($built[0]['type']) && $built[0]['type'] === 'button';
     }
 }

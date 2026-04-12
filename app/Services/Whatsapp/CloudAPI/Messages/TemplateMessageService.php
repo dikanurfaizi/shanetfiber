@@ -10,6 +10,7 @@ use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPayLaterComman
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPembayaranCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\OverdueBroadcastCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\TestMessageCommand;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\ReplyMessageCommand;
 
 class TemplateMessageService
 {
@@ -106,6 +107,19 @@ class TemplateMessageService
             note: $data['note'],
             templateName: $data['templateName'],
             account: $data['account']
+        );
+
+        return $this->dispatcher->dispatch($command, null);
+    }
+
+    public function replyMessage(array $data)
+    {
+        $command = new ReplyMessageCommand(
+            recipient: $data['recipient'],
+            text: $data['text'],
+            account: $data['account'],
+            messageId: $data['message_id'] ?? null, // dari wa_message_id di database
+            customerId: $data['customer_id'] ?? null
         );
 
         return $this->dispatcher->dispatch($command, null);

@@ -8,9 +8,11 @@ class TemplateMessageDTO
 {
     public function __construct(
         public string $recipient,
-        public string $templateName,
-        public string $language,
-        public array $components
+        public ?string $templateName = null, // Jadikan nullable
+        public ?string $language = 'id',    // Jadikan nullable
+        public array $components = [],      // Default array kosong
+        public ?string $text = null,        // Tambahan untuk Reply
+        public ?string $messageId = null    // Tambahan untuk Context/Reply ID
     ) {}
 
     public function validate(): void
@@ -19,12 +21,14 @@ class TemplateMessageDTO
             throw new RuntimeException("Recipient is required");
         }
 
-        if (!$this->templateName) {
-            throw new RuntimeException("Template name is required");
-        }
-
-        if (empty($this->components)) {
-            throw new RuntimeException("Template components is empty");
+        // Jika bukan tipe text, maka wajib validasi template
+        if (!$this->text) {
+            if (!$this->templateName) {
+                throw new RuntimeException("Template name is required for template messages");
+            }
+            if (empty($this->components)) {
+                throw new RuntimeException("Template components is empty");
+            }
         }
     }
 
@@ -32,18 +36,34 @@ class TemplateMessageDTO
     {
         $this->validate();
 
-        return [
+        // Base Payload
+        $payload = [
             'messaging_product' => 'whatsapp',
-            'to' => $this->recipient,
-            'type' => 'template',
-            'template' => [
-                'name' => $this->templateName,
-                'language' => [
-                    'code' => $this->language
-                ],
-                'components' => $this->components
-            ]
+            'recipient_type'    => 'individual',
+            'to'                => $this->recipient,
         ];
+
+        // Logic Jika tipe TEXT (Reply)
+        if ($this->text) {
+            $payload['type'] = 'text';
+            $payload['text'] = ['body' => $this->text];
+
+            if ($this->messageId) {
+                $payload['context'] = ['message_id' => $this->messageId];
+            }
+
+            return $payload;
+        }
+
+        // Logic Jika tipe TEMPLATE (Existing)
+        $payload['type'] = 'template';
+        $payload['template'] = [
+            'name' => $this->templateName,
+            'language' => ['code' => $this->language],
+            'components' => $this->components
+        ];
+
+        return $payload;
     }
 
     public function toLogArray(): array
