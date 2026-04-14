@@ -66,7 +66,7 @@ class ChangesPackageHandler extends BaseBroadcastAwareHandler implements Message
 
     public function build(string $traceId): array
     {
-        $customer = Customer::with(['package', 'user'])->find($this->customerId);
+        $customer = Customer::with(['user'])->find($this->customerId);
         $admin = $customer->user ?? User::find(1);
 
         $admin_number = !empty($admin->contact)

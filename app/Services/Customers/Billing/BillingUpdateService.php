@@ -248,6 +248,8 @@ class BillingUpdateService
             LogHelper::logInfo(null, [
                 'step' => 'END_UPDATE',
                 'results' => $results,
+                'old_package_name' => $oldPackageName,
+                'old_package_price' => $oldPackagePrice
             ], 200, 'Billing Update Flow', $traceId);
 
             $events = [];
@@ -260,13 +262,23 @@ class BillingUpdateService
                     null,
                     $traceId
                 );
-            }
 
-            LogHelper::logInfo(null, [
-                'step' => 'EVENT_PREPARED',
-                'package_changed' => $packageChanged,
-                'event_count' => count($events)
-            ], 200, 'Billing Update Flow', $traceId);
+                LogHelper::logInfo(null, [
+                    'step' => 'EVENT_PREPARED',
+                    'package_changed' => $packageChanged,
+                    'old_package_name' => $oldPackageName,
+                    'old_package_price' => $oldPackagePrice,
+                    'event_count' => count($events)
+                ], 200, 'Billing Update Flow', $traceId);
+            } else {
+                LogHelper::logInfo(null, [
+                    'step' => 'EVENT_SKIPPED',
+                    'package_changed' => $packageChanged,
+                    'old_package_name' => $oldPackageName,
+                    'old_package_price' => $oldPackagePrice,
+                    'event_count' => count($events)
+                ], 200, 'Billing Update Flow', $traceId);
+            }
 
             return [
                 'results' => $results,
