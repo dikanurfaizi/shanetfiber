@@ -146,4 +146,44 @@ class WhatsappConversationController extends Controller
             ], 500);
         }
     }
+
+    public function sync(Request $request)
+    {
+        $conversationId = $request->query('conversation_id');
+        $lastId = $request->query('last_id');
+
+        // 1. Ambil hanya pesan yang lebih baru dari last_id
+        $newMessages = WhatsappWebhookMessage::with(['media'])
+            ->where('conversation_id', $conversationId)
+            ->when($lastId, function ($query) use ($lastId) {
+                // Mengambil pesan yang ID-nya lebih besar dari ID terakhir yang ada di browser
+                return $query->where('id', '>', $lastId);
+            })
+            ->orderBy('id', 'asc')
+            ->get();
+
+        // 2. Transformasi dengan struktur yang identik dengan method index()
+        $formattedMessages = $newMessages->map(function ($m) {
+            return [
+                'id' => $m->id,
+                'wa_message_id' => $m->wa_message_id,
+                'text_body' => $m->text_body,
+                'direction' => $m->direction,
+                'status' => $m->status,
+                'timestamp_wa' => $m->timestamp_wa?->timestamp,
+                'media' => $m->media->map(function ($media) {
+                    return [
+                        'id' => $media->id,
+                        'file_name' => $media->file_name,
+                        'mime_type' => $media->mime_type,
+                        'url' => route('whatsapp.media.show', $media->id),
+                    ];
+                })->values()->all(),
+            ];
+        })->values()->all();
+
+        return response()->json([
+            'new_messages' => $formattedMessages
+        ]);
+    }
 }

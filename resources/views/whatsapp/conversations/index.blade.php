@@ -1,53 +1,57 @@
 <x-layouts.app-layout title="WhatsApp Conversations">
 
     <div x-data="waApp()" x-init="init()" class="wa-container d-flex flex-column flex-md-row"
-        style="height: 90vh; border: 1px solid #ccc; border-radius: 8px; overflow: hidden;">
+        style="height: 90vh; border: 1px solid #ccc; border-radius: 8px; overflow: hidden; position: relative;">
 
-        {{-- ================= SIDEBAR ================= --}}
-        <div x-show="isListVisible" class="wa-sidebar p-2 flex-shrink-0"
-            style="width:100%; max-width:300px; background:#f0f0f0; overflow-y:auto;">
+        {{-- ================= SIDEBAR (CHAT LIST) ================= --}}
+        <div x-show="isListVisible" class="wa-sidebar d-flex flex-column"
+            :class="{ 'wa-mobile-layer': mobileView === 'list' }"
+            style="width:100%; max-width:300px; background:#f0f0f0; height: 100%;">
 
-            <input type="text" class="form-control mb-2" placeholder="Search a chat" x-model="search">
+            {{-- SEARCH BAR HEADER (Hanya muncul di List) --}}
+            <div class="p-2 bg-light border-bottom">
+                <input type="text" class="form-control" placeholder="Search a chat" x-model="search">
+            </div>
 
-            <ul class="list-group list-group-flush"> {{-- list-group-flush agar border samping hilang --}}
-                <template x-for="conv in filteredConversations" :key="conv.id">
-                    <li class="list-group-item wa-contact px-3 py-3"
-                        :class="{ 'active': selectedConversation?.id === conv.id }" @click="selectConversation(conv)"
-                        style="cursor:pointer;">
-
-                        <div class="d-flex justify-content-between align-items-center">
-                            {{-- Nama atau Nomor Customer --}}
-                            <span x-text="conv.customer_name" style="font-size: 0.95rem;"></span>
-
-                            {{-- Waktu Pesan Terakhir --}}
-                            <small class="text-muted" x-text="formatTime(conv.last_message_at)"></small>
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-center mt-1">
-                            {{-- Preview Pesan Terakhir (Opsional jika ada datanya) --}}
-                            <small class="text-truncate text-muted" style="max-width: 180px;">
-                                <span x-text="conv.last_message_body || ''"></span>
-                            </small>
-
-                            {{-- Badge Unread --}}
-                            <span x-show="conv.has_unread" class="badge badge-success rounded-circle p-1"
-                                style="background-color: #25d366; width: 20px; height: 20px;">
-                                &nbsp;
-                            </span>
-                        </div>
-                    </li>
-                </template>
-            </ul>
+            <div class="flex-grow-1" style="overflow-y: auto;">
+                <ul class="list-group list-group-flush">
+                    <template x-for="conv in filteredConversations" :key="conv.id">
+                        <li class="list-group-item wa-contact px-3 py-3"
+                            :class="{ 'active': selectedConversation?.id === conv.id }"
+                            @click="selectConversation(conv)" style="cursor:pointer;">
+                            {{-- Content Tetap Sama --}}
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span x-text="conv.customer_name" style="font-size: 0.95rem;"></span>
+                                <small class="text-muted" x-text="formatTime(conv.last_message_at)"></small>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <small class="text-truncate text-muted" style="max-width: 180px;">
+                                    <span x-text="conv.last_message_body || ''"></span>
+                                </small>
+                                <span x-show="conv.has_unread" class="badge badge-success rounded-circle p-1"
+                                    style="background-color: #25d366; width: 20px; height: 20px;">&nbsp;</span>
+                            </div>
+                        </li>
+                    </template>
+                </ul>
+            </div>
         </div>
 
         {{-- ================= CHAT PANEL ================= --}}
-        <div x-show="isChatVisible" class="wa-chat-panel flex-grow-1 d-flex flex-column position-relative"
-            style="background:#e5ddd5; min-height:0;">
+        <div x-show="isChatVisible" class="wa-chat-panel flex-grow-1 d-flex flex-column"
+            :class="{ 'wa-mobile-layer': mobileView === 'chat' }" style="background:#e5ddd5; min-height:0;">
 
-            {{-- Mobile Back --}}
-            <div class="d-flex p-3 d-md-none border-bottom bg-white">
-                <button class="btn btn-light" @click="showList()">← Back</button>
-                <div class="ms-2 fw-bold" x-text="selectedConversation?.customer_name"></div>
+            {{-- CHAT HEADER (Hanya muncul di Chat Panel) --}}
+            <div class="d-flex align-items-center p-2 bg-white border-bottom shadow-sm">
+                {{-- Tombol Back hanya muncul di Mobile --}}
+                <button class="btn btn-light d-md-none rounded-circle me-2" @click="showList()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+
+                <div class="d-flex flex-column">
+                    <span class="fw-bold" x-text="selectedConversation?.customer_name || 'Select a chat'"></span>
+                    <small class="text-success" x-show="selectedConversation" style="font-size: 0.7rem;">Online</small>
+                </div>
             </div>
 
             <template x-if="selectedConversation">
@@ -86,7 +90,7 @@
 
                                         {{-- TEXT --}}
                                         <template x-if="msg.text_body">
-                                            <div class="message-text mb-1" x-text="msg.text_body"></div>
+                                            <div class="message-text mb-1" x-html="formatMessage(msg.text_body)"></div>
                                         </template>
 
                                         {{-- MEDIA --}}
@@ -163,8 +167,9 @@
                             {{-- Container Input --}}
                             <div class="flex-grow-1 mr-3"> {{-- mr-3 memberikan jarak horizontal yang lebih pas --}}
                                 <input type="text" id="chatInput"
-                                    class="form-control rounded-pill border-0 shadow-sm" placeholder="Type a message..."
-                                    x-model="newMessage" style="height: 45px; padding: 0 20px; line-height: 45px;">
+                                    class="form-control rounded-pill border-0 shadow-sm"
+                                    placeholder="Type a message..." x-model="newMessage"
+                                    style="height: 45px; padding: 0 20px; line-height: 45px;">
                             </div>
 
                             {{-- Tombol Kirim --}}
@@ -406,6 +411,59 @@
             .status-sent {
                 color: #8696a0 !important;
             }
+
+            @media (max-width: 767px) {
+
+                /* 1. Pastikan container tidak merusak layout global */
+                .wa-container {
+                    position: relative !important;
+                    /* Menjadi jangkar untuk elemen di dalamnya saja */
+                    height: 80vh !important;
+                    /* Beri ruang agar tidak menutupi seluruh layar */
+                    margin: 10px;
+                    z-index: 1;
+                    /* Nilai rendah agar tidak menimpa sidebar utama sistem */
+                }
+
+                /* 2. Overlay hanya berlaku di dalam .wa-container */
+                .wa-mobile-layer {
+                    position: absolute !important;
+                    top: 0;
+                    left: 0;
+                    width: 100% !important;
+                    height: 100% !important;
+                    max-width: none !important;
+                    background: #fff !important;
+                }
+
+                /* 3. Atur urutan tumpukan internal */
+                .wa-sidebar.wa-mobile-layer {
+                    z-index: 2;
+                }
+
+                .wa-chat-panel.wa-mobile-layer {
+                    z-index: 3;
+                }
+            }
+
+            /* Scroll halus untuk chat list */
+            .wa-sidebar .flex-grow-1 {
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .message-text {
+                white-space: pre-wrap;
+                /* Fallback untuk menjaga spasi */
+                word-wrap: break-word;
+            }
+
+            .message-text b {
+                font-weight: 700;
+            }
+
+            .message-text i {
+                font-style: italic;
+            }
         </style>
     @endsection
 
@@ -431,6 +489,46 @@
                                 this.mobileView = 'list';
                             }
                         });
+
+                        this.startPolling();
+                    },
+
+                    startPolling() {
+                        // Bersihkan interval jika sudah ada untuk menghindari kebocoran memori
+                        if (this.pollingInterval) clearInterval(this.pollingInterval);
+
+                        this.pollingInterval = setInterval(() => {
+                            this.fetchLatestMessages();
+                        }, 10000); // Cek setiap 10 detik
+                    },
+
+                    fetchLatestMessages() {
+                        if (!this.selectedConversation) return;
+
+                        // Ambil ID internal terakhir dari array messages
+                        const lastMsg = this.sortedMessages[this.sortedMessages.length - 1];
+                        const lastInternalId = lastMsg ? lastMsg.id : 0;
+
+                        fetch(`{{ route('whatsapp.conversations.sync') }}?conversation_id=${this.selectedConversation.id}&last_id=${lastInternalId}`, {
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                }
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.new_messages && data.new_messages.length > 0) {
+                                    // Gunakan spread operator untuk menambahkan pesan baru tanpa merusak state lama
+                                    this.selectedConversation.messages.push(...data.new_messages);
+
+                                    this.$nextTick(() => this.scrollToBottom());
+                                }
+                            });
+                    },
+
+                    // Pastikan untuk membersihkan interval jika komponen dihancurkan (opsional)
+                    destroy() {
+                        if (this.pollingInterval) clearInterval(this.pollingInterval);
                     },
 
                     get isListVisible() {
@@ -456,7 +554,10 @@
 
                     selectConversation(conv) {
                         this.selectedConversation = conv;
-                        if (window.innerWidth < 768) this.mobileView = 'chat';
+                        // Di mobile, ubah view ke chat. Di desktop, mobileView tetap null
+                        if (window.innerWidth < 768) {
+                            this.mobileView = 'chat';
+                        }
                         this.$nextTick(() => this.scrollToBottom());
                     },
 
@@ -569,6 +670,30 @@
 
                     cancelReply() {
                         this.replyingTo = null;
+                    },
+
+                    formatMessage(text) {
+                        if (!text) return '';
+
+                        // 1. Escape HTML untuk keamanan (XSS protection)
+                        let escaped = text
+                            .replace(/&/g, "&amp;")
+                            .replace(/</g, "&lt;")
+                            .replace(/>/g, "&gt;")
+                            .replace(/"/g, "&quot;")
+                            .replace(/'/g, "&#039;");
+
+                        // 2. Ubah *teks* menjadi <b>teks</b> (Bold)
+                        escaped = escaped.replace(/\*(.*?)\*/g, '<b>$1</b>');
+
+                        // 3. Ubah _teks_ menjadi <i>teks</i> (Italic)
+                        escaped = escaped.replace(/_(.*?)_/g, '<i>$1</i>');
+
+                        // 4. Ubah ~teks~ menjadi <strike>teks</strike> (Strikethrough)
+                        escaped = escaped.replace(/~(.*?)~/g, '<strike>$1</strike>');
+
+                        // 5. Ubah baris baru (\n) menjadi <br>
+                        return escaped.replace(/\n/g, '<br>');
                     }
                 };
             }

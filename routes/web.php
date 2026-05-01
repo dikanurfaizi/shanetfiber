@@ -392,6 +392,10 @@ Route::group(['prefix' => 'cpanel'], function () {
         // WhatsApp Conversations
         Route::prefix('whatsapp/conversations')->group(function () {
             Route::get('/', [WhatsappConversationController::class, 'index'])->name('whatsapp.conversations.index');
+
+            // Route Baru untuk Polling/Sync Pesan Terbaru
+            Route::get('/sync', [WhatsappConversationController::class, 'sync'])->name('whatsapp.conversations.sync');
+
             Route::get('/{id}', [WhatsappConversationController::class, 'show'])->name('whatsapp.conversations.show');
             Route::post('/send', [WhatsappConversationController::class, 'sendMessage'])->name('whatsapp.conversations.send');
         });
