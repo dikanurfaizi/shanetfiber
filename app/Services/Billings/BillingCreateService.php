@@ -162,7 +162,8 @@ class BillingCreateService
             $periodStart = $billingPeriode->startDate();
             $periodEnd   = $billingPeriode->endDate();
 
-            $membership = CustomerMembership::with('membership')
+            // Ambil semua membership aktif yang bersinggungan dengan periode billing
+            $memberships = CustomerMembership::with('membership')
                 ->where('customer_id', $customer->id)
                 ->where('is_active', 1)
                 ->where('start_date', '<=', $periodEnd)
@@ -170,37 +171,46 @@ class BillingCreateService
                     $q->whereNull('end_date')
                         ->orWhere('end_date', '>=', $periodStart);
                 })
-                ->latest('start_date')
-                ->first();
+                ->get(); // Menggunakan get() untuk iterasi
 
-            if ($membership?->membership) {
+            foreach ($memberships as $membership) {
+                // 1. Cek Validitas: Jika end_date sudah lampau (sebelum atau sama dengan periodEnd billing)
+                // atau logika khusus Anda: jika end_date < periodStart, maka sudah tidak berlaku untuk periode ini.
+                if ($membership->end_date && $membership->end_date < $periodEnd) {
+                    // Set ke non-aktif jika sudah melewati batas periode billing ini
+                    $membership->update(['is_active' => false]);
+                }
 
-                $base = $customerSubscription->price_final;
+                // 2. Kalkulasi Diskon (Hanya jika masih active setelah pengecekan di atas)
+                if ($membership->is_active && $membership->membership) {
+                    $base = $customerSubscription->price_final;
 
-                $discount = match ($membership->membership->discount_type) {
-                    'percent' => ($membership->membership->discount_value / 100) * $base,
-                    'amount'  => $membership->membership->discount_value,
-                    default   => 0,
-                };
+                    $discount = match ($membership->membership->discount_type) {
+                        'percent' => ($membership->membership->discount_value / 100) * $base,
+                        'amount'  => $membership->membership->discount_value,
+                        default   => 0,
+                    };
 
-                if ($discount > 0) {
-                    $item = [
-                        'billing_id' => $billing->id,
-                        'item_type'  => 'discount',
-                        'source_type' => 'membership',
-                        'source_id'  => $membership->membership->id,
-                        'item_name'  => $membership->membership->name,
-                        'qty'        => 1,
-                        'price'      => -abs($discount),
-                        'subtotal'   => -abs($discount),
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ];
+                    if ($discount > 0) {
+                        $items[] = [
+                            'billing_id'  => $billing->id,
+                            'item_type'   => 'discount',
+                            'source_type' => 'membership',
+                            'source_id'   => $membership->membership->id,
+                            'item_name'   => $membership->membership->name,
+                            'qty'         => 1,
+                            'price'       => -abs($discount),
+                            'subtotal'    => -abs($discount),
+                            'created_at'  => now(),
+                            'updated_at'  => now(),
+                        ];
 
-                    $items[] = $item;
+                        // Jika satu customer hanya boleh dapat 1 diskon membership (terbesar/terbaru), 
+                        // tambahkan break; setelah item dimasukkan.
+                        break;
+                    }
                 }
             }
-
 
             /** ----------------------------------------------------
              * 8. Add Addons (customer_addons)
