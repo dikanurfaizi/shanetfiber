@@ -88,7 +88,7 @@ class ReceiptController extends Controller
             ->when($bankName, fn($q) => $q->where('bank_name', $bankName))
             ->when($accountNumber, fn($q) => $q->where('account_number', $accountNumber))
             ->when($tellerName, fn($q) => $q->where('teller_name', $tellerName))
-            ->orderBy('created_at', 'ASC');
+            ->orderBy('payment_time', 'DESC');
 
         // === 🧠 Logging: tampilkan SQL & bindings ===
         // $sql = $this->replaceArray('?', $query->getBindings(), $query->toSql());

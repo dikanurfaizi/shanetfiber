@@ -110,7 +110,7 @@
 
                                     $isInline = in_array($data->payment_methode, ['cash', 'transfer']);
                                     $formattedDate = \Carbon\Carbon::parse($data->payment_time)->translatedFormat(
-                                        'd M Y',
+                                        'd M Y H:i \W\I\B',
                                     );
                                 @endphp
 
