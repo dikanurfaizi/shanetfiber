@@ -102,8 +102,10 @@
 
                                                         {{-- IMAGE --}}
                                                         <template x-if="isImage(file)">
-                                                            <img :src="file.url" class="img-fluid rounded border"
-                                                                style="max-height:250px; cursor:pointer;">
+                                                            <img :src="file.url"
+                                                                class="img-fluid rounded border img-zoomable"
+                                                                @click="zoomedImage = file.url"
+                                                                style="max-height:250px; cursor:zoom-in;">
                                                         </template>
 
                                                         {{-- DOCUMENT --}}
@@ -200,6 +202,29 @@
             </template>
 
         </div>
+
+        <!-- Modal Zoom Gambar -->
+        <template x-if="zoomedImage">
+            <div x-show="zoomedImage" x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0" @click="zoomedImage = null"
+                @keydown.escape.window="zoomedImage = null"
+                class="position-absolute w-100 h-100 d-flex align-items-center justify-content-center"
+                style="top: 0; left: 0; background: rgba(0,0,0,0.85); z-index: 9999; cursor: zoom-out;" x-cloak>
+
+                <div class="position-relative d-flex justify-content-center align-items-center"
+                    style="width: 90%; height: 90%;">
+                    <img :src="zoomedImage" class="img-fluid shadow-lg"
+                        style="max-height: 100%; max-width: 100%; border-radius: 4px; object-fit: contain;"
+                        @click.stop>
+
+                    <button type="button" class="btn-close btn-close-white position-absolute"
+                        style="top: 10px; right: 10px; filter: invert(1); scale: 1.5;"
+                        @click="zoomedImage = null"></button>
+                </div>
+            </div>
+        </template>
     </div>
 
     {{-- ================= STYLES ================= --}}
@@ -464,6 +489,27 @@
             .message-text i {
                 font-style: italic;
             }
+
+            .btn-close-white {
+                background-color: white;
+                border-radius: 50%;
+                padding: 10px;
+                opacity: 0.8;
+            }
+
+            .btn-close-white:hover {
+                opacity: 1;
+            }
+
+            [x-cloak] {
+                display: none !important;
+            }
+
+            /* Tambahan agar gambar di bubble chat terlihat bisa diklik */
+            .img-zoomable:hover {
+                opacity: 0.9;
+                filter: brightness(0.9);
+            }
         </style>
     @endsection
 
@@ -480,6 +526,7 @@
                     isSending: false,
                     replyingTo: null,
                     mobileView: window.innerWidth < 768 ? 'list' : null,
+                    zoomedImage: null,
 
                     init() {
                         window.addEventListener('resize', () => {
