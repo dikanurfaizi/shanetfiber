@@ -95,7 +95,7 @@ class DownloadWhatsappMediaJob implements ShouldQueue
             $storagePath = now()->format('Y/m/') . $generatedName;
 
             // Storage::disk($media->storage_disk)->put($storagePath, $fileContent);
-            Storage::disk('whatsapp_private')->put($storagePath, $fileContent);
+            Storage::disk('whatsapp_private')->put($storagePath, $fileContent, 'public');
 
             $fileSize = strlen($fileContent);
 

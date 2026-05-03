@@ -8,6 +8,8 @@
     <meta name="description" content="">
     <meta name="author" content="Mehrdad Amini">
     <meta name="csrf-token" content="{{ csrf_token() }}" />
+    <meta name="google-site-verification" content="VM3PKBo1GgIleHGysVVsGcowiPLWELh1d5qJ7cIP_pI" />
+    <meta name="msvalidate.01" content="54E283E0B2DF8EDBB2221E556F92DECC" />
     <title>{{ $title ?? 'Shanum Network Fiber' }}</title>
 
     @vite('resources/sass/app.scss')

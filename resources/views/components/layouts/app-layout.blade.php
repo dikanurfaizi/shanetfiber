@@ -8,6 +8,8 @@
     <meta name="description" content="">
     <meta name="author" content="Ari Purnawan">
     <meta name="csrf-token" content="{{ csrf_token() }}" />
+    <meta name="google-site-verification" content="VM3PKBo1GgIleHGysVVsGcowiPLWELh1d5qJ7cIP_pI" />
+    <meta name="msvalidate.01" content="54E283E0B2DF8EDBB2221E556F92DECC" />
     <title>{{ $title ?? 'Shanet Fiber Management' }}</title>
     <link rel="apple-touch-icon" sizes="120x120" href="{{ asset('images/favicon/apple-touch-icon.png') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon/favicon-32x32.png') }}">
