@@ -214,7 +214,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::put('/package-categories/{package_category:slug}/activate', [PackageCategoriesController::class, 'activate'])->name('activate.package.categories');
 
         // ==================== CUSTOMER MANAGEMENT ====================
-        Route::resource('customers', CustomerController::class);
+        Route::resource('customers', CustomerController::class)->withTrashed();
         Route::get('/customers/search', [PaymentController::class, 'index'])->name('customers.search');
         Route::put('/customers/{customer:slug}/disabled/true', [CustomerController::class, 'disable'])->name('customers.disable');
         Route::put('/customers/{customer:slug}/disabled/false', [CustomerController::class, 'enable'])->name('customers.enable');
@@ -231,11 +231,25 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('/customers/file/export', [CustomerController::class, 'export'])->name('customers.export');
         Route::patch('settings/customers/activation', [CustomerController::class, 'activation_all_customer'])->name('customers.all.activation');
 
-        Route::get('/customers/{customer:slug}/tab/info', [CustomerTabController::class, 'info'])->name('customers.tab.info');
-        Route::get('/customers/{customer:slug}/tab/billing', [CustomerTabController::class, 'billing'])->name('customers.tab.billing');
-        Route::get('/customers/{customer:slug}/tab/server', [CustomerTabController::class, 'server'])->name('customers.tab.server');
-        Route::get('/customers/{customer:slug}/tab/ont', [CustomerTabController::class, 'ont'])->name('customers.tab.ont');
-        Route::get('/customers/{customer:slug}/tab/traffic', [CustomerTabController::class, 'traffic'])->name('customers.tab.traffic');
+        Route::get('/customers/{customer:slug}/tab/info', [CustomerTabController::class, 'info'])
+            ->name('customers.tab.info')
+            ->withTrashed();
+
+        Route::get('/customers/{customer:slug}/tab/billing', [CustomerTabController::class, 'billing'])
+            ->name('customers.tab.billing')
+            ->withTrashed();
+
+        Route::get('/customers/{customer:slug}/tab/server', [CustomerTabController::class, 'server'])
+            ->name('customers.tab.server')
+            ->withTrashed();
+
+        Route::get('/customers/{customer:slug}/tab/ont', [CustomerTabController::class, 'ont'])
+            ->name('customers.tab.ont')
+            ->withTrashed();
+
+        Route::get('/customers/{customer:slug}/tab/traffic', [CustomerTabController::class, 'traffic'])
+            ->name('customers.tab.traffic')
+            ->withTrashed();
 
         Route::get('/customers/view/all/data', CustomerTrashedController::class)->name('customers.trashed');
         Route::delete('/customers/{customer:slug}/force-delete', [CustomerTrashedController::class, 'forceDelete'])->name('customers.forceDelete')->withTrashed();

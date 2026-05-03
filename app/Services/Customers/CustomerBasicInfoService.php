@@ -15,11 +15,15 @@ class CustomerBasicInfoService
 
             // Hanya load relasi yang dibutuhkan
             $customer->loadMissing([
+                'activeSubscription' => function ($query) {
+                    // Hapus ini jika model Subscription juga tidak pakai SoftDeletes
+                    $query->withTrashed();
+                },
                 'activeSubscription.package',
                 'user',
             ]);
 
-            return [
+            $data = [
                 'customer_id'     => $customer->customer_id,
                 'name'            => $customer->name,
                 'address'         => $customer->address,
@@ -27,10 +31,15 @@ class CustomerBasicInfoService
                 'package_price'   => $customer->activePackage->price ?? 0,
                 'responsibility'  => $customer->user->name ?? '-',
                 'email'           => $customer->email ?? '-',
-                'contact'         => $formatter->formatReceiver($customer->contact, 'display', false),
+                'contact'         => $customer->contact ? $formatter->formatReceiver($customer->contact, 'display', false) : '-',
                 'activation_date' => $customer->activation_date,
-                'customer'        => $customer // kalau kamu masih mau akses object-nya
+                'is_deleted'      => $customer->trashed(), // Tambahan info jika butuh status delete
+                'customer'        => $customer
             ];
+
+            LogHelper::logInfo(null, $data, 200, "Detail Customer Data", $traceId);
+
+            return $data;
         } catch (\Throwable $e) {
 
             LogHelper::logError(

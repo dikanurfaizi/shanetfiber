@@ -33,7 +33,14 @@ class CustomerTabController extends Controller
     {
         $traceId = (string) Str::uuid();
 
-        $data = $service->getCustomerBasicInfo($customer, $traceId);
+        // 1. Ambil data customer secara manual termasuk yang terhapus
+        // Kita berasumsi $customer yang dikirim dari route adalah ID atau Slug
+        $customerModel = Customer::withTrashed()
+            ->where('id', $customer->id) // atau ->where('slug', $customer) jika menggunakan slug
+            ->firstOrFail();
+
+        // 2. Masukkan object $customerModel ke service
+        $data = $service->getCustomerBasicInfo($customerModel, $traceId);
 
         // =========================
         // Explicit edit mode flag

@@ -358,16 +358,13 @@
                                 </button>
                                 <div class="dropdown-menu dropdown-menu-end">
                                     @can('view-deleted-customer')
-                                        <form method="POST" class="d-inline"
-                                            action="{{ route('customers.restore.preview', $customer->slug) }}">
-                                            @csrf
-                                            @method('put')
-                                            <a class="dropdown-item" href="#"
-                                                onclick="event.preventDefault(); this.closest('form').submit();">
+                                        <li>
+                                            <a class="dropdown-item"
+                                                href="{{ route('customers.restore.preview', $customer->slug) }}">
                                                 <i class="fas fa-undo-alt me-2 text-success"></i>
                                                 {{ __('customer.action.restore') }}
                                             </a>
-                                        </form>
+                                        </li>
                                     @endcan
                                     <div class="dropdown-divider"></div>
                                     @can('force-deleted-customer')

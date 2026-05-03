@@ -206,7 +206,9 @@ class CustomerController extends Controller
 
     public function show(Customer $customer)
     {
-        return view('customers.show', ['customer' => $customer]);
+        $customers = Customer::withTrashed()->where('id', $customer->id)
+            ->firstOrFail();
+        return view('customers.show', ['customer' => $customers]);
     }
 
     public function edit(Customer $customer)
