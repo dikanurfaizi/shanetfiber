@@ -1,6 +1,14 @@
 <?php
 
 return [
+    'header' => [
+        'name' => 'Management System',
+    ],
+
+    'home' => [
+        'nav-item' => 'Home',
+    ],
+
     'customers' => [
         'nav-item' => 'Customers',
         'index' => 'Show All Customers',
@@ -88,5 +96,8 @@ return [
     'conversations' => [
         'nav-item' => 'Conversations',
         'index' => 'WhatsApp'
-    ]
+    ],
+    'settings' => [
+        'nav-item' => 'Settings',
+    ],
 ];
