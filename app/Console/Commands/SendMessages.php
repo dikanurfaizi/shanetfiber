@@ -72,20 +72,27 @@ class SendMessages extends Command
 
         try {
             // ===============================================================
-            // DATE & TIME VALIDATION
+            // DATE & TIME VALIDATION (BEST PRACTICE)
             // ===============================================================
             $lastDay = $now->copy()->endOfMonth()->day;
             $effectiveDays = array_map(fn($d) => min($d, $lastDay), $days);
 
             if (!$testMode) {
+                // 1. Validasi Hari/Tanggal
                 if (!in_array($now->day, $effectiveDays, true)) {
                     $this->warn('⏩ Skipped: today not in scheduled days.');
                     return Command::SUCCESS;
                 }
 
-                $currentTime = $now->format('H:i');
-                if ($currentTime < $timeStart || $currentTime > $timeEnd) {
-                    $this->warn('⏩ Skipped: outside time window.');
+                // 2. Validasi Jendela Waktu (Menggunakan Carbon antara start dan end)
+                // Contoh: Apakah jam sekarang berada di antara 08:00:00 dan 21:00:00?
+                $isInsideWindow = $now->between(
+                    $now->copy()->setTimeFromTimeString($timeStart),
+                    $now->copy()->setTimeFromTimeString($timeEnd)
+                );
+
+                if (!$isInsideWindow) {
+                    $this->warn("⏩ Skipped: outside time window ({$timeStart} - {$timeEnd}).");
                     return Command::SUCCESS;
                 }
             }

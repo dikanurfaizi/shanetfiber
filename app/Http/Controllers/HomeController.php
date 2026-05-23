@@ -632,7 +632,7 @@ class HomeController extends Controller
                 'line' => $e->getLine(),
                 'file' => $e->getFile()
             ], 500, 'ERROR getCustomerRegistrationChurnData');
-            return response()->json(['error' => 'Failed to fetch data'], $traceId, $timer->lap());
+            return response()->json(['error' => 'Failed to fetch data'], $traceId);
         }
     }
 

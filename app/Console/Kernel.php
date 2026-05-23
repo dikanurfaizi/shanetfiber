@@ -106,17 +106,13 @@ class Kernel extends ConsoleKernel
         |--------------------------------------------------------------------------
         | 4. REMINDER WHATSAPP MESSAGES
         |--------------------------------------------------------------------------
-        | Dijalankan setiap 15 menit hanya pada tanggal 15,
-        | serta hanya antara jam 08:00 - 22:00 (WIB).
-        | Jika kondisi tidak terpenuhi, dilewati (tidak error).
+        | Biarkan berjalan setiap 15 menit secara global. 
+        | Validasi tanggal & jam diserahkan sepenuhnya ke DB via Command.
         */
         $schedule->command('reminder:messages-send')
             ->everyFifteenMinutes()
             ->timezone($defaultTimezone)
-            ->when(fn() => now()->hour >= 8 && now()->hour < 22)
-            ->onFailure(fn() => LogHelper::logError(null, ['time' => now()], 500, '[Scheduler] reminder:messages-send failed'))
-            ->onSuccess(fn() => LogHelper::logInfo(null, ['time' => now()], 200, '[Scheduler] reminder:messages-send finished successfully'))
-            ->withoutOverlapping(30)
+            ->withoutOverlapping(10) // Cukup tempelkan lock 10-30 menit agar tidak tabrakan
             ->appendOutputTo(storage_path('logs/scheduler-reminder.log'));
 
         /*

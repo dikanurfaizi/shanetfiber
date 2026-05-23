@@ -27,7 +27,12 @@ class OverdueBillingCollector
             ])
             ->join('customers', 'billings.customer_id', '=', 'customers.id')
             ->leftJoin('users', 'customers.user_id', '=', 'users.id')
-            ->leftJoin('customer_subscriptions as cs', 'customers.id', '=', 'cs.customer_id')
+
+            // 🔥 PERBAIKAN DI SINI: Kunci status subscription hanya yang ACTIVE
+            ->leftJoin('customer_subscriptions as cs', function ($join) {
+                $join->on('customers.id', '=', 'cs.customer_id')
+                    ->where('cs.status', '=', 'active');
+            })
             ->leftJoin('packages as p', 'cs.package_id', '=', 'p.id')
 
             // --- filter sudah pernah dikirim hari ini ---
@@ -55,6 +60,18 @@ class OverdueBillingCollector
                             ->whereDate('billings.paylater_until', '<', $today);
                     });
             })
+
+            // 🔥 ANTIMISALNYA: Mencegah duplikasi baris jika ada case khusus di DB
+            ->groupBy([
+                'customers.id',
+                'customers.name',
+                'customers.contact',
+                'p.name',
+                'billings.id',
+                'billings.total_amount',
+                'billings.due_date',
+                'billings.paylater_until'
+            ])
 
             ->limit(7);
 

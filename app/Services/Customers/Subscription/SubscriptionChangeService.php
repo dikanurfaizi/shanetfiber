@@ -27,7 +27,6 @@ class SubscriptionChangeService
                 ->createNew($customer, $data, $period, $traceId);
         }
 
-
         $oldSub->update([
             'status'        => 'terminated',
             'end_date'      => now(),

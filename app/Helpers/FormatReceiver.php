@@ -95,25 +95,51 @@ class FormatReceiver
     }
 
     /**
-     * Format homepage
-     * hasil: +62 81-234-567-89
+     * Format homepage dinamis untuk segala panjang nomor (termasuk 13-14 digit)
+     * Contoh hasil: 
+     * - 10 digit: +62 812-345-6789
+     * - 11-12 digit: +62 812-3456-7890
+     * - 13-14 digit: +62 812-3456-7890-1234
      */
     public function homepage(string $contact): string
     {
+        // 1. Bersihkan nomor (misal hasil: 628123456789012)
         $contact = $this->normalize($contact);
 
+        // 2. Ambil nomor setelah "62" (misal hasil: 8123456789012)
         $number = substr($contact, 2);
+        $length = strlen($number);
 
-        if (strlen($number) < 10) {
+        if ($length < 9) {
             return '+62 ' . $number;
         }
 
-        $part1 = substr($number, 0, 2);
-        $part2 = substr($number, 2, 3);
-        $part3 = substr($number, 5, 3);
-        $part4 = substr($number, 8, 2);
+        // 3. Jika nomor super panjang (13 digit atau lebih)
+        if ($length >= 13) {
+            // Pola: 3-4-4-Sisa (Maksimal 4 digit di setiap grup)
+            $part1 = substr($number, 0, 3);
+            $part2 = substr($number, 3, 4);
+            $part3 = substr($number, 7, 4);
+            $part4 = substr($number, 11); // Mengambil semua sisa angka di belakang
 
-        return "+62 $part1-$part2-$part3-$part4";
+            return "+62 $part1-$part2-$part3-$part4";
+        }
+
+        // 4. Jika nomor standar pendek (10 digit)
+        if ($length === 10) {
+            $part1 = substr($number, 0, 3);
+            $part2 = substr($number, 3, 3);
+            $part3 = substr($number, 6);
+
+            return "+62 $part1-$part2-$part3";
+        }
+
+        // 5. Jika nomor standar umum (11 - 12 digit)
+        $part1 = substr($number, 0, 3);
+        $part2 = substr($number, 3, 4);
+        $part3 = substr($number, 7);
+
+        return "+62 $part1-$part2-$part3";
     }
 
     /**
