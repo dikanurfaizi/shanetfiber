@@ -127,40 +127,60 @@
             <div class="card-header py-3 bg-light">
                 <h6 class="m-0 font-weight-bold text-primary">
                     <i class="fas fa-money-bill-wave mr-2"></i>
-                    {{ __('Payment Methods') }}
+                    {{ __('Metode Pembayaran') }}
                 </h6>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="alert alert-info">
-                            <h5 class="alert-heading"><i class="fas fa-info-circle mr-2"></i> Pembayaran dapat dilakukan
-                                dengan cara:</h5>
-                            <ol class="pl-3">
-                                <li>Cash/Tunai</li>
-                                <li>Pembayaran Online</li>
-                                <li>Transfer ke rekening admin
-                                    <span class="badge badge-primary">{{ $customer->user->name }}</span>
+                <div class="row d-flex flex-wrap align-items-stretch">
+
+                    <div class="col-md-6 mb-3 d-flex">
+                        <div class="alert alert-info w-100 d-flex flex-column h-100 mb-0">
+                            <h5 class="alert-heading">
+                                <i class="fas fa-info-circle mr-2"></i> Pembayaran dapat dilakukan dengan cara:
+                            </h5>
+                            <ol class="pl-3 mb-0 flex-grow-1">
+                                <li class="mb-2">
+                                    Cash/Tunai di lokasi terdekat Anda; bisa melalui Admin
+                                    <span class="badge badge-secondary">{{ $customer->user->name }}</span>
+                                    atau kunjungi langsung
+                                    <a href="https://maps.google.com/?q=Toko+Shanum+Cahaya+Baru+Purwakarta"
+                                        target="_blank" rel="noopener noreferrer" class="font-weight-bold text-primary">
+                                        Toko Shanum Cahaya Baru
+                                    </a>
                                 </li>
+                                <li class="mb-2">Pembayaran Online via Payment Gateway</li>
+                                <li class="mb-0">Transfer ke rekening/E-Wallet kami yang tertera pada halaman
+                                    utama Anda</li>
                             </ol>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="alert alert-success">
-                            <h5 class="alert-heading"><i class="fas fa-university mr-2"></i> Rekening Bank:</h5>
-                            <ul class="list-unstyled">
+
+                    <div class="col-md-6 mb-3 d-flex">
+                        <div class="alert alert-success w-100 d-flex flex-column h-100 mb-0">
+                            <h5 class="alert-heading">
+                                <i class="fas fa-university mr-2"></i> Tujuan Transfer / E-Wallet:
+                            </h5>
+                            <ul class="list-unstyled mb-0 flex-grow-1">
                                 @foreach ($banks as $bank)
-                                    <li class="mb-2">
-                                        <span class="badge badge-success">
-                                            Bank {{ $bank->bank }}: {{ $bank->account_number }}
+                                    <li class="mb-3 p-2 border-bottom">
+                                        <span class="badge badge-primary text-uppercase font-weight-bold"
+                                            style="font-size: 85%;">
+                                            {{ $bank->bank }}
                                         </span>
+
+                                        <span class="d-inline-block ml-2 font-weight-bold text-dark"
+                                            style="font-size: 1.15rem; letter-spacing: 0.5px;">
+                                            {{ implode(' ', str_split($bank->account_number, 4)) }}
+                                        </span>
+
                                         <br>
-                                        <small>a.n {{ $bank->name }}</small>
+                                        <span class="text-muted font-italic">a.n. {{ $bank->name }}</span>
                                     </li>
                                 @endforeach
                             </ul>
                         </div>
                     </div>
+
                 </div>
                 <div class="text-center mt-3">
                     <p class="mb-0">

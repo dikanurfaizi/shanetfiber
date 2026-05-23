@@ -17,6 +17,7 @@
     <link rel="icon" type="image/x-icon" href="{{ asset('images/favicon/favicon.png') }}" />
     <link rel="manifest" href="{{ asset('assets/site.webmanifest') }}">
     <link rel="mask-icon" href="{{ asset('images/favicon/safari-pinned-tab.svg') }}" color="#5bbad5">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css" />
     @vite('resources/sass/app.scss')
     <!-- Custom fonts for this template-->
     <link href="{{ asset('css/fontawsome-free-all.min.css') }}" rel="stylesheet" type="text/css">

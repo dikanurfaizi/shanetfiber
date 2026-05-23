@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Bank extends Model
 {
@@ -14,9 +15,9 @@ class Bank extends Model
     {
         return 'slug';
     }
-    
-    public function user()
+
+    public function users(): BelongsToMany
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsToMany(User::class, 'bank_users')->withTimestamps();
     }
 }

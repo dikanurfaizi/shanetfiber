@@ -3,9 +3,10 @@
 namespace App\Services\Customers;
 
 use App\Models\Billings\Billing;
-use App\Models\Bank;
+use App\Models\User;
 use App\Models\Websystem;
 use App\Models\Packages\PackageDuration;
+use App\Models\Whatsapp\WhatsappNumber;
 use Illuminate\Support\Carbon;
 use Jenssegers\Agent\Agent;
 use App\Helpers\LogHelper;
@@ -35,9 +36,13 @@ class PaymentDashboardService
             ->latest('payment_time')
             ->first();
 
-        $banks = Bank::where('user_id', $customer->user_id)
-            ->where('disabled', 'false')
-            ->get();
+        // 1. Ambil data user penanggung jawab customer beserta banknya yang aktif
+        $user = User::with(['banks' => function ($query) {
+            $query->where('disabled', 'false'); // Memastikan hanya mengambil bank master yang aktif
+        }])->find($customer->user_id);
+
+        // 2. Ambil daftar banknya (Menghasilkan Collection objek Bank)
+        $banks = $user ? $user->banks : collect();
 
         $customerSubscription = CustomerSubscription::with('package')
             ->where('customer_id', $customerId)
@@ -90,8 +95,24 @@ class PaymentDashboardService
             : Carbon::now()->startOfMonth()->addDays(14)->translatedFormat('d F Y, H:i') . ' WIB';
 
         $formatter = new FormatReceiver();
-        $contactAdmin = $formatter->formatReceiver($customer->user->contact, 'broadcast', false);
-        $contactWhatsapp = $formatter->formatReceiver($customer->user->contact, null, false);
+
+        // Menarik data nomor whatsapp default yang terhubung ke gateway "gowa"
+        $whatsappNumberRecord = WhatsappNumber::where('is_enabled', true)
+            ->where('is_default', true)
+            ->whereHas('account', function ($query) {
+                $query->where('is_active', 1)
+                    ->whereHas('gateway', function ($q) {
+                        $q->where('slug', 'gowa');
+                    });
+            })
+            ->first();
+
+        // Ambil value kolom 'number'-nya, jika tidak ada pasang fallback nomor lama
+        $adminNumber = $whatsappNumberRecord ? $whatsappNumberRecord->number : $customer->user->contact;
+
+        // Masukkan ke dalam formatter Anda yang lama
+        $contactAdmin    = $formatter->formatReceiver($adminNumber, 'broadcast', false);
+        $contactWhatsapp = $formatter->formatReceiver($adminNumber, null, false);
 
         $websystem = Websystem::where('slug', 'websystem')->first();
 

@@ -64,6 +64,7 @@ use App\Http\Controllers\Whatsapp\WhatsappCloudController;
 use App\Http\Controllers\Whatsapp\WhatsappConversationController;
 use App\Http\Controllers\Whatsapp\WhatsappFeatureController;
 use App\Http\Controllers\Whatsapp\WhatsappMediaController;
+use App\Http\Controllers\LocalizationController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -94,6 +95,7 @@ Route::get('/isolir', [IsolirController::class, 'index'])->name('isolir');
 Route::redirect('/', '/homepage');
 Route::post('payments/midtrans-notification', [PaymentCallbackController::class, 'receive']);
 Route::get('/homepage', [HomeController::class, 'home'])->name('homepage');
+Route::get('lang/{locale}', [LocalizationController::class, 'switchLang'])->name('lang.switch');
 Route::group(['prefix' => 'customer', 'namespace' => 'Customer'], function () {
     Route::group(['middleware' => 'guest'], function () {
         Route::get('/login', [CustomerLoginController::class, 'login'])->name('customerLogin');
@@ -306,6 +308,9 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('/billing-history/export/selected', [BillingHistoryController::class, 'exportSelectedPeriode'])->name('billingHistory.export.selected');
 
         // ==================== BANK MANAGEMENT ====================
+        Route::post('banks/{bank}/link-user', [BankController::class, 'linkUser'])->name('banks.link-user');
+        Route::delete('banks/{bank}/unlink-user', [BankController::class, 'unlinkUser'])->name('banks.unlink-user');
+
         Route::resource('banks', BankController::class);
         Route::put('/banks/{bank}/disabled/true', [BankController::class, 'disable'])->name('bank.disable');
         Route::put('/banks/{bank}/disabled/false', [BankController::class, 'enable'])->name('bank.enable');

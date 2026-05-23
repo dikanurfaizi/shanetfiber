@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -73,5 +74,14 @@ class User extends Authenticatable
     public function investorAdmins()
     {
         return $this->hasMany(InvestorAdmin::class, 'investor_id');
+    }
+
+    /**
+     * Mengambil 3 rekening terpusat yang bisa digunakan oleh user ini
+     */
+    public function banks(): BelongsToMany
+    {
+        // Laravel otomatis tahu tabel pembantunya bernama bank_user
+        return $this->belongsToMany(Bank::class, 'bank_users')->withTimestamps();
     }
 }

@@ -15,6 +15,7 @@
     <link href="{{ asset('assets/vendor/datatables/datatables.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
     <link href="{{ asset('css/mobile.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css" />
     <!-- jQuery dulu -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     @yield('custom_styles')
