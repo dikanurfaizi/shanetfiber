@@ -77,11 +77,12 @@ class User extends Authenticatable
     }
 
     /**
-     * Mengambil 3 rekening terpusat yang bisa digunakan oleh user ini
+     * Mengambil rekening terpusat yang terhubung dengan user ini
+     * * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
     public function banks(): BelongsToMany
     {
-        // Laravel otomatis tahu tabel pembantunya bernama bank_user
+        // Laravel otomatis tahu tabel pembantunya bernama bank_users dan foreign key-nya user_id dan bank_id
         return $this->belongsToMany(Bank::class, 'bank_users')->withTimestamps();
     }
 }

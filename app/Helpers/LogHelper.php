@@ -28,6 +28,12 @@ class LogHelper
 
     public static function logError($uri, $body, $statusCode, $description, $traceId = null, $resTime = null)
     {
+        // Khusus logError, jika payload $uri menangkap objek Exception asli, kita ekstrak messagenya
+        if ($uri instanceof \Exception) {
+            $description = $description . ' | Exception: ' . $uri->getMessage();
+            $uri = request()?->path() ?? 'null';
+        }
+
         Log::error(self::formatLog('ERROR', $uri, $body, $statusCode, $description, $traceId, $resTime));
     }
 
@@ -43,30 +49,38 @@ class LogHelper
         $caller      = self::getCaller();
         $traceId     = $traceId ?? (string) Str::uuid();
         $uri         = $uri ?? request()?->path() ?? 'null';
-        $statusCode  = $statusCode ?? 'null';
+        $statusCode  = $statusCode !== null ? (int) $statusCode : null;
         $description = $description ?? 'null';
-        $resTime     = $resTime ?? 0;
+        $resTime     = $resTime !== null ? (int) $resTime : 0;
 
         // Convert request object ke array
         if ($body instanceof \Illuminate\Http\Request) {
             $body = $body->all();
         }
 
-        // Mask sensitive fields
+        // Jalankan masking data jika payload bertipe array
         if (is_array($body)) {
             $body = self::maskSensitiveFields($body);
-            $body = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        } elseif (!is_string($body)) {
-            $body = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
 
-        // Tambahan kontekstual
-        $userName = Auth::user()?->name ?? 'guest';
-        $ip       = request()?->ip() ?? 'unknown';
-        $method   = request()?->method() ?? 'CLI';
-        $url      = request()?->fullUrl() ?? $uri;
+        // 🔥 STRATEGI JSON: Menyusun data log ke dalam struktur associative array baku
+        $logPayload = [
+            'timestamp'    => now()->toIso8601String(), // Standar waktu ISO-8601 (Sangat disukai Elasticsearch)
+            'level'        => $level,
+            'trace_id'     => $traceId,
+            'method'       => request()?->method() ?? 'CLI',
+            'status_code'  => $statusCode,
+            'response_time' => $resTime,
+            'caller'       => $caller,
+            'client_ip'    => request()?->ip() ?? 'unknown',
+            'user'         => Auth::user()?->name ?? 'guest',
+            'url'          => request()?->fullUrl() ?? $uri,
+            'description'  => $description,
+            'payload'      => $body // Menyimpan data objek/array murni tanpa double json_encode string
+        ];
 
-        return "$traceId | $method | $statusCode | $resTime | $caller | $ip | $userName | $url | $description | $body";
+        // Encode seluruh wrapper menjadi single-line JSON string bersih
+        return json_encode($logPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     private static function getCaller()

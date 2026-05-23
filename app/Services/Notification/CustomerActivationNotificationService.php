@@ -68,8 +68,9 @@ class CustomerActivationNotificationService
                 : $billing->due_date;
 
             // === Ambil semua bank user ===
-            $bankAccounts = Bank::where('user_id', $user->id)
-                ->where('disabled', 'false')->get();
+            $bankAccounts = $user->banks() // 👈 Memanggil relasi Many-to-Many di model User
+                ->where('banks.disabled', 'false') // Pastikan menulis 'banks.disabled' untuk menghindari ambiguitas kolom
+                ->get();
 
             if ($bankAccounts->isEmpty()) {
                 LogHelper::logWarning(null, [
