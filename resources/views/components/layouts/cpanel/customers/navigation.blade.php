@@ -2,7 +2,7 @@
 <li class="nav-item @if (request()->routeIs('home')) active @endif">
     <a class="nav-link" href="{{ route('home') }}">
         <i class="fas fa-home"></i>
-        <span>{{ __('Home') }}</span>
+        <span>{{ __('navigation.home.nav-item') }}</span>
     </a>
 </li>
 
@@ -224,7 +224,7 @@
     <li class="nav-item">
         <a class="nav-link" href="{{ route('websystem.edit', 'websystem') }}">
             <i class="fas fa-tools"></i>
-            <span><strong>Settings</strong></span>
+            <span><strong>{{ __('navigation.settings.nav-item') }}</strong></span>
         </a>
     </li>
 @endcanany

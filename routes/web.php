@@ -216,6 +216,8 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::put('/package-categories/{package_category:slug}/activate', [PackageCategoriesController::class, 'activate'])->name('activate.package.categories');
 
         // ==================== CUSTOMER MANAGEMENT ====================
+        Route::get('/customers/{customer:slug}/resend-activation', [CustomerController::class, 'resendActivation'])->name('customers.resend-activation');
+
         Route::resource('customers', CustomerController::class)->withTrashed();
         Route::get('/customers/search', [PaymentController::class, 'index'])->name('customers.search');
         Route::put('/customers/{customer:slug}/disabled/true', [CustomerController::class, 'disable'])->name('customers.disable');

@@ -33,6 +33,10 @@ use RouterOS\Exceptions\ConnectException;
 use App\Events\CustomerActivated;
 use App\Exports\CustomerMasterExport;
 use App\Helpers\ExecutionTimer;
+use App\Models\Billings\Billing;
+use App\Models\Billings\BillingPayment;
+use App\Models\Billings\BillingPeriode;
+use App\Models\Billings\BillingSubscriptionPeriode;
 use App\Services\Customers\CustomerSoftDeleteService;
 use App\Services\Customers\CustomerSubscriptionGuardService;
 use DomainException;
@@ -616,6 +620,94 @@ class CustomerController extends Controller
                 ->with('success', 'Customer deleted successfully');
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['msg' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Mengirim ulang email aktivasi ke Customer tertentu
+     */
+    public function resendActivation(Customer $customer)
+    {
+        $traceId = (string) Str::uuid();
+        // 1. Log debug awal dengan standard JSON baru Anda
+        LogHelper::logDebug(null, [
+            "customer_id"   => $customer->id,
+            "customer_slug" => $customer->slug,
+            "email"         => $customer->email
+        ], "CustomerController@resendActivation initiated", $traceId);
+
+        try {
+            // 1. Ambil Billing Periode terbaru/terakhir yang ada di sistem
+            $latestPeriode = BillingPeriode::orderByDesc('id')->first();
+            $membership = $customer->activeMembership; // Memanfaatkan relasi hasOne di model Customer
+            $membershipId = $membership->id ?? null;
+
+            $latestBilling = null;
+
+            if ($latestPeriode) {
+                // 2. Ambil subscription milik customer ini yang statusnya sedang 'active'
+                $activeSubscription = $customer->activeSubscription; // Memanfaatkan relasi hasOne di model Customer
+
+                if ($activeSubscription) {
+                    // 3. Cari data penghubung di tabel billing_subscription_periodes
+                    // berdasarkan customer_subscription_id dan billing_periode_id terbaru
+                    $billingSubscriptionPeriode = BillingSubscriptionPeriode::where('customer_subscription_id', $activeSubscription->id)
+                        ->where('billing_periode_id', $latestPeriode->id)
+                        ->first();
+
+                    if ($billingSubscriptionPeriode) {
+                        // 4. Cari data ke tabel billings berdasarkan billing_subscription_id (id dari pivot)
+                        // dan juga pastikan customer_id-nya sesuai
+                        $latestBilling = Billing::where('billing_subscription_id', $billingSubscriptionPeriode->id)
+                            ->where('customer_id', $customer->id)
+                            ->first();
+                    }
+                }
+            }
+
+            // 5. Cari data receipt terakhir milik customer ini (jika ada) untuk disertakan di event
+            $billingPayment = BillingPayment::where('billing_id', $latestBilling->id ?? null)
+                ->latest()
+                ->first();
+
+            $latestReceipt = $billingPayment ? $billingPayment->receipt : null;
+
+            // Sekarang variabel $latestBilling siap disuplay ke dalam array $result untuk event Anda
+            $result = [
+                'subscription' => $customer->activeSubscription,
+                'billing'      => $latestBilling, // 👈 Sudah berisi objek billing periode terakhir (atau null jika belum digenerate)
+                'receipt'      => $latestReceipt, // 👈 Sudah berisi objek receipt terakhir (atau null jika belum ada pembayaran)
+                'traceId'      => $traceId
+            ];
+
+            // 2. 🔥 Trigger Event Aktivasi Ulang sesuai dengan parameter Anda
+            event(
+                new CustomerActivated(
+                    $membershipId,
+                    $result['subscription'],
+                    $result['billing'],
+                    $result['receipt'],
+                    null,
+                    $result['traceId']
+                )
+            );
+
+            // 3. Log info di akhir setelah proses trigger dipastikan sukses tanpa exception
+            LogHelper::logInfo(null, [
+                "customer_id" => $customer->id,
+            ], 200, "CustomerController@resendActivation successfully executed", $result['traceId']);
+
+            // Kembali ke halaman detail/index dengan pesan sukses multibahasa
+            return redirect()->back()
+                ->with('success', __('customer.notification.resend_activation_success', ['name' => $customer->name]));
+        } catch (\Exception $e) {
+            // 4. Log error jika ada kegagalan mailer sistem / database
+            LogHelper::logError($e, [
+                "customer_id" => $customer->id,
+            ], 500, "CustomerController@resendActivation failed");
+
+            return redirect()->back()
+                ->with('error', __('customer.notification.resend_activation_failed'));
         }
     }
 }

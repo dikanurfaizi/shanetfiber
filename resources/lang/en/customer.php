@@ -108,6 +108,8 @@ return [
         'state-belum-lunas' => 'Unpaid',
         'current-password' => 'Current Password',
         'new-password' => 'New Password',
+        'total-customers' => 'customers found',
+        'show' => 'Show',
     ],
     'placeholder' => [
         'name' => 'Insert customer name',
@@ -139,6 +141,16 @@ return [
         'vlan_id' => 'VLAN ID',
         'all-responsibility' => 'All Admin',
         'no-type-available' => 'No Type Available',
+        'all-state' => 'All State',
+        'enable' => 'Enable',
+        'disable' => 'Disable',
+        'isolir' => 'Isolir',
+        'offline' => 'Offline',
+        'online' => 'Online',
+        'free' => 'Free',
+        'deactivated' => 'Deactivated',
+        'all-server' => 'All Server',
+        'all-package' => 'All Package',
     ],
     'button' => [
         'create' => 'Create a Customer',
@@ -161,7 +173,8 @@ return [
         'update-my-data' => 'Update',
         'change-password' => 'Change Password',
         'view' => 'View detail',
-        'download-receipt' => 'Download Receipt'
+        'download-receipt' => 'Download Receipt',
+        'export' => 'Data Export',
     ],
 
     'action' => [
@@ -172,6 +185,7 @@ return [
         'force-delete' => 'Force Delete',
         'restore' => 'Restore',
         'suspend' => 'Suspend Customer',
+        'resend-activation' => 'Resend Activation Msg',
     ],
 
     'info' => [
