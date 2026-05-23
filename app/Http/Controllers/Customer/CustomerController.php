@@ -699,7 +699,7 @@ class CustomerController extends Controller
 
             // Kembali ke halaman detail/index dengan pesan sukses multibahasa
             return redirect()->back()
-                ->with('success', __('customer.notification.resend_activation_success', ['name' => $customer->name]));
+                ->with('success', __('customer.message.resend-activation-success', ['name' => $customer->name]));
         } catch (\Exception $e) {
             // 4. Log error jika ada kegagalan mailer sistem / database
             LogHelper::logError($e, [
@@ -707,7 +707,7 @@ class CustomerController extends Controller
             ], 500, "CustomerController@resendActivation failed");
 
             return redirect()->back()
-                ->with('error', __('customer.notification.resend_activation_failed'));
+                ->with('error', __('customer.message.resend-activation-failed'));
         }
     }
 }

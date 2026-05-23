@@ -22,6 +22,27 @@ class WhatsappMessageService
         string $deviceId,
     ): void {
 
+        // 🔥 STRATEGI SANDBOX: Paksa nomor penerima ke nomor tester jika di environment LOCAL
+        if (app()->environment('local')) {
+            $originalReceiver = $receiver;
+            $receiver = '628983249628';
+
+            // Tambahkan catatan kecil di teks pesan agar Anda tahu nomor asli pelanggannya saat ngetes
+            $message .= "\n\n[Sandbox Mode - Original Target: " . $originalReceiver . "]";
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'original_receiver' => $originalReceiver,
+                    'sandbox_receiver' => $receiver,
+                    'message_type' => $messageType,
+                ],
+                200,
+                "Sandbox mode active - overriding receiver number",
+                $traceId
+            );
+        }
+
         $event = MessageEvent::find($messageEventId);
 
         if (!$event) {
@@ -63,7 +84,7 @@ class WhatsappMessageService
             // INIT
             // =====================
             $payload = [
-                'phone'   => $receiver,
+                'phone'   => $receiver, // Sudah otomatis menggunakan nomor bajakan jika di local
                 'message' => $message,
             ];
 

@@ -72,6 +72,17 @@ class CustomerActivationNotificationService
                 ->where('banks.disabled', 'false') // Pastikan menulis 'banks.disabled' untuk menghindari ambiguitas kolom
                 ->get();
 
+            LogHelper::logInfo(null, [
+                'customer_id' => $customerSubscription->customer_id,
+                'user_id' => $user->id,
+                'bank_count' => $bankAccounts->count(),
+                'bank_accounts' => $bankAccounts->map(fn($bank) => [
+                    'bank' => $bank->bank,
+                    'account_number' => $bank->account_number,
+                    'name' => $bank->name,
+                ]),
+            ], 200, 'Fetched user bank accounts for activation notification.', $traceId);
+
             if ($bankAccounts->isEmpty()) {
                 LogHelper::logWarning(null, [
                     'customer_id' => $customerSubscription->customer_id,

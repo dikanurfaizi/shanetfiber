@@ -210,7 +210,9 @@ return [
         'current-password-help' => 'Silakan masukkan password Anda yang aktif saat ini',
         'current-password-incorrect' => 'Password saat ini yang Anda masukkan salah',
         'password-changed-successfully' => 'Password Anda berhasil diperbarui',
-        'password-same-with-before' => 'Password baru tidak boleh sama dengan password sebelumnya'
+        'password-same-with-before' => 'Password baru tidak boleh sama dengan password sebelumnya',
+        'resend-activation-success' => 'Pesan aktivasi berhasil dikirim ulang',
+        'resend-activation-failed' => 'Gagal mengirim ulang pesan aktivasi',
     ],
     'restore' => [
         'header' => [

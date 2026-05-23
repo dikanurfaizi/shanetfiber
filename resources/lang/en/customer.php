@@ -213,7 +213,9 @@ return [
         'current-password-help' => 'Please enter your current password',
         'current-password-incorrect' => 'The current password is incorrect',
         'password-changed-successfully' => 'Password change successfully',
-        'password-same-with-before' => 'Password cannot be the same with previous'
+        'password-same-with-before' => 'Password cannot be the same with previous',
+        'resend-activation-success' => 'Activation message resent successfully',
+        'resend-activation-failed' => 'Failed to resend activation message',
     ],
     'restore' => [
         'header' => [

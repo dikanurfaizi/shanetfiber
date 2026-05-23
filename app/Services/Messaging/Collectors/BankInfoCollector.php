@@ -2,17 +2,23 @@
 
 namespace App\Services\Messaging\Collectors;
 
-use App\Models\Bank;
 use App\Helpers\LogHelper;
+use App\Models\User;
 
 class BankInfoCollector
 {
     public function getBankInfo(int $userId): string
     {
         try {
-            $banks = Bank::where('user_id', $userId)
-                ->where('disabled', 'false')
-                ->select('name', 'bank', 'account_number')
+            $user = User::find($userId);
+            if (!$user) {
+                LogHelper::logWarning(null, ['user_id' => $userId], 404, "User not found for user_id={$userId}");
+                return 'Pengguna tidak ditemukan';
+            }
+
+            $banks = $user->banks()
+                ->where('banks.disabled', 'false') // Gunakan boolean false (tanpa kutip) sesuai struktur MySQL Anda
+                ->select('banks.name', 'banks.bank', 'banks.account_number') // Ambil kolom spesifik dari tabel banks
                 ->get();
 
             if ($banks->isEmpty()) {
