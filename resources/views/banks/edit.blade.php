@@ -33,6 +33,42 @@
                     </div>
                 </div>
 
+                {{-- 👈 TAMBAHAN BARU: INPUT PILIHAN TIPE CHANNEL MENGGUNAKAN RADIO BUTTON --}}
+                <div class="row align-items-center">
+                    <div class="col-md-12 mb-3">
+                        <label class="text-dark">
+                            <strong>{{ __('bank.label.type') }} <span class="text-danger">*</span></strong>
+                        </label>
+                        <div class="d-flex align-items-center mt-1">
+                            <div class="custom-control custom-radio mr-4">
+                                {!! Form::radio('type', 'bank', true, [
+                                    'class' => 'custom-control-input',
+                                    'id' => 'type_bank',
+                                    'required' => true,
+                                ]) !!}
+                                <label class="custom-control-label font-weight-bold text-dark cursor-pointer"
+                                    for="type_bank">
+                                    <i class="fas fa-university text-info mr-1"></i> {{ __('bank.label.bank-account') }}
+                                </label>
+                            </div>
+                            <div class="custom-control custom-radio">
+                                {!! Form::radio('type', 'ewallet', false, [
+                                    'class' => 'custom-control-input',
+                                    'id' => 'type_ewallet',
+                                    'required' => true,
+                                ]) !!}
+                                <label class="custom-control-label font-weight-bold text-dark cursor-pointer"
+                                    for="type_ewallet">
+                                    <i class="fas fa-wallet text-warning mr-1"></i> {{ __('bank.label.ewallet') }}
+                                </label>
+                            </div>
+                        </div>
+                        @if ($errors->has('type'))
+                            <span class="text-danger small mt-1 d-block">{{ $errors->first('type') }}</span>
+                        @endif
+                    </div>
+                </div>
+
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label class="text-dark" for="bank_name_select">
@@ -40,7 +76,7 @@
                         </label>
                         <div class="input-group">
                             <div class="input-group-prepend">
-                                <span class="input-group-text"><i class="fas fa-wallet"></i></span>
+                                <span class="input-group-text"><i class="fas fa-money-check-alt"></i></span>
                             </div>
 
                             <select id="bank_name_select" name="bank" class="form-control select2-edit" required>
@@ -129,6 +165,10 @@
                 background-color: #f8f9fc;
                 width: 42px;
                 justify-content: center;
+            }
+
+            .cursor-pointer {
+                cursor: pointer;
             }
         </style>
     @endsection

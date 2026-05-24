@@ -17,8 +17,24 @@
                     <label class="text-muted small mb-1"><strong>{{ __('bank.label.bank-name') }}</strong></label>
                     <div class="h5 font-weight-bold text-dark">
                         <span class="badge badge-pill badge-primary text-uppercase px-2 py-1">
-                            <i class="fas fa-wallet mr-1"></i> {{ $bank->bank }}
+                            <i class="fas fa-university mr-1"></i> {{ $bank->bank }}
                         </span>
+                    </div>
+                </div>
+
+                {{-- 👈 TAMBAHAN KOMPONEN VISUAL: IDENTIFIKASI TIPE CHANNEL REKENING PUSAT --}}
+                <div class="mb-3">
+                    <label class="text-muted small mb-1"><strong>{{ __('bank.label.type') }}</strong></label>
+                    <div>
+                        @if ($bank->type === 'ewallet')
+                            <span class="badge badge-warning text-dark text-uppercase font-weight-bold px-2 py-1">
+                                <i class="fas fa-wallet mr-1"></i> {{ __('bank.label.ewallet') }}
+                            </span>
+                        @else
+                            <span class="badge badge-info text-white text-uppercase font-weight-bold px-2 py-1">
+                                <i class="fas fa-credit-card mr-1"></i> {{ __('bank.label.bank-account') }}
+                            </span>
+                        @endif
                     </div>
                 </div>
 
@@ -26,7 +42,7 @@
                     <label class="text-muted small mb-1"><strong>{{ __('bank.label.account-number') }}</strong></label>
                     <div class="h5 font-weight-bold text-dark text-monospace" style="letter-spacing: 0.5px;">
                         <i
-                            class="fas fa-credit-card text-muted mr-2"></i>{{ implode(' ', str_split($bank->account_number, 4)) }}
+                            class="fas fa-hashtag text-muted mr-2"></i>{{ implode(' ', str_split($bank->account_number, 4)) }}
                     </div>
                 </div>
 
@@ -134,6 +150,9 @@
         </div>
     </div>
 
+    {{-- =============================================================== --}}
+    {{-- MODAL ASSIGN ADMIN --}}
+    {{-- =============================================================== --}}
     <div class="modal fade" id="assignAdminModal" tabindex="-1" role="dialog" aria-labelledby="assignAdminModalLabel"
         aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-md" role="document">

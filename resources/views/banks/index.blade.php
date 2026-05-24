@@ -9,6 +9,9 @@
 
     <div class="card-body p-3 p-md-4">
 
+        {{-- =============================================================== --}}
+        {{-- DESKTOP VIEW --}}
+        {{-- =============================================================== --}}
         <div class="d-none d-md-block" style="overflow-x: auto;">
             <table id="banksTable" cellspacing="0" width="100%"
                 class="table datatable-loading no-footer sortable searchable">
@@ -17,6 +20,7 @@
                         <th width="5%">#</th>
                         <th>{{ __('bank.table.name') }}</th>
                         <th>{{ __('bank.table.bank') }}</th>
+                        <th>{{ __('bank.table.type') }}</th>
                         <th>{{ __('bank.table.account-number') }}</th>
                         <th>{{ __('bank.table.status') }}</th>
                         <th class="text-right" width="10%">{{ __('bank.table.action') }}</th>
@@ -40,6 +44,19 @@
                                 <span class="badge badge-pill badge-light text-dark border text-uppercase">
                                     {{ $bank->bank }}
                                 </span>
+                            </td>
+                            {{-- 👈 PILIHAN WARNA BADGE SESUAI TIPE (DESKTOP) --}}
+                            <td>
+                                @if ($bank->type === 'ewallet')
+                                    <span
+                                        class="badge badge-warning text-dark text-uppercase font-weight-bold px-2 py-1">
+                                        <i class="fas fa-wallet mr-1"></i> E-Wallet
+                                    </span>
+                                @else
+                                    <span class="badge badge-info text-white text-uppercase font-weight-bold px-2 py-1">
+                                        <i class="university mr-1"></i> Bank
+                                    </span>
+                                @endif
                             </td>
                             <td>
                                 <span class="text-monospace font-weight-bold text-dark">
@@ -109,6 +126,9 @@
             </table>
         </div>
 
+        {{-- =============================================================== --}}
+        {{-- MOBILE VIEW --}}
+        {{-- =============================================================== --}}
         <div class="d-md-none">
             @php $mobileI = $i; @endphp
             @foreach ($banks as $bank)
@@ -128,6 +148,19 @@
                     </div>
 
                     <div class="card-body p-3">
+                        {{-- 👈 BERBAGAI PILIHAN BADGE SESUAI TIPE (MOBILE) --}}
+                        <div class="mb-2">
+                            <small class="text-muted d-block font-weight-bold mb-1">Tipe Channel</small>
+                            @if ($bank->type === 'ewallet')
+                                <span class="badge badge-warning text-dark text-uppercase font-weight-bold px-2 py-1">
+                                    <i class="fas fa-wallet mr-1"></i> E-Wallet
+                                </span>
+                            @else
+                                <span class="badge badge-info text-white text-uppercase font-weight-bold px-2 py-1">
+                                    <i class="university mr-1"></i> Bank
+                                </span>
+                            @endif
+                        </div>
                         <div class="mb-2">
                             <small class="text-muted d-block font-weight-bold mb-0">{{ __('bank.table.bank') }}</small>
                             <span
@@ -211,13 +244,12 @@
 
                 deleteButtons.forEach(button => {
                     button.addEventListener('click', function(event) {
-                        event.preventDefault(); // Menghentikan redirect instan href="#"
+                        event.preventDefault();
 
                         const type = this.getAttribute('data-type');
                         const slug = this.getAttribute('data-slug');
                         const info = this.getAttribute('data-info');
 
-                        // Menentukan target form berdasarkan context (desktop / mobile)
                         const targetFormId = 'delete-form-' + type + '-' + slug;
 
                         Swal.fire({
@@ -225,14 +257,13 @@
                             text: `Apakah Anda yakin ingin menghapus data akun rekening ${info} secara permanen?`,
                             icon: 'warning',
                             showCancelButton: true,
-                            confirmButtonColor: '#e3342f', // Merah korosi (Danger)
-                            cancelButtonColor: '#6c757d', // Abu-abu (Secondary)
+                            confirmButtonColor: '#e3342f',
+                            cancelButtonColor: '#6c757d',
                             confirmButtonText: 'Ya, Hapus!',
                             cancelButtonText: 'Batal',
                             reverseButtons: true
                         }).then((result) => {
                             if (result.isConfirmed) {
-                                // Eksekusi submit form jika user mengonfirmasi tindakan
                                 document.getElementById(targetFormId).submit();
                             }
                         });

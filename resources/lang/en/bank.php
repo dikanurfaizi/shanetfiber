@@ -31,6 +31,7 @@ return [
         'no' => 'No',
         'name' => 'Account Name',
         'bank' => 'Bank Name',
+        'type' => 'Type',
         'account-number' => 'Account Number',
         'status' => 'Status',
         'action' => 'Action',
@@ -53,6 +54,10 @@ return [
         'disabled' => 'Inactive',
         'connected-admins' => 'Connected Admins',
         'assign-admin' => 'Assign Admin',
+        'unlink-admin' => 'Unlink Admin',
+        'type' => 'Type',
+        'ewallet' => 'E-Wallet',
+        'bank-account' => 'Bank Account',
     ],
     'text' => [
         'no-connected-admins' => 'No connected Admin Area yet.',
@@ -88,5 +93,7 @@ return [
         'name_required' => 'Account Name required!',
         'bank_required' => 'Bank Name required!',
         'account_number_required' => 'Account Number required!',
+        'type_required' => 'Type required!',
+        'type_in' => 'Invalid type selected!',
     ],
 ];

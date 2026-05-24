@@ -9,6 +9,7 @@ use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\CustomerActivation
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPayLaterCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPembayaranCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\OverdueBroadcastCommand;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\PaymentChannelUpdateCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\TestMessageCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\ReplyMessageCommand;
 
@@ -120,6 +121,24 @@ class TemplateMessageService
             account: $data['account'],
             messageId: $data['message_id'] ?? null, // dari wa_message_id di database
             customerId: $data['customer_id'] ?? null
+        );
+
+        return $this->dispatcher->dispatch($command, null);
+    }
+
+    public function sendPaymentChannelUpdate(array $data)
+    {
+        $command = new PaymentChannelUpdateCommand(
+            account: $data['account'],
+            templateName: $data['templateName'],
+            customerId: $data['customer_id'],
+            customerName: $data['customer_name'],
+            recipient: $data['recipient'],
+            channelUpdateDate: $data['channel_update_date'],
+            channel: $data['channel'],
+            bankPayload: $data['bank_payload'],
+            contactAdmin: $data['contact_admin'],
+            contactWhatsapp: $data['contact_whatsapp']
         );
 
         return $this->dispatcher->dispatch($command, null);

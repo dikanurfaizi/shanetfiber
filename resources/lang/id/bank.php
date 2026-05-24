@@ -30,6 +30,7 @@ return [
     'table' => [
         'name' => 'Nama Pemilik (Atas Nama)',
         'bank' => 'Nama Bank',
+        'type' => 'Tipe',
         'account-number' => 'Nomor Rekening',
         'status' => 'Status',
         'action' => 'Aksi',
@@ -53,6 +54,10 @@ return [
         'disabled' => 'Nonaktif',
         'connected-admins' => 'Admin Terhubung',
         'assign-admin' => 'Hubungkan Admin',
+        'unlink-admin' => 'Putus Akses Admin',
+        'type' => 'Tipe',
+        'ewallet' => 'E-Wallet',
+        'bank-account' => 'Rekening Bank',
     ],
     'text' => [
         'no-connected-admins' => 'Belum ada Admin Wilayah yang terhubung dengan rekening terpusat ini.',
@@ -88,5 +93,7 @@ return [
         'name_required' => 'Nama Pemilik dibutuhkan!',
         'bank_required' => 'Nama Bank dibutuhkan!',
         'account_number_required' => 'Nomor Rekening dibutuhkan!',
+        'type_required' => 'Tipe dibutuhkan!',
+        'type_in' => 'Tipe yang dipilih tidak valid!',
     ],
 ];

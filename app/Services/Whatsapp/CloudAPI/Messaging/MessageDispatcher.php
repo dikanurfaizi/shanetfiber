@@ -9,6 +9,7 @@ use App\Services\Whatsapp\CloudAPI\Templates\Runtime\TemplateHandlerRegistry;
 use App\Services\Whatsapp\CloudAPI\Transport\CloudApiClientProcess;
 use App\Services\Whatsapp\Meta\HandleOutgoingWhatsappMessage;
 use Illuminate\Support\Str;
+use ReflectionClass;
 
 class MessageDispatcher
 {

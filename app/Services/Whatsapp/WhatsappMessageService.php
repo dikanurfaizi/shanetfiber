@@ -22,10 +22,14 @@ class WhatsappMessageService
         string $deviceId,
     ): void {
 
-        // 🔥 STRATEGI SANDBOX: Paksa nomor penerima ke nomor tester jika di environment LOCAL
-        if (app()->environment('local')) {
+        // ===============================================================
+        // 🔥 STRATEGI SANDBOX: Dinamis Membaca Konfigurasi Global Override
+        // ===============================================================
+        $overrideNumber = config('messaging.phone_number_override');
+
+        if ($overrideNumber) {
             $originalReceiver = $receiver;
-            $receiver = '628983249628';
+            $receiver = (string) $overrideNumber;
 
             // Tambahkan catatan kecil di teks pesan agar Anda tahu nomor asli pelanggannya saat ngetes
             $message .= "\n\n[Sandbox Mode - Original Target: " . $originalReceiver . "]";
@@ -34,11 +38,11 @@ class WhatsappMessageService
                 null,
                 [
                     'original_receiver' => $originalReceiver,
-                    'sandbox_receiver' => $receiver,
-                    'message_type' => $messageType,
+                    'sandbox_receiver'  => $receiver,
+                    'message_type'      => $messageType,
                 ],
                 200,
-                "Sandbox mode active - overriding receiver number",
+                "Sandbox mode active - overriding receiver number from config override",
                 $traceId
             );
         }

@@ -7,6 +7,7 @@ use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\CustomerActivation
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPayLaterCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPembayaranCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\OverdueBroadcastCommand;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\PaymentChannelUpdateCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\ReplyMessageCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\TestMessageCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\BroadcastMidMonthHandler;
@@ -14,6 +15,7 @@ use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\CustomerActivation
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\InfoPayLaterHandler;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\InfoPembayaranHandler;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\OverdueBroadcastHandler;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\PaymentChannelUpdateHandler;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\ReplyMessageHandler;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\TestMessageHandler;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\TemplateHandlerRegistry;
@@ -44,6 +46,7 @@ class WhatsAppServiceProvider extends ServiceProvider
             TestMessageCommand::class => TestMessageHandler::class,
             OverdueBroadcastCommand::class => OverdueBroadcastHandler::class,
             ReplyMessageCommand::class => ReplyMessageHandler::class,
+            PaymentChannelUpdateCommand::class => PaymentChannelUpdateHandler::class,
         ];
     }
 }

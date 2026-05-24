@@ -40,22 +40,30 @@ class BankController extends Controller
      */
     public function store(Request $request)
     {
-        // 🔥 VALIDASI DIUBAH: Aturan 'user_id' dihapus karena ini pendaftaran rekening pusat murni
         $this->validate(
             $request,
             [
-                'name' => 'required',
-                'bank' => 'required',
+                'name'           => 'required',
+                'bank'           => 'required',
                 'account_number' => 'required',
+                'type'           => 'required|in:bank,ewallet', // 👈 Validasi tipe dikunci di sini
             ],
             [
-                'name.required' => __('bank.validation.name_required'),
-                'bank.required' => __('bank.validation.bank_required'),
+                'name.required'           => __('bank.validation.name_required'),
+                'bank.required'           => __('bank.validation.bank_required'),
                 'account_number.required' => __('bank.validation.account_number_required'),
+                'type.required'           => __('bank.validation.type_required'),
+                'type.in'                 => __('bank.validation.type_in'),
             ]
         );
 
-        $request->request->add(['slug' => str($request->bank . '-' . Str::random(4))->slug()]);
+        // Otomatis men-set default disabled ke 'false' (aktif) saat pertama kali disimpan 
+        // agar sesuai dengan spesifikasi enum ('false', 'true') di skema database Anda
+        $request->request->add([
+            'slug'     => str($request->bank . '-' . \Illuminate\Support\Str::random(4))->slug(),
+            'disabled' => 'true'
+        ]);
+
         Bank::create($request->all());
 
         return redirect()->route('banks.index')

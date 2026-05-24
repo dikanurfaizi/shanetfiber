@@ -27,7 +27,6 @@ class WhatsappCloudController extends Controller
         MetaTemplateFetcherService $fetcher
     ) {
         $traceId = Str::uuid()->toString();
-        LogHelper::logInfo(null, [], 200, "Initiate sync", $traceId);
 
         $gateway = WhatsappGateway::where('type', 'cloud')
             ->where('is_active', true)
@@ -36,17 +35,27 @@ class WhatsappCloudController extends Controller
             }])
             ->first();
 
-        if (!$gateway) {
+        if (!$gateway || $gateway->accounts->isEmpty()) {
+            LogHelper::logError(null, [], 404, "Sync cancelled: No active account found", $traceId);
             return redirect()
                 ->route('whatsapptemplate.index')
                 ->with('error', 'No active WhatsApp gateway account found.');
         }
 
+        $account = $gateway->accounts->first();
+
+        // Log Awal Ringkas Produksi
+        LogHelper::logInfo(null, [
+            'triggered_by_user' => auth()->user()->name ?? 'Dian Ardiansyah',
+            'account_id'        => $account->id,
+            'meta_waba_id'      => $account->meta_waba_id,
+        ], 200, "Initiate template sync", $traceId);
+
         try {
-            $account = $gateway->accounts->first();
             $templates = $fetcher->fetchAllTemplates($account);
 
             if (empty($templates)) {
+                LogHelper::logError(null, ['account_id' => $account->id], 400, "Sync aborted: Meta returned empty templates", $traceId);
                 return redirect()
                     ->route('whatsapptemplate.index')
                     ->with('error', 'No templates returned from Meta API.');
@@ -54,10 +63,48 @@ class WhatsappCloudController extends Controller
 
             $result = $syncService->syncFromMeta($account, $templates);
 
+            // ===============================================================
+            // 🔥 HANDLING JIKA TIDAK ADA PERUBAHAN DATA
+            // ===============================================================
+            $result = $syncService->syncFromMeta($account, $templates);
+
+            // 1. Amankan pembacaan key dengan menyertakan default nilai 0 jika key tidak di-return oleh service
+            $created = $result['created'] ?? 0;
+            $updated = $result['updated'] ?? 0;
+            $deleted = $result['deleted'] ?? 0;
+
+            $totalChanges = $created + $updated + $deleted;
+
+            // Handling jika data Meta dan Lokal sudah sama (tidak ada perubahan)
+            if ($totalChanges === 0) {
+                LogHelper::logInfo(null, [
+                    'account_id'  => $account->id,
+                    'total_meta'  => count($templates),
+                ], 200, "Sync finished: All templates are already up-to-date", $traceId);
+
+                return redirect()
+                    ->route('whatsapptemplate.index')
+                    ->with('info', 'Semua template sudah sesuai dengan Meta API (Tidak ada perubahan).');
+            }
+
+            // Jika ada perubahan (Gunakan variabel aman yang sudah di-declare di atas)
+            LogHelper::logInfo(null, [
+                'account_id' => $account->id,
+                'created'    => $created,
+                'updated'    => $updated,
+                'deleted'    => $deleted,
+            ], 200, "Sync completed with changes", $traceId);
+
             return redirect()
                 ->route('whatsapptemplate.index')
-                ->with('success', "Sync completed. Synced: {$result['synced']}, Failed: {$result['failed']}");
+                ->with('success', "Sinkronisasi berhasil. Ditambah: {$created}, Diperbarui: {$updated}, Dihapus: {$deleted}");
         } catch (\Throwable $e) {
+            LogHelper::logError(null, [
+                'account_id' => $account->id,
+                'exception'  => get_class($e),
+                'message'    => $e->getMessage()
+            ], 500, "Template sync thrown an exception", $traceId);
+
             return redirect()
                 ->route('whatsapptemplate.index')
                 ->with('error', 'Template sync failed: ' . $e->getMessage());
