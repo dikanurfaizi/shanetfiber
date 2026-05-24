@@ -71,7 +71,7 @@ class SendPaymentChannelUpdate extends Command
             // ===============================================================
             if (!$testMode) {
                 // 1. Validasi Tahun, Bulan (Juni), dan Tanggal (1 atau 2)
-                $allowedDays = [1, 2];
+                $allowedDays = [1];
                 if ($now->year !== 2026 || $now->month !== 6 || !in_array($now->day, $allowedDays, true)) {
                     $this->warn('⏩ Skipped: Today is not June 1st or 2nd, 2026.');
                     return Command::SUCCESS;
