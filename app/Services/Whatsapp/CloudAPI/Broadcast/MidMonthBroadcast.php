@@ -69,6 +69,7 @@ class MidMonthBroadcast
         $contactWhatsapp = $adminContact['contact_whatsapp'];
 
         $formatter = new FormatReceiver;
+        $overrideNumber    = config('messaging.phone_number_override');
 
         // ===============================================================
         // PREPARE QUEUE TIMING DELAY
@@ -95,7 +96,8 @@ class MidMonthBroadcast
             $resolvedTemplate = $bankResolution['template'];
             $bankPayload      = $bankResolution['payload'];
 
-            $recipient = $formatter->formatReceiver($data->customer_contact, null, false);
+            $targetContact = $overrideNumber ? (string) $overrideNumber : $data->customer_contact;
+            $recipient     = $formatter->formatReceiver($targetContact, null, false);
 
             $due_date_formatted = $data->final_due_date
                 ? Carbon::parse($data->final_due_date)->translatedFormat('d F Y')

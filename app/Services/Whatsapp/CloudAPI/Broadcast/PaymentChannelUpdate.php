@@ -12,6 +12,8 @@ use App\Services\Whatsapp\CloudAPI\Collectors\AdminBankCollector;
 // 💡 Import kedua Trait Anda di sini
 use App\Services\Whatsapp\CloudAPI\Broadcast\Traits\MapsBroadcastBankPayload;
 use App\Services\Whatsapp\CloudAPI\Broadcast\Traits\ResolvesAdminContact;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class PaymentChannelUpdate
 {
@@ -56,7 +58,7 @@ class PaymentChannelUpdate
         // PROCESS ENGINE LOOP
         // ===============================================================
         $delayInSeconds    = 0;
-        $delay             = now();
+        $delay             = $this->getNextDelay('notification', $traceId);
         $channelUpdateDate = '1 Juni 2026';
         $channel           = 'Shanetfiber';
         $overrideNumber    = config('messaging.phone_number_override');
@@ -100,5 +102,19 @@ class PaymentChannelUpdate
         }
 
         LogHelper::logInfo(null, ['total_dispatched' => $customers->count()], 900, '[PaymentChannelUpdate] Finished process', $traceId);
+    }
+
+    private function getNextDelay(string $queue, string $traceId): Carbon
+    {
+        $last = DB::table('jobs')
+            ->where('queue', $queue)
+            ->orderByDesc('available_at')
+            ->first();
+
+        if (!$last || !$last->reserved_at) {
+            return now();
+        }
+
+        return Carbon::createFromTimestamp($last->reserved_at)->addSeconds(1);
     }
 }

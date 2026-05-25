@@ -68,6 +68,7 @@ class OverdueBroadcast
         $contactWhatsapp = $adminContact['contact_whatsapp'];
 
         $formatter = new FormatReceiver;
+        $overrideNumber    = config('messaging.phone_number_override');
 
         // Ambil timing dasar delay antrean
         $delay = $this->getNextDelay('notification', $traceId);
@@ -92,7 +93,8 @@ class OverdueBroadcast
             $resolvedTemplate = $bankResolution['template'];
             $bankPayload      = $bankResolution['payload'];
 
-            $recipient = $formatter->formatReceiver($data->customer_contact, null, false);
+            $targetContact = $overrideNumber ? (string) $overrideNumber : $data->customer_contact;
+            $recipient     = $formatter->formatReceiver($targetContact, null, false);
 
             $lateDays = max(
                 Carbon::parse($data->final_due_date)->diffInDays(now(), false),
