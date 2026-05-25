@@ -5,25 +5,35 @@ namespace App\Services\Whatsapp\CloudAPI\Broadcast;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Helpers\MaskCustomerName;
-use App\Jobs\Whatsapp\CloudAPI\Broadcast\MidMonthReminderJob;
+use App\Jobs\Whatsapp\CloudAPI\Broadcast\MidMonthReminderJob; // 💡 Pastikan terpanggil
 use App\Models\Whatsapp\WhatsappGateway;
 use App\Services\Whatsapp\CloudAPI\Collectors\BillingReminderCollector;
+use App\Services\Whatsapp\CloudAPI\Collectors\AdminBankCollector;
 use App\Services\Whatsapp\CloudAPI\Messages\TemplateMessageService;
+use App\Services\Whatsapp\CloudAPI\Broadcast\Traits\MapsBroadcastBankPayload;
+use App\Services\Whatsapp\CloudAPI\Broadcast\Traits\ResolvesAdminContact;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class MidMonthBroadcast
 {
-    public function __construct(private BillingReminderCollector $collector, private TemplateMessageService $templateMessageService) {}
+    use MapsBroadcastBankPayload, ResolvesAdminContact;
+
+    public function __construct(
+        private BillingReminderCollector $collector,
+        private TemplateMessageService $templateMessageService,
+        private AdminBankCollector $bankCollector
+    ) {}
 
     public function run(string $traceId)
     {
         LogHelper::logInfo(null, [], 100, '[MidMonthBroadcast] Start', $traceId);
 
-        $templateName = 'pengingat_pembayaran_3';
+        $templateName1 = 'pengingat_pembayaran_v3';    // 2 Bank + 1 E-Wallet
+        $templateName2 = 'pengingat_pembayaran_v2_2';  // 1 Bank + 1 E-Wallet
+        $templateName3 = 'pengingat_pembayaran_v2_1';  // Hanya 2 Bank
 
-        // $billings = $this->collector->collect(now(), 'pembayaran_jatuh_tempo_2');
-        $billings = $this->collector->collect(now(), $templateName);
+        $billings = $this->collector->collect(now(), $templateName1, $templateName2, $templateName3);
 
         LogHelper::logInfo(null, [
             'count' => $billings->count()
@@ -34,8 +44,9 @@ class MidMonthBroadcast
             return;
         }
 
-        $formatter = new FormatReceiver;
-
+        // ===============================================================
+        // RESOLVE GATEWAY & ACCOUNT
+        // ===============================================================
         $gateway = WhatsappGateway::where('type', 'cloud')
             ->where('is_active', true)
             ->with(['accounts' => function ($q) {
@@ -43,84 +54,80 @@ class MidMonthBroadcast
             }])
             ->first();
 
-        if (!$gateway) {
-            LogHelper::logError(null, [], 120, '[MidMonthBroadcast] No active gateway found', $traceId);
-            return;
-        }
-
-        if ($gateway->accounts->isEmpty()) {
-            LogHelper::logError(null, [
-                'gateway_id' => $gateway->id
-            ], 121, '[MidMonthBroadcast] No active account found', $traceId);
+        if (!$gateway || $gateway->accounts->isEmpty()) {
+            LogHelper::logError(null, [], 120, '[MidMonthBroadcast] Gateway/Account invalid', $traceId);
             return;
         }
 
         $account = $gateway->accounts->first();
 
-        LogHelper::logInfo(null, [
-            'gateway_id' => $gateway->id,
-            'account_id' => $account->id
-        ], 130, '[MidMonthBroadcast] Gateway resolved', $traceId);
+        // ===============================================================
+        // RESOLVE GLOBAL ADMIN CONTACT VIA TRAIT
+        // ===============================================================
+        $adminContact    = $this->getAdminContact();
+        $contactAdmin    = $adminContact['contact_admin'];
+        $contactWhatsapp = $adminContact['contact_whatsapp'];
 
-        // $delay = $this->getNextDelay('notification', $traceId);
+        $formatter = new FormatReceiver;
 
+        // ===============================================================
+        // PREPARE QUEUE TIMING DELAY
+        // ===============================================================
+        $delayInSeconds = 0;
+        $delay = $this->getNextDelay('notification', $traceId);
+
+        // ===============================================================
+        // PROCESS ENGINE LOOP
+        // ===============================================================
         foreach ($billings as $idx => $data) {
 
-            $recipient = $formatter->formatReceiver(
-                $data->customer_contact,
-                null,
-                false
-            );
+            $adminBanks = $this->bankCollector->getBanksByUserId($data->user_id ?? 0);
+            $banks      = $adminBanks->where('type', 'bank')->values();
+            $ewallets   = $adminBanks->where('type', 'ewallet')->values();
+
+            // Panggil Trait untuk dapati Template & Payload Bank secara otomatis
+            $bankResolution = $this->resolveBankTemplateAndPayload($banks, $ewallets, [
+                $templateName1,
+                $templateName2,
+                $templateName3
+            ]);
+
+            $resolvedTemplate = $bankResolution['template'];
+            $bankPayload      = $bankResolution['payload'];
+
+            $recipient = $formatter->formatReceiver($data->customer_contact, null, false);
 
             $due_date_formatted = $data->final_due_date
                 ? Carbon::parse($data->final_due_date)->translatedFormat('d F Y')
                 : '-';
 
-            // LogHelper::logInfo(null, [
-            //     'index'         => $idx,
-            //     'customer_id'   => $data->customer_id,
-            //     'customer_name' => $data->customer_name,
-            //     'recipient'     => $recipient,
-            //     'package'       => $data->package_name,
-            //     'total'         => $this->currency($data->total),
-            //     'due_date'      => $due_date_formatted,
-            //     'delay_at'      => $delay->toDateTimeString(),
-            // ], 200, '[MidMonthBroadcast] Dispatch job', $traceId);
-
             $accountData = MaskCustomerName::buildAccountData($data->customer_name, $data->package_name);
 
-            // MidMonthReminderJob::dispatch(
-            //     contact: $recipient,
-            //     customerId: $data->customer_id,
-            //     customerName: $data->customer_name,
-            //     packageName: $data->package_name,
-            //     accountData: $accountData,
-            //     totalAmount: $this->currency($data->total),
-            //     dueDate: $due_date_formatted,
-            //     note: 'gangguan layanan internet',
-            //     templateName: $templateName,
-            //     account: $account
-            // )
-            //     ->delay($delay)
-            //     ->onQueue('notification');
+            // 💡 5. OPER SELLER / INJECT KE JOB ANTRIAN
+            MidMonthReminderJob::dispatch(
+                account: $account,
+                customerId: (string) $data->customer_id,
+                customerName: $data->customer_name,
+                packageName: $data->package_name,
+                accountData: $accountData,
+                totalAmount: $this->currency($data->total),
+                dueDate: $due_date_formatted,
+                note: 'gangguan layanan internet',
+                templateName: $resolvedTemplate,
+                contact: $recipient,
+                bankPayload: $bankPayload,          // 💡 Parameter baru untuk Trait Bank
+                contactAdmin: $contactAdmin,        // 💡 Parameter baru untuk Admin Contact
+                contactWhatsapp: $contactWhatsapp   // 💡 Parameter baru untuk WA Link Admin
+            )
+                ->delay($delay)
+                ->onQueue('notification');
 
-            $this->templateMessageService->sendBroadcastMidMonth([
-                'recipient' => $recipient,
-                'customer_id' => $data->customer_id,
-                'customer_name' => $data->customer_name,
-                'package_name' => $data->package_name,
-                'account_data' => $accountData,
-                'total_amount' => $this->currency($data->total),
-                'due_date' => $due_date_formatted,
-                'note' => 'gangguan layanan internet',
-                'templateName' => $templateName,
-                'account' => $account
-            ]);
-
-            // $delay = $delay->addMinute();
+            // Naikkan delay 2 detik per iterasi data agar merata dan aman dari rate limit
+            $delayInSeconds += 2;
+            $delay = now()->addSeconds($delayInSeconds);
         }
 
-        LogHelper::logInfo(null, [], 900, '[MidMonthBroadcast] Finished dispatch', $traceId);
+        LogHelper::logInfo(null, [], 900, '[MidMonthBroadcast] Finished dispatch to Queue', $traceId);
     }
 
     private function getNextDelay(string $queue, string $traceId): Carbon
@@ -131,23 +138,10 @@ class MidMonthBroadcast
             ->first();
 
         if (!$last || !$last->reserved_at) {
-            LogHelper::logInfo(null, [
-                'queue' => $queue
-            ], 300, '[MidMonthBroadcast] Queue empty, start now', $traceId);
-
             return now();
         }
 
-        // $delay = Carbon::createFromTimestamp($last->reserved_at)->addMinute();
-        $delay = Carbon::createFromTimestamp($last->reserved_at)->addSeconds(1);
-
-        LogHelper::logInfo(null, [
-            'queue'        => $queue,
-            'reserved_at'  => Carbon::createFromTimestamp($last->reserved_at)->toDateTimeString(),
-            'next_delay'   => $delay->toDateTimeString(),
-        ], 301, '[MidMonthBroadcast] Next delay calculated', $traceId);
-
-        return $delay;
+        return Carbon::createFromTimestamp($last->reserved_at)->addSeconds(1);
     }
 
     private function currency(int|float|null $n): string

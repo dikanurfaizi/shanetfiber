@@ -15,57 +15,47 @@ class OverdueReminderJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    private string $contact;
-    private string $customerId;
-    private string $packageName;
-    private string $totalAmount;
-    private string $lateDays;
-    private string $note;
-    private string $templateName;
-    private WhatsappGatewayAccount $account;
-
     public function __construct(
-        WhatsappGatewayAccount $account,
-        string $customerId,
-        string $packageName,
-        string $totalAmount,
-        string $lateDays,
-        string $note,
-        string $templateName,
-        string $contact
-    ) {
-        $this->account = $account;
-        $this->customerId = $customerId;
-        $this->packageName = $packageName;
-        $this->totalAmount = $totalAmount;
-        $this->lateDays = $lateDays;
-        $this->contact = $contact;
-        $this->note = $note;
-        $this->templateName = $templateName;
-    }
+        private string $contact,
+        private string $customerId,
+        private string $packageName,
+        private string $totalAmount,
+        private int $lateDays,
+        private string $note,
+        private string $templateName,
+        private WhatsappGatewayAccount $account,
+        private array $bankPayload,       // 💡 Tambahan field baru
+        private string $contactAdmin,     // 💡 Tambahan field baru
+        private string $contactWhatsapp   // 💡 Tambahan field baru
+    ) {}
 
     public function handle(TemplateMessageService $templateMessageService): void
     {
+        // Panggil service WhatsApp untuk kirim payload gabungan ke template baru Anda
         $templateMessageService->sendOverdueBroadcast([
-            'recipient' => $this->contact,
-            'customer_id' => $this->customerId,
-            'package_name' => $this->packageName,
-            'total_amount' => $this->totalAmount,
-            'late_days' => $this->lateDays,
-            'note' => $this->note,
-            'templateName' => $this->templateName,
-            'account' => $this->account
+            'recipient'        => $this->contact,
+            'customer_id'      => $this->customerId,
+            'package_name'     => $this->packageName,
+            'total_amount'     => $this->totalAmount,
+            'late_days'        => $this->lateDays,
+            'note'             => $this->note,
+            'templateName'     => $this->templateName,
+            'account'          => $this->account,
+            'bank_payload'     => $this->bankPayload,
+            'contact_admin'    => $this->contactAdmin,
+            'contact_whatsapp' => $this->contactWhatsapp,
         ]);
 
         LogHelper::logInfo(null, [
-            'recipient' => $this->contact,
-            'customer_id' => $this->customerId,
-            'package_name' => $this->packageName,
-            'total_amount' => $this->totalAmount,
-            'late_days' => $this->lateDays,
-            'note' => $this->note,
-            'templateName' => $this->templateName,
-            'account' => $this->account
-        ], 200, "[Mid Month Reminder Job] Executed");
+            'recipient'        => $this->contact,
+            'customer_id'      => $this->customerId,
+            'package_name'     => $this->packageName,
+            'total_amount'     => $this->totalAmount,
+            'late_days'        => $this->lateDays,
+            'note'             => $this->note,
+            'templateName'     => $this->templateName,
+            'contact_admin'    => $this->contactAdmin,
+            'contact_whatsapp' => $this->contactWhatsapp,
+        ], 200, "[Overdue Reminder Job] Executed and Message Sent via API");
     }
 }

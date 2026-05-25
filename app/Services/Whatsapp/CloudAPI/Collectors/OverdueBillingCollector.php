@@ -10,83 +10,83 @@ use Carbon\Carbon;
 
 class OverdueBillingCollector
 {
-    public function collect(Carbon $today, string $slug): Collection
+    /**
+     * Mengumpulkan data billing overdue berdasarkan 3 tipe template anti-duplikasi.
+     */
+    public function collect(Carbon $today, string $slug1, string $slug2, string $slug3): Collection
     {
+        $slugs = [$slug1, $slug2, $slug3];
+
         $query = Billing::query()
             ->select([
                 'customers.id as customer_id',
                 'customers.name as customer_name',
                 'customers.contact as customer_contact',
+                'customers.user_id as user_id', // 💡 Diperlukan oleh AdminBankCollector
                 'p.name as package_name',
-                'billings.total_amount as total',
-                'billings.due_date',
-                'billings.paylater_until',
 
-                // 👉 final due date ditentukan di DB
-                DB::raw('COALESCE(billings.paylater_until, billings.due_date) as final_due_date'),
+                // 💡 Menggabungkan nominal jika customer memiliki lebih dari 1 tagihan tertunggak
+                DB::raw('SUM(billings.total_amount) as total'),
+
+                DB::raw('MAX(billings.due_date) as due_date'),
+                DB::raw('MAX(billings.paylater_until) as paylater_until'),
+                DB::raw('MAX(COALESCE(billings.paylater_until, billings.due_date)) as final_due_date'),
             ])
             ->join('customers', 'billings.customer_id', '=', 'customers.id')
             ->leftJoin('users', 'customers.user_id', '=', 'users.id')
 
-            // 🔥 PERBAIKAN DI SINI: Kunci status subscription hanya yang ACTIVE
+            // Kunci status subscription hanya yang ACTIVE
             ->leftJoin('customer_subscriptions as cs', function ($join) {
                 $join->on('customers.id', '=', 'cs.customer_id')
                     ->where('cs.status', '=', 'active');
             })
             ->leftJoin('packages as p', 'cs.package_id', '=', 'p.id')
 
-            // --- filter sudah pernah dikirim hari ini ---
-            ->leftJoin('message_events as me', function ($join) use ($today, $slug) {
+            // --- filter anti-double send hari ini ---
+            ->leftJoin('message_events as me', function ($join) use ($today, $slugs) {
                 $join->on('billings.customer_id', '=', 'me.customer_id')
-                    ->where('me.message_type', $slug)
+                    ->whereIn('me.message_type', $slugs) // 💡 Mendukung pencocokan multi-template
                     ->whereDate('me.created_at', $today)
-                    ->whereIn('me.status', ['success', 'failed']);
+                    ->whereIn('me.status', ['success', 'failed', 'pending']);
             })
 
             ->whereNull('me.id')
 
-            // --- rule bisnis reminder ---
+            // --- rule bisnis overdue (sesuai kondisi logikamu) ---
             ->where(function ($q) use ($today) {
-
-                // BL : belum jatuh tempo
+                // BL
                 $q->where(function ($q) use ($today) {
                     $q->where('billings.status', 'BL')
-                        ->whereDate('billings.due_date', '>=', $today);
+                        ->whereDate('billings.due_date', '<', $today); // 💡 Koreksi: Overdue harusnya '<' bukan '>='
                 })
-
-                    // PL : sudah lewat paylater_until tapi status masih PL
+                    // PL
                     ->orWhere(function ($q) use ($today) {
                         $q->where('billings.status', 'PL')
                             ->whereDate('billings.paylater_until', '<', $today);
                     });
             })
 
-            // 🔥 ANTIMISALNYA: Mencegah duplikasi baris jika ada case khusus di DB
+            // 🔥 Leburkan data billing ID agar me-return tepat 1 baris per customer
             ->groupBy([
                 'customers.id',
                 'customers.name',
                 'customers.contact',
-                'p.name',
-                'billings.id',
-                'billings.total_amount',
-                'billings.due_date',
-                'billings.paylater_until'
-            ])
+                'customers.user_id',
+                'p.name'
+            ]);
 
-            ->limit(7);
-
+        // 💡 Ambil semua data tanpa limitasi untuk di-handle delay-nya di level Queue Job
         $data = $query->get();
 
-        // --- logging ringan ---
         LogHelper::logInfo(
             null,
             [
-                'date'  => $today->toDateString(),
-                'slug'  => $slug,
-                'count' => $data->count(),
+                'date'   => $today->toDateString(),
+                'slugs'  => $slugs,
+                'count'  => $data->count(),
             ],
             120,
-            '[BillingReminderCollector] Result collected'
+            '[OverdueBillingCollector] Result collected successfully'
         );
 
         return $data;

@@ -15,5 +15,8 @@ class OverdueBroadcastCommand
         public readonly string $note,
         public readonly string $templateName,
         public readonly WhatsappGatewayAccount $account,
+        public readonly array $bankPayload,
+        public readonly string $contactAdmin,
+        public readonly string $contactWhatsapp,
     ) {}
 }

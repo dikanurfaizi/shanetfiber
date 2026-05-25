@@ -10,86 +10,90 @@ use Carbon\Carbon;
 
 class BillingReminderCollector
 {
-    public function collect(Carbon $today, string $slug): Collection
+    /**
+     * Mengumpulkan data billing berdasarkan 3 slug template anti-duplikasi hari ini.
+     */
+    public function collect(Carbon $today, string $slug1, string $slug2, string $slug3): Collection
     {
+        $slugs = [$slug1, $slug2, $slug3];
+
         $query = Billing::query()
             ->select([
                 'customers.id as customer_id',
                 'customers.name as customer_name',
                 'customers.contact as customer_contact',
+                'customers.user_id as user_id', // 💡 Wajib di-select untuk kebutuhan AdminBankCollector
                 'p.name as package_name',
-                'billings.total_amount as total',
-                'billings.due_date',
-                'billings.paylater_until',
 
-                // 👉 final due date ditentukan di DB
-                DB::raw('COALESCE(billings.paylater_until, billings.due_date) as final_due_date'),
+                // 💡 Menggunakan SUM agar jika ada double tagihan (PL & BL), totalnya otomatis digabung
+                DB::raw('SUM(billings.total_amount) as total'),
+
+                // 💡 Menggunakan MAX untuk mengambil tanggal terjauh/terakhir jika ada dua tagihan
+                DB::raw('MAX(billings.due_date) as due_date'),
+                DB::raw('MAX(billings.paylater_until) as paylater_until'),
+                DB::raw('MAX(COALESCE(billings.paylater_until, billings.due_date)) as final_due_date'),
             ])
             ->join('customers', 'billings.customer_id', '=', 'customers.id')
             ->leftJoin('users', 'customers.user_id', '=', 'users.id')
 
-            // 🔥 PERBAIKAN DI SINI: Kunci status subscription hanya yang ACTIVE
+            // Kunci status subscription hanya yang ACTIVE
             ->leftJoin('customer_subscriptions as cs', function ($join) {
                 $join->on('customers.id', '=', 'cs.customer_id')
-                    ->where('cs.status', '=', 'active'); // Mengabaikan terminated/suspend
+                    ->where('cs.status', '=', 'active');
             })
             ->leftJoin('packages as p', 'cs.package_id', '=', 'p.id')
 
-            // --- filter sudah pernah dikirim hari ini ---
-            ->leftJoin('message_events as me', function ($join) use ($today, $slug) {
+            // --- FILTER SAKTI: Cek apakah sudah pernah dikirim salah satu dari 3 template hari ini ---
+            ->leftJoin('message_events as me', function ($join) use ($today, $slugs) {
                 $join->on('billings.customer_id', '=', 'me.customer_id')
-                    ->where('me.message_type', $slug)
+                    ->whereIn('me.message_type', $slugs) // 💡 Menggunakan whereIn untuk 3 jenis template sekaligus
                     ->whereDate('me.created_at', $today)
                     ->whereIn('me.status', ['success', 'failed', 'pending']);
             })
 
             ->whereNull('me.id')
 
-            // --- rule bisnis reminder ---
+            // --- rule bisnis reminder (BL <= 15 ATAU PL <= 15) ---
             ->where(function ($q) use ($today) {
-                // BL
+                // Kasus BL (Belum Lunas)
                 $q->where(function ($q) use ($today) {
                     $q->where('billings.status', 'BL')
                         ->whereMonth('billings.due_date', $today->month)
                         ->whereYear('billings.due_date', $today->year)
                         ->whereDay('billings.due_date', '<=', 15);
                 })
-                    // PL
+                    // Kasus PL (Paylater)
                     ->orWhere(function ($q) use ($today) {
                         $q->where('billings.status', 'PL')
-                            // 💡 Saran: Tambahkan filter Month untuk PL jika tipenya bulanan seperti BL
                             ->whereMonth('billings.paylater_until', $today->month)
                             ->whereYear('billings.paylater_until', $today->year)
                             ->whereDay('billings.paylater_until', '<=', 15);
                     });
             })
 
-            // 🔥 ANTIMISALNYA: Jika seandainya ada case khusus 1 customer punya 2 active subscription,
-            // group by ini memastikan data billing keluar tepat 1 baris per customer.
+            // 🔥 GROUP BY DIKUNCI PER CUSTOMER & PAKET
+            // Menghapus 'billings.id' dari group by agar data PL & BL milik customer yang sama melebur jadi 1 baris
             ->groupBy([
                 'customers.id',
                 'customers.name',
                 'customers.contact',
-                'p.name',
-                'billings.id', // Menjaga akurasi aggregate data billing
-                'billings.total_amount',
-                'billings.due_date',
-                'billings.paylater_until'
-            ])
-            ->limit(7);
+                'customers.user_id',
+                'p.name'
+            ]);
 
+        // 💡 LIMITATION DIHAPUS (Langsung ambil semua data untuk di-delay di level Job/Queue)
         $data = $query->get();
 
-        // --- logging ringan ---
+        // --- logging status ---
         LogHelper::logInfo(
             null,
             [
-                'date'  => $today->toDateString(),
-                'slug'  => $slug,
-                'count' => $data->count(),
+                'date'   => $today->toDateString(),
+                'slugs'  => $slugs,
+                'count'  => $data->count(),
             ],
             120,
-            '[BillingReminderCollector] Result collected'
+            '[BillingReminderCollector] Result collected successfully without limitation'
         );
 
         return $data;

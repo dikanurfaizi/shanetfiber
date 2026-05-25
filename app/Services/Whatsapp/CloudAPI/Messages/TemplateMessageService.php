@@ -74,14 +74,17 @@ class TemplateMessageService
         $command = new BroadcastMidMonthCommand(
             recipient: $data['recipient'],
             customerId: $data['customer_id'],
-            // customerName: $data['customer_name'],
-            // packageName: $data['package_name'],
+            customerName: $data['customer_name'],
+            packageName: $data['package_name'],
             accountData: $data['account_data'],
             total: $data['total_amount'],
             dueDate: $data['due_date'],
             note: $data['note'],
             templateName: $data['templateName'],
-            account: $data['account']
+            account: $data['account'],
+            bankPayload: $data['bank_payload'],
+            contactAdmin: $data['contact_admin'],
+            contactWhatsapp: $data['contact_whatsapp']
         );
 
         return $this->dispatcher->dispatch($command, null);
@@ -107,7 +110,10 @@ class TemplateMessageService
             lateDays: $data['late_days'],
             note: $data['note'],
             templateName: $data['templateName'],
-            account: $data['account']
+            account: $data['account'],
+            bankPayload: $data['bank_payload'],
+            contactAdmin: $data['contact_admin'],
+            contactWhatsapp: $data['contact_whatsapp']
         );
 
         return $this->dispatcher->dispatch($command, null);
