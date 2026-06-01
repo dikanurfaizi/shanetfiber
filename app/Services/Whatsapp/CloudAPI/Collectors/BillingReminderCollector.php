@@ -11,7 +11,7 @@ use Carbon\Carbon;
 class BillingReminderCollector
 {
     /**
-     * Mengumpulkan data billing berdasarkan 3 slug template anti-duplikasi hari ini.
+     * Mengumpulkan data billing berdasarkan 3 slug template anti-duplikasi hari ini (Maksimal 10 data).
      */
     public function collect(Carbon $today, string $slug1, string $slug2, string $slug3): Collection
     {
@@ -81,8 +81,8 @@ class BillingReminderCollector
                 'p.name'
             ]);
 
-        // 💡 LIMITATION DIHAPUS (Langsung ambil semua data untuk di-delay di level Job/Queue)
-        $data = $query->get();
+        // 💡 Di-limit maksimal 10 data per eksekusi untuk menghindari throttling/pembatasan billing dari Meta
+        $data = $query->limit(10)->get();
 
         // --- logging status ---
         LogHelper::logInfo(
@@ -93,7 +93,7 @@ class BillingReminderCollector
                 'count'  => $data->count(),
             ],
             120,
-            '[BillingReminderCollector] Result collected successfully without limitation'
+            '[BillingReminderCollector] Result collected successfully with throttle limit'
         );
 
         return $data;

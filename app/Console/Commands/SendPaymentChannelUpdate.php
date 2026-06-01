@@ -30,7 +30,6 @@ class SendPaymentChannelUpdate extends Command
             !$feature ||
             !$feature->is_active ||
             $feature->type !== 'cloud' ||
-            !$feature->is_scheduled ||
             empty($feature->schedule)
         ) {
             $this->warn('⏩ Payment channel update broadcast skipped (feature disabled / invalid).');

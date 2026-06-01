@@ -11,7 +11,7 @@ use Carbon\Carbon;
 class OverdueBillingCollector
 {
     /**
-     * Mengumpulkan data billing overdue berdasarkan 3 tipe template anti-duplikasi.
+     * Mengumpulkan data billing overdue berdasarkan 3 tipe template anti-duplikasi (Maksimal 10 data).
      */
     public function collect(Carbon $today, string $slug1, string $slug2, string $slug3): Collection
     {
@@ -75,9 +75,10 @@ class OverdueBillingCollector
                 'p.name'
             ]);
 
-        // 💡 Ambil semua data tanpa limitasi untuk di-handle delay-nya di level Queue Job
-        $data = $query->get();
+        // 💡 Di-limit maksimal 10 data per eksekusi untuk menghindari throttling/pembatasan billing dari Meta
+        $data = $query->limit(10)->get();
 
+        // --- logging status ---
         LogHelper::logInfo(
             null,
             [
@@ -86,7 +87,7 @@ class OverdueBillingCollector
                 'count'  => $data->count(),
             ],
             120,
-            '[OverdueBillingCollector] Result collected successfully'
+            '[OverdueBillingCollector] Result collected successfully with throttle limit'
         );
 
         return $data;

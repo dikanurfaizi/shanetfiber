@@ -29,7 +29,7 @@ class PaymentChannelUpdate
     {
         LogHelper::logInfo(null, [], 100, '[PaymentChannelUpdate] Start process', $traceId);
 
-        $templateName1 = 'info_perubahan_rekening_pembayaran';
+        $templateName1 = 'info_perubahan_rekening_pembayaran_2_bank_1_ewallet';
         $templateName2 = 'info_perubahan_rekening_pembayaran_1_bank_1_ewallet';
         $templateName3 = 'info_perubahan_rekening_pembayaran_2_bank';
 

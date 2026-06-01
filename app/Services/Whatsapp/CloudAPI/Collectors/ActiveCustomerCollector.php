@@ -45,11 +45,13 @@ class ActiveCustomerCollector
             // --- filter sudah pernah dikirim hari ini ---
             ->leftJoin('message_events as me', function ($join) use ($today, $slug1, $slug2, $slug3) {
                 $join->on('billings.customer_id', '=', 'me.customer_id')
-                    ->where(function ($q) use ($slug1, $slug2, $slug3) {
-                        $q->whereIn('me.message_type', [$slug1, $slug2, $slug3]);
-                    })
                     ->whereDate('me.created_at', $today)
-                    ->whereIn('me.status', ['success', 'failed', 'pending']);
+                    ->whereIn('me.status', ['success', 'failed', 'pending'])
+                    ->where(function ($q) use ($slug1, $slug2, $slug3) {
+                        // Cek slug reminder reguler ATAU slug info perubahan rekening
+                        $q->whereIn('me.message_type', [$slug1, $slug2, $slug3])
+                            ->orWhere('me.message_type', '=', 'info_perubahan_rekening_pembayaran');
+                    });
             })
 
             ->whereNull('me.id');
@@ -88,6 +90,14 @@ class ActiveCustomerCollector
             'customers.user_id'
         ]);
 
+        // ===============================================================
+        // RATE LIMITER ENGINE (THROTTLING)
+        // ===============================================================
+        if (!$testMode) {
+            // Batasi hanya mengambil maksimal 10 pelanggan per satu siklus eksekusi cron
+            $query->limit(10);
+        }
+
         $data = $query->get();
 
         // ===============================================================
@@ -107,12 +117,11 @@ class ActiveCustomerCollector
                 'date'      => $today->toDateString(),
                 'slug1'     => $slug1,
                 'slug2'     => $slug2,
-                'slug3'     => $slug3,
                 'count'     => $data->count(),
                 'test_mode' => $testMode ? 'ON' : 'OFF'
             ],
             120,
-            '[BillingReminderCollector] Result collected'
+            '[BillingReminderCollector] Result collected with throttle limit'
         );
 
         return $data;

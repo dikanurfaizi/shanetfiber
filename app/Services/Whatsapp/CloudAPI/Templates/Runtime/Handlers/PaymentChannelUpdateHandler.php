@@ -26,7 +26,7 @@ class PaymentChannelUpdateHandler implements ContractsTemplateHandler
         // ===============================================================
 
         // Kasus 1: 2 Bank, 1 Dana/E-wallet (14 Variabel)
-        if ($template === 'info_perubahan_rekening_pembayaran') {
+        if ($template === 'info_perubahan_rekening_pembayaran_2_bank_1_ewallet') {
             $bodyValues = array_merge(
                 [$command->customerName, $command->channelUpdateDate, $command->channel],
                 $this->getTwoBanksAndOneWallet($command->bankPayload), // 💡 Panggil helper dari trait

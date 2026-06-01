@@ -219,14 +219,18 @@ class Kernel extends ConsoleKernel
         |--------------------------------------------------------------------------
         | 11. PAYMENT CHANNEL UPDATE BROADCAST
         |--------------------------------------------------------------------------
-        | Dijalankan setiap menit pada tanggal 1 Juni 2026, antara jam 08:00 - 21:00 WIB.
-        | Validasi tanggal & jam diserahkan sepenuhnya ke DB via Command.
-        */
+        | Dijalankan setiap 30 menit HANYA pada tanggal 1 Juni 2026.
+        | Output otomatis di-append ke custom log file.
+        | */
         $schedule->command('reminder:payment-channel-update-send')
-            ->cron('* * 1,2 6 *')
+            ->cron('*/30 * 1 6 *') // '*/30' memastikan command hanya dieksekusi pada menit ke-0 dan ke-30
             ->when(function () {
                 return now()->year === 2026;
-            });
+            })
+            ->onFailure(fn() => LogHelper::logError(null, ['time' => now()], 500, '[Scheduler] reminder:payment-channel-update-send failed'))
+            ->onSuccess(fn() => LogHelper::logInfo(null, ['time' => now()], 200, '[Scheduler] reminder:payment-channel-update-send finished successfully'))
+            ->withoutOverlapping(10)
+            ->appendOutputTo(storage_path('logs/scheduler-payment-channel.log'));
     }
 
     /**
