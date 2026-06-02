@@ -22,6 +22,7 @@ use App\Services\Billings\BillingService;
 use App\Services\Billings\PayLaterService;
 use App\Services\Billings\PaymentCancellationService;
 use App\Services\Billings\PaymentService;
+use App\Services\Messaging\Collectors\AdminBankCollector;
 use App\Services\Routerboard\MikrotikService;
 use App\Services\Routerboard\Ppp\SecretService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -274,27 +275,27 @@ class BillingController extends Controller
         }
 
         // Validasi Keberadaan Sesi Aktif Pelanggan (PPP Active Session)
-        $usernamePpp = $customer->username;
-        try {
-            $activeUser = $this->secretService->getOnePppSecretActive($mikrotik, $usernamePpp, $traceId);
+        // $usernamePpp = $customer->username;
+        // try {
+        //     $activeUser = $this->secretService->getOnePppSecretActive($mikrotik, $usernamePpp, $traceId);
 
-            if (empty($activeUser)) {
-                LogHelper::logWarning(null, [
-                    'billing_id' => $billing->id,
-                    'username'   => $usernamePpp
-                ], 404, 'payment.user_session.offline', $traceId, $timer->lap());
+        //     if (empty($activeUser)) {
+        //         LogHelper::logWarning(null, [
+        //             'billing_id' => $billing->id,
+        //             'username'   => $usernamePpp
+        //         ], 404, 'payment.user_session.offline', $traceId, $timer->lap());
 
-                return redirect()->back()->with('error', __('payment.mikrotik.user_offline', ['username' => $usernamePpp]));
-            }
-        } catch (\Throwable $e) {
-            LogHelper::logError(null, [
-                'billing_id' => $billing->id,
-                'username'   => $usernamePpp,
-                'error'      => $e->getMessage()
-            ], 500, 'payment.user_query.failed', $traceId, $timer->lap());
+        //         return redirect()->back()->with('error', __('payment.mikrotik.user_offline', ['username' => $usernamePpp]));
+        //     }
+        // } catch (\Throwable $e) {
+        //     LogHelper::logError(null, [
+        //         'billing_id' => $billing->id,
+        //         'username'   => $usernamePpp,
+        //         'error'      => $e->getMessage()
+        //     ], 500, 'payment.user_query.failed', $traceId, $timer->lap());
 
-            return redirect()->back()->with('error', __('payment.mikrotik.query_failed', ['username' => $usernamePpp]));
-        }
+        //     return redirect()->back()->with('error', __('payment.mikrotik.query_failed', ['username' => $usernamePpp]));
+        // }
 
         // === 3. NOT ACTIVE PERIOD FLOW ===
         if ($paymentMethod === 'not-active-periode') {
@@ -618,11 +619,12 @@ class BillingController extends Controller
     {
         $billing->load([
             'customer',
-            'billingItems',      // 👈 ini kunci
+            'billingItems',
             'billingSubscription',
         ]);
 
-        $banks = Bank::orderBy('name', 'ASC')->where('disabled', 'false')->where('user_id', $billing->customer->user_id)->get();
+        $bankCollector = new AdminBankCollector();
+        $banks = $bankCollector->getBanksByUserId((int) $billing->customer->user_id);
 
         $websystem = Websystem::where('slug', 'websystem')->first();
 
