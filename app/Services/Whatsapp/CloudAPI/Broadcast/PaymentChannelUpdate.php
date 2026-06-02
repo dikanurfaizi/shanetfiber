@@ -2,6 +2,7 @@
 
 namespace App\Services\Whatsapp\CloudAPI\Broadcast;
 
+use App\Enums\WhatsAppAction;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Jobs\Whatsapp\CloudAPI\Broadcast\PaymentChannelUpdateJob;
@@ -32,8 +33,9 @@ class PaymentChannelUpdate
         $templateName1 = 'info_perubahan_rekening_pembayaran_2_bank_1_ewallet';
         $templateName2 = 'info_perubahan_rekening_pembayaran_1_bank_1_ewallet';
         $templateName3 = 'info_perubahan_rekening_pembayaran_2_bank';
+        $messageType = WhatsAppAction::PAYMENT_CHANNEL_UPDATE->value;
 
-        $customers = $this->collector->collect(now(), $templateName1, $templateName2, $templateName3);
+        $customers = $this->collector->collect(now(), $messageType, $templateName1, $templateName2, $templateName3);
         if ($customers->isEmpty()) return;
 
         // ===============================================================
@@ -59,8 +61,7 @@ class PaymentChannelUpdate
         // ===============================================================
         $delayInSeconds    = 0;
         $delay             = $this->getNextDelay('notification', $traceId);
-        $channelUpdateDate = '1 Juni 2026';
-        $channel           = 'Shanetfiber';
+        $channelUpdateDate = Carbon::parse('2026-06-01')->translatedFormat('d F Y');
         $overrideNumber    = config('messaging.phone_number_override');
         $formatter         = new FormatReceiver; // Tetap butuh untuk format nomor customer di dalam loop
 
@@ -78,6 +79,7 @@ class PaymentChannelUpdate
 
             $resolvedTemplate = $bankResolution['template'];
             $bankPayload      = $bankResolution['payload'];
+            $channel          = $data?->package_name ?? 'Shanetfiber';
 
             $targetContact = $overrideNumber ? (string) $overrideNumber : $data->customer_contact;
             $recipient     = $formatter->formatReceiver($targetContact, null, false);

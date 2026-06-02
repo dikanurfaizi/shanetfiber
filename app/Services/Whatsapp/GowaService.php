@@ -17,6 +17,7 @@ use App\Services\Messaging\Collectors\BillingPeriodCollector;
 use App\Services\Messaging\Collectors\FormatterCollector;
 use App\Services\Messaging\Collectors\BroadcastMidMonthCollector;
 use App\Services\Messaging\Collectors\UnpaidSummaryCollector;
+use App\Services\Messaging\Collectors\ChannelUpdateCustomerCollector;
 use App\Services\Messaging\Handlers\ActivationHandler;
 use App\Services\Messaging\Handlers\BillingStatusHandler;
 use App\Services\Messaging\Handlers\BroadcastMonthlyHandler;
@@ -28,6 +29,7 @@ use App\Services\Messaging\Handlers\TestMessageHandler;
 use App\Services\Messaging\Handlers\BroadcastMidMonthHandler;
 use App\Services\Messaging\MessageBuilder;
 use App\Services\Messaging\MessageDispatcher;
+use App\Services\Messaging\Handlers\PaymentChannelUpdateHandler;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
@@ -48,6 +50,7 @@ class GowaService
         private BroadcastMidMonthCollector $collector,
         private FormatReceiver $formatNumber,
         private UnpaidSummaryCollector $unpaidSummaryCollector,
+        private ChannelUpdateCustomerCollector $channelUpdateCustomerCollector,
     ) {}
 
     // ============================================
@@ -565,6 +568,71 @@ class GowaService
                 ],
                 500,
                 '[Menu] Failed to dispatch handler',
+                $traceId
+            );
+        }
+    }
+
+    public function paymentChannelUpdate(
+        string $eventId,
+        string $deviceId,
+        string $traceId,
+        string $recipient,
+        array $bankPayload,
+        string $resolvedTemplate
+    ): void {
+        $queueName = 'notification';
+        try {
+            LogHelper::logInfo(
+                null,
+                [
+                    'recipient' => $recipient,
+                    'template' => $resolvedTemplate
+                ],
+                200,
+                '[Payment Channel Update] Preparing to dispatch handler',
+                $traceId
+            );
+
+            // 👉 Validasi kontak kosong untuk mencegah anomali data di antrean gateway
+            if (empty($recipient)) {
+                LogHelper::logWarning(
+                    null,
+                    ['event_id' => $eventId],
+                    400,
+                    '[Payment Channel Update] Empty recipient contact number',
+                    $traceId
+                );
+                return;
+            }
+
+            $this->dispatcher->dispatch(
+                $resolvedTemplate,
+                fn(string $category) => new PaymentChannelUpdateHandler(
+                    builder: $this->builder,
+                    recipient: $recipient,                // 👈 Masuk ke constructor handler
+                    bankPayload: $bankPayload,            // 👈 Masuk ke constructor handler
+                    resolvedTemplate: $resolvedTemplate,  // 👈 Masuk ke constructor handler
+                    category: $category
+                ),
+                queue: $queueName,
+                traceId: $traceId,
+                eventId: $eventId,
+                deviceId: $deviceId,
+            );
+        } catch (\Throwable $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'trace_id' => $traceId,
+                    'recipient' => $recipient ?? null,
+                    'error' => [
+                        'code' => $e->getCode(),
+                        'message' => $e->getMessage(),
+                    ],
+                ],
+                500,
+                '[Payment Channel Update] Failed to dispatch handler',
                 $traceId
             );
         }

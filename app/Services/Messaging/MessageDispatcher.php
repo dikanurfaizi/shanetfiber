@@ -212,6 +212,7 @@ class MessageDispatcher
             WhatsAppAction::CHANGES_PACKAGE->value => 30,
             WhatsAppAction::UNPAYMENT->value => 30,
             WhatsAppAction::TEST_MESSAGE->value => 15,
+            WhatsAppAction::PAYMENT_CHANNEL_UPDATE->value => 300,
             'payment' => 30,
             default => 90,
         };

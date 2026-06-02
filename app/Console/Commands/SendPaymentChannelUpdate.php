@@ -28,9 +28,7 @@ class SendPaymentChannelUpdate extends Command
 
         if (
             !$feature ||
-            !$feature->is_active ||
-            $feature->type !== 'cloud' ||
-            empty($feature->schedule)
+            !$feature->is_active
         ) {
             $this->warn('⏩ Payment channel update broadcast skipped (feature disabled / invalid).');
             return Command::SUCCESS;
@@ -70,7 +68,7 @@ class SendPaymentChannelUpdate extends Command
             // ===============================================================
             if (!$testMode) {
                 // 1. Validasi Tahun, Bulan (Juni), dan Tanggal (1 atau 2)
-                $allowedDays = [1];
+                $allowedDays = [1, 2, 3, 4, 5];
                 if ($now->year !== 2026 || $now->month !== 6 || !in_array($now->day, $allowedDays, true)) {
                     $this->warn('⏩ Skipped: Today is not June 1st or 2nd, 2026.');
                     return Command::SUCCESS;

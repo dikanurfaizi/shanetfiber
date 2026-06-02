@@ -2,7 +2,7 @@
 
 namespace App\Services\Whatsapp\CloudAPI\Collectors;
 
-use App\Models\Billings\Billing;
+use App\Models\Customers\Customer;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\LogHelper;
@@ -10,30 +10,27 @@ use Carbon\Carbon;
 
 class ActiveCustomerCollector
 {
-    public function collect(Carbon $today, string $slug1, string $slug2, string $slug3): Collection
+    /**
+     * Mengumpulkan data customer yang belum pernah menerima pesan broadcast tipe ini.
+     * * @param Carbon $today Tanggal hari ini (tetap dipertahankan untuk log)
+     * @param string $messageType Slug utama pengiriman (e.g., 'info_perubahan_rekening_pembayaran')
+     * @param string $slug1 Tambahan pengecekan slug pembanding 1
+     * @param string $slug2 Tambahan pengecekan slug pembanding 2
+     * @param string $slug3 Tambahan pengecekan slug pembanding 3
+     */
+    public function collect(Carbon $today, string $messageType, string $slug1, string $slug2, string $slug3): Collection
     {
         $testMode = config('messaging.reminder_allow_test', false);
 
-        $query = Billing::query()
+        $query = Customer::query()
             ->select([
                 'customers.id as customer_id',
                 'customers.name as customer_name',
                 'customers.contact as customer_contact',
-                'customers.user_id as user_id', // Dipetakan kembali ke key user_id relasi admin bank
-
-                // 👉 Menggunakan MAX untuk mengantisipasi jika customer punya > 1 subs aktif/paket berbeda
+                'customers.user_id as user_id',
                 DB::raw('MAX(p.name) as package_name'),
-
-                // 👉 Jika ada 2 billing aktif, nominalnya digabung (akumulasi) agar informatif
-                DB::raw('SUM(billings.total_amount) as total'),
-
-                // 👉 Ambil batas waktu jatuh tempo paling maksimal/terakhir
-                DB::raw('MAX(billings.due_date) as due_date'),
-                DB::raw('MAX(billings.paylater_until) as paylater_until'),
-                DB::raw('MAX(COALESCE(billings.paylater_until, billings.due_date)) as final_due_date'),
             ])
-            ->join('customers', 'billings.customer_id', '=', 'customers.id')
-            ->leftJoin('users', 'customers.user_id', '=', 'users.id')
+            ->leftJoin('users as u', 'customers.user_id', '=', 'u.id')
 
             // Kunci status subscription hanya yang ACTIVE
             ->leftJoin('customer_subscriptions as cs', function ($join) {
@@ -42,47 +39,22 @@ class ActiveCustomerCollector
             })
             ->leftJoin('packages as p', 'cs.package_id', '=', 'p.id')
 
-            // --- filter sudah pernah dikirim hari ini ---
-            ->leftJoin('message_events as me', function ($join) use ($today, $slug1, $slug2, $slug3) {
-                $join->on('billings.customer_id', '=', 'me.customer_id')
-                    ->whereDate('me.created_at', $today)
+            // --- FILTER ANTI-DOUBLE (MESSAGE EVENTS) ---
+            // Pengecekan murni berdasarkan message_type & tambahan slugs tanpa filter tanggal me.created_at
+            ->leftJoin('message_events as me', function ($join) use ($messageType, $slug1, $slug2, $slug3) {
+                $join->on('customers.id', '=', 'me.customer_id')
                     ->whereIn('me.status', ['success', 'failed', 'pending'])
-                    ->where(function ($q) use ($slug1, $slug2, $slug3) {
-                        // Cek slug reminder reguler ATAU slug info perubahan rekening
-                        $q->whereIn('me.message_type', [$slug1, $slug2, $slug3])
-                            ->orWhere('me.message_type', '=', 'info_perubahan_rekening_pembayaran');
+                    ->where(function ($q) use ($messageType, $slug1, $slug2, $slug3) {
+                        // Cek apakah customer sudah pernah menerima slug utama ATAU slugs tambahan lainnya
+                        $q->where('me.message_type', '=', $messageType)
+                            ->orWhereIn('me.message_type', [$slug1, $slug2, $slug3]);
                     });
             })
+            ->whereNull('me.id')
 
-            ->whereNull('me.id');
+            // --- FILTER USER ID BUKAN ADMIN UTAMA (Bukan ID 1) ---
+            ->where('customers.user_id', '!=', 1);
 
-        // ===============================================================
-        // CONDITIONAL FILTER BASED ON MODE
-        // ===============================================================
-        if (!$testMode) {
-            // JIKA PRODUCTION: Jalankan business rules penyaringan tanggal yang ketat
-            $query->where(function ($q) use ($today) {
-                // Status BL (Belum Lunas)
-                $q->where(function ($q) use ($today) {
-                    $q->where('billings.status', 'BL')
-                        ->whereMonth('billings.due_date', $today->month)
-                        ->whereYear('billings.due_date', $today->year)
-                        ->whereDay('billings.due_date', '<=', 15);
-                })
-                    // Status PL (Paylater)
-                    ->orWhere(function ($q) use ($today) {
-                        $q->where('billings.status', 'PL')
-                            ->whereMonth('billings.paylater_until', $today->month)
-                            ->whereYear('billings.paylater_until', $today->year)
-                            ->whereDay('billings.paylater_until', '<=', 15);
-                    });
-            });
-        } else {
-            // JIKA TEST MODE: Longgarkan aturan tanggal, ambil semua billing yang masih menunggak (BL/PL)
-            $query->whereIn('billings.status', ['BL', 'PL']);
-        }
-
-        // Group by mutlak pada entitas customer unik
         $query->groupBy([
             'customers.id',
             'customers.name',
@@ -94,8 +66,7 @@ class ActiveCustomerCollector
         // RATE LIMITER ENGINE (THROTTLING)
         // ===============================================================
         if (!$testMode) {
-            // Batasi hanya mengambil maksimal 10 pelanggan per satu siklus eksekusi cron
-            $query->limit(10);
+            $query->limit(10); // Tetap di-limit 10 data per eksekusi
         }
 
         $data = $query->get();
@@ -104,24 +75,21 @@ class ActiveCustomerCollector
         // TEST MODE ENGINE: POTONG DATA (1 CUSTOMER PER ADMIN)
         // ===============================================================
         if ($testMode && $data->isNotEmpty()) {
-            // Menggunakan fungsi group Collection Laravel berdasarkan user_id (admin), lalu ambil baris pertama saja
             $data = $data->groupBy('user_id')->map(function ($group) {
                 return $group->first();
             })->values();
         }
 
-        // --- logging ringan ---
         LogHelper::logInfo(
             null,
             [
                 'date'      => $today->toDateString(),
-                'slug1'     => $slug1,
-                'slug2'     => $slug2,
                 'count'     => $data->count(),
-                'test_mode' => $testMode ? 'ON' : 'OFF'
+                'test_mode' => $testMode ? 'ON' : 'OFF',
+                'slugs'     => [$messageType, $slug1, $slug2, $slug3]
             ],
             120,
-            '[BillingReminderCollector] Result collected with throttle limit'
+            '[ActiveCustomerCollector] Dynamic customer data collected successfully'
         );
 
         return $data;

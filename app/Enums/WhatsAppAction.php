@@ -15,4 +15,5 @@ enum WhatsAppAction: string
     case ORDER_CREATED = 'order_created';
     case CHANGES_PACKAGE = 'changes_paket';
     case TEST_MESSAGE = 'test_message';
+    case PAYMENT_CHANNEL_UPDATE = 'payment_channel_update';
 }
