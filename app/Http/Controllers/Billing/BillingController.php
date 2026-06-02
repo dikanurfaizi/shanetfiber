@@ -585,7 +585,7 @@ class BillingController extends Controller
             'LS' => 'PAID',
             'BL' => 'UNPAID',
             'PL' => 'PAYLATER',
-            'NP' => 'NOT ACTIVE PERIOD',
+            'VD' => 'NOT ACTIVE PERIOD',
         ];
 
         $statusCamel = now()->format('F Y');
