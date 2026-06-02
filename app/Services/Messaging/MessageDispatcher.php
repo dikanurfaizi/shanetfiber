@@ -193,10 +193,9 @@ class MessageDispatcher
                 }
 
                 // 2. Cek apakah selisih baseTime dengan waktu sekarang sudah >= 3 menit
-                // Kita gunakan abs(now()->diffInMinutes($baseTime)) agar aman jika ada waktu di masa depan
                 if (now()->diffInMinutes($baseTime) >= 1) {
                     $baseTime = now();
-                    $source = 'fallback_stale_data'; // Opsional: tandai bahwa ini fallback karena data lama
+                    $source = 'fallback_stale_data';
                 }
             } else {
                 $baseTime = now();
@@ -204,18 +203,8 @@ class MessageDispatcher
             }
         }
 
-        // 4. tentukan interval
-        $interval = match ($type) {
-            WhatsAppAction::ACTIVATION->value => 30,
-            WhatsAppAction::PAYLATER->value => 30,
-            WhatsAppAction::ORDER_CREATED->value => 30,
-            WhatsAppAction::CHANGES_PACKAGE->value => 30,
-            WhatsAppAction::UNPAYMENT->value => 30,
-            WhatsAppAction::TEST_MESSAGE->value => 15,
-            WhatsAppAction::PAYMENT_CHANNEL_UPDATE->value => 300,
-            'payment' => 30,
-            default => 90,
-        };
+        // 4. tentukan interval (Dibuat rata sama untuk semua tipe pesan)
+        $interval = 300; // Contoh: disamakan menjadi 300 detik (5 menit)
 
         $final_delay = $baseTime->copy()->addSeconds(30 + $interval);
 
