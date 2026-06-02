@@ -203,10 +203,11 @@ class MessageDispatcher
             }
         }
 
-        // 4. tentukan interval (Dibuat rata sama untuk semua tipe pesan)
-        $interval = 300; // Contoh: disamakan menjadi 300 detik (5 menit)
+        // 4. tentukan interval random antara 3 menit (180 detik) sampai 15 menit (900 detik)
+        $interval = rand(180, 900);
 
-        $final_delay = $baseTime->copy()->addSeconds(30 + $interval);
+        // 5. final delay = base + interval random (tanpa tambahan hardcoded buffer jika ingin murni max 10 menit)
+        $final_delay = $baseTime->copy()->addSeconds($interval);
 
         LogHelper::logInfo(
             null,

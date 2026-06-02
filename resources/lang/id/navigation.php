@@ -94,7 +94,7 @@ return [
     ],
     'conversations' => [
         'nav-item' => 'Pesan',
-        'index' => 'WhatsApp Gateway'
+        'index' => 'WhatsApp'
     ],
     'settings' => [
         'nav-item' => 'Pengaturan',
@@ -136,14 +136,14 @@ return [
             'features' => 'Fitur',
         ],
         'message-events' => [
-            'nav-item' => 'Template Pesan',
+            'nav-item' => 'Pesan',
             'index' => 'Semua Log Pesan',
         ],
         'payment-gateways' => [
             'nav-item' => 'Payment Gateway',
         ],
         'banks' => [
-            'nav-item' => 'Rekening Pusat',
+            'nav-item' => 'Rekening',
         ],
         'autoisolir' => [
             'nav-item' => 'Auto Isolir',

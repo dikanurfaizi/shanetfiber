@@ -22,6 +22,8 @@ use App\Services\Billings\BillingService;
 use App\Services\Billings\PayLaterService;
 use App\Services\Billings\PaymentCancellationService;
 use App\Services\Billings\PaymentService;
+use App\Services\Routerboard\MikrotikService;
+use App\Services\Routerboard\Ppp\SecretService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
@@ -43,6 +45,10 @@ class BillingController extends Controller
     private BillingReportService $billingReportService;
 
     private PayLaterService $payLaterService;
+
+    private MikrotikService $mikrotikService;
+
+    private SecretService $secretService;
 
     public function __construct(
         BillingService $billingService,
@@ -231,85 +237,108 @@ class BillingController extends Controller
     {
         $traceId = (string) Str::uuid();
         $timer = new ExecutionTimer();
+        $paymentMethod = $request->payment_methode;
 
         LogHelper::logInfo(null, [
             'billing_id'     => $billing->id,
             'customer_id'    => $billing->customer_id,
-            'payment_method' => $request->payment_methode,
+            'payment_method' => $paymentMethod,
         ], 100, 'payment.request.received', $traceId, $timer->lap());
 
-        $paymentMethod = $request->payment_methode;
-
-        // === ROUTING DECISIONS (LOG ONCE PER PATH) ===
-        if ($paymentMethod === 'transfer') {
-
-            LogHelper::logInfo(null, [
-                'billing_id' => $billing->id,
-            ], 200, 'payment.route.transfer', $traceId, $timer->lap());
-
-            return redirect()->route('billings.transfer', $billing->slug);
+        // === 1. ROUTING DECISIONS (SHORT-CIRCUIT) ===
+        if (in_array($paymentMethod, ['transfer', 'paylater'])) {
+            LogHelper::logInfo(null, ['billing_id' => $billing->id], 200, "payment.route.{$paymentMethod}", $traceId, $timer->lap());
+            return redirect()->route("billings.{$paymentMethod}", $billing->slug);
         }
 
-        if ($paymentMethod === 'paylater') {
+        // === 2. MIKROTIK INFRASTRUCTURE & ACTIVE SESSION VALIDATION ===
+        $customer = $billing->customer;
+        $mikrotik = $customer?->mikrotik;
 
-            LogHelper::logInfo(null, [
-                'billing_id' => $billing->id,
-            ], 200, 'payment.route.paylater', $traceId, $timer->lap());
-
-            return redirect()->route('billings.paylater', $billing->slug);
+        if (!$mikrotik) {
+            return redirect()->back()->with('error', __('payment.mikrotik.not_found'));
         }
 
+        // Validasi Jalur Koneksi Utama API MikroTik
+        try {
+            $this->mikrotikService->getMikrotik($mikrotik, $traceId);
+        } catch (\Throwable $e) {
+            LogHelper::logError(null, [
+                'billing_id' => $billing->id,
+                'router_id'  => $mikrotik->id,
+                'host'       => $mikrotik->host,
+                'error'      => $e->getMessage()
+            ], 500, 'payment.mikrotik_connection.failed', $traceId, $timer->lap());
+
+            return redirect()->back()->with('error', __('payment.mikrotik.connection_failed'));
+        }
+
+        // Validasi Keberadaan Sesi Aktif Pelanggan (PPP Active Session)
+        $usernamePpp = $customer->username;
+        try {
+            $activeUser = $this->secretService->getOnePppSecretActive($mikrotik, $usernamePpp, $traceId);
+
+            if (empty($activeUser)) {
+                LogHelper::logWarning(null, [
+                    'billing_id' => $billing->id,
+                    'username'   => $usernamePpp
+                ], 404, 'payment.user_session.offline', $traceId, $timer->lap());
+
+                return redirect()->back()->with('error', __('payment.mikrotik.user_offline', ['username' => $usernamePpp]));
+            }
+        } catch (\Throwable $e) {
+            LogHelper::logError(null, [
+                'billing_id' => $billing->id,
+                'username'   => $usernamePpp,
+                'error'      => $e->getMessage()
+            ], 500, 'payment.user_query.failed', $traceId, $timer->lap());
+
+            return redirect()->back()->with('error', __('payment.mikrotik.query_failed', ['username' => $usernamePpp]));
+        }
+
+        // === 3. NOT ACTIVE PERIOD FLOW ===
         if ($paymentMethod === 'not-active-periode') {
+            $userId = auth()->user()->id;
 
             $billing->update([
-                'updated_by' => auth()->user()->id,
-                'status'      => 'VD',
+                'updated_by' => $userId,
+                'status'     => 'VD',
                 'updated_at' => now()
             ]);
 
-            $billing->billingSubscription->update([
-                'updated_by' => auth()->user()->id,
-                'status'      => 'expired'
+            $billing->billingSubscription?->update([
+                'updated_by' => $userId,
+                'status'     => 'expired'
             ]);
 
-            $billing->billingSubscription->customerSubscription->update([
-                'status' => 'paused',
+            $billing->billingSubscription?->customerSubscription?->update([
+                'status'        => 'paused',
                 'terminated_at' => now(),
             ]);
 
-            LogHelper::logInfo(null, [
-                'billing_id' => $billing->id,
-                'status'     => 'VD',
-            ], 200, 'payment.marked.no_usage', $traceId, $timer->lap());
+            LogHelper::logInfo(null, ['billing_id' => $billing->id, 'status' => 'VD'], 200, 'payment.marked.no_usage', $traceId, $timer->lap());
 
-            return redirect()->back()
-                ->with('success', 'The billing status for ' . $billing->customer_name . ' has been marked as No Usage for this period.');
+            return redirect()->back()->with('success', __('payment.success.no_usage', ['name' => $billing->customer_name]));
         }
 
-        // === MAIN PAYMENT FLOW ===
+        // === 4. MAIN PAYMENT FLOW ===
         try {
             $paymentData = $this->preparePaymentData($request);
-
-            $result = $this->paymentService
-                ->processPayment($billing, $paymentData, $traceId);
+            $result = $this->paymentService->processPayment($billing, $paymentData, $traceId);
 
             if (!empty($result['receipt'])) {
                 event(new PaymentSucceeded($result['receipt']->id, $traceId));
             }
 
-            return redirect()->back()
-                ->with('success', 'Payment ' . $billing->customer_name . ' successfully.');
+            return redirect()->back()->with('success', __('payment.success.processed', ['name' => $billing->customer_name]));
         } catch (\Throwable $e) {
-
-            // hanya log di boundary, DETAIL sudah di service
             LogHelper::logError(null, [
                 'billing_id' => $billing->id,
                 'exception'  => class_basename($e),
                 'message'    => $e->getMessage(),
             ], 500, 'payment.request.failed', $traceId, $timer->lap());
 
-            return redirect()->back()
-                ->with('error', 'Payment failed.');
+            return redirect()->back()->with('error', __('payment.errors.failed'));
         }
     }
 
