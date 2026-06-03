@@ -98,7 +98,8 @@ class GowaService
                 queue: $queueName,
                 traceId: $traceId,
                 eventId: $eventId,
-                deviceId: $deviceId
+                deviceId: $deviceId,
+                delay: null
             );
         } catch (\Throwable $e) {
             LogHelper::logError(null, [
@@ -145,7 +146,8 @@ class GowaService
                 queue: $queueName,
                 traceId: $traceId,
                 eventId: $eventId,
-                deviceId: $deviceId
+                deviceId: $deviceId,
+                delay: null
             );
 
             LogHelper::logInfo(null, [
@@ -191,7 +193,8 @@ class GowaService
                 queue: $queueName,
                 traceId: $traceId,
                 eventId: $eventId,
-                deviceId: $deviceId
+                deviceId: $deviceId,
+                delay: null
             );
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -234,7 +237,8 @@ class GowaService
                 queue: $queueName,
                 traceId: $traceId,
                 eventId: $eventId,
-                deviceId: $deviceId
+                deviceId: $deviceId,
+                delay: null
             );
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -277,7 +281,8 @@ class GowaService
                 queue: $queueName,
                 traceId: $traceId,
                 eventId: $eventId,
-                deviceId: $deviceId
+                deviceId: $deviceId,
+                delay: null
             );
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -339,9 +344,9 @@ class GowaService
                     ),
                     queue: $queueName,
                     traceId: $traceId,
-                    // delay: $delayTime,
                     eventId: $eventId,
-                    deviceId: $deviceId
+                    deviceId: $deviceId,
+                    delay: null,
                 );
 
                 $globalIndex++;
@@ -399,9 +404,9 @@ class GowaService
                         ),
                         queue: $queueName,
                         traceId: $traceId,
-                        // delay: $delayTime,
                         eventId: $eventId,
-                        deviceId: $deviceId
+                        deviceId: $deviceId,
+                        delay: null
                     );
                     $globalIndex++;
                 }
@@ -438,7 +443,6 @@ class GowaService
     ): void {
         $queueName = 'notification';
         try {
-            // $delayTime = $this->delayMessage($globalIndex, 'interactive');
             $this->dispatcher->dispatch(
                 $action,
                 fn(string $category) => new ChangesPackageHandler(
@@ -453,7 +457,8 @@ class GowaService
                 queue: $queueName,
                 traceId: $traceId,
                 eventId: $eventId,
-                deviceId: $deviceId
+                deviceId: $deviceId,
+                delay: null
             );
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -511,7 +516,8 @@ class GowaService
                 queue: $queueName,
                 traceId: $traceId,
                 eventId: null,
-                deviceId: $activeAccount->defaultNumber?->device_id
+                deviceId: $activeAccount->defaultNumber?->device_id,
+                delay: null
             );
 
             LogHelper::logInfo(null, [
@@ -549,10 +555,11 @@ class GowaService
                     custName: $custName,
                     category: $category
                 ),
-                $queueName,
-                $traceId,
-                $eventId,
-                $deviceId
+                queue: $queueName,
+                traceId: $traceId,
+                eventId: $eventId,
+                deviceId: $deviceId,
+                delay: null
             );
         } catch (\Throwable $e) {
             LogHelper::logError(

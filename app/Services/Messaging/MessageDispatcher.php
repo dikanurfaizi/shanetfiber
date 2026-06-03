@@ -24,7 +24,8 @@ class MessageDispatcher
         ?string $queue = 'default',
         ?string $traceId = null,
         ?int $eventId = null,
-        string $deviceId
+        string $deviceId,
+        ?Carbon $delay = null // 👈 1. Tambahkan parameter delay opsional di bagian akhir (default null)
     ): void {
 
         $startTime = microtime(true);
@@ -60,7 +61,8 @@ class MessageDispatcher
                 'message' => $message,
             ];
 
-            $delay = $this->delayMessage($action);
+            // 👈 2. Jika parameter $delay tidak null, gunakan nilai tersebut. Jika null, jalankan delayMessage().
+            $finalDelay = $delay ?? $this->delayMessage($action);
 
             // Create / Update event
             if ($eventId) {
@@ -73,7 +75,7 @@ class MessageDispatcher
                     'trace_id'      => $traceId,
                     'payload'       => $payload,
                     'device_id'     => $deviceId,
-                    'scheduled_at'  => $delay,
+                    'scheduled_at'  => $finalDelay, // 👈 Ganti jadi $finalDelay
                 ]);
             } else {
 
@@ -86,7 +88,7 @@ class MessageDispatcher
                     'trace_id'      => $traceId,
                     'stage'         => 'SENDING JOB',
                     'device_id'     => $deviceId,
-                    'scheduled_at'  => $delay,
+                    'scheduled_at'  => $finalDelay, // 👈 Ganti jadi $finalDelay
                 ]);
             }
 
@@ -96,13 +98,13 @@ class MessageDispatcher
             LogHelper::logInfo(
                 null,
                 [
-                    'event_id'    => $event->id,
-                    'action'      => $action,
-                    'channel'     => 'go_whatsapp',
-                    'device_id'   => $deviceId,
-                    'receiver'    => $formattedReceiver,
-                    'queue'       => $queue,
-                    'delay_seconds' => $delay->diffInSeconds(Carbon::now()),
+                    'event_id'      => $event->id,
+                    'action'        => $action,
+                    'channel'       => 'go_whatsapp',
+                    'device_id'     => $deviceId,
+                    'receiver'      => $formattedReceiver,
+                    'queue'         => $queue,
+                    'delay_seconds' => $finalDelay->diffInSeconds(Carbon::now()), // 👈 Ganti jadi $finalDelay
                 ],
                 200,
                 '[MessageDispatcher] Dispatching',
@@ -120,7 +122,7 @@ class MessageDispatcher
                 $deviceId
             )
                 ->onQueue($queue)
-                ->delay($delay);
+                ->delay($finalDelay); // 👈 Ganti jadi $finalDelay
 
             // ✅ SUCCESS LOG (RINGKAS & TRACEABLE)
             LogHelper::logInfo(
@@ -143,11 +145,11 @@ class MessageDispatcher
             LogHelper::logError(
                 null,
                 [
-                    'trace_id' => $traceId,
-                    'action'   => $action,
-                    'stage'    => $stage,
+                    'trace_id'  => $traceId,
+                    'action'    => $action,
+                    'stage'     => $stage,
                     'device_id' => $deviceId,
-                    'error'    => $e->getMessage(),
+                    'error'     => $e->getMessage(),
                 ],
                 500,
                 '[MessageDispatcher] Dispatch failed',
@@ -170,7 +172,6 @@ class MessageDispatcher
             ->first();
 
         if ($lastJob) {
-            // available_at biasanya UNIX timestamp
             $baseTime = Carbon::createFromTimestamp($lastJob->available_at);
             $source = 'jobs';
         } else {
@@ -183,7 +184,6 @@ class MessageDispatcher
                 $scheduled = $lastEvent->scheduled_at ? Carbon::parse($lastEvent->scheduled_at) : null;
                 $sent = $lastEvent->sent_at ? Carbon::parse($lastEvent->sent_at) : null;
 
-                // 1. Tentukan baseTime awal & source berdasarkan yang terbaru
                 if ($scheduled && $sent) {
                     $baseTime = $scheduled->greaterThan($sent) ? $scheduled : $sent;
                     $source = $scheduled->greaterThan($sent) ? 'message_events_scheduled' : 'message_events_sent';
@@ -192,7 +192,6 @@ class MessageDispatcher
                     $source = $scheduled ? 'message_events_scheduled' : 'message_events_sent';
                 }
 
-                // 2. Cek apakah selisih baseTime dengan waktu sekarang sudah >= 3 menit
                 if (now()->diffInMinutes($baseTime) >= 1) {
                     $baseTime = now();
                     $source = 'fallback_stale_data';
@@ -203,10 +202,7 @@ class MessageDispatcher
             }
         }
 
-        // 4. tentukan interval random antara 1 menit (60 detik) sampai 5 menit (300 detik)
         $interval = rand(60, 300);
-
-        // 5. final delay = base + interval random (tanpa tambahan hardcoded buffer jika ingin murni max 10 menit)
         $final_delay = $baseTime->copy()->addSeconds($interval);
 
         LogHelper::logInfo(
@@ -223,7 +219,6 @@ class MessageDispatcher
             '[MessageDispatcher] Calculated delay',
         );
 
-        // 5. final delay = base + 30 detik buffer + interval
         return $final_delay;
     }
 }

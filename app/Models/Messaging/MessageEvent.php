@@ -26,6 +26,7 @@ class MessageEvent extends Model
         'last_error_at',
         'trace_id',
         'sent_at',
+        'scheduled_at',
     ];
 
     protected $casts = [
@@ -33,6 +34,7 @@ class MessageEvent extends Model
         'request_payload' => 'array',
         'response_payload' => 'array',
         'sent_at' => 'datetime',
+        'scheduled_at' => 'datetime',
         'last_error_at' => 'datetime',
         'retry_count' => 'integer',
     ];

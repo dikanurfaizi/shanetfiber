@@ -156,7 +156,23 @@
                                 <td>{{ $events->firstItem() + $i }}</td>
                                 <td><span class="badge badge-info">{{ strtoupper($event->channel) }}</span></td>
                                 <td>{{ $event->customer->name ?? '-' }}</td>
-                                <td>{{ $event->customer->contact ?? '-' }}</td>
+                                <td>
+                                    @if ($event->customer && $event->customer->contact)
+                                        {{ $event->customer->contact }}
+                                    @else
+                                        @php
+                                            // Decode string JSON meta menjadi array
+                                            $metaData = is_string($event->meta)
+                                                ? json_decode($event->meta, true)
+                                                : $event->meta;
+                                            // Bersihkan suffix '@s.whatsapp.net' jika ada agar nomornya rapi
+                                            $phoneFallback = isset($metaData['phone'])
+                                                ? str_replace('@s.whatsapp.net', '', $metaData['phone'])
+                                                : '-';
+                                        @endphp
+                                        {{ $phoneFallback }}
+                                    @endif
+                                </td>
                                 <td>{{ $event->message_type }}</td>
                                 <td>
                                     @php
@@ -258,7 +274,23 @@
 
                         <strong
                             class="text-break">{{ $event->customer->name ?? __('message_event.unknown_customer') }}</strong><br>
-                        <span class="text-muted text-break">{{ $event->customer->contact ?? '-' }}</span>
+
+                        {{-- Fallback Kontak di Mobile --}}
+                        <span class="text-muted text-break">
+                            @if ($event->customer && $event->customer->contact)
+                                {{ $event->customer->contact }}
+                            @else
+                                @php
+                                    $metaData = is_string($event->meta)
+                                        ? json_decode($event->meta, true)
+                                        : $event->meta;
+                                    $phoneFallback = isset($metaData['phone'])
+                                        ? str_replace('@s.whatsapp.net', '', $metaData['phone'])
+                                        : '-';
+                                @endphp
+                                {{ $phoneFallback }}
+                            @endif
+                        </span>
 
                         {{-- Bagian Badge Tipe Pengiriman di Mobile --}}
                         <div class="mt-2 d-flex flex-wrap align-items-center" style="gap: 6px;">

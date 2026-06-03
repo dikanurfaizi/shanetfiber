@@ -101,9 +101,9 @@ class TextMessageHandler extends BaseHandler
             $this->makeHandler($keyword, $sender, $customer, $category),
             queue: 'notification',
             traceId: $traceId,
-            delay: now()->addSeconds(1),
             eventId: null,
-            deviceId: $deviceId
+            deviceId: $deviceId,
+            delay: now()->addSeconds(1),
         );
     }
 
@@ -135,9 +135,9 @@ class TextMessageHandler extends BaseHandler
             ),
             queue: 'notification',
             traceId: $traceId,
-            delay: now()->addSeconds(1),
             eventId: null,
-            deviceId: $deviceId
+            deviceId: $deviceId,
+            delay: now()->addSeconds(1),
         );
     }
 
