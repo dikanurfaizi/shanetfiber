@@ -33,7 +33,7 @@ class TestConnectionService
                 null,
                 [
                     'host' => $mikrotik['host'],
-                    'resource_data' => array_keys($result[0] ?? []) // Log only keys for brevity
+                    'resource_data' => array_keys($result[0] ?? [])
                 ],
                 200,
                 "Successfully fetched system resource from Mikrotik",
@@ -52,15 +52,16 @@ class TestConnectionService
                         'line' => $e->getLine()
                     ],
                     'connection_details' => [
-                        'host' => $router['host'] ?? 'N/A',
-                        'port' => $router['port'] ?? 'N/A'
+                        // PERBAIKAN: Menggunakan array key yang benar sesuai parameter $mikrotik
+                        'host' => $mikrotik['host'] ?? 'N/A',
+                        'port' => $mikrotik['port'] ?? 'N/A'
                     ]
                 ],
                 500,
                 "Failed to fetch system resource from Mikrotik",
                 $traceId
             );
-            return [];
+            return []; // Pastikan return array kosong jika gagal
         }
     }
 
@@ -71,17 +72,17 @@ class TestConnectionService
      * @throws BadCredentialsException
      * @throws ConfigException
      */
-    public function checkOnline($mikrotik, string $traceId): array
+    public function checkOnline($router, string $traceId): array
     {
         try {
-            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($router, $traceId);
 
             if (!$client) {
                 LogHelper::LogError(
                     null,
                     [
                         'status' => false,
-                        'message' => "Failed to connect to Mikrotik: {$mikrotik->name}",
+                        'message' => "Failed to connect to Mikrotik: {$router->name}",
                         'data' => null,
                     ],
                     503,
@@ -90,7 +91,7 @@ class TestConnectionService
                 );
                 return [
                     'status' => false,
-                    'message' => "Failed to connect to Mikrotik: {$mikrotik->name}",
+                    'message' => "Failed to connect to Mikrotik: {$router->name}",
                     'data' => null,
                 ];
             }
@@ -101,7 +102,7 @@ class TestConnectionService
             LogHelper::logInfo(
                 null,
                 [
-                    'host' => $mikrotik->host,
+                    'host' => $router->host,
                     'uptime' => $result[0]['uptime'] ?? 'N/A',
                     'cpu_load' => $result[0]['cpu-load'] ?? 'N/A'
                 ],

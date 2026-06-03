@@ -47,8 +47,6 @@ class BillingController extends Controller
 
     private PayLaterService $payLaterService;
 
-    private MikrotikService $mikrotikService;
-
     private SecretService $secretService;
 
     public function __construct(
@@ -262,7 +260,7 @@ class BillingController extends Controller
 
         // Validasi Jalur Koneksi Utama API MikroTik
         try {
-            $this->mikrotikService->getMikrotik($mikrotik, $traceId);
+            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
         } catch (\Throwable $e) {
             LogHelper::logError(null, [
                 'billing_id' => $billing->id,

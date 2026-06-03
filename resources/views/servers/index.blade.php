@@ -27,16 +27,16 @@
                     @foreach ($mikrotiks as $mikrotik)
                         <tr>
                             <td><span class="fw-normal">{{ ++$i }}</span></td>
-                            <td><span id="mikrotik-name" class="fw-normal">{{ $mikrotik->name }}</span></td>
-                            <td><span id="mikrotik-host" class="fw-normal">{{ $mikrotik->host }}</span></td>
-                            <td><span id="mikrotik-port" class="fw-normal">{{ $mikrotik->port }}</span></td>
+                            <td><span class="mikrotik-name fw-normal">{{ $mikrotik->name }}</span></td>
+                            <td><span class="mikrotik-host fw-normal">{{ $mikrotik->host }}</span></td>
+                            <td><span class="mikrotik-port fw-normal">{{ $mikrotik->port }}</span></td>
 
                             <td>
 
                                 <a href="{{ route('mikrotiks.show', $mikrotik->slug) }}" data-bs-toggle="tooltip"
                                     data-bs-placement="top" title="Show Mikrotik"
                                     class="btn btn-datatable btn-icon btn-transparent-dark me-2 router-show">
-                                    <i id="button-show-mikrotik" class="fas fa-external-link-alt"></i>
+                                    <i class="button-show-mikrotik fas fa-external-link-alt"></i>
                                 </a>
                                 @can('server-edit')
                                     <a href="{{ route('servers.edit', $mikrotik->slug) }}" data-bs-toggle="tooltip"
@@ -68,9 +68,9 @@
                                         </form>
                                     @endif
                                 @endcan
-                                <a href="javascript:void(0)" id="check-online" data-id="{{ $mikrotik->id }}"
-                                    data-bs-toggle="tooltip" data-bs-placement="top" title="Cek Mikrotik Status"
-                                    class="btn btn-datatable btn-icon btn-transparent-dark me-2">
+                                <a href="javascript:void(0)" data-id="{{ $mikrotik->id }}" data-bs-toggle="tooltip"
+                                    data-bs-placement="top" title="Cek Mikrotik Status"
+                                    class="btn-check-online btn btn-datatable btn-icon btn-transparent-dark me-2">
                                     <i class="fas fa-exchange-alt"></i>
                                 </a>
                                 @can('server-delete')
@@ -95,10 +95,17 @@
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 }
             });
-            $(document).on('click', '#check-online', function(e) {
+
+            // Mengubah selector event dari ID (#check-online) ke Class (.btn-check-online)
+            $(document).on('click', '.btn-check-online', function(e) {
                 e.preventDefault();
-                const selectedRouterId = $(this).data('id');
+
+                const $this = $(this); // Menyimpan referensi tombol yang diklik
+                const $row = $this.closest('tr'); // Mencari baris (tr) terdekat dari tombol ini
+
+                const selectedRouterId = $this.data('id');
                 const url = "{{ route('check-online', ':id') }}".replace(':id', selectedRouterId);
+
                 $.ajax({
                     url: url,
                     method: "POST",
@@ -117,14 +124,11 @@
                             autotimeout: 5000,
                             autoclose: true
                         });
-                        $('#mikrotik-name').removeClass('text-danger');
-                        $('#mikrotik-host').removeClass('text-danger');
-                        $('#mikrotik-port').removeClass('text-danger');
-                        $('#button-show-mikrotik').removeClass('text-danger');
-                        $('#mikrotik-name').addClass('text-success');
-                        $('#mikrotik-host').addClass('text-success');
-                        $('#mikrotik-port').addClass('text-success');
-                        $('#button-show-mikrotik').addClass('text-success');
+
+                        // Cari class di dalam baris yang bersangkutan saja, lalu ubah warnanya
+                        $row.find('.mikrotik-name, .mikrotik-host, .mikrotik-port, .button-show-mikrotik')
+                            .removeClass('text-danger')
+                            .addClass('text-success');
                     },
                     error: function(data) {
                         new Notify({
@@ -138,14 +142,11 @@
                             autotimeout: 5000,
                             autoclose: true
                         });
-                        $('#mikrotik-name').removeClass('text-success');
-                        $('#mikrotik-host').removeClass('text-success');
-                        $('#mikrotik-port').removeClass('text-success');
-                        $('#button-show-mikrotik').removeClass('text-success');
-                        $('#mikrotik-name').addClass('text-danger');
-                        $('#mikrotik-host').addClass('text-danger');
-                        $('#mikrotik-port').addClass('text-danger');
-                        $('#button-show-mikrotik').addClass('text-danger');
+
+                        // Cari class di dalam baris yang bersangkutan saja, lalu ubah warnanya
+                        $row.find('.mikrotik-name, .mikrotik-host, .mikrotik-port, .button-show-mikrotik')
+                            .removeClass('text-success')
+                            .addClass('text-danger');
                     }
                 });
             });
