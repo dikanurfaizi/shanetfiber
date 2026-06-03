@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Messages;
 
+use App\Helpers\ExecutionTimer;
+use App\Helpers\LogHelper;
 use App\Helpers\MessageResponseNormalizer;
 use App\Models\Messaging\MessageEvent;
 use App\Http\Controllers\Controller;
@@ -96,7 +98,23 @@ class MessageEventController extends Controller
     public function resend(MessageEvent $event)
     {
         $traceId = (string) Str::uuid();
+        $timer = new ExecutionTimer();
+
+        // Log awal proses resend
+        LogHelper::logInfo(null, [
+            'trace_id' => $traceId,
+            'event_id' => $event->id,
+            'current_status' => $event->status
+        ], 200, 'Initiating message resend process.', $traceId, $timer->lap());
+
         if ($event->status !== 'failed') {
+            // Log jika event tidak valid untuk di-resend
+            LogHelper::logWarning(null, [
+                'trace_id' => $traceId,
+                'event_id' => $event->id,
+                'current_status' => $event->status
+            ], 400, 'Event not eligible for resend.', $traceId, $timer->lap());
+
             return back()->with('error', 'Event not eligible for resend.');
         }
 
@@ -104,6 +122,13 @@ class MessageEventController extends Controller
             $event->id,
             $traceId
         )->onQueue('default');
+
+        // Log sukses masuk antrean
+        LogHelper::logInfo(null, [
+            'trace_id' => $traceId,
+            'event_id' => $event->id,
+            'queue' => 'default'
+        ], 200, 'Message resend job dispatched successfully.', $traceId, $timer->lap());
 
         return back()->with('success', 'Event queued for resend.');
     }

@@ -1,8 +1,8 @@
-<x-layouts.cpanel.settings.app-layout title="WhatsApp Cloud Templates">
+<x-layouts.cpanel.settings.app-layout :title="__('message_event.app_title')">
 
     <div class="card">
         <div class="card-header">
-            <h5 class="mb-0">Message Events Log</h5>
+            <h5 class="mb-0">@lang('message_event.title')</h5>
         </div>
 
         <div class="card-body border-bottom">
@@ -12,13 +12,13 @@
                 <div class="form-row">
 
                     <div class="col-12 col-md-4 mb-2">
-                        <input type="text" name="q" class="form-control" placeholder="Nama / Nomor"
-                            value="{{ request('q') }}">
+                        <input type="text" name="q" class="form-control"
+                            placeholder="{{ __('message_event.placeholder_search') }}" value="{{ request('q') }}">
                     </div>
 
                     <div class="col-12 col-md-4 mb-2">
                         <select name="channel" class="form-control">
-                            <option value="">All Channel</option>
+                            <option value="">@lang('message_event.all_channel')</option>
                             @foreach ($channels as $channel)
                                 <option value="{{ $channel }}" @selected(request('channel') === $channel)>
                                     {{ strtoupper($channel) }}
@@ -29,7 +29,7 @@
 
                     <div class="col-12 col-md-4 mb-2">
                         <select name="message_type" class="form-control">
-                            <option value="">All Message Type</option>
+                            <option value="">@lang('message_event.all_message_type')</option>
                             @foreach ($messageTypes as $type)
                                 <option value="{{ $type }}" @selected(request('message_type') === $type)>
                                     {{ $type }}
@@ -47,7 +47,7 @@
 
                         <small>
                             <i class="fas fa-sliders-h mr-1"></i>
-                            Advanced Filter
+                            @lang('message_event.advanced_filter')
                         </small>
                     </a>
                 </div>
@@ -80,20 +80,20 @@
                         {{-- Desktop & Tablet --}}
                         <div class="d-none d-md-inline-block">
                             <button class="btn btn-primary mr-2">
-                                Filter
+                                @lang('message_event.filter')
                             </button>
                             <a href="{{ route('messageevents.index') }}" class="btn btn-outline-secondary">
-                                Reset
+                                @lang('message_event.reset')
                             </a>
                         </div>
 
                         {{-- Mobile --}}
                         <div class="d-block d-md-none">
                             <button class="btn btn-primary btn-block mb-2">
-                                Filter
+                                @lang('message_event.filter')
                             </button>
                             <a href="{{ route('messageevents.index') }}" class="btn btn-outline-secondary btn-block">
-                                Reset
+                                @lang('message_event.reset')
                             </a>
                         </div>
 
@@ -107,26 +107,26 @@
             {{-- QUICK FILTER --}}
             <div class="mb-3">
 
-                <span class="text-muted small mr-2">Quick Filter:</span>
+                <span class="text-muted small mr-2">@lang('message_event.quick_filter')</span>
 
                 <a href="{{ route('messageevents.index', array_merge(request()->except('status'), ['status' => 'failed'])) }}"
                     class="btn btn-sm btn-outline-danger mr-1 {{ request('status') === 'failed' ? 'active' : '' }}">
-                    ❌ Failed
+                    ❌ @lang('message_event.status_failed')
                 </a>
 
                 <a href="{{ route('messageevents.index', array_merge(request()->except('status'), ['status' => 'pending'])) }}"
                     class="btn btn-sm btn-outline-warning mr-1 {{ request('status') === 'pending' ? 'active' : '' }}">
-                    ⏳ Pending
+                    ⏳ @lang('message_event.status_pending')
                 </a>
 
                 <a href="{{ route('messageevents.index', array_merge(request()->except('status'), ['status' => 'success'])) }}"
                     class="btn btn-sm btn-outline-success mr-1 {{ request('status') === 'success' ? 'active' : '' }}">
-                    ✅ Success
+                    ✅ @lang('message_event.status_success')
                 </a>
 
                 <a href="{{ route('messageevents.index', request()->except('status')) }}"
                     class="btn btn-sm btn-outline-secondary">
-                    🔄 All
+                    🔄 @lang('message_event.status_all')
                 </a>
 
             </div>
@@ -138,14 +138,15 @@
                 <table class="table table-hover table-bordered mb-0">
                     <thead class="thead-light">
                         <tr>
-                            <th>#</th>
-                            <th>Channel</th>
-                            <th>Customer</th>
-                            <th>Phone</th>
-                            <th>Message Type</th>
-                            <th>Status</th>
-                            <th>Sent At</th>
-                            <th>Action</th>
+                            <th>@lang('message_event.th_hash')</th>
+                            <th>@lang('message_event.th_channel')</th>
+                            <th>@lang('message_event.th_customer')</th>
+                            <th>@lang('message_event.th_phone')</th>
+                            <th>@lang('message_event.th_message_type')</th>
+                            <th>@lang('message_event.th_status')</th>
+                            <th>@lang('message_event.th_sent_at')</th>
+                            <th>@lang('message_event.th_scheduled_at')</th>
+                            <th>@lang('message_event.th_action')</th>
                         </tr>
                     </thead>
 
@@ -159,17 +160,32 @@
                                 <td>{{ $event->message_type }}</td>
                                 <td>
                                     @php
-                                        $map = ['success' => 'success', 'failed' => 'danger', 'pending' => 'warning'];
+                                        // Cukup sisakan mapping untuk class warna Bootstrap saja
+                                        $colorMap = [
+                                            'success' => 'success',
+                                            'failed' => 'danger',
+                                            'pending' => 'warning',
+                                        ];
                                     @endphp
-                                    <span class="badge badge-{{ $map[$event->status] ?? 'secondary' }}">
-                                        {{ strtoupper($event->status) }}
+                                    <span class="badge badge-{{ $colorMap[$event->status] ?? 'secondary' }}">
+                                        {{ __('message_event.db_status.' . $event->status) ?? strtoupper($event->status) }}
                                     </span>
                                 </td>
-                                <td>{{ optional($event->sent_at)->format('d M Y H:i:s') }}</td>
+                                {{-- Kolom Sent At --}}
+                                <td>{{ $event->sent_at ? $event->sent_at->translatedFormat('d M Y H:i:s') : '-' }}</td>
+
+                                {{-- Kolom Scheduled At --}}
+                                <td>
+                                    @if ($event->scheduled_at)
+                                        {{ $event->scheduled_at->translatedFormat('d M Y H:i:s') }}
+                                    @else
+                                        <span class="badge badge-secondary shadow-sm">⚡ @lang('message_event.realtime')</span>
+                                    @endif
+                                </td>
                                 <td>
                                     <button class="btn btn-sm btn-outline-primary" data-toggle="collapse"
                                         data-target="#detail-{{ $event->id }}">
-                                        <i class="fas fa-eye"></i> Detail
+                                        <i class="fas fa-eye"></i> @lang('message_event.btn_detail')
                                     </button>
 
                                     @if ($event->status === 'failed')
@@ -177,7 +193,7 @@
                                             style="display:inline;">
                                             @csrf
                                             <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                <i class="fas fa-redo-alt"></i> Retry
+                                                <i class="fas fa-redo-alt"></i> @lang('message_event.btn_retry')
                                             </button>
                                         </form>
                                     @endif
@@ -185,9 +201,9 @@
                             </tr>
 
                             <tr class="collapse bg-light" id="detail-{{ $event->id }}">
-                                <td colspan="8" class="p-3">
+                                <td colspan="9" class="p-3">
                                     <div class="mb-2">
-                                        <strong>Response:</strong><br>
+                                        <strong>@lang('message_event.label_response')</strong><br>
                                         <code>{{ $event->response_summary }}</code>
                                     </div>
 
@@ -205,8 +221,8 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center text-muted">
-                                    No message events found
+                                <td colspan="9" class="text-center text-muted">
+                                    @lang('message_event.no_events')
                                 </td>
                             </tr>
                         @endforelse
@@ -227,49 +243,63 @@
                             </span>
 
                             @php
-                                $map = ['success' => 'success', 'failed' => 'danger', 'pending' => 'warning'];
+                                $colorMap = ['success' => 'success', 'failed' => 'danger', 'pending' => 'warning'];
                             @endphp
 
-                            <span class="badge badge-{{ $map[$event->status] ?? 'secondary' }}">
-                                {{ strtoupper($event->status) }}
+                            <span class="badge badge-{{ $colorMap[$event->status] ?? 'secondary' }}">
+                                {{ __('message_event.db_status.' . $event->status) ?? strtoupper($event->status) }}
                             </span>
                         </div>
 
+                        {{-- Waktu Sent At di Mobile --}}
                         <div class="small text-muted mb-1">
-                            {{ optional($event->sent_at)->format('d M Y H:i') }}
+                            {{ $event->sent_at ? $event->sent_at->translatedFormat('d M Y H:i') : '-' }}
                         </div>
 
-                        <strong>{{ $event->customer->name ?? 'Unknown Customer' }}</strong><br>
-                        <span class="text-muted">{{ $event->customer->contact ?? '-' }}</span>
+                        <strong
+                            class="text-break">{{ $event->customer->name ?? __('message_event.unknown_customer') }}</strong><br>
+                        <span class="text-muted text-break">{{ $event->customer->contact ?? '-' }}</span>
 
-                        <div class="mt-1">
-                            <span class="badge badge-light">
+                        {{-- Bagian Badge Tipe Pengiriman di Mobile --}}
+                        <div class="mt-2 d-flex flex-wrap align-items-center" style="gap: 6px;">
+                            <span class="badge badge-light text-wrap text-break border text-left"
+                                style="max-width: 100%;">
                                 {{ $event->message_type }}
                             </span>
+
+                            @if ($event->scheduled_at)
+                                <span class="badge badge-light text-muted border">
+                                    📅 {{ $event->scheduled_at->translatedFormat('d M Y H:i') }}
+                                </span>
+                            @else
+                                <span class="badge badge-secondary">
+                                    ⚡ @lang('message_event.realtime')
+                                </span>
+                            @endif
                         </div>
 
                         <button class="btn btn-sm btn-outline-primary mt-2 w-100" data-toggle="collapse"
                             data-target="#detail-mobile-{{ $event->id }}">
-                            Lihat Detail
+                            @lang('message_event.btn_view_detail')
                         </button>
 
                         <div class="collapse mt-2" id="detail-mobile-{{ $event->id }}">
                             <div class="bg-light p-2 rounded small">
 
                                 <div class="mb-2">
-                                    <strong>Response:</strong><br>
-                                    <code>{{ $event->response_summary }}</code>
+                                    <strong>@lang('message_event.label_response')</strong><br>
+                                    <code class="text-break">{{ $event->response_summary }}</code>
                                 </div>
 
                                 <div class="text-muted">
-                                    <div>
+                                    <div class="mb-1">
                                         <strong>Trace ID:</strong><br>
-                                        <code>{{ $event->trace_id ?? '-' }}</code>
+                                        <code class="text-break">{{ $event->trace_id ?? '-' }}</code>
                                     </div>
 
-                                    <div class="mt-1">
+                                    <div>
                                         <strong>Message ID:</strong><br>
-                                        <code>{{ $event->message_id ?? '-' }}</code>
+                                        <code class="text-break">{{ $event->message_id ?? '-' }}</code>
                                     </div>
                                 </div>
 
@@ -280,7 +310,7 @@
                 </div>
             @empty
                 <div class="text-center text-muted">
-                    No message events found
+                    @lang('message_event.no_events')
                 </div>
             @endforelse
         </div>

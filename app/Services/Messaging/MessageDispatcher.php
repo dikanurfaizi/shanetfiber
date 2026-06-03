@@ -203,8 +203,8 @@ class MessageDispatcher
             }
         }
 
-        // 4. tentukan interval random antara 3 menit (180 detik) sampai 15 menit (900 detik)
-        $interval = rand(180, 900);
+        // 4. tentukan interval random antara 1 menit (60 detik) sampai 5 menit (300 detik)
+        $interval = rand(60, 300);
 
         // 5. final delay = base + interval random (tanpa tambahan hardcoded buffer jika ingin murni max 10 menit)
         $final_delay = $baseTime->copy()->addSeconds($interval);

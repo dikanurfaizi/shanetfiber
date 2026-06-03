@@ -81,7 +81,7 @@ class PaymentChannelUpdateNotificationService
                 $delayInSeconds = 0;
                 $delayInterval = 300; // Jeda aman 5 menit per customer untuk WA Web
 
-                $overrideNumber = config('messaging.override_recipient_number', null);
+                $overrideNumber = config('messaging.phone_number_override', null);
 
                 foreach ($customers as $data) {
 
