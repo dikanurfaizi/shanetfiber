@@ -68,7 +68,7 @@ class OverdueBroadcast
         $contactWhatsapp = $adminContact['contact_whatsapp'];
 
         $formatter = new FormatReceiver;
-        $overrideNumber    = config('messaging.phone_number_override');
+        $overrideNumber    = config('messaging.phone_number_override', null);
 
         // Ambil timing dasar delay antrean
         $delay = $this->getNextDelay('notification', $traceId);

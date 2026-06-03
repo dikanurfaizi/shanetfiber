@@ -25,7 +25,7 @@ class WhatsappMessageService
         // ===============================================================
         // 🔥 STRATEGI SANDBOX: Dinamis Membaca Konfigurasi Global Override
         // ===============================================================
-        $overrideNumber = config('messaging.phone_number_override');
+        $overrideNumber = config('messaging.phone_number_override', null);
 
         if ($overrideNumber) {
             $originalReceiver = $receiver;

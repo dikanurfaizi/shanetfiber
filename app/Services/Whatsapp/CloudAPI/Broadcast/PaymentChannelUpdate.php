@@ -62,7 +62,7 @@ class PaymentChannelUpdate
         $delayInSeconds    = 0;
         $delay             = $this->getNextDelay('notification', $traceId);
         $channelUpdateDate = Carbon::parse('2026-06-01')->translatedFormat('d F Y');
-        $overrideNumber    = config('messaging.phone_number_override');
+        $overrideNumber    = config('messaging.phone_number_override', null);
         $formatter         = new FormatReceiver; // Tetap butuh untuk format nomor customer di dalam loop
 
         foreach ($customers as $idx => $data) {
