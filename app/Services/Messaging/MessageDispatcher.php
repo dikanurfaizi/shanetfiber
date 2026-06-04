@@ -184,6 +184,7 @@ class MessageDispatcher
                 $scheduled = $lastEvent->scheduled_at ? Carbon::parse($lastEvent->scheduled_at) : null;
                 $sent = $lastEvent->sent_at ? Carbon::parse($lastEvent->sent_at) : null;
 
+                // Tentukan baseTime dan source awal berdasarkan mana yang lebih baru/besar
                 if ($scheduled && $sent) {
                     $baseTime = $scheduled->greaterThan($sent) ? $scheduled : $sent;
                     $source = $scheduled->greaterThan($sent) ? 'message_events_scheduled' : 'message_events_sent';
@@ -192,7 +193,9 @@ class MessageDispatcher
                     $source = $scheduled ? 'message_events_scheduled' : 'message_events_sent';
                 }
 
-                if (now()->diffInMinutes($baseTime) >= 1) {
+                // --- KOREKSI LOGIKA DISINI ---
+                // Jika baseTime yang terpilih ternyata sudah lampau (lewat dari waktu sekarang)
+                if ($baseTime->isPast()) {
                     $baseTime = now();
                     $source = 'fallback_stale_data';
                 }
