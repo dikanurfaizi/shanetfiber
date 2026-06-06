@@ -14,8 +14,9 @@ class ChannelUpdateCustomerCollector
      * Mengumpulkan data customer yang belum pernah menerima pesan broadcast tipe ini.
      * * @param Carbon $today Tanggal hari ini (tetap dipertahankan untuk log)
      * @param string $messageType Slug utama pengiriman (e.g., 'payment_channel_update')
+     * @param int|null $customerId ID Customer spesifik untuk kebutuhan Single Resend (Opsional)
      */
-    public function collect(Carbon $today, string $messageType): Collection
+    public function collect(Carbon $today, string $messageType, ?int $customerId = null): Collection
     {
         $testMode = config('messaging.reminder_allow_test', false);
 
@@ -58,6 +59,13 @@ class ChannelUpdateCustomerCollector
             // --- TAMBAHKAN FILTER STATUS BILLING DISINI ---
             ->whereIn('b.status', ['BL', 'PL']);
 
+        // ===============================================================
+        // CONDITIONAL WHERE: JIKA TARGET RESEND SINGLE CUSTOMER
+        // ===============================================================
+        if (!is_null($customerId)) {
+            $query->where('customers.id', '=', $customerId);
+        }
+
         $query->groupBy([
             'customers.id',
             'customers.name',
@@ -66,18 +74,18 @@ class ChannelUpdateCustomerCollector
         ]);
 
         // ===============================================================
-        // RATE LIMITER ENGINE (THROTTLING)
+        // RATE LIMITER ENGINE (THROTTLING) - Hanya jalan jika Broadcast Massal
         // ===============================================================
-        if (!$testMode) {
+        if (!$testMode && is_null($customerId)) {
             $query->limit(5);
         }
 
         $data = $query->get();
 
         // ===============================================================
-        // TEST MODE ENGINE: POTONG DATA (1 CUSTOMER PER ADMIN)
+        // TEST MODE ENGINE - Hanya jalan jika Broadcast Massal
         // ===============================================================
-        if ($testMode && $data->isNotEmpty()) {
+        if ($testMode && is_null($customerId) && $data->isNotEmpty()) {
             $data = $data->groupBy('user_id')->map(function ($group) {
                 return $group->first();
             })->values();
@@ -85,7 +93,12 @@ class ChannelUpdateCustomerCollector
 
         LogHelper::logInfo(
             null,
-            ['date' => $today->toDateString(), 'count' => $data->count(), 'test_mode' => $testMode ? 'ON' : 'OFF'],
+            [
+                'date'        => $today->toDateString(),
+                'count'       => $data->count(),
+                'test_mode'   => $testMode ? 'ON' : 'OFF',
+                'customer_id' => $customerId ?? 'ALL'
+            ],
             120,
             '[ChannelUpdateCustomerCollector] Dynamic customer data collected successfully'
         );

@@ -12,6 +12,7 @@ use App\Models\Membership\Membership;
 use App\Services\Notification\CustomerActivationNotificationService;
 use App\Services\Notification\PaymentNotificationService;
 use App\Services\Notification\PaymentPayLaterNotificationService;
+use App\Services\Notification\PaymentChannelUpdateNotificationService;
 use Illuminate\Support\Facades\DB;
 
 class ResendEventService
@@ -20,12 +21,13 @@ class ResendEventService
         protected PaymentNotificationService $paymentNotification,
         protected CustomerActivationNotificationService $activationService,
         protected PaymentPayLaterNotificationService $paylaterService,
+        protected PaymentChannelUpdateNotificationService $channelUpdateService
     ) {}
 
     public function handle(MessageEvent $event, string $traceId): void
     {
+        // 👉 LANGKAH 1: Set Status awal ke 'pending' dengan RETRY stage di dalam transaksi singkat
         DB::transaction(function () use ($event, $traceId) {
-
             LogHelper::logInfo(
                 null,
                 [
@@ -39,119 +41,76 @@ class ResendEventService
                 $traceId
             );
 
-            // =========================
-            // CREATE RETRY EVENT
-            // =========================
             $event->update([
-                'status'      => 'pending',
-                'stage'       => 'RETRY',
-                'retry_count' => $event->retry_count + 1,
+                'status'        => 'pending',
+                'stage'         => 'RETRY',
+                'retry_count'   => $event->retry_count + 1,
                 'last_error_at' => null,
             ]);
+        });
 
-            $newEvent = $event->refresh();
+        $newEvent = $event->refresh();
 
+        // 👉 LANGKAH 2: Jalankan flow pengiriman di luar DB::transaction utama (Mencegah lock/rollback massal)
+        try {
             LogHelper::logInfo(
                 null,
                 [
                     'new_event_id'  => $newEvent->id,
-                    'retry_of_id'   => $newEvent->retry_of_id,
                     'retry_count'   => $newEvent->retry_count,
                 ],
                 200,
-                '[RESEND] Retry Event Created',
+                '[RESEND] Retry State Initiated, Routing Message...',
                 $traceId
             );
 
             /*
-        |--------------------------------------------------------------------------
-        | PAYMENT
-        |--------------------------------------------------------------------------
-        */
+            |--------------------------------------------------------------------------
+            | PAYMENT FLOW
+            |--------------------------------------------------------------------------
+            */
             if (in_array($newEvent->message_type, ['payment', 'informasi_bayar'])) {
+                LogHelper::logInfo(null, [], 200, '[RESEND] Routing to PAYMENT flow', $traceId);
 
-                LogHelper::logInfo(
-                    null,
-                    [],
-                    200,
-                    '[RESEND] Routing to PAYMENT flow',
-                    $traceId
-                );
-
-                $receipt = Receipt::where('customer_id', $newEvent->customer_id)
-                    ->latest()
-                    ->lockForUpdate()
-                    ->first();
+                // Lock data receipt saja secara spesifik
+                $receipt = DB::transaction(function () use ($newEvent, $traceId) {
+                    return Receipt::where('customer_id', $newEvent->customer_id)
+                        ->latest()
+                        ->lockForUpdate()
+                        ->first();
+                });
 
                 if (!$receipt) {
-                    LogHelper::logError(
-                        null,
-                        ['customer_id' => $newEvent->customer_id],
-                        500,
-                        '[RESEND] Receipt not found',
-                        $traceId
-                    );
-
+                    LogHelper::logError(null, ['customer_id' => $newEvent->customer_id], 500, '[RESEND] Receipt not found', $traceId);
                     throw new \RuntimeException("Receipt not found for customer {$newEvent->customer_id}");
                 }
 
-                LogHelper::logInfo(
-                    null,
-                    [
-                        'receipt_id' => $receipt->id,
-                    ],
-                    200,
-                    '[RESEND] Receipt Found',
-                    $traceId
+                LogHelper::logInfo(null, ['receipt_id' => $receipt->id], 200, '[RESEND] Receipt Found', $traceId);
+
+                $this->paymentNotification->sendWhatsAppPaymentNotificationByReceiptId(
+                    $receipt->id,
+                    $traceId,
+                    $newEvent->id
                 );
 
-                $this->paymentNotification
-                    ->sendWhatsAppPaymentNotificationByReceiptId(
-                        $receipt->id,
-                        $traceId,
-                        $newEvent->id
-                    );
-
-                LogHelper::logInfo(
-                    null,
-                    [],
-                    200,
-                    '[RESEND] PAYMENT resend dispatched',
-                    $traceId
-                );
-
+                LogHelper::logInfo(null, [], 200, '[RESEND] PAYMENT resend dispatched', $traceId);
                 return;
             }
 
             /*
-        |--------------------------------------------------------------------------
-        | ACTIVATION
-        |--------------------------------------------------------------------------
-        */
+            |--------------------------------------------------------------------------
+            | ACTIVATION FLOW
+            |--------------------------------------------------------------------------
+            */
             if (in_array($newEvent->message_type, ['activation_customer', 'aktivasi_layanan'])) {
-
-                LogHelper::logInfo(
-                    null,
-                    [],
-                    200,
-                    '[RESEND] Routing to ACTIVATION flow',
-                    $traceId
-                );
+                LogHelper::logInfo(null, [], 200, '[RESEND] Routing to ACTIVATION flow', $traceId);
 
                 $customerSubscription = CustomerSubscription::with(['customer', 'package'])
                     ->where('customer_id', $newEvent->customer_id)
                     ->where('status', 'active')
                     ->firstOrFail();
 
-                LogHelper::logInfo(
-                    null,
-                    [
-                        'customer_subscription_id' => $customerSubscription->id,
-                    ],
-                    200,
-                    '[RESEND] Active Subscription Found',
-                    $traceId
-                );
+                LogHelper::logInfo(null, ['customer_subscription_id' => $customerSubscription->id], 200, '[RESEND] Active Subscription Found', $traceId);
 
                 $billing = Billing::with(['billingSubscription.billingPeriode'])
                     ->whereHas(
@@ -161,13 +120,7 @@ class ResendEventService
                     ->latest()
                     ->firstOrFail();
 
-                LogHelper::logInfo(
-                    null,
-                    ['billing_id' => $billing->id],
-                    200,
-                    '[RESEND] Billing Found',
-                    $traceId
-                );
+                LogHelper::logInfo(null, ['billing_id' => $billing->id], 200, '[RESEND] Billing Found', $traceId);
 
                 $receipt = Receipt::with('billingPayment')
                     ->whereHas(
@@ -177,20 +130,11 @@ class ResendEventService
                     ->latest()
                     ->firstOrFail();
 
-                LogHelper::logInfo(
-                    null,
-                    ['receipt_id' => $receipt->id],
-                    200,
-                    '[RESEND] Receipt Found for Activation',
-                    $traceId
-                );
+                LogHelper::logInfo(null, ['receipt_id' => $receipt->id], 200, '[RESEND] Receipt Found for Activation', $traceId);
 
                 $customerMembershipId = null;
-
                 if ($receipt->member_type && $receipt->member_type !== 'NON_MEMBER') {
-
                     $membership = Membership::where('name', $receipt->member_type)->first();
-
                     if ($membership) {
                         $customerMembership = CustomerMembership::where('membership_id', $membership->id)
                             ->where('customer_id', $customerSubscription->customer_id)
@@ -220,31 +164,17 @@ class ResendEventService
                     $traceId
                 );
 
-                LogHelper::logInfo(
-                    null,
-                    [],
-                    200,
-                    '[RESEND] ACTIVATION resend dispatched',
-                    $traceId
-                );
-
+                LogHelper::logInfo(null, [], 200, '[RESEND] ACTIVATION resend dispatched', $traceId);
                 return;
             }
 
             /*
-        |--------------------------------------------------------------------------
-        | PAYLATER
-        |--------------------------------------------------------------------------
-        */
+            |--------------------------------------------------------------------------
+            | PAYLATER FLOW
+            |--------------------------------------------------------------------------
+            */
             if (in_array($newEvent->message_type, ['paylater', 'informasi_bayar_nanti'])) {
-
-                LogHelper::logInfo(
-                    null,
-                    [],
-                    200,
-                    '[RESEND] Routing to PAYLATER flow',
-                    $traceId
-                );
+                LogHelper::logInfo(null, [], 200, '[RESEND] Routing to PAYLATER flow', $traceId);
 
                 $customerSubscription = CustomerSubscription::with(['customer', 'package'])
                     ->where('customer_id', $newEvent->customer_id)
@@ -259,42 +189,51 @@ class ResendEventService
                     ->latest()
                     ->firstOrFail();
 
-                LogHelper::logInfo(
-                    null,
-                    ['billing_id' => $billing->id, 'event_id' => $newEvent->id],
-                    200,
-                    '[RESEND] PAYLATER billing resolved',
-                    $traceId
-                );
+                LogHelper::logInfo(null, ['billing_id' => $billing->id, 'event_id' => $newEvent->id], 200, '[RESEND] PAYLATER billing resolved', $traceId);
 
-                $this->paylaterService->send(
-                    $billing->id,
-                    $newEvent->id,
-                    $traceId
-                );
+                $this->paylaterService->send($billing->id, $newEvent->id, $traceId);
 
-                LogHelper::logInfo(
-                    null,
-                    [],
-                    200,
-                    '[RESEND] PAYLATER resend dispatched',
-                    $traceId
-                );
-
+                LogHelper::logInfo(null, [], 200, '[RESEND] PAYLATER resend dispatched', $traceId);
                 return;
             }
 
+            /*
+            |--------------------------------------------------------------------------
+            | PAYMENT CHANNEL UPDATE FLOW
+            |--------------------------------------------------------------------------
+            */
+            if (in_array($newEvent->message_type, ['update_rekening_juni_2026', 'payment_channel_update'])) {
+                LogHelper::logInfo(null, ['event_id' => $newEvent->id], 200, '[RESEND] Routing to PAYMENT CHANNEL UPDATE single flow', $traceId);
+
+                // Memanggil method targeted single target
+                $this->channelUpdateService->sendSingleEvent($newEvent, $traceId);
+
+                LogHelper::logInfo(null, [], 200, '[RESEND] PAYMENT CHANNEL UPDATE single resend dispatched', $traceId);
+                return;
+            }
+
+            throw new \InvalidArgumentException("Unsupported message type: {$newEvent->message_type}");
+        } catch (\Throwable $e) {
+            // 👉 LANGKAH 3: Tangkap exception, amankan state DB ke status 'failed'
             LogHelper::logError(
-                null,
-                ['message_type' => $newEvent->message_type],
+                $e,
+                ['event_id' => $newEvent->id, 'error_message' => $e->getMessage()],
                 500,
-                '[RESEND] Unsupported message type',
+                '[RESEND] Handling Exception - Updating state to FAILED',
                 $traceId
             );
 
-            throw new \InvalidArgumentException(
-                "Unsupported message type: {$newEvent->message_type}"
-            );
-        });
+            $newEvent->update([
+                'status'        => 'failed',
+                'stage'         => 'RETRY_FAILED',
+                'last_error_at' => now(),
+                'meta'          => json_encode(array_merge(json_decode($newEvent->meta, true) ?? [], [
+                    'resend_error' => $e->getMessage()
+                ]))
+            ]);
+
+            // 👉 LANGKAH 4: Lempar kembali errornya agar Job Queue menangkap kegagalan ini untuk tracking worker
+            throw $e;
+        }
     }
 }

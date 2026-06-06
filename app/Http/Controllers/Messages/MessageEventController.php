@@ -125,7 +125,6 @@ class MessageEventController extends Controller
 
         // Log sukses masuk antrean
         LogHelper::logInfo(null, [
-            'trace_id' => $traceId,
             'event_id' => $event->id,
             'queue' => 'default'
         ], 200, 'Message resend job dispatched successfully.', $traceId, $timer->lap());
