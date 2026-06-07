@@ -35,37 +35,37 @@ class ChannelUpdateCustomerCollector
             })
             ->leftJoin('packages as p', 'cs.package_id', '=', 'p.id')
 
-            // --- TAMBAHKAN JOIN BILLINGS ---
-            ->leftJoin('billings as b', 'customers.id', '=', 'b.customer_id')
+            // --- JOIN BILLINGS ---
+            // Gunakan INNER JOIN jika broadcast ini WAJIB hanya untuk yang punya tagihan bermasalah
+            ->join('billings as b', 'customers.id', '=', 'b.customer_id')
 
-            // --- FILTER ANTI-DOUBLE (MESSAGE EVENTS) ---
-            ->leftJoin('message_events as me', function ($join) use ($messageType) {
-                $join->on('customers.id', '=', 'me.customer_id')
-                    ->where('me.message_type', '=', $messageType)
-                    ->where(function ($query) {
-                        $query->whereIn('me.status', ['success', 'pending'])
-                            ->orWhere(function ($q) {
-                                $q->where('me.status', '=', 'failed')
-                                    ->where('me.response_code', '=', 'INVALID JID');
-                            });
-                    });
-            })
-            ->whereNull('me.id')
             ->where('customers.user_id', '!=', 1)
             ->where('customers.disabled', '=', 'false')
             ->where('customers.activation', '=', 'true')
             ->where('cs.status', '=', 'active')
 
-            // --- TAMBAHKAN FILTER STATUS BILLING DISINI ---
+            // --- FILTER STATUS BILLING ---
             ->whereIn('b.status', ['BL', 'PL']);
 
         // ===============================================================
-        // CONDITIONAL WHERE: JIKA TARGET RESEND SINGLE CUSTOMER
+        // CONDITIONAL FILTER: ANTI-DOUBLE ATAU SINGLE RESEND
         // ===============================================================
         if (!is_null($customerId)) {
             $query->where('customers.id', '=', $customerId);
+        } else {
+            $query->whereDoesntHave('messageEvents', function ($sub) use ($messageType) {
+                $sub->where('message_type', '=', $messageType)
+                    ->where(function ($q) {
+                        $q->whereIn('status', ['success', 'pending'])
+                            ->orWhere(function ($failQuery) {
+                                $failQuery->where('status', '=', 'failed')
+                                    ->where('response_code', '=', 'INVALID_JID'); // FIX disini
+                            });
+                    });
+            });
         }
 
+        // group by menjaga agar customer tetap unik (1 customer saja) meskipun record billing/message_events double di DB
         $query->groupBy([
             'customers.id',
             'customers.name',

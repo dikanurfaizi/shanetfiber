@@ -8,12 +8,16 @@ use App\Helpers\MessageResponseNormalizer;
 use App\Models\Messaging\MessageEvent;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendResentMessageJob;
-use App\Services\MessageEvent\ResendEventService;
+use App\Services\Event\ResendEventService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class MessageEventController extends Controller
 {
+    public function __construct(
+        protected ResendEventService $service
+    ) {}
+
     public function index(Request $request)
     {
         $query = MessageEvent::query()
@@ -97,37 +101,35 @@ class MessageEventController extends Controller
 
     public function resend(MessageEvent $event)
     {
-        $traceId = (string) Str::uuid();
-        $timer = new ExecutionTimer();
-
-        // Log awal proses resend
-        LogHelper::logInfo(null, [
-            'trace_id' => $traceId,
-            'event_id' => $event->id,
-            'current_status' => $event->status
-        ], 200, 'Initiating message resend process.', $traceId, $timer->lap());
+        // 1. Ambil state terbaru & validasi langsung (Fail-Fast)
+        $event->refresh();
 
         if ($event->status !== 'failed') {
-            // Log jika event tidak valid untuk di-resend
+            // Log warning hanya ditembak jika ada anomali/percobaan resend ilegal
             LogHelper::logWarning(null, [
-                'trace_id' => $traceId,
-                'event_id' => $event->id,
+                'event_id'       => $event->id,
                 'current_status' => $event->status
-            ], 400, 'Event not eligible for resend.', $traceId, $timer->lap());
+            ], 400, 'Event not eligible for resend.');
 
             return back()->with('error', 'Event not eligible for resend.');
         }
 
-        SendResentMessageJob::dispatch(
-            $event->id,
-            $traceId
-        )->onQueue('default');
+        // 2. Inisiasi tracking & timer hanya jika data VALID untuk diproses
+        $traceId = (string) Str::uuid();
+        $timer   = new ExecutionTimer();
+        $queue   = 'notification';
 
-        // Log sukses masuk antrean
+        // 3. Eksekusi service utama
+        $this->service->handle($event, $traceId);
+
+        // $resendJob = SendResentMessageJob::dispatch($event->id, $traceId);
+        // $resendJob->onQueue($queue);
+
+        // 4. Cukup satu log sukses ini saja untuk memantau keberhasilan proses
         LogHelper::logInfo(null, [
             'event_id' => $event->id,
-            'queue' => 'default'
-        ], 200, 'Message resend job dispatched successfully.', $traceId, $timer->lap());
+            'queue'    => $queue
+        ], 200, 'Message resend job processed successfully.', $traceId, $timer->lap());
 
         return back()->with('success', 'Event queued for resend.');
     }
