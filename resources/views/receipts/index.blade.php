@@ -16,45 +16,103 @@
     </div>
 
     <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-3">
-            {{ $receipts->withQueryString()->links() }}
+        {{-- Pembungkus Utama Atas: Pagination di kiri, Semua Form/Tombol Filter di kanan --}}
+        <div class="d-flex justify-content-between align-items-center flex-wrap mt-3">
 
-            @canany(['receipt-export-all', 'receipt-export-selected-period'])
-                <div class="d-flex gap-2">
+            {{-- Pagination Kiri --}}
+            <div>
+                {{ $receipts->withQueryString()->links() }}
+            </div>
+
+            {{-- Kelompok Filter Kanan (Disatukan dalam inline flex Bootstrap 4) --}}
+            <div class="d-flex align-items-center flex-wrap">
+
+                {{-- === 📑 1. Form Dropdown Urutan / Sorting === --}}
+                {!! Form::open([
+                    'url' => url()->current(),
+                    'method' => 'GET',
+                    'class' => 'form-inline mr-2my-1',
+                    'id' => 'sortForm',
+                ]) !!}
+                {{-- Pertahankan parameter search yang sedang aktif --}}
+                @foreach (request()->except(['sort_by', 'sort_order', 'page']) as $key => $value)
+                    @if (is_array($value))
+                        @foreach ($value as $v)
+                            <input type="hidden" name="{{ $key }}[]" value="{{ $v }}">
+                        @endforeach
+                    @else
+                        <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                    @endif
+                @endforeach
+
+                {!! Form::select(
+                    'sort_by',
+                    [
+                        'payment_time' => 'Sort by: Payment Time',
+                        'teller_name' => 'Sort by: Teller Name',
+                        'combined' => 'Sort by: Time & Teller',
+                    ],
+                    request('sort_by', 'payment_time'),
+                    [
+                        'class' => 'form-control form-control-sm mr-2',
+                        'style' => 'width:auto;',
+                        'onchange' => 'this.form.submit()',
+                    ],
+                ) !!}
+
+                {!! Form::select(
+                    'sort_order',
+                    [
+                        'desc' => 'Descending (Z-A / Terbaru)',
+                        'asc' => 'Ascending (A-Z / Terlama)',
+                    ],
+                    request('sort_order', 'desc'),
+                    [
+                        'class' => 'form-control form-control-sm mr-3',
+                        'style' => 'width:auto;',
+                        'onchange' => 'this.form.submit()',
+                    ],
+                ) !!}
+                {!! Form::close() !!}
+
+                {{-- === 📤 2. Fitur Kelompok Tombol Export === --}}
+                @canany(['receipt-export-all', 'receipt-export-selected-period'])
+
                     @can('receipt-export-selected-period')
-                        {{-- Export per bulan --}}
-                        <form action="{{ route('receipts.export.selected') }}" method="GET" class="d-flex align-items-center">
-                            <div class="col-md-4 col-lg-3">
-                                {!! Form::select('period', $periods, request('period'), [
-                                    'placeholder' => __('billing.placeholder.search-period'),
-                                    'class' => 'form-control form-select-sm me-2',
-                                    'style' => 'width:auto;',
-                                    'onchange' => 'this.form.submit()',
-                                ]) !!}
-                            </div>
+                        {{-- Export per bulan (Dibersihkan dari col-md agar tidak merusak baris) --}}
+                        <form action="{{ route('receipts.export.selected') }}" method="GET" class="form-inline mr-2 my-1">
+                            {!! Form::select('period', $periods, request('period'), [
+                                'placeholder' => __('billing.placeholder.search-period'),
+                                'class' => 'form-control form-control-sm',
+                                'style' => 'width:auto;',
+                                'onchange' => 'this.form.submit()',
+                            ]) !!}
                         </form>
                     @endcan
 
                     @can('receipt-export-all')
                         {{-- Export semua --}}
-                        <form action="{{ route('receipts.export.all') }}" method="GET">
+                        <form action="{{ route('receipts.export.all') }}" method="GET" class="form-inline my-1">
                             <input type="hidden" name="all" value="1">
                             <button type="submit" class="btn btn-primary btn-sm d-flex align-items-center"
-                                style="height: 35px;">
-                                <i class="fas fa-file-excel me-1 mr-2"></i>{{ __('billing.button.export-all-receipt') }}
+                                style="height: 31px;">
+                                <i class="fas fa-file-excel mr-2"></i>{{ __('billing.button.export-all-receipt') }}
                             </button>
                         </form>
                     @endcan
-                </div>
-            @endcanany
+
+                @endcanany
+            </div>
         </div>
+
         @if ($totalPrice > 0)
             <div class="alert alert-success mt-2">
                 <strong> Total Payments: @moneyIDR($totalPrice) </strong>
             </div>
         @endif
+
         @if ($receipts->isNotEmpty())
-            <div style="overflow-x: auto;">
+            <div style="overflow-x: auto;" class="mt-3">
                 <table id="billingsTable" cellspacing="0" width="100%"
                     class="table table-bordered table-striped table-hover">
                     <tr class="table-primary text-center">
@@ -143,6 +201,8 @@
                 No receipt found!
             </div>
         @endif
-        {{ $receipts->withQueryString()->links() }}
+        <div class="mt-3">
+            {{ $receipts->withQueryString()->links() }}
+        </div>
     </div>
 </x-layouts.cpanel.billings.app-layout>

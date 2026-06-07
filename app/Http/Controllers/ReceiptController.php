@@ -47,6 +47,11 @@ class ReceiptController extends Controller
         $paymentMethode = $request->payment_methode;
         $tellerName = $request->teller;
 
+        // === 📊 Ambil parameter sorting ===
+        // Default sort_by ke 'payment_time' dan sort_order ke 'desc' jika tidak dikirim dari request
+        $sortBy = $request->get('sort_by', 'payment_time');
+        $sortOrder = strtolower($request->get('sort_order', 'desc')) === 'asc' ? 'asc' : 'desc';
+
         $accountName = null;
         $bankName = null;
         $accountNumber = null;
@@ -60,10 +65,8 @@ class ReceiptController extends Controller
 
         // === 🔧 Tentukan Periode Pencarian ===
         if (empty($request->search_month) && empty($request->search_year)) {
-            // Tidak ada input sama sekali → pakai bulan & tahun saat ini
             $searchPeriode = date('M-y');
         } else {
-            // Jika salah satu diisi, normalisasi ke format M-y
             $year  = $request->search_year ?: date('Y');
             $month = $request->search_month ?: date('m');
             $searchPeriode = date('M-y', strtotime("{$year}-{$month}-01"));
@@ -73,9 +76,8 @@ class ReceiptController extends Controller
         $query = Receipt::query()
             ->when($searchName, fn($q) => $q->where('customer_name', 'like', "%{$searchName}%"))
             ->when($searchPeriode, function ($q) use ($searchPeriode) {
-                // Kompatibilitas untuk 2 format periode
-                $monthShort = date('M-y', strtotime($searchPeriode)); // Oct-25
-                $monthFull  = date('F Y', strtotime($searchPeriode)); // October 2025
+                $monthShort = date('M-y', strtotime($searchPeriode));
+                $monthFull  = date('F Y', strtotime($searchPeriode));
 
                 $q->where(function ($sub) use ($monthShort, $monthFull) {
                     $sub->where('periode', 'like', "%{$monthShort}%")
@@ -87,12 +89,22 @@ class ReceiptController extends Controller
             ->when($accountName, fn($q) => $q->where('account_name', $accountName))
             ->when($bankName, fn($q) => $q->where('bank_name', $bankName))
             ->when($accountNumber, fn($q) => $q->where('account_number', $accountNumber))
-            ->when($tellerName, fn($q) => $q->where('teller_name', $tellerName))
-            ->orderBy('payment_time', 'DESC');
+            ->when($tellerName, fn($q) => $q->where('teller_name', $tellerName));
+
+        // === 📑 Logika Sorting Dinamis ===
+        if ($sortBy === 'combined') {
+            // Kombinasi: urutkan berdasarkan payment_time dulu, baru teller_name
+            $query->orderBy('payment_time', $sortOrder)
+                ->orderBy('teller_name', $sortOrder);
+        } elseif (in_array($sortBy, ['payment_time', 'teller_name'])) {
+            // Sorting salah satu kolom saja
+            $query->orderBy($sortBy, $sortOrder);
+        } else {
+            // Fallback default jika input sort_by aneh-aneh
+            $query->orderBy('payment_time', 'desc');
+        }
 
         // === 🧠 Logging: tampilkan SQL & bindings ===
-        // $sql = $this->replaceArray('?', $query->getBindings(), $query->toSql());
-
         LogHelper::logInfo($request, [
             'trace_id' => $traceId,
             'filters' => [
@@ -102,9 +114,9 @@ class ReceiptController extends Controller
                 'payment_methode' => $paymentMethode,
                 'account_bank' => $request->account_bank,
                 'teller_name' => $tellerName,
+                'sort_by' => $sortBy,
+                'sort_order' => $sortOrder,
             ],
-            // 'raw_sql' => $query->toSql(),
-            // 'bound_sql' => $sql,
         ], 200, 'Executing Receipt::index query');
 
         // === 🔢 Hitung total dan ambil data ===
@@ -130,6 +142,7 @@ class ReceiptController extends Controller
         return view('receipts.index', compact('receipts', 'totalPrice', 'periods'))
             ->with('i', (request()->input('page', 1) - 1) * $paginate);
     }
+
     /**
      * Show the form for creating a new resource.
      */
