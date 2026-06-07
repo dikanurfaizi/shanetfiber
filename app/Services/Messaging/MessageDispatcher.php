@@ -7,6 +7,7 @@ use App\Models\Messaging\MessageEvent;
 use App\Helpers\LogHelper;
 use App\Helpers\FormatReceiver;
 use App\Jobs\Whatsapp\SendWhatsappMessageJob;
+use App\Models\Whatsapp\WhatsappMessage;
 use Throwable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -160,7 +161,7 @@ class MessageDispatcher
 
     /**
      * Mengkalkulasi delay dinamis: Titik Akhir Antrean + Input Detik dari Depan + Jeda Pengaman
-     * Mendukung bypass instan untuk pesan respons interaktif pelanggan.
+     * Mendukung bypass instan untuk pesan respons interaktif pelanggan berbasis Database.
      */
     private function delayMessage(string $action, string $traceId, int $inputDelaySeconds = 0, string $queue = 'notification', float $startTime = 0): Carbon
     {
@@ -171,27 +172,24 @@ class MessageDispatcher
         $lastEvent      = null;
 
         // ===============================================================
-        // 1. CHECK INTERACTIVE BYPASS ACTION (PESAN RESPONS INTERAKTIF)
+        // 1. DYNAMIC CHECK: INTERACTIVE BYPASS VIA DATABASE
         // ===============================================================
-        $interactiveActions = [
-            WhatsAppAction::UNKNOWN_KEYWORD->value,
-            WhatsAppAction::UNKNOWN_CUSTOMER->value,
-            WhatsAppAction::UNKNOWN_CUSTOMER_INFO->value,
-            WhatsAppAction::CALL_ADMIN->value,
-            WhatsAppAction::UNKNOWN_CALL_ADMIN->value,
-            WhatsAppAction::UNKNOWN_INFO_PACKAGE->value,
-            WhatsAppAction::MENU->value,
-            WhatsAppAction::STOP->value,
-            WhatsAppAction::YA->value,
-            WhatsAppAction::THANK_YOU->value,
-            WhatsAppAction::TEST_MESSAGE->value,
-            WhatsAppAction::ISSUES->value,
-        ];
+        // Gunakan cache static internal agar kueri ke DB tidak duplikat di dalam looping massal
+        static $interactiveCache = [];
 
-        if (in_array($action, $interactiveActions, true)) {
+        if (!isset($interactiveCache[$action])) {
+            // Menggunakan nama model konfigurasi pesan Anda (misal: WhatsappMessage)
+            // Pastikan namespace model ini sudah di-use di bagian atas file class
+            $interactiveCache[$action] = WhatsappMessage::where('category', 'INTERACTIVE')
+                ->where('slug', $action)
+                ->exists();
+        }
+
+        // 👈 FIX: Sekarang kondisi if mengecek langsung hasil kueri dinamis database
+        if ($interactiveCache[$action]) {
             // Untuk pesan interaktif, potong kompas langsung instan + 5 detik sebagai buffer urutan antrean
             $baseTime    = now();
-            $final_delay = $baseTime->copy()->addSeconds(5);
+            $final_delay = $baseTime->copy()->addSeconds(rand(2, 5));
             $source      = 'interactive_bypass';
         } else {
             // ===============================================================
@@ -264,7 +262,7 @@ class MessageDispatcher
                 'input_requested_delay_seconds' => $inputDelaySeconds,
                 'safety_interval_seconds'       => $safetyInterval,
                 'final_delay'                   => $final_delay->toDateTimeString(),
-                'last_job_available_at'         => $lastJob ? $lastJob->available_at : null, // 👈 Fix pencegahan Object Property Error jika null
+                'last_job_available_at'         => $lastJob ? $lastJob->available_at : null,
                 'last_event_scheduled_at'       => $lastEvent ? $lastEvent->scheduled_at : null,
             ],
             200,
