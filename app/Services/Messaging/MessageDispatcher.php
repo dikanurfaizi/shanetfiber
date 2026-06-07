@@ -64,7 +64,7 @@ class MessageDispatcher
             $queueName = $queue ?? 'notification';
 
             // 👈 2. Hitung delay aslinya di dalam delayMessage dengan menyertakan rentang detik dari depan
-            $finalDelay = $this->delayMessage($traceId, $delaySeconds, $queueName, $startTime);
+            $finalDelay = $this->delayMessage($action, $traceId, $delaySeconds, $queueName, $startTime);
 
             // Create / Update event
             if ($eventId) {
@@ -159,67 +159,125 @@ class MessageDispatcher
 
     /**
      * Mengkalkulasi delay dinamis: Titik Akhir Antrean + Input Detik dari Depan + Jeda Pengaman
+     * Mendukung bypass instan untuk pesan respons interaktif pelanggan.
      */
-    private function delayMessage(string $traceId, int $inputDelaySeconds = 0, string $queue = 'notification', float $startTime = 0): Carbon
+    private function delayMessage(string $action, string $traceId, int $inputDelaySeconds = 0, string $queue = 'notification', float $startTime = 0): Carbon
     {
-        $source = null;
-        $baseTime = null;
+        $source         = null;
+        $baseTime       = null;
+        $safetyInterval = 0;
+        $lastJob        = null;
+        $lastEvent      = null;
 
-        // 1. Ambil kriteria job terakhir di tabel antrean
-        $lastJob = DB::table('jobs')
-            ->where('queue', $queue)
-            ->orderByDesc('available_at')
-            ->first();
+        // ===============================================================
+        // 1. CHECK INTERACTIVE BYPASS ACTION (PESAN RESPONS INTERAKTIF)
+        // ===============================================================
+        $interactiveActions = [
+            WhatsAppAction::UNKNOWN_KEYWORD->value,
+            WhatsAppAction::UNKNOWN_CUSTOMER->value,
+            WhatsAppAction::UNKNOWN_CUSTOMER_INFO->value,
+            WhatsAppAction::CALL_ADMIN->value,
+            WhatsAppAction::UNKNOWN_CALL_ADMIN->value,
+            WhatsAppAction::UNKNOWN_INFO_PACKAGE->value,
+            WhatsAppAction::MENU->value,
+            WhatsAppAction::STOP->value,
+            WhatsAppAction::YA->value,
+            WhatsAppAction::THANK_YOU->value,
+            WhatsAppAction::TEST_MESSAGE->value,
+            WhatsAppAction::ISSUES->value,
 
-        if ($lastJob) {
-            $baseTime = Carbon::createFromTimestamp($lastJob->available_at);
-            $source = 'jobs';
+            // ✅ Dimasukkan ke bypass agar interaksi transaksi pelanggan langsung instan
+            WhatsAppAction::PAYMENT_CHANNEL_UPDATE->value,
+            WhatsAppAction::TRANSFER->value,
+            WhatsAppAction::CASH->value,
+            WhatsAppAction::PAYMENT_GATEWAY->value,
+        ];
+
+        if (in_array($action, $interactiveActions, true)) {
+            // Untuk pesan interaktif, potong kompas langsung instan + 5 detik sebagai buffer urutan antrean
+            $baseTime    = now();
+            $final_delay = $baseTime->copy()->addSeconds(5);
+            $source      = 'interactive_bypass';
         } else {
-            // 2. Fallback ke data riwayat message_events
-            $lastEvent = MessageEvent::where('channel', 'go_whatsapp')
-                ->orderByDesc('created_at')
+            // ===============================================================
+            // 2. NORMAL FLOW: AMBIL DATA ANTREAN TERAKHIR (JOBS / EVENTS)
+            // ===============================================================
+
+            // Ambil kriteria job terakhir di tabel antrean (Berdasarkan ID terbesar)
+            $lastJob = DB::table('jobs')
+                ->where('queue', $queue)
+                ->orderByDesc('id')
                 ->first();
 
-            if ($lastEvent && ($lastEvent->scheduled_at || $lastEvent->sent_at)) {
-                $scheduled = $lastEvent->scheduled_at ? Carbon::parse($lastEvent->scheduled_at) : null;
-                $sent = $lastEvent->sent_at ? Carbon::parse($lastEvent->sent_at) : null;
+            if ($lastJob) {
+                $baseTime = Carbon::createFromTimestamp($lastJob->available_at);
+                $source   = 'jobs';
+            } else {
+                // Fallback ke data riwayat message_events jika tabel jobs kosong
+                $lastEvent = MessageEvent::where('channel', 'go_whatsapp')
+                    ->orderByDesc('id')
+                    ->first();
 
-                if ($scheduled && $sent) {
-                    $baseTime = $scheduled->greaterThan($sent) ? $scheduled : $sent;
-                    $source = $scheduled->greaterThan($sent) ? 'message_events_scheduled' : 'message_events_sent';
-                } else {
-                    $baseTime = $scheduled ?? $sent;
-                    $source = $scheduled ? 'message_events_scheduled' : 'message_events_sent';
+                if ($lastEvent) {
+                    // Parse nilai waktu jika kolom tersebut tidak null
+                    $scheduled = $lastEvent->scheduled_at ? Carbon::parse($lastEvent->scheduled_at) : null;
+                    $sent      = $lastEvent->sent_at ? Carbon::parse($lastEvent->sent_at) : null;
+
+                    // Skenario A: Jika kedua kolom terisi (Paling sering terjadi pada pesan yang sudah sukses)
+                    if ($scheduled && $sent) {
+                        $baseTime = $scheduled->greaterThan($sent) ? $scheduled : $sent;
+                        $source   = $scheduled->greaterThan($sent) ? 'message_events_scheduled' : 'message_events_sent';
+                    }
+                    // Skenario B: Jika hanya scheduled_at saja yang terisi (Pesan baru yang masih antre/pending)
+                    // ✅ Sesuai logikanya: jika scheduled_at ada & sent_at null, ambil dari scheduled_at untuk penambahan waktu
+                    elseif ($scheduled) {
+                        $baseTime = $scheduled;
+                        $source   = 'message_events_only_scheduled';
+                    }
+                    // Skenario C: Jika hanya sent_at saja yang terisi (Fallback pengaman data historis)
+                    elseif ($sent) {
+                        $baseTime = $sent;
+                        $source   = 'message_events_only_sent';
+                    }
                 }
+            } // 👈 FIX: Penutup blok 'else fallback' yang sebelumnya salah posisi
+
+            // ===============================================================
+            // PENJAGAAN STALE DATA (KOREKSI WAKTU LAMPAU)
+            // ===============================================================
+            // Jika seluruh antrean bersih/kosong, ATAU waktu acuan dari database 
+            // ternyata sudah lewat/lampau, paksa baseTime mulai dari waktu sekarang (now())
+            if (!$baseTime || $baseTime->isPast()) {
+                $baseTime = now();
+                $source   = ($baseTime === null) ? 'fallback_now' : $source . '_adjusted_to_now';
             }
+
+            // ===============================================================
+            // 3. KALKULASI RENTANG ANTREAN NORMAL
+            // ===============================================================
+            $safetyInterval = rand(5, 10); // Jeda pengaman acak agar tidak bertabrakan di detik yang sama
+            $final_delay = $baseTime->copy()
+                ->addSeconds($inputDelaySeconds)
+                ->addSeconds($safetyInterval);
         }
 
-        // 3. Jika seluruh antrean bersih/kosong, atau waktu terakhirnya sudah lewat (isPast)
-        // Kita jadikan waktu sekarang (now()) sebagai titik dasar kalkulasi
-        if (!$baseTime || $baseTime->isPast()) {
-            $baseTime = now();
-            $source = ($baseTime === null) ? 'fallback_now' : $source . '_adjusted_to_now';
-        }
-
-        // 4. Kalkulasi Rentang: Waktu Dasar + Detik Permintaan Depan + Jeda Pengaman Acak (1-2 Menit)
-        $safetyInterval = rand(60, 100);
-        $final_delay = $baseTime->copy()
-            ->addSeconds($inputDelaySeconds)
-            ->addSeconds($safetyInterval);
-
+        // ===============================================================
+        // 4. LOGGING (SINKRON DENGAN HASIL REALTIME)
+        // ===============================================================
         LogHelper::logInfo(
             null,
             [
-                'source' => $source,
-                'base_time' => $baseTime->toDateTimeString(),
+                'action'                        => $action,
+                'source'                        => $source,
+                'base_time'                     => $baseTime->toDateTimeString(),
                 'input_requested_delay_seconds' => $inputDelaySeconds,
-                'safety_interval_seconds' => $safetyInterval,
-                'final_delay' => $final_delay->toDateTimeString(),
-                'last_job_available_at' => $lastJob?->available_at ?? null,
-                'last_event_scheduled_at' => isset($lastEvent) ? $lastEvent->scheduled_at : null,
+                'safety_interval_seconds'       => $safetyInterval,
+                'final_delay'                   => $final_delay->toDateTimeString(),
+                'last_job_available_at'         => $lastJob->available_at ?? null,
+                'last_event_scheduled_at'       => $lastEvent->scheduled_at ?? null,
             ],
             200,
-            '[MessageDispatcher] Dynamic relative delay calculated',
+            "[MessageDispatcher] Dynamic relative delay calculated (" . ($source === 'interactive_bypass' ? 'BYPASS' : 'QUEUED') . ")",
             $traceId,
             round(microtime(true) - $startTime, 4)
         );

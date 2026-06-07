@@ -57,9 +57,11 @@ class ChannelUpdateCustomerCollector
             $query->whereDoesntHave('messageEvents', function ($sub) use ($messageType) {
                 $sub->where('message_type', '=', $messageType)
                     ->where(function ($q) {
-                        // Gunakan nama tabel default laravel untuk relasi (biasanya message_events)
-                        $q->where('status', '=', 'success')
-                            ->orWhere('status', '=', 'pending')
+                        // 1. Exclude customer yang statusnya masih 'success' atau 'pending'
+                        $q->whereIn('status', ['success', 'pending'])
+
+                            // 2. ATAU Exclude juga customer yang 'failed' tapi response_code-nya 'INVALID_JID'
+                            // (Sehingga nomor yang corrupt/salah tidak akan pernah dikirimi ulang)
                             ->orWhere(function ($failQuery) {
                                 $failQuery->where('status', '=', 'failed')
                                     ->where('response_code', '=', 'INVALID_JID');
