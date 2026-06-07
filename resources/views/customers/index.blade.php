@@ -34,11 +34,16 @@
                             </div>
                             <!-- Kolom Alamat -->
                             <div class="col-md-3 col-12 mb-2">
-                                <select name="search_address" class="form-control">
-                                    <option value="">{{ __('customer.placeholder.select-address') }}</option>
-                                    <option value="NULL">{{ __('customer.placeholder.without-address') }}</option>
+                                <select name="search_address" id="select2-address-lokal" class="form-control">
+                                    <option value="">{{ __('billing.placeholder.search-address') }}</option>
+                                    <option value="NULL" {{ request('search_address') === 'NULL' ? 'selected' : '' }}>
+                                        {{ __('billing.placeholder.search-without-address') }}
+                                    </option>
                                     @foreach ($address as $addrr)
-                                        <option value="{{ $addrr }}">{{ $addrr }}</option>
+                                        <option value="{{ $addrr }}"
+                                            {{ request('search_address') === $addrr ? 'selected' : '' }}>
+                                            {{ $addrr }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
@@ -573,7 +578,18 @@
     </div>
 
     @section('custom_scripts')
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         <script>
+            $(document).ready(function() {
+                $('#select2-address-lokal').select2({
+                    theme: 'default',
+                    placeholder: "{{ __('billing.placeholder.search-address') }}",
+                    allowClear: true,
+                    width: '100%'
+                });
+            });
+
             function updatePerPage() {
                 let perPage = document.getElementById('perPage').value;
                 let url = new URL(window.location.href);
@@ -584,6 +600,11 @@
     @endsection
 
     @section('custom_styles')
+        <!-- CSS Select2 -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <!-- Tema Bootstrap 4 untuk Select2 agar tampilannya pas dengan template SB Admin / Bootstrap Anda -->
+        <link href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@x.x.x/dist/select2-bootstrap4.min.css"
+            rel="stylesheet" />
         <style>
             .custom-badge {
                 background-color: #d1e7dd;
@@ -617,8 +638,90 @@
                 background-color: lightgray !important;
                 /* abu-abu soft sedang */
             }
+
+            /* 1. Menyamakan tinggi container luar Select2 */
+            .select2-container .select2-selection--single {
+                height: calc(1.5em + 0.75rem + 2px) !important;
+                border: 1px solid #d1d3e2 !important;
+                /* Warna border standar SB Admin / Bootstrap 4 */
+                border-radius: 0.35rem !important;
+                /* Kelengkungan sudut form standar */
+                background-color: #fff !important;
+                display: flex !important;
+                align-items: center !important;
+                /* Memastikan isi seleksi vertikal di tengah */
+            }
+
+            /* 2. Mengatur posisi teks yang dipilih di dalam dropdown */
+            .select2-container--default .select2-selection--single .select2-selection__rendered {
+                color: #6e707e !important;
+                /* Warna teks standar Bootstrap 4 */
+                padding-left: 0.75rem !important;
+                /* Padding kiri disamakan dengan form-control */
+                line-height: normal !important;
+                /* Reset line-height agar fleksibel */
+                width: 100% !important;
+            }
+
+            /* 3. Menyelaraskan posisi vertikal tombol silang (clear button) jika allowClear: true */
+            .select2-container--default .select2-selection--single .select2-selection__clear {
+                margin-right: 0.5rem !important;
+                height: 100% !important;
+                display: flex !important;
+                align-items: center !important;
+            }
+
+            /* 4. Menyelaraskan posisi vertikal ikon panah dropdown Select2 */
+            .select2-container--default .select2-selection--single .select2-selection__arrow {
+                height: 100% !important;
+                /* Mengikuti tinggi penuh dari komponen induk */
+                top: 0 !important;
+                /* Reset posisi atas */
+                right: 0.5rem !important;
+                /* Jarak panah dari kanan */
+                display: flex !important;
+                align-items: center !important;
+                /* Panah otomatis presisi di tengah vertikal */
+            }
+
+            /* 5. Menyesuaikan tampilan kotak drop-down yang melayang saat diklik */
+            .select2-dropdown {
+                border: 1px solid #d1d3e2 !important;
+                border-radius: 0.35rem !important;
+                z-index: 1060 !important;
+                /* Mencegah tertutup komponen modal atau layout wrapper */
+            }
+
+            /* Tampilan Badges bawaan Anda tetap dipertahankan di bawah ini */
+            .custom-badge {
+                background-color: #d1e7dd;
+                color: #0f5132;
+                border-radius: 0.25rem;
+                padding: 0.25em 0.6em;
+                font-size: 0.75rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                display: inline-block;
+            }
+
+            .btn-disabled {
+                opacity: 0.3 !important;
+                pointer-events: none !important;
+            }
+
+            .bg-turquoise-soft {
+                background-color: #e0f7f4;
+            }
+
+            .text-turquoise {
+                color: #009688;
+            }
+
+            .bg-gray-soft {
+                background-color: lightgray !important;
+            }
         </style>
     @endsection
-
 
 </x-layouts.cpanel.customers.app-layout>

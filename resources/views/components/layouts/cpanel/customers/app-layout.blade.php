@@ -24,7 +24,8 @@
     <link href="{{ asset('assets/sweet-alert/sweet-alert.min.css') }}" rel="stylesheet">
     <link href="{{ asset('assets/vendor/datatables/datatables.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css" />
+    <link href="{{ asset('assets/select2/css/select2.min.css') }}" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css" rel="stylesheet" />
 
     <!-- Custom styles for this template-->
     <link href="{{ asset('css/sb-admin-2.min.css') }}" rel="stylesheet">
@@ -109,6 +110,7 @@
     <script src="{{ @asset('vendor/larapex-charts/apexcharts.js') }}"></script>
     <script src="{{ asset('js/customers/billing-edit.js') }}"></script>
     <script src="{{ asset('js/customers/traffic-chart.js') }}"></script>
+    <script src="{{ asset('assets/select2/js/select2.min.js') }}"></script>
     <!-- Page level custom scripts -->
     @yield('custom_scripts')
     @stack('scripts')
