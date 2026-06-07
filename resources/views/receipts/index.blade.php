@@ -50,7 +50,7 @@
                     [
                         'payment_time' => 'Sort by: Payment Time',
                         'teller_name' => 'Sort by: Teller Name',
-                        'combined' => 'Sort by: Time & Teller',
+                        'combined' => 'Sort by: Teller Name & Payment Time',
                     ],
                     request('sort_by', 'payment_time'),
                     [

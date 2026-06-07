@@ -94,8 +94,8 @@ class ReceiptController extends Controller
         // === 📑 Logika Sorting Dinamis ===
         if ($sortBy === 'combined') {
             // Kombinasi: urutkan berdasarkan payment_time dulu, baru teller_name
-            $query->orderBy('payment_time', $sortOrder)
-                ->orderBy('teller_name', $sortOrder);
+            $query->orderBy('teller_name', $sortOrder)
+                ->orderBy('payment_time', $sortOrder);
         } elseif (in_array($sortBy, ['payment_time', 'teller_name'])) {
             // Sorting salah satu kolom saja
             $query->orderBy($sortBy, $sortOrder);
