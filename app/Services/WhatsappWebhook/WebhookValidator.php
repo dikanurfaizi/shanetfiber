@@ -4,6 +4,7 @@ namespace App\Services\WhatsappWebhook;
 
 use App\Helpers\LogHelper;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class WebhookValidator
 {
@@ -37,13 +38,17 @@ class WebhookValidator
         $data = json_decode($payload, true);
 
         if (! is_array($data)) {
-            LogHelper::logWarning(null, [], 400, '[Webhook] Invalid JSON payload', $traceId);
+            LogHelper::logWarning(null, [
+                'invalid_payload_string' => Str::limit($payload, 500) // Catat string rusak maksimal 500 karakter
+            ], 400, '[Webhook] Invalid JSON payload', $traceId);
             return null;
         }
 
+        // ✅ PERBAIKAN: Catat seluruh isi data ($data) ke dalam LogHelper
         LogHelper::logInfo(null, [
-            'event'     => $data['event'] ?? $data['action'] ?? 'unknown',
-            'timestamp' => $data['timestamp'] ?? null,
+            'event'       => $data['event'] ?? $data['action'] ?? 'unknown',
+            'timestamp'   => $data['timestamp'] ?? null,
+            'raw_payload' => $data, // 👈 Baris ini akan membongkar semua isi pesan webhook di file log Anda
         ], 200, '[Webhook] Received WhatsApp event', $traceId);
 
         return $data;
