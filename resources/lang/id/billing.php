@@ -1,0 +1,218 @@
+<?php
+
+return [
+    'pay-later' => 'Pembayaran Nanti',
+    'table' => [
+        'no' => 'No.',
+        'number' => 'No. Tagihan',
+        'customer-name' => 'Nama Pelanggan',
+        'periode' => 'Periode',
+        'address' => 'Alamat',
+        'package-name' => 'Paket',
+        'activation' => 'Aktivasi',
+        'bill' => 'Jumlah Tagihan',
+        'bill-state' => 'Status Tagihan',
+        'package-price' => 'Harga',
+        'action' => 'Aksi',
+        'payment-methode' => 'Metode Pembayaran',
+        'duedate' => 'Jatuh Tempo',
+        'customer_id' => 'Cust ID',
+        'teller-name' => 'Nama Teller'
+    ],
+    'placeholder' => [
+        'search-customer-name' => 'Semua Pelanggan',
+        'search-month' => 'Semua Bulan',
+        'search-address' => 'Semua Alamat',
+        'search-without-address' => 'Tanpa Alamat',
+        'search-year' => 'Semua Tahun',
+        'search-teller' => 'Semua Teller',
+        'search-payment-methode' => 'Semua Metode Pembayaran',
+        'search-account-bank' => 'Semua Bank',
+        'search-admin' => 'Semua Admin',
+        'select' => [
+            'status' => 'Pilih Status',
+            'paid' => 'Dibayar',
+            'unpaid' => 'Belum Dibayar',
+            'periode' => 'Silakan pilih periode',
+            'paylater' => 'Pembayaran Nanti',
+            'notactive' => 'Periode Tidak Aktif'
+        ],
+        'search-period' => 'Periode untuk ekspor',
+        'all-period' => 'Semua Periode',
+        'deposit-bank' => 'Bank Tujuan',
+        'account-holder' => 'Nama Pemilik Rekening',
+        'account-number' => 'Nomor Rekening',
+        'reference-id' => 'ID Referensi',
+        'select-bank' => 'Pilih Bank',
+    ],
+    'title' => [
+        'index' => 'Kelola Tagihan',
+        'create' => 'Buat Tagihan Baru',
+        'edit' => 'Edit Tagihan',
+        'show' => 'Lihat Detail Tagihan',
+        'create-one' => 'Tambah Tagihan Baru',
+        'delete' => 'Hapus Periode Tagihan',
+        'billing-information' => 'Informasi Billing',
+        'transfer-information' => 'Informasi Transfer Bank',
+    ],
+    'header' => [
+        'index' => 'Tagihan Aktif',
+        'create' => 'Tambah Tagihan Baru',
+        'create-one' => 'Tambah Tagihan ke Periode yang Ada',
+        'edit' => 'Edit Tagihan',
+        'show' => 'Detail Tagihan',
+        'paid-off' => 'Lunas',
+        'search' => 'Cari',
+        'delete' => 'Hapus periode tagihan: :billingperiode',
+        'history-index' => 'Riwayat Tagihan',
+        'billing-paylater' => 'Tagihan Bayar Nanti',
+        'billing-bank-transfer' => 'Transfer Bank',
+    ],
+    'label' => [
+        'periode' => 'Periode:',
+        'automatic' => 'Tagihan Otomatis?',
+        'enable-automatic' => 'Aktifkan Tagihan Otomatis',
+        'select-billing-date' => 'Pilih Tanggal Tagihan (1-28)',
+        'select-date' => 'Pilih Tanggal',
+        'export-year' => 'Tahun',
+        'show' => 'Tampilkan',
+        'total-bill' => 'Total Tagihan',
+        'billing-number' => 'Nomor Tagihan',
+        'customer-name' => 'Nama Pelanggan',
+        'billing-period' => 'Periode Tagihan',
+        'package-name' => 'Nama Paket',
+        'package-price' => 'Harga Paket',
+        'user-created' => 'Dibuat Oleh',
+        'state' => 'Status Tagihan',
+        'teller-name' => 'Nama Teller',
+        'bank-transfer' => 'Transfer Bank',
+        'deposit-bank' => 'Bank Tujuan',
+        'account-holder' => 'Nama Pemilik Rekening',
+        'account-number' => 'Nomor Rekening',
+        'reference-id' => 'ID Referensi',
+        'no-data' => 'Tidak Ada Data',
+    ],
+
+    'button' => [
+        'created-new-bill' => 'Buat Tagihan Baru',
+        'add-new-bill' => 'Tambah Tagihan Baru',
+        'edit' => 'Edit Tagihan',
+        'save-add' => 'Tambah Tagihan',
+        'save-create' => 'Buat Tagihan',
+        'update' => 'Perbarui Tagihan',
+        'delete' => 'Hapus Tagihan',
+        'back' => 'Kembali',
+        'cancel' => 'Batal',
+        'pay' => 'Bayar',
+        'unpay' => 'Batalkan Pembayaran',
+        'search' => 'Cari Tagihan',
+        'view' => 'Lihat',
+        'all-payment' => 'Semua',
+        'waiting-payment' => 'Menunggu',
+        'paid-off' => 'Lunas',
+        'expired' => 'Kadaluarsa',
+        'cancelled' => 'Dibatalkan',
+        'unpaid' => 'Belum Lunas',
+        'create-order' => 'Bayar Sekarang',
+        'view-order' => 'Lihat Pesanan',
+        'pay-later' => 'Pembayaran Nanti',
+        'activation' => 'Aktivasi',
+        'continue-payment' => 'Lanjutkan Pembayaran',
+        'export-all-receipt' => 'Ekspor Semua Kuitansi',
+        'export-selected-period' => 'Ekspor Periode Terpilih',
+        'export-year' => 'Ekspor Buku Kerja Tahunan',
+        'invoice' => 'Cetak Faktur',
+        'export-excel' => 'Ekspor ke Excel',
+    ],
+
+    'action' => [
+        'view' => 'Lihat tagihan ini',
+        'edit' => 'Edit tagihan ini',
+        'delete' => 'Hapus tagihan ini',
+    ],
+
+    'info' => [
+        'whoops' => 'Waduh!',
+        'there_were_some_problems_with_your_input' => 'Terdapat beberapa masalah dengan input yang Anda masukkan.',
+        'are_you_sure_to_delete_billing' => 'Apakah Anda yakin ingin menghapus periode tagihan: :billingperiode?',
+        'warning-delete' => 'Peringatan! Menghapus periode ini akan menghapus seluruh data tagihan terkait pada periode: :billingperiode.',
+        'after-delete' => 'Tindakan ini tidak dapat dibatalkan.',
+        'press-button' => 'Tekan tombol :button-delete untuk menghapus periode tagihan :billingperiode atau tekan :button-cancel untuk mematalkan tindakan ini.',
+        'billing-history-found' => 'Menampilkan :count riwayat tagihan di semua periode.',
+        'billing-history-not-found' => 'Riwayat tagihan tidak ditemukan berdasarkan kriteria yang dipilih.',
+        'billing' => [
+            'created' => 'Tagihan berhasil dibuat.',
+            'updated' => 'Tagihan berhasil diperbarui.',
+            'deleted' => 'Tagihan berhasil dihapus.',
+            'payment-success' => 'Pembayaran berhasil. Terima kasih!',
+            'payment-cancelled' => 'Pembayaran dibatalkan.',
+            'payment-failed' => 'Pembayaran gagal. Silakan coba lagi.',
+            'payment-pending' => 'Pembayaran sedang dalam proses. Silakan tunggu konfirmasi.',
+            'payment-not-found' => 'Data pembayaran tidak ditemukan.',
+            'payment-invalid' => 'Data pembayaran tidak valid.',
+            'payment-error' => 'Terjadi kesalahan saat memproses pembayaran. Silakan hubungi dukungan IT.',
+            'count' => [
+                'singular' => ':count tagihan',
+                'plural' => ':count tagihan-tagihan'
+            ]
+        ],
+    ],
+    'state' => [
+        'belum-lunas' => 'Belum Lunas',
+        'lunas' => 'Lunas',
+        'paylater' => 'Pembayaran Nanti',
+        'belum-lunas-lainnya' => 'dan ada :count_bill_unpaid tagihan lagi yang belum lunas',
+        'tidak-ada-pemakaian' => 'Periode Tidak Aktif',
+        'confirm-on' => 'Dikonfirmasi pada ',
+        'due-date' => 'Jatuh tempo pada ',
+        'cash' => 'Tunai',
+        'transfer' => 'Transfer Bank',
+    ],
+    'status' => [
+        'waiting-payment' => 'Menunggu Pembayaran',
+        'paid-off' => 'Lunas',
+        'expired' => 'Kadaluarsa',
+        'cancelled' => 'Dibatalkan',
+    ],
+    'mikrotik' => [
+        'comment-belum-lunas' => 'belum_lunas',
+        'comment-lunas' => 'lunas',
+        'profile_isolir' => 'profile_isolir',
+    ],
+    'invoice' => [
+        'header' => [
+            'title' => 'FAKTUR / INVOICE',
+            'invoice_no' => 'No. Invoice',
+            'printed'   => 'Dicetak Pada',
+            'due_date' => 'Jatuh Tempo'
+        ],
+        'info' => [
+            'bill_to' => 'Tagihan Kepada',
+            'issued_by' => 'Diterbitkan Oleh',
+            'company_name'  => 'Shanum Network Fiber'
+        ],
+        'period' => [
+            'billing_period' => 'Periode Tagihan'
+        ],
+        'table' => [
+            'item' => 'Deskripsi Item',
+            'qty' => 'Qty',
+            'price' => 'Harga Satuan',
+            'amount' => 'Total Harga'
+        ],
+        'summary' => [
+            'subtotal' => 'Subtotal',
+            'discount' => 'Diskon',
+            'tax' => 'PPN / Pajak',
+            'total' => 'Total Tagihan'
+        ],
+        'payment_info' => [
+            'instruction' => 'Instruksi Pembayaran',
+            'transfer' => 'Silakan lakukan transfer sesuai jumlah total tagihan ke salah satu rekening bank berikut:'
+        ],
+        'footer' => [
+            'copyright' => 'Faktur ini dibuat otomatis oleh Shanum Network Fiber',
+            'notes' => 'Faktur ini diterbitkan oleh sistem komputer dan tidak memerlukan tanda tangan basah.'
+        ]
+    ]
+];

@@ -32,7 +32,7 @@ class BillingHelper
             $expired = now()->gt($payLaterDate);
             $color = $expired ? 'bg-danger' : 'bg-warning';
             $html .= '<span class="badge ' . $color . ' text-white"><i class="fas fa-ban"></i> '
-                . __('billing.state.paylater') . ' ' . $payLaterDate->format('F d, Y') . '</span>';
+                . __('billing.state.paylater') . ' ' . $payLaterDate->translatedFormat('d F, Y') . '</span>';
         } elseif ($billing->status === 'NP') {
             $html .= '<span class="badge bg-primary text-white"><i class="fas fa-info-circle"></i> '
                 . __('billing.state.tidak-ada-pemakaian') . '</span>';
@@ -41,7 +41,7 @@ class BillingHelper
             $color = $expired ? 'bg-danger' : 'bg-primary';
 
             $html .= '<span class="badge ' . $color . ' text-white"><i class="fas fa-ban"></i> '
-                . __('billing.state.belum-lunas') . '. due ' . Carbon::parse($billing->due_date)->format('F d, Y') . '</span>';
+                . __('billing.state.belum-lunas') . '. ' . __('billing.state.due-date') . ' ' . Carbon::parse($billing->due_date)->translatedFormat('d F, Y') . '</span>';
         }
 
         $unpaidOther = count($billingsUnpaid) - $countBillingCustomerUnpaid;
@@ -61,7 +61,7 @@ class BillingHelper
             return '<span class="badge bg-primary text-white">
             <i class="fas fa-times-circle"></i> ' .
                 __('billing.state.confirm-on') . ' ' .
-                e(\Carbon\Carbon::parse($billing->updated_at)->format('F d, Y')) .
+                e(Carbon::parse($billing->updated_at)->translatedFormat('d F, Y')) .
                 '</span>';
         }
 
@@ -69,7 +69,7 @@ class BillingHelper
         if ($billing->status === 'LS') {
             $paymentMethod = $billing->billingPayment->payment_method ?? '-';
             $paymentTime = $billing->billingPayment
-                ? \Carbon\Carbon::parse($billing->billingPayment->payment_time)->format('F d, Y')
+                ? Carbon::parse($billing->billingPayment->payment_time)->translatedFormat('d F, Y')
                 : '';
 
             return '<span class="badge bg-success text-white">
@@ -82,11 +82,11 @@ class BillingHelper
         if (!auth()->user() || !auth()->user()->can('billing-edit')) {
             // Jika belum lunas (status selain NP dan LS)
             $dueDate = $billing->due_date
-                ? \Carbon\Carbon::parse($billing->due_date)->format('F d, Y')
+                ? Carbon::parse($billing->due_date)->translatedFormat('d F Y')
                 : '-';
 
             $label = '<span class="badge bg-danger text-white">
-        <i class="fas fa-exclamation-circle"></i> Unpaid, Due Date ' . e($dueDate) . '
+        <i class="fas fa-exclamation-circle"></i> ' . __('billing.state.belum-lunas') . ', ' . __('billing.state.due-date') . ' ' . e($dueDate) . '
         </span>';
 
             return $label;
@@ -98,14 +98,14 @@ class BillingHelper
             data-slug="' . e($billing->slug) . '"
             style="min-width: 180px; width: max-content;">';
 
-        $html .= '<option value="cash">Cash</option>';
+        $html .= '<option value="cash">' . __('billing.state.cash') . '</option>';
 
         if (!empty($bank) && count($bank)) {
-            $html .= '<option value="transfer">Transfer</option>';
+            $html .= '<option value="transfer">' . __('billing.state.transfer') . '</option>';
         }
 
-        $html .= '<option value="paylater">Pay Later</option>';
-        $html .= '<option value="not-active-periode">Not Active Period</option>';
+        $html .= '<option value="paylater">' . __('billing.state.paylater') . '</option>';
+        $html .= '<option value="not-active-periode">' . __('billing.state.tidak-ada-pemakaian') . '</option>';
         $html .= '</select>';
 
         return $html;
@@ -145,7 +145,7 @@ class BillingHelper
                     <a class="btn btn-outline-primary btn-sm ml-1"
                         target="_blank"
                         href="' . route('billings.print-invoice', $billing->slug) . '">
-                        <i class="fas fa-file-pdf"></i> Print Invoice
+                        <i class="fas fa-file-pdf"></i> ' . __('billing.button.invoice') . '
                     </a>';
             } elseif ($customer) {
 

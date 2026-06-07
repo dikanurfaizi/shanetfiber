@@ -26,6 +26,8 @@ class BillingPeriodeSheet implements
     WithColumnFormatting,
     WithStyles
 {
+    private int $no = 1;
+
     public function __construct(
         protected int $periodeId,
         protected string $periodeName
@@ -78,17 +80,17 @@ class BillingPeriodeSheet implements
             'Address',
             'Billing Period',
             'Package Name',
-            'Package Subtotal',
-            'Addons Total',
+            'Package Subtotal (IDR)',
+            'Addons Total (IDR)',
             'Discount (IDR)',
             'Discount (%)',
-            'Subtotal Before Tax',
+            'Subtotal Before Tax (IDR)',
             'Tax (IDR)',
-            'Grand Total',
+            'Grand Total (IDR)',
             'Status',
             'Payment Time',
-            'Teller',
-            'Admin Responsible',
+            'Teller Name',
+            'Admin Name',
             'Created At'
         ];
     }
@@ -98,8 +100,6 @@ class BillingPeriodeSheet implements
      * =============================== */
     public function map($billing): array
     {
-        static $no = 1;
-
         $packageSubtotal = 0;
         $addonsTotal     = 0;
         $discountNominal = 0;
@@ -130,10 +130,10 @@ class BillingPeriodeSheet implements
             'VD' => 'NOT ACTIVE',
         ];
 
-        $formatted = $billing->created_at->format('d-m-Y');
+        $formatted = Carbon::parse($billing->created_at)->format('m/d/Y');
 
         return [
-            $no++,
+            $this->no++,
             $billing->billing_number,
             $billing->customer?->name ?? '-',
             $billing->customer?->address ?? '-',
@@ -150,7 +150,7 @@ class BillingPeriodeSheet implements
 
             $statusMap[$billing->status] ?? $billing->status,
             $billing->billingPayment?->payment_time
-                ? Carbon::parse($billing->billingPayment->payment_time)->format('d/m/Y')
+                ? Carbon::parse($billing->billingPayment->payment_time)->format('m/d/Y')
                 : '-',
             $billing->billingPayment?->paidByUser?->name ?? '-',
             $billing->customer?->user?->name ?? '-',

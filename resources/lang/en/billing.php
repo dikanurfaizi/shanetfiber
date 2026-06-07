@@ -2,17 +2,16 @@
 
 return [
     'pay-later' => 'Pay Later',
-    'bank-transfer' => 'Bank Transfer',
     'table' => [
-        'no' => 'No',
+        'no' => 'No.',
         'number' => 'Billing No.',
-        'customer-name' => 'Name',
+        'customer-name' => 'Customer Name',
         'periode' => 'Period',
         'address' => 'Address',
         'package-name' => 'Package',
         'activation' => 'Activation',
-        'bill' => 'Bill',
-        'bill-state' => 'Bill Status',
+        'bill' => 'Bill Amount',
+        'bill-state' => 'Billing Status',
         'package-price' => 'Price',
         'action' => 'Action',
         'payment-methode' => 'Payment Method',
@@ -23,48 +22,75 @@ return [
     'placeholder' => [
         'search-customer-name' => 'All Customers',
         'search-month' => 'All Months',
-        'search-address' => 'All Address',
+        'search-address' => 'All Addresses',
         'search-without-address' => 'Without Address',
         'search-year' => 'All Years',
         'search-teller' => 'All Tellers',
-        'search-payment-methode' => 'All Payment Method',
-        'search-account-bank' => 'All Bank',
-        'search-admin' => 'All Admin',
+        'search-payment-methode' => 'All Payment Methods',
+        'search-account-bank' => 'All Banks',
+        'search-admin' => 'All Admins',
         'select' => [
-            'status' => 'Status',
+            'status' => 'Select Status',
             'paid' => 'Paid',
             'unpaid' => 'Unpaid',
-            'periode' => 'Please select periode',
+            'periode' => 'Please select a period',
             'paylater' => 'Pay Later',
-            'notactive' => 'Not Active Period'
+            'notactive' => 'Inactive Period'
         ],
-        'search-period' => 'Period for export'
+        'search-period' => 'Period for export',
+        'all-period' => 'All Periods',
+        'deposit-bank' => 'Deposit Bank',
+        'account-holder' => 'Account Name',
+        'account-number' => 'Account Number',
+        'reference-id' => 'Reference ID',
+        'select-bank' => 'Select Bank',
     ],
     'title' => [
         'index' => 'Manage Billings',
         'create' => 'Create New Billing',
         'edit' => 'Edit Billing',
-        'show' => 'View Billing',
+        'show' => 'View Billing Details',
         'create-one' => 'Add New Billing',
         'delete' => 'Delete Billing Period',
+        'billing-information' => 'Billing Information',
+        'transfer-information' => 'Bank Transfer Information',
     ],
     'header' => [
         'index' => 'Active Bills',
         'create' => 'Add New Billing',
         'create-one' => 'Add Billing to Existing Period',
         'edit' => 'Edit Billing',
-        'show' => 'Billing Detail',
+        'show' => 'Billing Details',
         'paid-off' => 'Paid Off',
         'search' => 'Search',
-        'delete' => 'Delete billing periode :billingperiode',
-        'history-index' => 'Historical Bills'
+        'delete' => 'Delete billing period: :billingperiode',
+        'history-index' => 'Billing History',
+        'billing-paylater' => 'Pay Later Bills',
+        'billing-bank-transfer' => 'Bank Transfer',
     ],
     'label' => [
         'periode' => 'Period:',
         'automatic' => 'Automatic Billing?',
         'enable-automatic' => 'Enable Automatic Billing',
-        'select-billing-date' => 'Select Billing Date (1–28)',
+        'select-billing-date' => 'Select Billing Date (1-28)',
         'select-date' => 'Select Date',
+        'export-year' => 'Year',
+        'show' => 'Show',
+        'total-bill' => 'Total Bill',
+        'billing-number' => 'Billing Number',
+        'customer-name' => 'Customer Name',
+        'billing-period' => 'Billing Period',
+        'package-name' => 'Package Name',
+        'package-price' => 'Package Price',
+        'user-created' => 'Created By',
+        'state' => 'Billing State',
+        'teller-name' => 'Teller Name',
+        'bank-transfer' => 'Bank Transfer',
+        'deposit-bank' => 'Deposit Bank',
+        'account-holder' => 'Account Name',
+        'account-number' => 'Account Number',
+        'reference-id' => 'Reference ID',
+        'no-data' => 'No Data',
     ],
 
     'button' => [
@@ -86,40 +112,64 @@ return [
         'paid-off' => 'Paid Off',
         'expired' => 'Expired',
         'cancelled' => 'Cancelled',
-        'paid-off' => 'Paid Off',
         'unpaid' => 'Unpaid',
-        'create-order' => 'Bayar Sekarang',
+        'create-order' => 'Pay Now',
         'view-order' => 'View Order',
         'pay-later' => 'Pay Later',
         'activation' => 'Activation',
-        'continue-payment' => 'Lanjutkan Pembayaran',
-        'export-all-receipt' => 'Export All Receipt',
+        'continue-payment' => 'Proceed to Payment',
+        'export-all-receipt' => 'Export All Receipts',
+        'export-selected-period' => 'Export Selected Period',
+        'export-year' => 'Export Annual Workbook',
+        'invoice' => 'Print Invoice',
+        'export-excel' => 'Export to Excel',
     ],
 
     'action' => [
-        'view' => 'View this billing',
-        'edit' => 'Edit this billing',
-        'delete' => 'Delete this billing',
+        'view' => 'View this bill',
+        'edit' => 'Edit this bill',
+        'delete' => 'Delete this bill',
     ],
 
     'info' => [
         'whoops' => 'Whoops!',
         'there_were_some_problems_with_your_input' => 'There were some problems with your input.',
-        'are_you_sure_to_delete_billing' => 'Are you sure to delete billing periode :billingperiode?',
-        'warning-delete' => 'Warning!!! Deleting a billing will delete their all bill in periode :billingperiode.',
-        'after-delete' => 'After delete, it cannot be recovered.',
-        'press-button' => 'Press :button-delete button to delete billing periode :billingperiode and press :button-cancel to cancel this operation.',
+        'are_you_sure_to_delete_billing' => 'Are you sure you want to delete billing period: :billingperiode?',
+        'warning-delete' => 'Warning! Deleting this period will permanently remove all associated bills in period: :billingperiode.',
+        'after-delete' => 'This action cannot be undone.',
+        'press-button' => 'Press the :button-delete button to delete billing period :billingperiode or press :button-cancel to cancel this operation.',
+        'billing-history-found' => 'Found :count billing(s) across all periods.',
+        'billing-history-not-found' => 'No billing history found matching the given criteria.',
+        'billing' => [
+            'created' => 'Billing created successfully.',
+            'updated' => 'Billing updated successfully.',
+            'deleted' => 'Billing deleted successfully.',
+            'payment-success' => 'Payment successful. Thank you!',
+            'payment-cancelled' => 'Payment cancelled.',
+            'payment-failed' => 'Payment failed. Please try again.',
+            'payment-pending' => 'Payment is pending. Please wait for confirmation.',
+            'payment-not-found' => 'Payment record not found.',
+            'payment-invalid' => 'Invalid payment data received.',
+            'payment-error' => 'An error occurred while processing the payment. Please contact IT support.',
+            'count' => [
+                'singular' => ':count bill',
+                'plural' => ':count bills'
+            ]
+        ],
     ],
     'state' => [
         'belum-lunas' => 'Unpaid',
         'lunas' => 'Paid Off',
         'paylater' => 'Pay Later',
-        'belum-lunas-lainnya' => 'and :count_bill_unpaid more bills unpaid',
-        'tidak-ada-pemakaian' => 'Not Active Period',
-        'confirm-on' => 'confirm on '
+        'belum-lunas-lainnya' => 'and :count_bill_unpaid more unpaid bill(s)',
+        'tidak-ada-pemakaian' => 'Inactive Period',
+        'confirm-on' => 'Confirmed on ',
+        'due-date' => 'Due date on ',
+        'cash' => 'Cash',
+        'transfer' => 'Bank Transfer',
     ],
     'status' => [
-        'waiting-payment' => 'Waiting Payment',
+        'waiting-payment' => 'Awaiting Payment',
         'paid-off' => 'Paid Off',
         'expired' => 'Expired',
         'cancelled' => 'Cancelled',
@@ -132,8 +182,8 @@ return [
     'invoice' => [
         'header' => [
             'title' => 'INVOICE',
-            'invoice_no' => 'Invoice No',
-            'printed'   => 'Printed',
+            'invoice_no' => 'Invoice No.',
+            'printed'   => 'Printed On',
             'due_date' => 'Due Date'
         ],
         'info' => [
@@ -145,25 +195,24 @@ return [
             'billing_period' => 'Billing Period'
         ],
         'table' => [
-            'item' => 'Item',
+            'item' => 'Item Description',
             'qty' => 'Qty',
-            'price' => 'Price',
-            'amount' => 'Amount'
+            'price' => 'Unit Price',
+            'amount' => 'Total Amount'
         ],
         'summary' => [
-            'subtotal' => 'Sub Total',
+            'subtotal' => 'Subtotal',
             'discount' => 'Discount',
-            'tax' => 'PPN',
+            'tax' => 'VAT / Tax',
             'total' => 'Total Due'
         ],
         'payment_info' => [
-            'instruction' => 'Instruksi Pembayaran',
-            'transfer' => 'Silakan transfer jumlah total ke salah satu rekening berikut:'
+            'instruction' => 'Payment Instructions',
+            'transfer' => 'Please transfer the total amount due to one of the following bank accounts:'
         ],
         'footer' => [
-            'copyright' => 'Invoice generated by Shanum Network Fiber',
-            'notes' => 'This invoice is system generated and does not require signature'
+            'copyright' => 'This invoice was generated by Shanum Network Fiber',
+            'notes' => 'This is a computer-generated invoice and does not require a physical signature.'
         ]
     ]
-
 ];

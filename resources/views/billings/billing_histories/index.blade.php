@@ -11,7 +11,7 @@
         @else
             <div class="alert alert-success mt-2">
                 <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-                {{ $data->total() }} billing histories found.
+                {{ __('billing.info.billing-history-found', ['count' => $data->total()]) }}
             </div>
         @endif
         @if (session('warning'))
@@ -91,12 +91,12 @@
                     @can('billing-export-selected')
                         {{-- Form Filter Periode --}}
                         <form action="{{ route('billingHistory.index') }}" method="GET" id="periodeForm"
-                            class="form-inline mb-2 mr-3"> {{-- mr-3: Jarak dropdown ke button --}}
+                            class="form-inline mb-2 mr-3">
 
                             <label for="periode_id" class="font-weight-bold text-primary mb-0 mr-2">Periode</label>
 
                             {!! Form::select('periode_id', $periode, request('periode_id'), [
-                                'placeholder' => __('All Periode'),
+                                'placeholder' => __('billing.placeholder.all-period'),
                                 'class' => 'form-control form-control-sm w-auto',
                                 'onchange' => 'this.form.submit()',
                                 'id' => 'periode_id',
@@ -104,17 +104,30 @@
                         </form>
 
                         {{-- Form Export Selected --}}
-                        <form action="{{ route('billingHistory.export.selected') }}" method="GET" class="mb-2 mr-2">
+                        <form action="{{ route('billingHistory.export.selected') }}" method="GET" class="mb-2 mr-3">
                             <input type="hidden" name="status" value="{{ request('status') }}">
                             <input type="hidden" name="periode_id" value="{{ request('periode_id') }}">
-                            <button type="submit" class="btn btn-sm btn-success text-nowrap">Export Selected</button>
+                            <button type="submit" class="btn btn-sm btn-success text-nowrap">
+                                <i class="fas fa-file-excel"></i> {{ __('billing.button.export-selected-period') }}
+                            </button>
                         </form>
                     @endcan
 
                     @can('billing-export-all')
-                        {{-- Form Export All --}}
-                        <form action="{{ route('billingHistory.export.all') }}" method="GET" class="mb-2">
-                            <button type="submit" class="btn btn-sm btn-dark text-nowrap">Export All</button>
+                        {{-- Form Export Per Tahun (Peningkatan dari Export All lama) --}}
+                        <form action="{{ route('billingHistory.export.year') }}" method="GET"
+                            class="form-inline mb-2 align-items-center">
+                            <label for="export_year"
+                                class="font-weight-bold text-dark mb-0 mr-2">{{ __('billing.label.export-year') }}</label>
+
+                            {!! Form::select('export_year', $years, request('export_year', now()->year), [
+                                'class' => 'form-control form-control-sm w-auto mr-2',
+                                'id' => 'export_year',
+                            ]) !!}
+
+                            <button type="submit" class="btn btn-sm btn-dark text-nowrap">
+                                <i class="fas fa-download"></i> {{ __('billing.button.export-year') }}
+                            </button>
                         </form>
                     @endcan
 
@@ -223,7 +236,7 @@
             </div>
         @else
             <div class="alert alert-danger mt-2">
-                No billing found!
+                {{ __('billing.billing-history-not-found') }}
             </div>
         @endif
         {{-- Footer (pagination + show per page) --}}
@@ -235,7 +248,8 @@
 
             {{-- Show per page --}}
             <form method="GET" id="paginationForm" class="d-inline-flex align-items-center mb-3">
-                <label for="perPage" class="fw-bold text-primary me-2 mb-0 mr-1">Show</label>
+                <label for="perPage"
+                    class="fw-bold text-primary me-2 mb-0 mr-1">{{ __('billing.label.show') }}</label>
                 {!! Form::select('perPage', [25 => 25, 50 => 50, 100 => 100], request('perPage'), [
                     'class' => 'form-control form-control-sm w-auto',
                     'onchange' => 'this.form.submit()',

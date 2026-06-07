@@ -59,8 +59,34 @@ class BillingHistoryController extends Controller
         // pagination
         $data = $billingsQuery->paginate($paginate)->appends($request->all());
 
-        // ambil periode dari item pertama yang sedang ditampilkan (periode terakhir)
-        $periode = BillingPeriode::orderBy('id', 'ASC')->pluck('name', 'id');
+        // 1. Ambil semua data periode yang dibutuhkan dalam satu query
+        $allPeriodes = BillingPeriode::orderBy('id', 'ASC')->get(['id', 'name', 'year']);
+
+        // 2. Format ulang teks nama periode khusus UNTUK TAMPILAN DROPDOWN mengikuti locale aktif
+        $periode = $allPeriodes->mapWithKeys(function ($item) {
+            // Coba parse kolom 'name' menggunakan Carbon
+            // Jika format di DB Anda murni tanggal (Y-m-d) atau nama bulan (e.g., "March 2026")
+            try {
+                $translatedName = \Carbon\Carbon::parse($item->name)->translatedFormat('F Y');
+            } catch (\Exception $e) {
+                // Fallback jika format 'name' bukan standar tanggal yang bisa diparse Carbon
+                $translatedName = $item->name;
+            }
+
+            // Return format array: [ ID_DATABASE => "Nama Bulan Terjemahan" ]
+            return [$item->id => $translatedName];
+        });
+
+        // 3. Ambil data tahun yang unik (tetap sama seperti optimasi sebelumnya)
+        $years = $allPeriodes->whereNotNull('year')
+            ->sortByDesc('year')
+            ->pluck('year', 'year')
+            ->unique()
+            ->toArray();
+
+        if (empty($years)) {
+            $years = [now()->year => now()->year];
+        }
 
         $filterData = $this->billingReportService->getFilterData($traceId);
 
@@ -75,22 +101,24 @@ class BillingHistoryController extends Controller
                 'searchAddress' => $searchParams['address'],
                 'statuses'      => $this->billingQueryService->getStatuses(),
                 'selectedPeriod' => $request->period,
-                'periode'       => $periode
+                'periode'       => $periode,
+                'years'         => $years
             ],
             $filterData
         ))->with('i', (request()->input('page', 1) - 1) * $paginate);
     }
 
-    public function exportAllPeriode(Request $request)
+    // Mengubah nama method agar lebih sesuai
+    public function exportYearExport(Request $request)
     {
-        return Excel::download(
-            new BillingYearWorkbookExport(),
-            'Billing-' . now()->year . '.xlsx'
-        );
+        $year = $request->get('export_year', now()->year);
+        return Excel::download(new BillingYearWorkbookExport($year), 'Billing-' . $year . '.xlsx');
     }
 
     public function exportSelectedPeriode(Request $request)
     {
+
+        // dd($request->all());
         $timestamp = now()->format('Ymd_His');
         $status  = $request->get('status');
         $periodeId = $request->get('periode_id');
@@ -101,13 +129,15 @@ class BillingHistoryController extends Controller
             'LS' => 'PAID',
             'BL' => 'UNPAID',
             'PL' => 'PAYLATER',
-            'NP' => 'NOT ACTIVE PERIOD',
+            'VD' => 'NOT ACTIVE PERIOD',
         ];
 
         $statusCamel = 'All';
         if ($status != null) {
             $statusCamel = Str::title(strtolower($statusMap[$status]));
         }
+
+        // dd($status, $statusCamel, $periodeId, $periode?->name, $timestamp);
 
         return Excel::download(
             new BillingSnapshotExport($status, $periodeId),

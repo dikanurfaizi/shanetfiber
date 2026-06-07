@@ -11,7 +11,7 @@
         @else
             <div class="alert alert-success mt-2">
                 <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-                {{ $data->total() }} billings found.
+                {{ __('billing.info.billing.count.singular', ['count' => $data->total()]) }}
             </div>
         @endif
         @if (session('warning'))
@@ -74,8 +74,6 @@
         </span>
     </div>
 
-
-
     <div class="card-body">
         <div class="row align-items-center gy-2 mt-3 justify-content-between">
             {{-- Pagination kiri --}}
@@ -106,7 +104,8 @@
                         style="margin-bottom:10px; margin-right:10px;">
                         <input type="hidden" name="status" value="{{ request('status') }}">
                         <input type="hidden" name="periode" value="{{ $periode }}">
-                        <button type="submit" class="btn btn-sm btn-success">Export Data</button>
+                        <button type="submit"
+                            class="btn btn-sm btn-success">{{ __('billing.button.export-excel') }}</button>
                     </form>
                 @endcan
             </div>
@@ -114,7 +113,7 @@
 
         @if ($totalPrice > 0)
             <div class="alert alert-success mt-2">
-                <strong> Total Bill: @moneyIDR($totalPrice) </strong>
+                <strong> {{ __('billing.label.total-bill') }}: @moneyIDR($totalPrice) </strong>
             </div>
         @endif
         @if ($data->isNotEmpty())
@@ -248,7 +247,8 @@
 
             {{-- Dropdown perPage kanan --}}
             <form method="GET" id="paginationForm" class="d-flex align-items-center mb-3">
-                <label for="perPage" class="fw-bold text-primary me-2 mb-0 mr-1">Show</label>
+                <label for="perPage"
+                    class="fw-bold text-primary me-2 mb-0 mr-1">{{ __('billing.label.show') }}</label>
                 {!! Form::select('perPage', [25 => 25, 50 => 50, 100 => 100], request('perPage'), [
                     'class' => 'form-control form-control-sm w-auto',
                     'onchange' => 'this.form.submit()',
