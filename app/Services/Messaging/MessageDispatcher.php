@@ -63,7 +63,7 @@ class MessageDispatcher
 
             $queueName = $queue ?? 'notification';
 
-            // 👈 2. Hitung delay aslinya di dalam delayMessage dengan menyertakan rentang detik dari depan
+            // 1. Hitung delay aslinya di dalam delayMessage dengan menyertakan rentang detik dari depan
             $finalDelay = $this->delayMessage($action, $traceId, $delaySeconds, $queueName, $startTime);
 
             // Create / Update event
@@ -109,6 +109,7 @@ class MessageDispatcher
                 round(microtime(true) - $startTime, 4)
             );
 
+            // ✅ Memicu job penanganan pesan utama yang valid
             SendWhatsappMessageJob::dispatch(
                 $action,
                 $formattedReceiver,
@@ -185,12 +186,6 @@ class MessageDispatcher
             WhatsAppAction::THANK_YOU->value,
             WhatsAppAction::TEST_MESSAGE->value,
             WhatsAppAction::ISSUES->value,
-
-            // ✅ Dimasukkan ke bypass agar interaksi transaksi pelanggan langsung instan
-            WhatsAppAction::PAYMENT_CHANNEL_UPDATE->value,
-            WhatsAppAction::TRANSFER->value,
-            WhatsAppAction::CASH->value,
-            WhatsAppAction::PAYMENT_GATEWAY->value,
         ];
 
         if (in_array($action, $interactiveActions, true)) {
@@ -219,34 +214,30 @@ class MessageDispatcher
                     ->first();
 
                 if ($lastEvent) {
-                    // Parse nilai waktu jika kolom tersebut tidak null
                     $scheduled = $lastEvent->scheduled_at ? Carbon::parse($lastEvent->scheduled_at) : null;
                     $sent      = $lastEvent->sent_at ? Carbon::parse($lastEvent->sent_at) : null;
 
-                    // Skenario A: Jika kedua kolom terisi (Paling sering terjadi pada pesan yang sudah sukses)
+                    // Skenario A: Jika kedua kolom terisi
                     if ($scheduled && $sent) {
                         $baseTime = $scheduled->greaterThan($sent) ? $scheduled : $sent;
                         $source   = $scheduled->greaterThan($sent) ? 'message_events_scheduled' : 'message_events_sent';
                     }
-                    // Skenario B: Jika hanya scheduled_at saja yang terisi (Pesan baru yang masih antre/pending)
-                    // ✅ Sesuai logikanya: jika scheduled_at ada & sent_at null, ambil dari scheduled_at untuk penambahan waktu
+                    // Skenario B: Jika hanya scheduled_at saja yang terisi (Pesan masih antre)
                     elseif ($scheduled) {
                         $baseTime = $scheduled;
                         $source   = 'message_events_only_scheduled';
                     }
-                    // Skenario C: Jika hanya sent_at saja yang terisi (Fallback pengaman data historis)
+                    // Skenario C: Jika hanya sent_at saja yang terisi
                     elseif ($sent) {
                         $baseTime = $sent;
                         $source   = 'message_events_only_sent';
                     }
                 }
-            } // 👈 FIX: Penutup blok 'else fallback' yang sebelumnya salah posisi
+            }
 
             // ===============================================================
             // PENJAGAAN STALE DATA (KOREKSI WAKTU LAMPAU)
             // ===============================================================
-            // Jika seluruh antrean bersih/kosong, ATAU waktu acuan dari database 
-            // ternyata sudah lewat/lampau, paksa baseTime mulai dari waktu sekarang (now())
             if (!$baseTime || $baseTime->isPast()) {
                 $baseTime = now();
                 $source   = ($baseTime === null) ? 'fallback_now' : $source . '_adjusted_to_now';
@@ -255,7 +246,7 @@ class MessageDispatcher
             // ===============================================================
             // 3. KALKULASI RENTANG ANTREAN NORMAL
             // ===============================================================
-            $safetyInterval = rand(5, 10); // Jeda pengaman acak agar tidak bertabrakan di detik yang sama
+            $safetyInterval = rand(5, 10); // Jeda pengaman acak
             $final_delay = $baseTime->copy()
                 ->addSeconds($inputDelaySeconds)
                 ->addSeconds($safetyInterval);
@@ -273,8 +264,8 @@ class MessageDispatcher
                 'input_requested_delay_seconds' => $inputDelaySeconds,
                 'safety_interval_seconds'       => $safetyInterval,
                 'final_delay'                   => $final_delay->toDateTimeString(),
-                'last_job_available_at'         => $lastJob->available_at ?? null,
-                'last_event_scheduled_at'       => $lastEvent->scheduled_at ?? null,
+                'last_job_available_at'         => $lastJob ? $lastJob->available_at : null, // 👈 Fix pencegahan Object Property Error jika null
+                'last_event_scheduled_at'       => $lastEvent ? $lastEvent->scheduled_at : null,
             ],
             200,
             "[MessageDispatcher] Dynamic relative delay calculated (" . ($source === 'interactive_bypass' ? 'BYPASS' : 'QUEUED') . ")",

@@ -20,6 +20,22 @@ class ChannelUpdateCustomerCollector
     {
         $testMode = config('messaging.reminder_allow_test', false);
 
+        // ===============================================================
+        // 1. Ambil Semua ID Customer yang INVALID_JID Terlebih Dahulu (Early Exclude)
+        // ===============================================================
+        // Tarik kumpulan ID customer dari tabel message_events yang gagal karena nomor tidak valid
+        $invalidJidCustomerIds = DB::table('message_events')
+            ->where('message_type', '=', $messageType)
+            ->where('status', '=', 'failed')
+            ->where('response_code', '=', 'INVALID_JID')
+            ->whereNotNull('customer_id')
+            ->distinct()
+            ->pluck('customer_id')
+            ->toArray(); // Diubah menjadi bentuk array murni murni [1, 5, 12, dst]
+
+        // ===============================================================
+        // 2. QUERY UTAMA DATA CUSTOMER
+        // ===============================================================
         $query = Customer::query()
             ->select([
                 'customers.id as customer_id',
@@ -36,7 +52,6 @@ class ChannelUpdateCustomerCollector
             ->leftJoin('packages as p', 'cs.package_id', '=', 'p.id')
 
             // --- JOIN BILLINGS ---
-            // Gunakan INNER JOIN jika broadcast ini WAJIB hanya untuk yang punya tagihan bermasalah
             ->join('billings as b', 'customers.id', '=', 'b.customer_id')
 
             ->where('customers.user_id', '!=', 1)
@@ -48,29 +63,28 @@ class ChannelUpdateCustomerCollector
             ->whereIn('b.status', ['BL', 'PL']);
 
         // ===============================================================
-        // CONDITIONAL FILTER: ANTI-DOUBLE ATAU SINGLE RESEND
+        // 3. TERAPKAN PENGECUALIAN (EXCLUDE INVALID JID)
+        // ===============================================================
+        if (!empty($invalidJidCustomerIds)) {
+            // Langsung buang semua customer ID yang nomor WA-nya rusak/salah
+            $query->whereNotIn('customers.id', $invalidJidCustomerIds);
+        }
+
+        // ===============================================================
+        // 4. CONDITIONAL FILTER: ANTI-DOUBLE ATAU SINGLE RESEND
         // ===============================================================
         if (!is_null($customerId)) {
             $query->where('customers.id', '=', $customerId);
         } else {
-            // Memastikan sub-query mengikat field tabel message_events secara eksplisit
+            // Sisa pengecekan di dalam whereDoesntHave sekarang menjadi sangat tipis dan ringan 
+            // Karena hanya perlu menjaga status success dan pending saja
             $query->whereDoesntHave('messageEvents', function ($sub) use ($messageType) {
                 $sub->where('message_type', '=', $messageType)
-                    ->where(function ($q) {
-                        // 1. Exclude customer yang statusnya masih 'success' atau 'pending'
-                        $q->whereIn('status', ['success', 'pending'])
-
-                            // 2. ATAU Exclude juga customer yang 'failed' tapi response_code-nya 'INVALID_JID'
-                            // (Sehingga nomor yang corrupt/salah tidak akan pernah dikirimi ulang)
-                            ->orWhere(function ($failQuery) {
-                                $failQuery->where('status', '=', 'failed')
-                                    ->where('response_code', '=', 'INVALID_JID');
-                            });
-                    });
+                    ->whereIn('status', ['success', 'pending', 'failed']);
             });
         }
 
-        // group by menjaga agar customer tetap unik (1 customer saja) meskipun record billing/message_events double di DB
+        // Group by menjaga agar customer tetap unik (1 customer saja)
         $query->groupBy([
             'customers.id',
             'customers.name',
@@ -99,13 +113,14 @@ class ChannelUpdateCustomerCollector
         LogHelper::logInfo(
             null,
             [
-                'date'        => $today->toDateString(),
-                'count'       => $data->count(),
-                'test_mode'   => $testMode ? 'ON' : 'OFF',
-                'customer_id' => $customerId ?? 'ALL'
+                'date'               => $today->toDateString(),
+                'count'              => $data->count(),
+                'test_mode'          => $testMode ? 'ON' : 'OFF',
+                'customer_id'        => $customerId ?? 'ALL',
+                'total_invalid_wapi' => count($invalidJidCustomerIds) // Bagus untuk metrik analisis logs
             ],
             120,
-            '[ChannelUpdateCustomerCollector] Dynamic customer data collected successfully'
+            '[ChannelUpdateCustomerCollector] Dynamic customer data collected successfully with clear early-exclude'
         );
 
         return $data;

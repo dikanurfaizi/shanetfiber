@@ -5,7 +5,6 @@ namespace App\Services\Notification;
 use App\Enums\WhatsAppAction;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
-use App\Jobs\Whatsapp\ProcessPaymentChannelUpdateJob;
 use App\Models\Customers\Customer;
 use App\Models\Messaging\MessageEvent;
 use App\Services\Whatsapp\CloudAPI\Broadcast\PaymentChannelUpdate;
@@ -49,7 +48,7 @@ class PaymentChannelUpdateNotificationService
             $customers = $this->channelUpdateCustomerCollector->collect(now()->startOfDay(), $mainSlug, null);
 
             $delayInSeconds = 0;
-            $delayInterval = rand(60, 900);
+            $delayInterval = rand(60, 300); // Random delay antara 1 menit hingga 5 menit untuk menghindari spike
             $overrideNumber = config('messaging.phone_number_override', null);
 
             foreach ($customers as $data) {
