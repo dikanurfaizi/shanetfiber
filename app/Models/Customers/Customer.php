@@ -11,6 +11,7 @@ use App\Models\Membership\CustomerMembership;
 use App\Models\Customers\CustomerSubscription;
 use App\Models\Websystem;
 use App\Models\AutoIsolir;
+use App\Models\Messaging\MessageEvent;
 use App\Models\PasswordHistory;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -249,5 +250,11 @@ class Customer extends Authenticatable
                     ]
                 ];
             });
+    }
+
+    public function messageEvents(): HasMany
+    {
+        // Sesuaikan namespace 'App\Models\Messaging\MessageEvent' jika berbeda di project Anda
+        return $this->hasMany(MessageEvent::class, 'customer_id');
     }
 }

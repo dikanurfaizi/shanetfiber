@@ -10,6 +10,7 @@ use App\Models\Customers\Customer;
 use App\Models\Messaging\MessageEvent;
 use App\Services\Whatsapp\CloudAPI\Broadcast\PaymentChannelUpdate;
 use App\Services\Whatsapp\WhatsappGatewayResolver;
+use App\Services\Whatsapp\GowaService;
 use App\Services\Messaging\Collectors\ChannelUpdateCustomerCollector;
 use App\Services\Messaging\Collectors\AdminBankCollector;
 use App\Services\Notification\Traits\MapsBroadcastBankPayload;
@@ -22,6 +23,7 @@ class PaymentChannelUpdateNotificationService
     public function __construct(
         private PaymentChannelUpdate $paymentChannelUpdate,
         private WhatsappGatewayResolver $gatewayResolver,
+        private GowaService $gowaService,
         private ChannelUpdateCustomerCollector $channelUpdateCustomerCollector,
         private AdminBankCollector $bankCollector
     ) {}
@@ -47,7 +49,7 @@ class PaymentChannelUpdateNotificationService
             $customers = $this->channelUpdateCustomerCollector->collect(now()->startOfDay(), $mainSlug, null);
 
             $delayInSeconds = 0;
-            $delayInterval = rand(30, 60);
+            $delayInterval = rand(60, 900);
             $overrideNumber = config('messaging.phone_number_override', null);
 
             foreach ($customers as $data) {
@@ -70,7 +72,7 @@ class PaymentChannelUpdateNotificationService
                     'trace_id'        => $traceId,
                 ]);
 
-                $this->dispatchNotificationJob($event->id, $deviceId, $traceId, $recipient, $bankPayload, $mainSlug, $testMode, $delayInSeconds);
+                $this->dispatchNotification($event->id, $deviceId, $traceId, $recipient, $bankPayload, $mainSlug, $testMode, $delayInSeconds);
 
                 if (!$testMode) {
                     $delayInSeconds += $delayInterval;
@@ -139,7 +141,7 @@ class PaymentChannelUpdateNotificationService
             }
 
             // Kirim tanpa akumulasi delay (Immediate Release) karena ini adalah manual resend tunggal
-            $this->dispatchNotificationJob($event->id, $deviceId, $traceId, $recipient, $bankPayload, $mainSlug, true);
+            $this->dispatchNotification($event->id, $deviceId, $traceId, $recipient, $bankPayload, $mainSlug, true);
 
             LogHelper::logInfo(null, ['event_id' => $event->id, 'recipient' => $recipient], 200, '[Resend Single] Payment channel update job dispatched successfully', $traceId);
         } catch (\Throwable $e) {
@@ -175,21 +177,17 @@ class PaymentChannelUpdateNotificationService
     /**
      * Helper privat untuk standarisasi dispatch Job ke Queue
      */
-    private function dispatchNotificationJob(string $eventId, string $deviceId, string $traceId, string $recipient, array $bankPayload, string $mainSlug, bool $isTestMode, int $delaySeconds = 0): void
+    private function dispatchNotification(string $eventId, string $deviceId, string $traceId, string $recipient, array $bankPayload, string $mainSlug, bool $isTestMode, int $delaySeconds = 0): void
     {
-        $jobInstance = ProcessPaymentChannelUpdateJob::dispatch(
+        $this->gowaService->paymentChannelUpdate(
             eventId: $eventId,
             deviceId: $deviceId,
             traceId: $traceId,
             recipient: $recipient,
             bankPayload: $bankPayload,
-            mainSlug: $mainSlug
+            resolvedTemplate: $mainSlug,
+            isTestMode: $isTestMode,
+            delaySeconds: $isTestMode ? 0 : $delaySeconds
         );
-
-        $jobInstance->onQueue('notification');
-
-        if (!$isTestMode && $delaySeconds > 0) {
-            $jobInstance->delay(now()->addSeconds($delaySeconds));
-        }
     }
 }

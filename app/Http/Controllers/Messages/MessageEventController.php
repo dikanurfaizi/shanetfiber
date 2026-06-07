@@ -62,7 +62,7 @@ class MessageEventController extends Controller
         }
 
         $events = $query
-            ->orderByDesc('sent_at')
+            ->orderByDesc('created_at')
             ->paginate(20)
             ->withQueryString();
 

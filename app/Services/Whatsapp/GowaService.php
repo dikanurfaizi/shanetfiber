@@ -99,7 +99,7 @@ class GowaService
                 traceId: $traceId,
                 eventId: $eventId,
                 deviceId: $deviceId,
-                delay: null
+                delaySeconds: 0
             );
         } catch (\Throwable $e) {
             LogHelper::logError(null, [
@@ -147,7 +147,7 @@ class GowaService
                 traceId: $traceId,
                 eventId: $eventId,
                 deviceId: $deviceId,
-                delay: null
+                delaySeconds: 0
             );
 
             LogHelper::logInfo(null, [
@@ -194,7 +194,7 @@ class GowaService
                 traceId: $traceId,
                 eventId: $eventId,
                 deviceId: $deviceId,
-                delay: null
+                delaySeconds: 0
             );
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -238,7 +238,7 @@ class GowaService
                 traceId: $traceId,
                 eventId: $eventId,
                 deviceId: $deviceId,
-                delay: null
+                delaySeconds: 0
             );
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -282,7 +282,7 @@ class GowaService
                 traceId: $traceId,
                 eventId: $eventId,
                 deviceId: $deviceId,
-                delay: null
+                delaySeconds: 0
             );
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -346,7 +346,7 @@ class GowaService
                     traceId: $traceId,
                     eventId: $eventId,
                     deviceId: $deviceId,
-                    delay: null,
+                    delaySeconds: 0,
                 );
 
                 $globalIndex++;
@@ -406,7 +406,7 @@ class GowaService
                         traceId: $traceId,
                         eventId: $eventId,
                         deviceId: $deviceId,
-                        delay: null
+                        delaySeconds: 0
                     );
                     $globalIndex++;
                 }
@@ -458,7 +458,7 @@ class GowaService
                 traceId: $traceId,
                 eventId: $eventId,
                 deviceId: $deviceId,
-                delay: null
+                delaySeconds: 0
             );
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -517,7 +517,7 @@ class GowaService
                 traceId: $traceId,
                 eventId: null,
                 deviceId: $activeAccount->defaultNumber?->device_id,
-                delay: null
+                delaySeconds: 0
             );
 
             LogHelper::logInfo(null, [
@@ -559,7 +559,7 @@ class GowaService
                 traceId: $traceId,
                 eventId: $eventId,
                 deviceId: $deviceId,
-                delay: null
+                delaySeconds: 0
             );
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -586,22 +586,28 @@ class GowaService
         string $traceId,
         string $recipient,
         array $bankPayload,
-        string $resolvedTemplate
+        string $resolvedTemplate,
+        bool $isTestMode,
+        ?int $delaySeconds
     ): void {
         $queueName = 'notification';
         try {
+            // 1. Amankan logika delay langsung di dalam eksekutor
+            $finalDelay = $isTestMode ? 0 : ($delaySeconds ?? 0);
+
             LogHelper::logInfo(
                 null,
                 [
                     'recipient' => $recipient,
-                    'template' => $resolvedTemplate
+                    'template' => $resolvedTemplate,
+                    'delay_applied' => $finalDelay . ' seconds'
                 ],
                 200,
                 '[Payment Channel Update] Preparing to dispatch handler',
                 $traceId
             );
 
-            // 👉 Validasi kontak kosong untuk mencegah anomali data di antrean gateway
+            // 👉 Validasi kontak kosong
             if (empty($recipient)) {
                 LogHelper::logWarning(
                     null,
@@ -613,19 +619,21 @@ class GowaService
                 return;
             }
 
+            // 2. Kirim ke dispatcher dengan instance Carbon yang valid
             $this->dispatcher->dispatch(
                 $resolvedTemplate,
                 fn(string $category) => new PaymentChannelUpdateHandler(
                     builder: $this->builder,
-                    recipient: $recipient,                // 👈 Masuk ke constructor handler
-                    bankPayload: $bankPayload,            // 👈 Masuk ke constructor handler
-                    resolvedTemplate: $resolvedTemplate,  // 👈 Masuk ke constructor handler
+                    recipient: $recipient,
+                    bankPayload: $bankPayload,
+                    resolvedTemplate: $resolvedTemplate,
                     category: $category
                 ),
                 queue: $queueName,
                 traceId: $traceId,
                 eventId: $eventId,
                 deviceId: $deviceId,
+                delaySeconds: $finalDelay
             );
         } catch (\Throwable $e) {
             LogHelper::logError(

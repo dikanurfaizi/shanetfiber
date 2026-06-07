@@ -103,7 +103,7 @@ class TextMessageHandler extends BaseHandler
             traceId: $traceId,
             eventId: null,
             deviceId: $deviceId,
-            delay: now()->addSeconds(1),
+            delaySeconds: 1,
         );
     }
 
@@ -137,7 +137,7 @@ class TextMessageHandler extends BaseHandler
             traceId: $traceId,
             eventId: null,
             deviceId: $deviceId,
-            delay: now()->addSeconds(1),
+            delaySeconds: 1,
         );
     }
 

@@ -53,13 +53,16 @@ class ChannelUpdateCustomerCollector
         if (!is_null($customerId)) {
             $query->where('customers.id', '=', $customerId);
         } else {
+            // Memastikan sub-query mengikat field tabel message_events secara eksplisit
             $query->whereDoesntHave('messageEvents', function ($sub) use ($messageType) {
                 $sub->where('message_type', '=', $messageType)
                     ->where(function ($q) {
-                        $q->whereIn('status', ['success', 'pending'])
+                        // Gunakan nama tabel default laravel untuk relasi (biasanya message_events)
+                        $q->where('status', '=', 'success')
+                            ->orWhere('status', '=', 'pending')
                             ->orWhere(function ($failQuery) {
                                 $failQuery->where('status', '=', 'failed')
-                                    ->where('response_code', '=', 'INVALID_JID'); // FIX disini
+                                    ->where('response_code', '=', 'INVALID_JID');
                             });
                     });
             });
