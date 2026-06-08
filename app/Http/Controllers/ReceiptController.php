@@ -37,20 +37,20 @@ class ReceiptController extends Controller
     public function index(Request $request)
     {
         $traceId = (string) Str::uuid();
-        $startTime = microtime(true); // 🕒 Mulai timing
+        $startTime = microtime(true);
         $paginate = 25;
 
-        // === 🔍 Ambil parameter pencarian ===
+        // === 🔍 Ambil parameter pencarian bawaan ===
         $searchName = $request->search_name;
         $searchPeriode = $request->search_month . ' ' . $request->search_year;
         $searchAddress = $request->search_address;
         $paymentMethode = $request->payment_methode;
         $tellerName = $request->teller;
 
-        // === 📊 Ambil parameter sorting ===
-        // Default sort_by ke 'payment_time' dan sort_order ke 'desc' jika tidak dikirim dari request
-        $sortBy = $request->get('sort_by', 'payment_time');
-        $sortOrder = strtolower($request->get('sort_order', 'desc')) === 'asc' ? 'asc' : 'desc';
+        // === 📥 Ambil parameter FILTER BARU (Dropdown & Date) ===
+        $filterCustomer = $request->get('filter_customer');
+        $filterTeller = $request->get('filter_teller');
+        $filterDate = $request->get('filter_date');
 
         $accountName = null;
         $bankName = null;
@@ -91,33 +91,21 @@ class ReceiptController extends Controller
             ->when($accountNumber, fn($q) => $q->where('account_number', $accountNumber))
             ->when($tellerName, fn($q) => $q->where('teller_name', $tellerName));
 
-        // === 📑 Logika Sorting Dinamis ===
-        if ($sortBy === 'combined') {
-            // Kombinasi: urutkan berdasarkan payment_time dulu, baru teller_name
-            $query->orderBy('teller_name', $sortOrder)
-                ->orderBy('payment_time', $sortOrder);
-        } elseif (in_array($sortBy, ['payment_time', 'teller_name'])) {
-            // Sorting salah satu kolom saja
-            $query->orderBy($sortBy, $sortOrder);
-        } else {
-            // Fallback default jika input sort_by aneh-aneh
-            $query->orderBy('payment_time', 'desc');
+        // === 📑 Eksekusi Filter Baru ===
+        if (!empty($filterCustomer)) {
+            $query->where('customer_name', $filterCustomer);
         }
 
-        // === 🧠 Logging: tampilkan SQL & bindings ===
-        LogHelper::logInfo($request, [
-            'trace_id' => $traceId,
-            'filters' => [
-                'search_name' => $searchName,
-                'search_periode' => $searchPeriode,
-                'search_address' => $searchAddress,
-                'payment_methode' => $paymentMethode,
-                'account_bank' => $request->account_bank,
-                'teller_name' => $tellerName,
-                'sort_by' => $sortBy,
-                'sort_order' => $sortOrder,
-            ],
-        ], 200, 'Executing Receipt::index query');
+        if (!empty($filterTeller)) {
+            $query->where('teller_name', $filterTeller);
+        }
+
+        if (!empty($filterDate)) {
+            $query->whereDate('payment_time', $filterDate);
+        }
+
+        // === 🔝 Default Sorting ===
+        $query->orderBy('payment_time', 'desc');
 
         // === 🔢 Hitung total dan ambil data ===
         $totalPrice = $query->sum('package_price');
@@ -128,24 +116,29 @@ class ReceiptController extends Controller
             ->orderByRaw("STR_TO_DATE(CONCAT('01 ', periode), '%d %M %Y') DESC")
             ->pluck('periode', 'periode');
 
+        // === 👥 Ambil List Unik untuk Dropdown Filter (Tanpa AJAX) ===
+        $customers = Receipt::whereNotNull('customer_name')
+            ->distinct()
+            ->orderBy('customer_name', 'asc')
+            ->pluck('customer_name', 'customer_name');
+
+        $tellers = Receipt::whereNotNull('teller_name')
+            ->distinct()
+            ->orderBy('teller_name', 'asc')
+            ->pluck('teller_name', 'teller_name');
+
         $endTime = microtime(true);
         $duration = round(($endTime - $startTime) * 1000, 2);
 
-        // === ✅ Log sukses ===
         LogHelper::logInfo($request, [
             'trace_id' => $traceId,
             'result_count' => $receipts->total(),
-            'execution_time_ms' => $duration,
-            'total_price_sum' => $totalPrice,
-        ], 200, 'Successfully retrieved receipt index', $traceId, $duration);
+        ], 200, 'Successfully retrieved receipt index with local filters', $traceId, $duration);
 
-        return view('receipts.index', compact('receipts', 'totalPrice', 'periods'))
+        // Kirim $customers dan $tellers ke view
+        return view('receipts.index', compact('receipts', 'totalPrice', 'periods', 'customers', 'tellers'))
             ->with('i', (request()->input('page', 1) - 1) * $paginate);
     }
-
-    /**
-     * Show the form for creating a new resource.
-     */
 
     /**
      * Display the specified resource.

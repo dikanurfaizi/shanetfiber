@@ -318,11 +318,16 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::put('/banks/{bank}/disabled/false', [BankController::class, 'enable'])->name('bank.enable');
 
         // ==================== RECEIPT MANAGEMENT ====================
+        // 1. Route Export
+        Route::get('receipts/export/all', [ReceiptController::class, 'exportAll'])->name('receipts.export.all');
+        Route::get('receipts/export/selected', [ReceiptController::class, 'exportSelected'])->name('receipts.export.selected');
+
+        // 2. Route Resource Utama
         Route::resource('receipts', ReceiptController::class);
-        Route::get('receipt/{receipt}/print/', [ReceiptController::class, 'print'])->name('receipts.print');
-        Route::get('receipt/{receipt}/thermal', [ReceiptController::class, 'thermalPrint'])->name('receipts.thermal');
-        Route::get('/receipt/export/all', [ReceiptController::class, 'exportAll'])->name('receipts.export.all');
-        Route::get('/receipt/export/selected', [ReceiptController::class, 'exportSelected'])->name('receipts.export.selected');
+
+        // 3. Route Print (Menggunakan parameter wildcard {receipt})
+        Route::get('receipts/{receipt}/print', [ReceiptController::class, 'print'])->name('receipts.print');
+        Route::get('receipts/{receipt}/thermal', [ReceiptController::class, 'thermalPrint'])->name('receipts.thermal');
 
         // ==================== SETTINGS MANAGEMENT ====================
         // Users & Roles

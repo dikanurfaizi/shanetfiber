@@ -1,7 +1,7 @@
 <x-layouts.cpanel.billings.app-layout title="Receipts">
 
     <div class="card-header py-3">
-        <h5 class="mb-2 font-weight-bold text-primary">{{ __('Receipts') }}</h5>
+        <h5 class="mb-2 font-weight-bold text-primary">{{ __('receipts.header.receipt_list') }}</h5>
         @if (isset($message))
             <div class="alert alert-danger mt-2">
                 <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
@@ -10,7 +10,7 @@
         @else
             <div class="alert alert-success mt-2">
                 <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-                {{ $receipts->total() }} receipts found
+                {{ __('receipts.message.total_receipts', ['count' => $receipts->total()]) }}
             </div>
         @endif
     </div>
@@ -27,15 +27,16 @@
             {{-- Kelompok Filter Kanan (Disatukan dalam inline flex Bootstrap 4) --}}
             <div class="d-flex align-items-center flex-wrap">
 
-                {{-- === 📑 1. Form Dropdown Urutan / Sorting === --}}
+                {{-- === 📑 1. Form Filter Spesifik (Lokal Data via Select2) === --}}
                 {!! Form::open([
                     'url' => url()->current(),
                     'method' => 'GET',
-                    'class' => 'form-inline mr-2my-1',
-                    'id' => 'sortForm',
+                    'class' => 'form-inline mr-2 my-1',
+                    'id' => 'advancedFilterForm',
                 ]) !!}
-                {{-- Pertahankan parameter search yang sedang aktif --}}
-                @foreach (request()->except(['sort_by', 'sort_order', 'page']) as $key => $value)
+
+                {{-- Pertahankan parameter search/pagination lain --}}
+                @foreach (request()->except(['filter_customer', 'filter_teller', 'filter_date', 'page']) as $key => $value)
                     @if (is_array($value))
                         @foreach ($value as $v)
                             <input type="hidden" name="{{ $key }}[]" value="{{ $v }}">
@@ -45,34 +46,38 @@
                     @endif
                 @endforeach
 
-                {!! Form::select(
-                    'sort_by',
-                    [
-                        'payment_time' => 'Sort by: Payment Time',
-                        'teller_name' => 'Sort by: Teller Name',
-                        'combined' => 'Sort by: Teller Name & Payment Time',
-                    ],
-                    request('sort_by', 'payment_time'),
-                    [
-                        'class' => 'form-control form-control-sm mr-2',
-                        'style' => 'width:auto;',
-                        'onchange' => 'this.form.submit()',
-                    ],
-                ) !!}
+                <div class="form-group mr-2 my-1" style="min-width: 200px;">
+                    {!! Form::select('filter_customer', $customers, request('filter_customer'), [
+                        'placeholder' => __('receipts.placeholder.select_customer_name'),
+                        'id' => 'filterCustomer',
+                        'class' => 'form-control form-control-sm select2-local w-100',
+                    ]) !!}
+                </div>
 
-                {!! Form::select(
-                    'sort_order',
-                    [
-                        'desc' => 'Descending (Z-A / Terbaru)',
-                        'asc' => 'Ascending (A-Z / Terlama)',
-                    ],
-                    request('sort_order', 'desc'),
-                    [
-                        'class' => 'form-control form-control-sm mr-3',
-                        'style' => 'width:auto;',
-                        'onchange' => 'this.form.submit()',
-                    ],
-                ) !!}
+                <div class="form-group mr-2 my-1" style="min-width: 180px;">
+                    {!! Form::select('filter_teller', $tellers, request('filter_teller'), [
+                        'placeholder' => __('receipts.placeholder.select_teller'),
+                        'id' => 'filterTeller',
+                        'class' => 'form-control form-control-sm select2-local w-100',
+                    ]) !!}
+                </div>
+
+                <div class="form-group mr-2 my-1">
+                    <input type="text" name="filter_date" id="filterDate"
+                        class="form-control form-control-sm datetimepicker"
+                        placeholder="{{ __('receipts.placeholder.select_date') }}" value="{{ request('filter_date') }}"
+                        autocomplete="off" style="width: 150px;">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-sm my-1 mr-1">
+                    <i class="fas fa-search mr-1"></i> {{ __('receipts.button.filter') }}
+                </button>
+
+                @if (request('filter_customer') || request('filter_teller') || request('filter_date'))
+                    <a href="{{ url()->current() }}"
+                        class="btn btn-secondary btn-sm my-1">{{ __('receipts.button.reset') }}</a>
+                @endif
+
                 {!! Form::close() !!}
 
                 {{-- === 📤 2. Fitur Kelompok Tombol Export === --}}
@@ -82,7 +87,7 @@
                         {{-- Export per bulan (Dibersihkan dari col-md agar tidak merusak baris) --}}
                         <form action="{{ route('receipts.export.selected') }}" method="GET" class="form-inline mr-2 my-1">
                             {!! Form::select('period', $periods, request('period'), [
-                                'placeholder' => __('billing.placeholder.search-period'),
+                                'placeholder' => __('receipts.placeholder.periode'),
                                 'class' => 'form-control form-control-sm',
                                 'style' => 'width:auto;',
                                 'onchange' => 'this.form.submit()',
@@ -96,7 +101,7 @@
                             <input type="hidden" name="all" value="1">
                             <button type="submit" class="btn btn-primary btn-sm d-flex align-items-center"
                                 style="height: 31px;">
-                                <i class="fas fa-file-excel mr-2"></i>{{ __('billing.button.export-all-receipt') }}
+                                <i class="fas fa-file-excel mr-2"></i>{{ __('receipts.button.export_all') }}
                             </button>
                         </form>
                     @endcan
@@ -107,7 +112,7 @@
 
         @if ($totalPrice > 0)
             <div class="alert alert-success mt-2">
-                <strong> Total Payments: @moneyIDR($totalPrice) </strong>
+                <strong> {{ __('receipts.label.total_payments') }}: @moneyIDR($totalPrice) </strong>
             </div>
         @endif
 
@@ -116,15 +121,15 @@
                 <table id="billingsTable" cellspacing="0" width="100%"
                     class="table table-bordered table-striped table-hover">
                     <tr class="table-primary text-center">
-                        <th>{{ __('billing.table.no') }}</th>
-                        <th>{{ __('billing.table.customer-name') }}</th>
-                        <th>{{ __('billing.table.customer_id') }}</th>
-                        <th>{{ __('billing.table.address') }}</th>
-                        <th>{{ __('billing.table.periode') }}</th>
-                        <th>{{ __('billing.table.bill') }}</th>
-                        <th>{{ __('billing.table.payment-methode') }}</th>
-                        <th>{{ __('billing.table.teller-name') }}</th>
-                        <th>{{ __('customer.table.action') }}</th>
+                        <th>{{ __('receipts.table.no') }}</th>
+                        <th>{{ __('receipts.table.customer_name') }}</th>
+                        <th>{{ __('receipts.table.customer_id') }}</th>
+                        <th>{{ __('receipts.table.address') }}</th>
+                        <th>{{ __('receipts.table.periode') }}</th>
+                        <th>{{ __('receipts.table.bill') }}</th>
+                        <th>{{ __('receipts.table.payment_method') }}</th>
+                        <th>{{ __('receipts.table.teller_name') }}</th>
+                        <th>{{ __('receipts.table.actions') }}</th>
                     </tr>
                     @foreach ($receipts as $key => $data)
                         <tr>
@@ -132,26 +137,27 @@
 
                             <td><a href="{{ route('receipts.show', $data->slug) }}" data-bs-toggle="tooltip"
                                     data-bs-placement="top" title="Show Billing">
-                                    <span class="badge text-primary">{{ $data->customer_name ?? 'no name' }}</span></a>
+                                    <span
+                                        class="badge text-primary">{{ $data->customer_name ?? __('receipts.label.no_name') }}</span></a>
                             </td>
                             <td><a href="{{ route('receipts.show', $data->slug) }}" data-bs-toggle="tooltip"
                                     data-bs-placement="top" title="Show Billing">
                                     <span
-                                        class="badge text-primary">{{ $data->customer->customer_id ?? 'no customer ID' }}</span></a>
+                                        class="badge text-primary">{{ $data->customer->customer_id ?? __('receipts.label.no_customer_id') }}</span></a>
                             </td>
                             <td>
                                 <span class="badge text-primary"
                                     style="white-space: normal; text-align: left; display: inline-block; max-width: 220px; line-height: 1.4;">
-                                    {{ $data->customer_address ?? 'no address' }}
+                                    {{ $data->customer_address ?? __('receipts.label.no_address') }}
                                 </span>
                             </td>
                             <td><span
-                                    class="badge text-primary">{{ Carbon\Carbon::parse($data->periode)->translatedFormat('M Y') ?? 'no periode' }}</span>
+                                    class="badge text-primary">{{ Carbon\Carbon::parse($data->periode)->translatedFormat('M Y') ?? __('receipts.label.no_periode') }}</span>
                             </td>
                             <td>
                                 <span class="badge bg-blue-soft text-primary">
                                     @if ($data->package_price === 0)
-                                        {{ __('Free') }}
+                                        {{ __('receipts.label.free') }}
                                     @else
                                         @moneyIDR($data->package_price)
                                     @endif
@@ -160,9 +166,9 @@
                             <td>
                                 @php
                                     $method = match ($data->payment_methode) {
-                                        null => __('No Payment Method'),
-                                        'cash' => __('Cash'),
-                                        'transfer' => 'Transfer',
+                                        null => __('receipts.label.no_payment_method'),
+                                        'cash' => __('receipts.label.cash'),
+                                        'transfer' => __('receipts.label.transfer'),
                                         default => $data->payment_methode,
                                     };
 
@@ -185,11 +191,13 @@
                                     @endif
                                 </span>
                             </td>
-                            <td><span class="badge text-primary">{{ $data->teller_name ?? 'no name' }}</span></td>
+                            <td><span
+                                    class="badge text-primary">{{ $data->teller_name ?? __('receipts.label.no_teller') }}</span>
+                            </td>
                             <td class="d-flex items-center justify-content-end">
                                 @can('billing-edit')
                                     <a class="btn btn-success btn-sm" href="{{ route('receipts.print', $data->slug) }}"
-                                        target="_blank"><i class="fa fa-print"></i> Print PDF</a>
+                                        target="_blank"><i class="fa fa-print"></i> {{ __('receipts.button.print') }}</a>
                                 @endcan
                             </td>
                         </tr>
@@ -198,11 +206,44 @@
             </div>
         @else
             <div class="alert alert-danger mt-2">
-                No receipt found!
+                {{ __('receipts.message.no_receipts') }}
             </div>
         @endif
         <div class="mt-3">
             {{ $receipts->withQueryString()->links() }}
         </div>
     </div>
+
+    @section('custom_scripts')
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+        <link rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+
+        <script>
+            $(document).ready(function() {
+                // Inisialisasi Select2 Standar untuk Data Lokal (Otomatis bisa search text)
+                $('#filterCustomer').select2({
+                    placeholder: '-- Pilih Pelanggan --',
+                    allowClear: true,
+                    width: 'resolve'
+                });
+
+                $('#filterTeller').select2({
+                    placeholder: '-- Pilih Teller --',
+                    allowClear: true,
+                    width: 'resolve'
+                });
+
+                // Inisialisasi Datepicker
+                $('#filterDate').datepicker({
+                    format: 'yyyy-mm-dd',
+                    autoclose: true,
+                    todayHighlight: true
+                });
+            });
+        </script>
+    @endsection
 </x-layouts.cpanel.billings.app-layout>
