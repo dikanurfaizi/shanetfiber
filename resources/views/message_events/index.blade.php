@@ -13,12 +13,13 @@
 
                     <div class="col-12 col-md-4 mb-2">
                         <input type="text" name="q" class="form-control"
-                            placeholder="{{ __('message_event.placeholder_search') }}" value="{{ request('q') }}">
+                            placeholder="{{ __('message_event.placeholder.placeholder_search') }}"
+                            value="{{ request('q') }}">
                     </div>
 
                     <div class="col-12 col-md-4 mb-2">
                         <select name="channel" class="form-control">
-                            <option value="">@lang('message_event.all_channel')</option>
+                            <option value="">@lang('message_event.label.all_channel')</option>
                             @foreach ($channels as $channel)
                                 <option value="{{ $channel }}" @selected(request('channel') === $channel)>
                                     {{ strtoupper($channel) }}
@@ -29,7 +30,7 @@
 
                     <div class="col-12 col-md-4 mb-2">
                         <select name="message_type" class="form-control">
-                            <option value="">@lang('message_event.all_message_type')</option>
+                            <option value="">@lang('message_event.label.all_message_type')</option>
                             @foreach ($messageTypes as $type)
                                 <option value="{{ $type }}" @selected(request('message_type') === $type)>
                                     {{ $type }}
@@ -47,7 +48,7 @@
 
                         <small>
                             <i class="fas fa-sliders-h mr-1"></i>
-                            @lang('message_event.advanced_filter')
+                            @lang('message_event.button.advanced_filter')
                         </small>
                     </a>
                 </div>
@@ -80,20 +81,20 @@
                         {{-- Desktop & Tablet --}}
                         <div class="d-none d-md-inline-block">
                             <button class="btn btn-primary mr-2">
-                                @lang('message_event.filter')
+                                @lang('message_event.button.filter')
                             </button>
                             <a href="{{ route('messageevents.index') }}" class="btn btn-outline-secondary">
-                                @lang('message_event.reset')
+                                @lang('message_event.button.reset')
                             </a>
                         </div>
 
                         {{-- Mobile --}}
                         <div class="d-block d-md-none">
                             <button class="btn btn-primary btn-block mb-2">
-                                @lang('message_event.filter')
+                                @lang('message_event.button.filter')
                             </button>
                             <a href="{{ route('messageevents.index') }}" class="btn btn-outline-secondary btn-block">
-                                @lang('message_event.reset')
+                                @lang('message_event.button.reset')
                             </a>
                         </div>
 
@@ -107,26 +108,26 @@
             {{-- QUICK FILTER --}}
             <div class="mb-3">
 
-                <span class="text-muted small mr-2">@lang('message_event.quick_filter')</span>
+                <span class="text-muted small mr-2">@lang('message_event.label.quick_filter')</span>
 
                 <a href="{{ route('messageevents.index', array_merge(request()->except('status'), ['status' => 'failed'])) }}"
                     class="btn btn-sm btn-outline-danger mr-1 {{ request('status') === 'failed' ? 'active' : '' }}">
-                    ❌ @lang('message_event.status_failed')
+                    ❌ @lang('message_event.state.status_failed')
                 </a>
 
                 <a href="{{ route('messageevents.index', array_merge(request()->except('status'), ['status' => 'pending'])) }}"
                     class="btn btn-sm btn-outline-warning mr-1 {{ request('status') === 'pending' ? 'active' : '' }}">
-                    ⏳ @lang('message_event.status_pending')
+                    ⏳ @lang('message_event.state.status_pending')
                 </a>
 
                 <a href="{{ route('messageevents.index', array_merge(request()->except('status'), ['status' => 'success'])) }}"
                     class="btn btn-sm btn-outline-success mr-1 {{ request('status') === 'success' ? 'active' : '' }}">
-                    ✅ @lang('message_event.status_success')
+                    ✅ @lang('message_event.state.status_success')
                 </a>
 
                 <a href="{{ route('messageevents.index', request()->except('status')) }}"
                     class="btn btn-sm btn-outline-secondary">
-                    🔄 @lang('message_event.status_all')
+                    🔄 @lang('message_event.state.status_all')
                 </a>
 
             </div>
@@ -138,15 +139,15 @@
                 <table class="table table-hover table-bordered mb-0">
                     <thead class="thead-light">
                         <tr>
-                            <th>@lang('message_event.th_hash')</th>
-                            <th>@lang('message_event.th_channel')</th>
-                            <th>@lang('message_event.th_customer')</th>
-                            <th>@lang('message_event.th_phone')</th>
-                            <th>@lang('message_event.th_message_type')</th>
-                            <th>@lang('message_event.th_status')</th>
-                            <th>@lang('message_event.th_sent_at')</th>
-                            <th>@lang('message_event.th_scheduled_at')</th>
-                            <th>@lang('message_event.th_action')</th>
+                            <th>@lang('message_event.table.hash')</th>
+                            <th>@lang('message_event.table.channel')</th>
+                            <th>@lang('message_event.table.customer')</th>
+                            <th>@lang('message_event.table.phone')</th>
+                            <th>@lang('message_event.table.message_type')</th>
+                            <th>@lang('message_event.table.status')</th>
+                            <th>@lang('message_event.table.sent_at')</th>
+                            <th>@lang('message_event.table.scheduled_at')</th>
+                            <th>@lang('message_event.table.action')</th>
                         </tr>
                     </thead>
 
@@ -161,11 +162,9 @@
                                         {{ $event->customer->contact }}
                                     @else
                                         @php
-                                            // Decode string JSON meta menjadi array
                                             $metaData = is_string($event->meta)
                                                 ? json_decode($event->meta, true)
                                                 : $event->meta;
-                                            // Bersihkan suffix '@s.whatsapp.net' jika ada agar nomornya rapi
                                             $phoneFallback = isset($metaData['phone'])
                                                 ? str_replace('@s.whatsapp.net', '', $metaData['phone'])
                                                 : '-';
@@ -176,7 +175,6 @@
                                 <td>{{ $event->message_type }}</td>
                                 <td>
                                     @php
-                                        // Cukup sisakan mapping untuk class warna Bootstrap saja
                                         $colorMap = [
                                             'success' => 'success',
                                             'failed' => 'danger',
@@ -187,21 +185,19 @@
                                         {{ __('message_event.db_status.' . $event->status) ?? strtoupper($event->status) }}
                                     </span>
                                 </td>
-                                {{-- Kolom Sent At --}}
                                 <td>{{ $event->sent_at ? $event->sent_at->translatedFormat('d M Y H:i:s') : '-' }}</td>
 
-                                {{-- Kolom Scheduled At --}}
                                 <td>
                                     @if ($event->scheduled_at)
                                         {{ $event->scheduled_at->translatedFormat('d M Y H:i:s') }}
                                     @else
-                                        <span class="badge badge-secondary shadow-sm">⚡ @lang('message_event.realtime')</span>
+                                        <span class="badge badge-secondary shadow-sm">⚡ @lang('message_event.label.realtime')</span>
                                     @endif
                                 </td>
                                 <td>
                                     <button class="btn btn-sm btn-outline-primary" data-toggle="collapse"
                                         data-target="#detail-{{ $event->id }}">
-                                        <i class="fas fa-eye"></i> @lang('message_event.btn_detail')
+                                        <i class="fas fa-eye"></i> @lang('message_event.button.btn_detail')
                                     </button>
 
                                     @if ($event->status === 'failed')
@@ -209,7 +205,7 @@
                                             style="display:inline;">
                                             @csrf
                                             <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                <i class="fas fa-redo-alt"></i> @lang('message_event.btn_retry')
+                                                <i class="fas fa-redo-alt"></i> @lang('message_event.button.btn_retry')
                                             </button>
                                         </form>
                                     @endif
@@ -219,7 +215,7 @@
                             <tr class="collapse bg-light" id="detail-{{ $event->id }}">
                                 <td colspan="9" class="p-3">
                                     <div class="mb-2">
-                                        <strong>@lang('message_event.label_response')</strong><br>
+                                        <strong>@lang('message_event.label.label_response')</strong><br>
                                         <code>{{ $event->response_summary }}</code>
                                     </div>
 
@@ -238,7 +234,7 @@
                         @empty
                             <tr>
                                 <td colspan="9" class="text-center text-muted">
-                                    @lang('message_event.no_events')
+                                    @lang('message_event.state.no_events')
                                 </td>
                             </tr>
                         @endforelse
@@ -267,15 +263,13 @@
                             </span>
                         </div>
 
-                        {{-- Waktu Sent At di Mobile --}}
                         <div class="small text-muted mb-1">
                             {{ $event->sent_at ? $event->sent_at->translatedFormat('d M Y H:i') : '-' }}
                         </div>
 
                         <strong
-                            class="text-break">{{ $event->customer->name ?? __('message_event.unknown_customer') }}</strong><br>
+                            class="text-break">{{ $event->customer->name ?? __('message_event.label.unknown_customer') }}</strong><br>
 
-                        {{-- Fallback Kontak di Mobile --}}
                         <span class="text-muted text-break">
                             @if ($event->customer && $event->customer->contact)
                                 {{ $event->customer->contact }}
@@ -292,7 +286,6 @@
                             @endif
                         </span>
 
-                        {{-- Bagian Badge Tipe Pengiriman di Mobile --}}
                         <div class="mt-2 d-flex flex-wrap align-items-center" style="gap: 6px;">
                             <span class="badge badge-light text-wrap text-break border text-left"
                                 style="max-width: 100%;">
@@ -305,32 +298,32 @@
                                 </span>
                             @else
                                 <span class="badge badge-secondary">
-                                    ⚡ @lang('message_event.realtime')
+                                    ⚡ @lang('message_event.label.realtime')
                                 </span>
                             @endif
                         </div>
 
                         <button class="btn btn-sm btn-outline-primary mt-2 w-100" data-toggle="collapse"
                             data-target="#detail-mobile-{{ $event->id }}">
-                            @lang('message_event.btn_view_detail')
+                            @lang('message_event.button.btn_view_detail')
                         </button>
 
                         <div class="collapse mt-2" id="detail-mobile-{{ $event->id }}">
                             <div class="bg-light p-2 rounded small">
 
                                 <div class="mb-2">
-                                    <strong>@lang('message_event.label_response')</strong><br>
+                                    <strong>@lang('message_event.label.label_response')</strong><br>
                                     <code class="text-break">{{ $event->response_summary }}</code>
                                 </div>
 
                                 <div class="text-muted">
                                     <div class="mb-1">
-                                        <strong>Trace ID:</strong><br>
+                                        <strong>{{ __('message_event.label.trace_id') }}:</strong><br>
                                         <code class="text-break">{{ $event->trace_id ?? '-' }}</code>
                                     </div>
 
                                     <div>
-                                        <strong>Message ID:</strong><br>
+                                        <strong>{{ __('message_event.label.message_id') }}:</strong><br>
                                         <code class="text-break">{{ $event->message_id ?? '-' }}</code>
                                     </div>
                                 </div>
@@ -342,7 +335,7 @@
                 </div>
             @empty
                 <div class="text-center text-muted">
-                    @lang('message_event.no_events')
+                    @lang('message_event.state.no_events')
                 </div>
             @endforelse
         </div>

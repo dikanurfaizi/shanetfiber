@@ -183,10 +183,10 @@
                                     {{ $method }}
 
                                     @if ($isInline)
-                                        on {{ $formattedDate }}
+                                        {{ __('receipts.label.on') }} {{ $formattedDate }}
                                     @else
                                         <div style="margin-top: 4px;">
-                                            on {{ $formattedDate }}
+                                            {{ __('receipts.label.on') }} {{ $formattedDate }}
                                         </div>
                                     @endif
                                 </span>

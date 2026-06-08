@@ -53,6 +53,7 @@ return [
         'no_address' => 'Alamat Kosong',
         'no_periode' => 'Periode Kosong',
         'total_payments' => 'Total Pembayaran',
+        'on' => 'pada',
     ],
     'button' => [
         'create' => 'Buat Kuitansi',

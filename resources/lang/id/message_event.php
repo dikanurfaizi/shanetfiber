@@ -1,37 +1,56 @@
 <?php
 
 return [
+    'header' => [],
     'title' => 'Log Riwayat Pesan',
-    'app_title' => 'Templat WhatsApp Cloud',
-    'placeholder_search' => 'Nama / Nomor',
-    'all_channel' => 'Semua Channel',
-    'all_message_type' => 'Semua Tipe Pesan',
-    'advanced_filter' => 'Filter Lanjutan',
-    'filter' => 'Saring',
-    'reset' => 'Atur Ulang',
-    'quick_filter' => 'Filter Cepat:',
-    'status_failed' => 'Gagal',
-    'status_pending' => 'Tertunda',
-    'status_success' => 'Sukses',
-    'status_all' => 'Semua',
-    'th_hash' => '#',
-    'th_channel' => 'Channel',
-    'th_customer' => 'Pelanggan',
-    'th_phone' => 'No. Telepon',
-    'th_message_type' => 'Tipe Pesan',
-    'th_status' => 'Status',
-    'th_sent_at' => 'Dikirim Pada',
-    'th_scheduled_at' => 'Dijadwalkan Pada',
-    'th_action' => 'Aksi',
-    'btn_detail' => 'Detail',
-    'btn_view_detail' => 'Lihat Detail',
-    'btn_retry' => 'Coba Lagi',
-    'label_response' => 'Respons:',
-    'no_events' => 'Tidak ada riwayat pesan ditemukan',
-    'realtime' => 'LANGSUNG',
-    'unknown_customer' => 'Pelanggan Tidak Dikenal',
+    'app_title' => 'Riwayat Pesan',
+
+    'table' => [
+        'hash' => '#',
+        'channel' => 'Saluran',
+        'customer' => 'Pelanggan',
+        'phone' => 'No. Telepon',
+        'message_type' => 'Tipe Pesan',
+        'status' => 'Status',
+        'sent_at' => 'Dikirim Pada',
+        'scheduled_at' => 'Dijadwalkan Pada',
+        'action' => 'Aksi',
+    ],
+
+    'label' => [
+        'all_channel' => 'Semua Saluran',
+        'all_message_type' => 'Semua Tipe Pesan',
+        'quick_filter' => 'Filter Cepat:',
+        'label_response' => 'Respon:',
+        'realtime' => 'REALTIME',
+        'unknown_customer' => 'Pelanggan Tidak Dikenal',
+        'message_id' => 'ID Pesan',
+        'trace_id' => 'Trace ID'
+    ],
+
+    'placeholder' => [
+        'placeholder_search' => 'Nama / Nomor',
+    ],
+
+    'button' => [
+        'advanced_filter' => 'Filter Lanjutan',
+        'filter' => 'Filter',
+        'reset' => 'Reset',
+        'btn_detail' => 'Detail',
+        'btn_view_detail' => 'Lihat Detail',
+        'btn_retry' => 'Coba Lagi',
+    ],
+
+    'state' => [
+        'status_failed' => 'Gagal',
+        'status_pending' => 'Tertunda',
+        'status_success' => 'Berhasil',
+        'status_all' => 'Semua',
+        'no_events' => 'Riwayat pesan tidak ditemukan',
+    ],
+
     'db_status' => [
-        'success' => 'SUKSES',
+        'success' => 'BERHASIL',
         'failed'  => 'GAGAL',
         'pending' => 'TERTUNDA',
     ],

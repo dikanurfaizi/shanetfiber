@@ -53,6 +53,7 @@ return [
         'no_address' => 'No Address',
         'no_periode' => 'No Periode',
         'total_payments' => 'Total Payments',
+        'on' => 'on',
     ],
     'button' => [
         'create' => 'Create Receipt',
