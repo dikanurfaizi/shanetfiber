@@ -52,7 +52,7 @@ class PaymentChannelUpdateNotificationService
                 ->count();
 
             // 2. Tentukan batasan limit (maksimal 15 per hari)
-            $maxLimit = 15;
+            $maxLimit = 10;
             $sisaKuota = $maxLimit - $totalSentToday;
 
             // 3. Jika sisa kuota 0 atau minus, stop proses broadcast hari ini
@@ -65,7 +65,7 @@ class PaymentChannelUpdateNotificationService
             $customers = $this->channelUpdateCustomerCollector->collect(now()->startOfDay(), $mainSlug, null);
 
             $delayInSeconds = 0;
-            $delayInterval = rand(60, 300);
+            $delayInterval = rand(600, 1200);
             $overrideNumber = config('messaging.phone_number_override', null);
 
             // Tambahkan counter internal saat looping untuk memastikan tidak kebablasan jika data $customers banyak
