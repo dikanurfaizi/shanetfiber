@@ -45,14 +45,39 @@ class PaymentChannelUpdateNotificationService
 
             $deviceId = $number->device_id;
             $mainSlug = WhatsAppAction::PAYMENT_CHANNEL_UPDATE->value;
+
+            // 1. Hitung total pesan yang sudah terkirim/pending hari ini untuk slug ini
+            $totalSentToday = MessageEvent::where('message_type', $mainSlug)
+                ->where('created_at', '>=', now()->startOfDay())
+                ->count();
+
+            // 2. Tentukan batasan limit (maksimal 15 per hari)
+            $maxLimit = 15;
+            $sisaKuota = $maxLimit - $totalSentToday;
+
+            // 3. Jika sisa kuota 0 atau minus, stop proses broadcast hari ini
+            if ($sisaKuota <= 0) {
+                LogHelper::logInfo(null, ['service' => 'PaymentChannelUpdateNotificationService'], 200, 'Quota reached or exceeded (15/day). No notifications sent.', $traceId);
+                return;
+            }
+
+            // 4. Ambil data customer (bisa Anda batasi dengan ->take($sisaKuota) jika kolektor mendukung)
             $customers = $this->channelUpdateCustomerCollector->collect(now()->startOfDay(), $mainSlug, null);
 
             $delayInSeconds = 0;
-            $delayInterval = rand(60, 300); // Random delay antara 1 menit hingga 5 menit untuk menghindari spike
+            $delayInterval = rand(60, 300);
             $overrideNumber = config('messaging.phone_number_override', null);
 
+            // Tambahkan counter internal saat looping untuk memastikan tidak kebablasan jika data $customers banyak
+            $sentCounter = 0;
+
             foreach ($customers as $data) {
-                // 👉 Optimasi: Menggunakan method internal buildBankPayload
+                // Validasi sisa kuota di dalam loop demi keamanan ganda
+                if ($sentCounter >= $sisaKuota) {
+                    LogHelper::logInfo(null, ['info' => 'Loop stopped because quota limit hit mid-process'], 200, '[PaymentChannelUpdate] Stopped due to limit', $traceId);
+                    break;
+                }
+
                 $bankPayload = $this->buildBankPayload($data, $mainSlug, $adminNumber);
                 if (!$bankPayload) continue;
 
@@ -76,9 +101,12 @@ class PaymentChannelUpdateNotificationService
                 if (!$testMode) {
                     $delayInSeconds += $delayInterval;
                 }
+
+                // Naikkan counter setiap kali berhasil membuat data event baru
+                $sentCounter++;
             }
 
-            LogHelper::logInfo(null, ['total_dispatched' => $customers->count()], 900, '[PaymentChannelUpdate] Finished process', $traceId);
+            LogHelper::logInfo(null, ['total_dispatched' => $sentCounter], 900, '[PaymentChannelUpdate] Finished process', $traceId);
         } catch (\Throwable $e) {
             LogHelper::logError($e, ['service' => 'PaymentChannelUpdateNotificationService', 'error_message' => $e->getMessage()], 500, 'Failed executing payment channel update notifications', $traceId);
         }
