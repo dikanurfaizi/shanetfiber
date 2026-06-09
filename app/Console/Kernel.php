@@ -223,7 +223,11 @@ class Kernel extends ConsoleKernel
         | Output otomatis di-append ke custom log file.
         | */
         $schedule->command('reminder:payment-channel-update-send')
-            ->everyFiveHours() // ✅ Berjalan otomatis setiap 5 jam sekali (pada menit ke-0)
+            ->cron('0 */5 * * *') // 🔄 Menggantikan ->everyFiveHours() dengan standard cron setiap 5 jam
+            ->when(function () {
+                // 📅 Memastikan scheduler hanya berjalan dari tanggal 1 hingga 15 Juni 2026
+                return now()->between('2026-06-01 00:00:00', '2026-06-15 23:59:59');
+            })
             ->onFailure(fn() => LogHelper::logError(null, ['time' => now()], 500, '[Scheduler] reminder:payment-channel-update-send failed'))
             ->onSuccess(fn() => LogHelper::logInfo(null, ['time' => now()], 200, '[Scheduler] reminder:payment-channel-update-send finished successfully'))
             ->withoutOverlapping(10)

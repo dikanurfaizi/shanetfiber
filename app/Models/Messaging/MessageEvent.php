@@ -14,6 +14,7 @@ class MessageEvent extends Model
         'channel',
         'device_id',
         'message_type',
+        'phone_number',
         'meta',
         'status',
         'stage',

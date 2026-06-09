@@ -44,6 +44,7 @@ class MessageDispatcher
                     'gateway_id'      => $context->account->id,
                     'channel'         => 'meta_api',
                     'message_type'    => $context->templateName,
+                    'phone_number'    => $context->recipient,
                     'meta'            => $payload,
                     'status'          => 'pending',
                     'stage'           => 'INIT',

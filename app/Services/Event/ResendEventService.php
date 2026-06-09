@@ -2,7 +2,10 @@
 
 namespace App\Services\Event;
 
+use App\Helpers\DelayMessage;
+use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
+use App\Jobs\Whatsapp\SendWhatsappMessageJob;
 use App\Models\Messaging\MessageEvent;
 use App\Models\Receipt;
 use App\Models\Customers\CustomerSubscription;
@@ -13,6 +16,7 @@ use App\Services\Notification\CustomerActivationNotificationService;
 use App\Services\Notification\PaymentNotificationService;
 use App\Services\Notification\PaymentPayLaterNotificationService;
 use App\Services\Notification\PaymentChannelUpdateNotificationService;
+use App\Services\Whatsapp\WhatsappGatewayResolver;
 use Illuminate\Support\Facades\DB;
 
 class ResendEventService
@@ -21,12 +25,20 @@ class ResendEventService
         protected PaymentNotificationService $paymentNotification,
         protected CustomerActivationNotificationService $activationService,
         protected PaymentPayLaterNotificationService $paylaterService,
-        protected PaymentChannelUpdateNotificationService $channelUpdateService
+        protected PaymentChannelUpdateNotificationService $channelUpdateService,
+        protected WhatsappGatewayResolver $gatewayResolver,
     ) {}
 
     public function handle(MessageEvent $event, string $traceId): void
     {
-        // 👉 LANGKAH 1: Set Status awal ke 'pending' dengan RETRY stage di dalam transaksi singkat
+        $startTime = microtime(true);
+
+        // Guard clause awal: Hanya melayani channel go_whatsapp
+        if ($event->channel !== 'go_whatsapp') {
+            throw new \InvalidArgumentException("Unsupported channel: {$event->channel}");
+        }
+
+        // 👉 LANGKAH 1: Set Status awal ke 'pending' di dalam transaksi singkat
         DB::transaction(function () use ($event, $traceId) {
             LogHelper::logInfo(
                 null,
@@ -51,7 +63,7 @@ class ResendEventService
 
         $newEvent = $event->refresh();
 
-        // 👉 LANGKAH 2: Jalankan flow pengiriman di luar DB::transaction utama (Mencegah lock/rollback massal)
+        // 👉 LANGKAH 2: Jalankan flow pengiriman di luar DB::transaction utama
         try {
             LogHelper::logInfo(
                 null,
@@ -72,8 +84,7 @@ class ResendEventService
             if (in_array($newEvent->message_type, ['payment', 'informasi_bayar'])) {
                 LogHelper::logInfo(null, [], 200, '[RESEND] Routing to PAYMENT flow', $traceId);
 
-                // Lock data receipt saja secara spesifik
-                $receipt = DB::transaction(function () use ($newEvent, $traceId) {
+                $receipt = DB::transaction(function () use ($newEvent) {
                     return Receipt::where('customer_id', $newEvent->customer_id)
                         ->latest()
                         ->lockForUpdate()
@@ -203,16 +214,43 @@ class ResendEventService
             |--------------------------------------------------------------------------
             */
             if (in_array($newEvent->message_type, ['update_rekening_juni_2026', 'payment_channel_update'])) {
-                LogHelper::logInfo(null, ['event_id' => $newEvent->id], 200, '[RESEND] Routing to PAYMENT CHANNEL UPDATE single flow', $traceId);
+                LogHelper::logInfo(null, ['event_id' => $newEvent->id], 200, '[RESEND] Routing to PAYMENT CHANNEL UPDATE single flow', $traceId, round(microtime(true) - $startTime, 4));
 
-                // Memanggil method targeted single target
                 $this->channelUpdateService->sendSingleEvent($newEvent, $traceId);
 
-                LogHelper::logInfo(null, [], 200, '[RESEND] PAYMENT CHANNEL UPDATE single resend dispatched', $traceId);
+                LogHelper::logInfo(null, [], 200, '[RESEND] PAYMENT CHANNEL UPDATE single resend dispatched', $traceId, round(microtime(true) - $startTime, 4));
                 return;
             }
 
-            throw new \InvalidArgumentException("Unsupported message type: {$newEvent->message_type}");
+            /*
+            |--------------------------------------------------------------------------
+            | UNKNOWN KEYWORD FLOW
+            |--------------------------------------------------------------------------
+            */
+            if (in_array($newEvent->message_type, ['unknown_keyword', 'info_tagihan', 'info_paket', 'menu', 'stop', 'hubungi_admin', 'gangguan'])) {
+                LogHelper::logInfo(null, ['message_type' => $newEvent->message_type], 200, '[RESEND] Routing to UNKNOWN KEYWORD flow', $traceId);
+
+                $this->sendingMessageDirectly($newEvent, $traceId, $startTime);
+
+                LogHelper::logInfo(null, [], 200, '[RESEND] Unknown keyword message dispatched successfully', $traceId, round(microtime(true) - $startTime, 4));
+                return; // ✅ FIX: Wajib di-return agar tidak mengeksekusi logic di bawahnya
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | FALLBACK: UNKNOWN CUSTOMER / CUSTOM FLOW VIA PAYLOAD
+            |--------------------------------------------------------------------------
+            */
+            if (empty($newEvent->customer_id)) {
+                LogHelper::logInfo(null, ['message_type' => $newEvent->message_type, 'event_id' => $newEvent->id], 200, '[RESEND] No Customer ID - Fallback sending message directly from payload', $traceId, round(microtime(true) - $startTime, 4));
+
+                $this->sendingMessageDirectly($newEvent, $traceId, $startTime);
+
+                LogHelper::logInfo(null, [], 200, '[RESEND] Fallback message dispatched successfully', $traceId, round(microtime(true) - $startTime, 4));
+                return;
+            }
+
+            throw new \InvalidArgumentException("Unsupported message type: {$newEvent->message_type} or invalid customer configuration.");
         } catch (\Throwable $e) {
             // 👉 LANGKAH 3: Tangkap exception, amankan state DB ke status 'failed'
             LogHelper::logError(
@@ -220,20 +258,68 @@ class ResendEventService
                 ['event_id' => $newEvent->id, 'error_message' => $e->getMessage()],
                 500,
                 '[RESEND] Handling Exception - Updating state to FAILED',
-                $traceId
+                $traceId,
+                round(microtime(true) - $startTime, 4)
             );
+
+            $currentMeta = is_array($newEvent->meta) ? $newEvent->meta : [];
 
             $newEvent->update([
                 'status'        => 'failed',
                 'stage'         => 'RETRY_FAILED',
                 'last_error_at' => now(),
-                'meta'          => json_encode(array_merge(json_decode($newEvent->meta, true) ?? [], [
+                'meta'          => array_merge($currentMeta, [
                     'resend_error' => $e->getMessage()
-                ]))
+                ])
             ]);
 
-            // 👉 LANGKAH 4: Lempar kembali errornya agar Job Queue menangkap kegagalan ini untuk tracking worker
             throw $e;
         }
+    }
+
+    private function sendingMessageDirectly(MessageEvent $newEvent, string $traceId, float $startTime): void
+    {
+        [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, 'update_rekening_juni_2026') ?? [null, null, null];
+        if (!$gateway || !$account || !$number) {
+            throw new \RuntimeException("Failed to resolve active gateway components.");
+        }
+
+        $queueName = 'notification';
+        $deviceId = $number->device_id;
+
+        // Hitung delay pengiriman secara dinamis
+        $finalDelay = (new DelayMessage())->calculation(
+            $newEvent->message_type,
+            $traceId,
+            rand(60, 270),
+            $queueName,
+            round(microtime(true) - $startTime, 4)
+        );
+
+        // Amankan konversi data payload bertipe array ke string JSON murni
+        $payloadString = is_array($newEvent->request_payload) ? json_encode($newEvent->request_payload) : $newEvent->request_payload;
+
+        $newEvent->update([
+            'status'       => 'pending',
+            'stage'        => 'SENDING JOB',
+            'meta'         => $newEvent->meta,
+            'payload'      => $payloadString,
+            'device_id'    => $deviceId,
+            'scheduled_at' => $finalDelay,
+        ]);
+
+        $formattedReceiver = (new FormatReceiver())->formatReceiver($newEvent->phone_number, null, false);
+
+        SendWhatsappMessageJob::dispatch(
+            $newEvent->message_type,
+            $formattedReceiver,
+            $payloadString,
+            null,
+            $traceId,
+            $newEvent->id,
+            $deviceId
+        )
+            ->onQueue($queueName)
+            ->delay($finalDelay);
     }
 }

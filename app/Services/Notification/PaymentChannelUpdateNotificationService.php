@@ -88,10 +88,11 @@ class PaymentChannelUpdateNotificationService
                     'gateway_id'      => $account->id,
                     'channel'         => 'go_whatsapp',
                     'message_type'    => $mainSlug,
-                    'meta'            => json_encode($bankPayload),
+                    'phone_number'    => $recipient,
+                    'meta'            => null,
                     'status'          => 'pending',
                     'stage'           => 'INIT',
-                    'request_payload' => json_encode($bankPayload),
+                    'request_payload' => null,
                     'retry_count'     => 0,
                     'trace_id'        => $traceId,
                 ]);
