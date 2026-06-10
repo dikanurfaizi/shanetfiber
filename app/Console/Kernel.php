@@ -137,17 +137,24 @@ class Kernel extends ConsoleKernel
         |--------------------------------------------------------------------------
         | 6. ARCHIVE LARAVEL LOGS
         |--------------------------------------------------------------------------
-        | Dijalankan setiap hari pada pukul 23:59,
-        | Jika kondisi tidak terpenuhi, dilewati (tidak error).
-        */
+        | Berjalan setiap menit untuk memantau jika ukuran log mendekati 3MB.
+        | Otomatis mengarsip terjadwal harian tepat pada pukul 23:59.
+        | */
         $schedule->command('logs:rotate')
-            ->everyFiveMinutes()
+            ->everyMinute()
             ->timezone($defaultTimezone)
             ->withoutOverlapping()
             ->onOneServer()
             ->evenInMaintenanceMode()
             ->appendOutputTo(storage_path('logs/scheduler-rotate.log'));
 
+        /*
+        |--------------------------------------------------------------------------
+        | 7. CLEANUP ARCHIVED LOGS
+        |--------------------------------------------------------------------------
+        | Berjalan setiap hari pada pukul 23:59 untuk menghapus berkas arsip 
+        | yang umurnya sudah melewati batas retensi (15 hari).
+        | */
         $schedule->command('logs:cleanup')
             ->dailyAt('23:59')
             ->timezone($defaultTimezone)
@@ -159,7 +166,7 @@ class Kernel extends ConsoleKernel
 
         /*
         |--------------------------------------------------------------------------
-        | 7. DELETE OLD MESSAGE LOGS
+        | 8. DELETE OLD MESSAGE LOGS
         |--------------------------------------------------------------------------
         | Dijalankan setiap hari pada pukul 00:30,
         | Jika kondisi tidak terpenuhi, dilewati (tidak error).
@@ -175,7 +182,7 @@ class Kernel extends ConsoleKernel
 
         /*
         |--------------------------------------------------------------------------
-        | 8. FETCH MIKROTIK INFO
+        | 9. FETCH MIKROTIK INFO
         |--------------------------------------------------------------------------
         | Dijalankan setiap 30 menit antara jam 06:00 - 22:00 (WIB).
         */
@@ -190,7 +197,7 @@ class Kernel extends ConsoleKernel
 
         /*
         |--------------------------------------------------------------------------
-        | 9. SCAN OLTS
+        | 10. SCAN OLTS
         |--------------------------------------------------------------------------
         | Dijalankan setiap 15 menit antara jam 06:00 - 22:00 (WIB).
         */
@@ -205,7 +212,7 @@ class Kernel extends ConsoleKernel
 
         /*
         |--------------------------------------------------------------------------
-        | 10. APPLY SCHEDULED SUBSCRIPTION CHANGES
+        | 11. APPLY SCHEDULED SUBSCRIPTION CHANGES
         |--------------------------------------------------------------------------
         | Dijalankan setiap hari pada pukul 01:00,
         */
@@ -217,7 +224,7 @@ class Kernel extends ConsoleKernel
 
         /*
         |--------------------------------------------------------------------------
-        | 11. PAYMENT CHANNEL UPDATE BROADCAST
+        | 12. PAYMENT CHANNEL UPDATE BROADCAST
         |--------------------------------------------------------------------------
         | Dijalankan setiap 5 jam dari tanggal 1 sampai 15 Juni 2026.
         | Output otomatis di-append ke custom log file.
