@@ -59,7 +59,7 @@ class BillingHelper
         // Jika status NP
         if ($billing->status === 'VD') {
             return '<span class="badge bg-primary text-white">
-            <i class="fas fa-times-circle"></i> ' .
+        <i class="fas fa-times-circle"></i> ' .
                 __('billing.state.confirm-on') . ' ' .
                 e(Carbon::parse($billing->updated_at)->translatedFormat('d F, Y')) .
                 '</span>';
@@ -72,10 +72,43 @@ class BillingHelper
                 ? Carbon::parse($billing->billingPayment->payment_time)->translatedFormat('d F, Y')
                 : '';
 
-            return '<span class="badge bg-success text-white">
-            <i class="fas fa-check-circle"></i> ' .
-                ucfirst(e($paymentMethod)) . ' on ' . e($paymentTime) .
-                '</span>';
+            // Menentukan label metode pembayaran (gunakan translation jika tersedia)
+            $methodLabel = match ($paymentMethod) {
+                'cash' => __('billing.label.cash'),
+                'transfer' => __('billing.label.transfer'),
+                default => ucfirst(e($paymentMethod)),
+            };
+
+            // Menggunakan gaya text-left d-inline-block khas Bootstrap 4 agar rapi ke bawah jika transfer
+            $html = '<span class="badge bg-success text-white text-left d-inline-block" style="max-width: 100%; font-weight: normal; padding: 0.5rem 0.75rem;">';
+            $html .= '<i class="fas fa-check-circle"></i> <strong>' . $methodLabel . '</strong>';
+
+            if ($paymentMethod === 'cash') {
+                // Jika cash, tampilkan sejajar kesamping (inline)
+                $html .= ' ' . __('billing.label.on') . ' ' . e($paymentTime);
+            } else {
+                // Jika selain cash (termasuk transfer), turunkan tanggal ke bawah
+                $html .= '<div class="mt-1">' . __('billing.label.on') . ' ' . e($paymentTime) . '</div>';
+
+                // Jika metodenya transfer, tambahkan detail informasi rekening bank
+                if ($paymentMethod === 'transfer') {
+                    // Ambil data bank langsung dari relation billingPayment Anda
+                    $bankName = $billing->billingPayment->receipt->bank_name ?? '-';
+                    $accountNumber = $billing->billingPayment->receipt->account_number ?? '-';
+                    $accountName = $billing->billingPayment->receipt->account_name ?? '-';
+
+                    $html .= '<div class="mt-1" style="font-size: 90%; opacity: 0.9;">';
+                    $html .= __('billing.label.to_account') . ' ' . e($bankName) . ' - ' . e($accountNumber);
+                    $html .= '</div>';
+                    $html .= '<div class="mt-1" style="font-size: 90%; opacity: 0.9;">';
+                    $html .= __('billing.label.on_behalf_of') . ' ' . e($accountName);
+                    $html .= '</div>';
+                }
+            }
+
+            $html .= '</span>';
+
+            return $html;
         }
 
         // Jika user TIDAK punya permission billing-edit → hanya tampilkan label merah
@@ -86,17 +119,17 @@ class BillingHelper
                 : '-';
 
             $label = '<span class="badge bg-danger text-white">
-        <i class="fas fa-exclamation-circle"></i> ' . __('billing.state.belum-lunas') . ', ' . __('billing.state.due-date') . ' ' . e($dueDate) . '
-        </span>';
+    <i class="fas fa-exclamation-circle"></i> ' . __('billing.state.belum-lunas') . ', ' . __('billing.state.due-date') . ' ' . e($dueDate) . '
+    </span>';
 
             return $label;
         }
 
         // Jika user punya permission billing-edit → tampilkan dropdown payment method
         $html = '<select name="payment_method"
-            class="form-control form-control-sm billing-method-select mt-1"
-            data-slug="' . e($billing->slug) . '"
-            style="min-width: 180px; width: max-content;">';
+        class="form-control form-control-sm billing-method-select mt-1"
+        data-slug="' . e($billing->slug) . '"
+        style="min-width: 180px; width: max-content;">';
 
         $html .= '<option value="cash">' . __('billing.state.cash') . '</option>';
 

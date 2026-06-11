@@ -54,6 +54,8 @@ return [
         'no_periode' => 'No Periode',
         'total_payments' => 'Total Payments',
         'on' => 'on',
+        'to_account' => 'to',
+        'on_behalf_of' => 'o.b.o'
     ],
     'button' => [
         'create' => 'Create Receipt',

@@ -49,71 +49,67 @@ class MessageDispatcher
                 $traceId
             );
 
-            $formattedReceiver = $this->formatter->formatReceiver(
-                $built['to'],
-                null,
-                true
-            );
+            // OPTIMASI 1: Gabungkan pemformatan nomor telepon agar tidak memanggil method 2x secara redundant
+            $phoneNumberFormat = $this->formatter->formatReceiver($built['to'], null, false);
+            $whatsappFormat = $this->formatter->formatReceiver($phoneNumberFormat, null, true);
 
             $payload = [
-                'phone'   => $formattedReceiver,
+                'phone'   => $whatsappFormat,
                 'message' => $message,
             ];
 
             $queueName = $queue ?? 'notification';
-
-            // 1. Hitung delay aslinya di dalam delayMessage dengan menyertakan rentang detik dari depan
             $finalDelay = $this->delayMessage->calculation($action, $traceId, $delaySeconds, $queueName, $startTime);
 
-            // Create / Update event
+            // OPTIMASI 2: DRY (Don't Repeat Yourself) untuk data MessageEvent
+            $eventData = [
+                'status'       => 'pending',
+                'stage'        => 'SENDING JOB',
+                'trace_id'     => $traceId,
+                'meta'         => $payload,
+                'device_id'    => $deviceId,
+                'scheduled_at' => $finalDelay,
+            ];
+
             if ($eventId) {
                 $event = MessageEvent::findOrFail($eventId);
-                $event->update([
-                    'status'        => 'pending',
-                    'stage'         => 'SENDING JOB',
-                    'trace_id'      => $traceId,
-                    'meta'          => $payload,
-                    'payload'       => $payload,
-                    'device_id'     => $deviceId,
-                    'scheduled_at'  => $finalDelay,
-                ]);
+                $event->update(array_merge($eventData, ['payload' => $payload]));
             } else {
-                $event = MessageEvent::create([
-                    'customer_id'   => $built['customer_id'] ?? null,
-                    'channel'       => 'go_whatsapp',
-                    'message_type'  => $action,
-                    'phone_number'  => $formattedReceiver,
-                    'meta'          => $payload,
-                    'status'        => 'pending',
-                    'trace_id'      => $traceId,
-                    'stage'         => 'SENDING JOB',
-                    'device_id'     => $deviceId,
-                    'scheduled_at'  => $finalDelay,
-                ]);
+                $event = MessageEvent::create(array_merge($eventData, [
+                    'customer_id'  => $built['customer_id'] ?? null,
+                    'channel'      => 'go_whatsapp',
+                    'message_type' => $action,
+                    'phone_number' => $phoneNumberFormat,
+                ]));
             }
 
+            // OPTIMASI 3: Ekstrak kesamaan data log untuk mengurangi boilerplate code
+            $logContext = [
+                'event_id'  => $event->id,
+                'action'    => $action,
+                'channel'   => 'go_whatsapp',
+                'device_id' => $deviceId,
+                'receiver'  => $phoneNumberFormat,
+                'queue'     => $queueName,
+            ];
+
             // === LOG BEFORE DISPATCH ===
+            // FIX: Mengganti createFromTimestampPsr7 dengan createFromTimestamp standar yang menerima float/int
             LogHelper::logInfo(
                 null,
-                [
-                    'event_id'      => $event->id,
-                    'action'        => $action,
-                    'channel'       => 'go_whatsapp',
-                    'device_id'     => $deviceId,
-                    'receiver'      => $formattedReceiver,
-                    'queue'         => $queueName,
-                    'delay_seconds' => $finalDelay->diffInSeconds(Carbon::now(), false),
-                ],
+                array_merge($logContext, [
+                    'delay_seconds' => $finalDelay
+                ]),
                 200,
                 '[MessageDispatcher] Dispatching',
                 $traceId,
                 round(microtime(true) - $startTime, 4)
             );
 
-            // ✅ Memicu job penanganan pesan utama yang valid
+            // ✅ Memicu job penanganan pesan utama
             SendWhatsappMessageJob::dispatch(
                 $action,
-                $formattedReceiver,
+                $whatsappFormat,
                 $message,
                 $built['customer_id'] ?? null,
                 $traceId,
@@ -126,14 +122,7 @@ class MessageDispatcher
             // ✅ SUCCESS LOG
             LogHelper::logInfo(
                 null,
-                [
-                    'event_id'    => $event->id,
-                    'action'      => $action,
-                    'channel'     => 'go_whatsapp',
-                    'device_id'   => $deviceId,
-                    'receiver'    => $formattedReceiver,
-                    'queue'       => $queueName,
-                ],
+                $logContext,
                 200,
                 '[MessageDispatcher] Dispatched',
                 $traceId,

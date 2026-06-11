@@ -91,6 +91,11 @@ return [
         'account-number' => 'Account Number',
         'reference-id' => 'Reference ID',
         'no-data' => 'No Data',
+        'on' => 'on',
+        'cash' => 'Cash',
+        'transfer' => 'Transfer',
+        'to_account' => 'to',
+        'on_behalf_of' => 'o.b.o'
     ],
 
     'button' => [

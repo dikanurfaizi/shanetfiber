@@ -84,7 +84,7 @@
                 @canany(['receipt-export-all', 'receipt-export-selected-period'])
 
                     @can('receipt-export-selected-period')
-                        {{-- Export per bulan (Dibersihkan dari col-md agar tidak merusak baris) --}}
+                        {{-- Export per bulan --}}
                         <form action="{{ route('receipts.export.selected') }}" method="GET" class="form-inline mr-2 my-1">
                             {!! Form::select('period', $periods, request('period'), [
                                 'placeholder' => __('receipts.placeholder.periode'),
@@ -117,7 +117,11 @@
         @endif
 
         @if ($receipts->isNotEmpty())
-            <div style="overflow-x: auto;" class="mt-3">
+
+            {{-- ================================================================= --}}
+            {{-- 🖥️ TAMPILAN DESKTOP: Berupa Tabel (Sembunyi di layar < md) --}}
+            {{-- ================================================================= --}}
+            <div class="d-none d-md-block mt-3" style="overflow-x: auto;">
                 <table id="billingsTable" cellspacing="0" width="100%"
                     class="table table-bordered table-striped table-hover">
                     <tr class="table-primary text-center">
@@ -133,17 +137,20 @@
                     </tr>
                     @foreach ($receipts as $key => $data)
                         <tr>
-                            <td><span class="badge text-primary">{{ ++$i }}</span></td>
-
-                            <td><a href="{{ route('receipts.show', $data->slug) }}" data-bs-toggle="tooltip"
+                            <td><span class="badge text-primary">{{ $receipts->firstItem() + $key }}</span></td>
+                            <td>
+                                <a href="{{ route('receipts.show', $data->slug) }}" data-bs-toggle="tooltip"
                                     data-bs-placement="top" title="Show Billing">
                                     <span
-                                        class="badge text-primary">{{ $data->customer_name ?? __('receipts.label.no_name') }}</span></a>
+                                        class="badge text-primary">{{ $data->customer_name ?? __('receipts.label.no_name') }}</span>
+                                </a>
                             </td>
-                            <td><a href="{{ route('receipts.show', $data->slug) }}" data-bs-toggle="tooltip"
+                            <td>
+                                <a href="{{ route('receipts.show', $data->slug) }}" data-bs-toggle="tooltip"
                                     data-bs-placement="top" title="Show Billing">
                                     <span
-                                        class="badge text-primary">{{ $data->customer->customer_id ?? __('receipts.label.no_customer_id') }}</span></a>
+                                        class="badge text-primary">{{ $data->customer->customer_id ?? __('receipts.label.no_customer_id') }}</span>
+                                </a>
                             </td>
                             <td>
                                 <span class="badge text-primary"
@@ -151,7 +158,8 @@
                                     {{ $data->customer_address ?? __('receipts.label.no_address') }}
                                 </span>
                             </td>
-                            <td><span
+                            <td>
+                                <span
                                     class="badge text-primary">{{ Carbon\Carbon::parse($data->periode)->translatedFormat('M Y') ?? __('receipts.label.no_periode') }}</span>
                             </td>
                             <td>
@@ -171,44 +179,149 @@
                                         'transfer' => __('receipts.label.transfer'),
                                         default => $data->payment_methode,
                                     };
-
-                                    $isInline = in_array($data->payment_methode, ['cash', 'transfer']);
+                                    $isInline = $data->payment_methode === 'cash';
                                     $formattedDate = \Carbon\Carbon::parse($data->payment_time)->translatedFormat(
                                         'd M Y H:i \W\I\B',
                                     );
                                 @endphp
-
-                                <span class="badge bg-success text-white">
-                                    <i class="fas fa-check-circle"></i>
-                                    {{ $method }}
-
+                                <span class="badge bg-success text-white text-left d-inline-block"
+                                    style="max-width: 100%;">
+                                    <i class="fas fa-check-circle"></i> {{ $method }}
                                     @if ($isInline)
                                         {{ __('receipts.label.on') }} {{ $formattedDate }}
                                     @else
-                                        <div style="margin-top: 4px;">
-                                            {{ __('receipts.label.on') }} {{ $formattedDate }}
-                                        </div>
+                                        <div class="mt-1">{{ __('receipts.label.on') }} {{ $formattedDate }}</div>
+                                        @if ($data->payment_methode === 'transfer')
+                                            <div class="mt-1" style="font-size: 90%; opacity: 0.9;">
+                                                {{ __('receipts.label.to_account') }} {{ $data->bank_name }} -
+                                                {{ $data->account_number }}
+                                            </div>
+                                            <div class="mt-1" style="font-size: 90%; opacity: 0.9;">
+                                                {{ __('receipts.label.on_behalf_of') }} {{ $data->account_name }}
+                                            </div>
+                                        @endif
                                     @endif
                                 </span>
                             </td>
                             <td><span
                                     class="badge text-primary">{{ $data->teller_name ?? __('receipts.label.no_teller') }}</span>
                             </td>
-                            <td class="d-flex items-center justify-content-end">
+                            <td class="text-center">
                                 @can('billing-edit')
-                                    <a class="btn btn-success btn-sm" href="{{ route('receipts.print', $data->slug) }}"
-                                        target="_blank"><i class="fa fa-print"></i> {{ __('receipts.button.print') }}</a>
+                                    <a class="btn btn-success btn-sm shadow-sm"
+                                        href="{{ route('receipts.print', $data->slug) }}" target="_blank">
+                                        <i class="fa fa-print"></i> {{ __('receipts.button.print') }}
+                                    </a>
                                 @endcan
                             </td>
                         </tr>
                     @endforeach
                 </table>
             </div>
+
+            {{-- ================================================================= --}}
+            {{-- 📱 TAMPILAN MOBILE: Berupa Cards List (Sembunyi di layar >= md) --}}
+            {{-- ================================================================= --}}
+            <div class="d-block d-md-none mt-3">
+                @foreach ($receipts as $key => $data)
+                    @php
+                        $method = match ($data->payment_methode) {
+                            null => __('receipts.label.no_payment_method'),
+                            'cash' => __('receipts.label.cash'),
+                            'transfer' => __('receipts.label.transfer'),
+                            default => $data->payment_methode,
+                        };
+                        $isInline = $data->payment_methode === 'cash';
+                        $formattedDate = \Carbon\Carbon::parse($data->payment_time)->translatedFormat(
+                            'd M Y H:i \W\I\B',
+                        );
+                    @endphp
+
+                    <div class="card shadow-sm border-left-primary mb-3">
+                        <div class="card-body p-3">
+                            {{-- Header Card: No & Nama Pelanggan --}}
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                                <div>
+                                    <span class="badge badge-primary mr-1">#{{ $receipts->firstItem() + $key }}</span>
+                                    <a href="{{ route('receipts.show', $data->slug) }}"
+                                        class="font-weight-bold text-primary">
+                                        {{ $data->customer_name ?? __('receipts.label.no_name') }}
+                                    </a>
+                                </div>
+                                <span class="badge bg-blue-soft text-primary font-weight-bold">
+                                    @if ($data->package_price === 0)
+                                        {{ __('receipts.label.free') }}
+                                    @else
+                                        @moneyIDR($data->package_price)
+                                    @endif
+                                </span>
+                            </div>
+
+                            {{-- Detail Informasi --}}
+                            <div class="row style-mobile-content small text-muted">
+                                <div class="col-6 mb-1"><strong>{{ __('receipts.table.customer_id') }}:</strong></div>
+                                <div class="col-6 mb-1 text-dark">{{ $data->customer->customer_id ?? '-' }}</div>
+
+                                <div class="col-6 mb-1"><strong>{{ __('receipts.table.periode') }}:</strong></div>
+                                <div class="col-6 mb-1 text-dark">
+                                    {{ Carbon\Carbon::parse($data->periode)->translatedFormat('M Y') }}</div>
+
+                                <div class="col-12 mb-1"><strong>{{ __('receipts.table.address') }}:</strong></div>
+                                <div class="col-12 mb-2 text-dark text-justify">{{ $data->customer_address ?? '-' }}
+                                </div>
+
+                                <div class="col-12 mb-2">
+                                    <strong>{{ __('receipts.table.payment_method') }}:</strong>
+                                    <div class="mt-1">
+                                        <span class="badge bg-success text-white text-left d-block w-100 p-2"
+                                            style="white-space: normal;">
+                                            <i class="fas fa-check-circle"></i> {{ $method }}
+                                            @if ($isInline)
+                                                {{ __('receipts.label.on') }} {{ $formattedDate }}
+                                            @else
+                                                <div class="mt-1">{{ __('receipts.label.on') }}
+                                                    {{ $formattedDate }}</div>
+                                                @if ($data->payment_methode === 'transfer')
+                                                    <div class="mt-1"
+                                                        style="font-size: 92%; opacity: 0.95; border-top: 1px solid rgba(255,255,255,0.3); pt-1">
+                                                        {{ __('receipts.label.to_account') }}
+                                                        <strong>{{ $data->bank_name }} -
+                                                            {{ $data->account_number }}</strong>
+                                                    </div>
+                                                    <div style="font-size: 92%; opacity: 0.95;">
+                                                        {{ __('receipts.label.on_behalf_of') }}
+                                                        <strong>{{ $data->account_name }}</strong>
+                                                    </div>
+                                                @endif
+                                            @endif
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="col-6"><strong>{{ __('receipts.table.teller_name') }}:</strong></div>
+                                <div class="col-6 text-dark text-right"><span>{{ $data->teller_name ?? '-' }}</span>
+                                </div>
+                            </div>
+
+                            {{-- Tombol Aksi Mobile --}}
+                            @can('billing-edit')
+                                <div class="border-top pt-2 mt-2 text-right">
+                                    <a class="btn btn-success btn-sm btn-block shadow-sm"
+                                        href="{{ route('receipts.print', $data->slug) }}" target="_blank">
+                                        <i class="fa fa-print mr-1"></i> {{ __('receipts.button.print') }}
+                                    </a>
+                                </div>
+                            @endcan
+                        </div>
+                    </div>
+                @endforeach
+            </div>
         @else
             <div class="alert alert-danger mt-2">
                 {{ __('receipts.message.no_receipts') }}
             </div>
         @endif
+
         <div class="mt-3">
             {{ $receipts->withQueryString()->links() }}
         </div>
@@ -224,15 +337,18 @@
 
         <script>
             $(document).ready(function() {
-                // Inisialisasi Select2 Standar untuk Data Lokal (Otomatis bisa search text)
                 $('#filterCustomer').select2({
-                    placeholder: '-- Pilih Pelanggan --',
+                    placeholder: function() {
+                        return $(this).attr('placeholder') || $(this).data('placeholder');
+                    },
                     allowClear: true,
                     width: 'resolve'
                 });
 
                 $('#filterTeller').select2({
-                    placeholder: '-- Pilih Teller --',
+                    placeholder: function() {
+                        return $(this).attr('placeholder') || $(this).data('placeholder');
+                    },
                     allowClear: true,
                     width: 'resolve'
                 });

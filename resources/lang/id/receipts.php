@@ -54,6 +54,8 @@ return [
         'no_periode' => 'Periode Kosong',
         'total_payments' => 'Total Pembayaran',
         'on' => 'pada',
+        'to_account' => 'ke',
+        'on_behalf_of' => 'a.n',
     ],
     'button' => [
         'create' => 'Buat Kuitansi',

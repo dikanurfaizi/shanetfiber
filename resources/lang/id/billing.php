@@ -91,6 +91,11 @@ return [
         'account-number' => 'Nomor Rekening',
         'reference-id' => 'ID Referensi',
         'no-data' => 'Tidak Ada Data',
+        'on' => 'pada',
+        'cash' => 'Tunai',
+        'transfer' => 'Transfer',
+        'to_account' => 'ke',
+        'on_behalf_of' => 'a.n'
     ],
 
     'button' => [
