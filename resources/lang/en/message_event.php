@@ -25,7 +25,9 @@ return [
         'realtime' => 'REALTIME',
         'unknown_customer' => 'Unknown Customer',
         'message_id' => 'Message ID',
-        'trace_id' => 'Trace ID'
+        'trace_id' => 'Trace ID',
+        'message_type' => 'Message Type (You Can Choose More Than 1)',
+        'find_customer' => 'Find Customer'
     ],
 
     'placeholder' => [

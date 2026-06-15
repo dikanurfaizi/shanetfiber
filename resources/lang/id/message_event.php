@@ -25,7 +25,9 @@ return [
         'realtime' => 'REALTIME',
         'unknown_customer' => 'Pelanggan Tidak Dikenal',
         'message_id' => 'ID Pesan',
-        'trace_id' => 'Trace ID'
+        'trace_id' => 'Trace ID',
+        'message_type' => 'Tipe Pesan (Bisa Pilih Lebih dari 1)',
+        'find_customer' => 'Cari Pelanggan'
     ],
 
     'placeholder' => [

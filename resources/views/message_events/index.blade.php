@@ -1,5 +1,46 @@
 <x-layouts.cpanel.settings.app-layout :title="__('message_event.app_title')">
 
+    @section('custom_styles')
+        {{-- STYLE TAMBAHAN: Untuk menyulap checkbox menjadi tombol pill yang ciamik --}}
+        <style>
+            .message-type-badge-group .custom-control {
+                padding-left: 0;
+            }
+
+            /* Efek saat checkbox terpilih (Checked) */
+            .message-type-badge-group .custom-control-input:checked~.custom-control-label {
+                background-color: #007bff !important;
+                color: #fff !important;
+                border-color: #007bff !important;
+            }
+
+            /* Style default tombol pill */
+            .message-type-badge-group .custom-control-label {
+                cursor: pointer;
+                padding: 0.375rem 0.75rem;
+                border: 1px solid #ced4da;
+                border-radius: 50px;
+                background-color: #fff;
+                color: #495057;
+                transition: all 0.15s ease-in-out;
+                user-select: none;
+                display: inline-block;
+            }
+
+            /* Efek hover ketika mouse berada di atas tombol */
+            .message-type-badge-group .custom-control-label:hover {
+                background-color: #f8f9fa;
+                border-color: #b5bbc1;
+            }
+
+            /* Hilangkan indikator kotak bawaan bootstrap/browser */
+            .message-type-badge-group .custom-control-label::before,
+            .message-type-badge-group .custom-control-label::after {
+                display: none !important;
+            }
+        </style>
+    @endsection
+
     <div class="card">
         <div class="card-header">
             <h5 class="mb-0">@lang('message_event.title')</h5>
@@ -11,13 +52,16 @@
                 {{-- BASIC FILTER --}}
                 <div class="form-row">
 
-                    <div class="col-12 col-md-4 mb-2">
+                    <div class="col-12 col-md-6 mb-2">
+                        <label
+                            class="small font-weight-bold text-muted mb-1">{{ __('message_event.label.find_customer') }}</label>
                         <input type="text" name="q" class="form-control"
                             placeholder="{{ __('message_event.placeholder.placeholder_search') }}"
                             value="{{ request('q') }}">
                     </div>
 
-                    <div class="col-12 col-md-4 mb-2">
+                    <div class="col-12 col-md-6 mb-2">
+                        <label class="small font-weight-bold text-muted mb-1">Channel</label>
                         <select name="channel" class="form-control">
                             <option value="">@lang('message_event.label.all_channel')</option>
                             @foreach ($channels as $channel)
@@ -28,17 +72,29 @@
                         </select>
                     </div>
 
-                    <div class="col-12 col-md-4 mb-2">
-                        <select name="message_type" class="form-control">
-                            <option value="">@lang('message_event.label.all_message_type')</option>
-                            @foreach ($messageTypes as $type)
-                                <option value="{{ $type }}" @selected(request('message_type') === $type)>
-                                    {{ $type }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+                </div>
 
+                {{-- DESIGN BARU: Tipe Pesan dalam bentuk Badge/Button Selectable --}}
+                <div class="form-group mb-2">
+                    <label
+                        class="small font-weight-bold text-muted mb-1 d-block">{{ __('message_event.label.message_type') }}</label>
+                    <div class="d-flex flex-wrap align-items-center message-type-badge-group" style="gap: 8px;">
+                        @foreach ($messageTypes as $index => $type)
+                            @php
+                                $isChecked =
+                                    is_array(request('message_type')) && in_array($type, request('message_type'));
+                            @endphp
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" name="message_type[]" value="{{ $type }}"
+                                    class="custom-control-input" id="msg_type_{{ $index }}"
+                                    @checked($isChecked)>
+                                {{-- Di sini letak perbaikannya, teks pengganggu sudah dibersihkan --}}
+                                <label class="custom-control-label small shadow-sm" for="msg_type_{{ $index }}">
+                                    {{ $type }}
+                                </label>
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
 
                 <div class="mb-2">
@@ -75,7 +131,7 @@
                 </div>
 
                 {{-- ROW 3: BUTTON --}}
-                <div class="form-row">
+                <div class="form-row mt-2">
                     <div class="col-12 text-left">
 
                         {{-- Desktop & Tablet --}}
@@ -303,10 +359,22 @@
                             @endif
                         </div>
 
-                        <button class="btn btn-sm btn-outline-primary mt-2 w-100" data-toggle="collapse"
-                            data-target="#detail-mobile-{{ $event->id }}">
-                            @lang('message_event.button.btn_view_detail')
-                        </button>
+                        <div class="mt-2 d-flex" style="gap: 6px;">
+                            <button class="btn btn-sm btn-outline-primary flex-grow-1" data-toggle="collapse"
+                                data-target="#detail-mobile-{{ $event->id }}">
+                                @lang('message_event.button.btn_view_detail')
+                            </button>
+
+                            @if ($event->status === 'failed')
+                                <form action="{{ route('messageevents.resend', $event->id) }}" method="POST"
+                                    class="flex-grow-1">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                                        <i class="fas fa-redo-alt"></i> @lang('message_event.button.btn_retry')
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
 
                         <div class="collapse mt-2" id="detail-mobile-{{ $event->id }}">
                             <div class="bg-light p-2 rounded small">

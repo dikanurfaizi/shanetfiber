@@ -37,9 +37,9 @@ class MessageEventController extends Controller
             $query->where('channel', $request->channel);
         }
 
-        // 🏷 Filter message type
-        if ($request->filled('message_type')) {
-            $query->where('message_type', $request->message_type);
+        // 🏷 UPDATE POIN 3: Menggunakan whereIn karena nilainya berbentuk Array Multiple Select
+        if ($request->filled('message_type') && is_array($request->message_type)) {
+            $query->whereIn('message_type', $request->message_type);
         }
 
         // 📅 Filter tanggal
