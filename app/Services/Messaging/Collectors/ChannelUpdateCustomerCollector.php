@@ -12,7 +12,7 @@ class ChannelUpdateCustomerCollector
 {
     /**
      * Mengumpulkan data customer yang belum pernah menerima pesan broadcast tipe ini.
-     * * @param Carbon $today Tanggal hari ini (tetap dipertahankan untuk log)
+     * * @param Carbon $today Tanggal hari ini 
      * @param string $messageType Slug utama pengiriman (e.g., 'payment_channel_update')
      * @param int|null $customerId ID Customer spesifik untuk kebutuhan Single Resend (Opsional)
      */
@@ -23,7 +23,6 @@ class ChannelUpdateCustomerCollector
         // ===============================================================
         // 1. Ambil Semua ID Customer yang INVALID_JID Terlebih Dahulu (Early Exclude)
         // ===============================================================
-        // Tarik kumpulan ID customer dari tabel message_events yang gagal karena nomor tidak valid
         $invalidJidCustomerIds = DB::table('message_events')
             ->where('message_type', '=', $messageType)
             ->where('status', '=', 'failed')
@@ -31,7 +30,7 @@ class ChannelUpdateCustomerCollector
             ->whereNotNull('customer_id')
             ->distinct()
             ->pluck('customer_id')
-            ->toArray(); // Diubah menjadi bentuk array murni murni [1, 5, 12, dst]
+            ->toArray();
 
         // ===============================================================
         // 2. QUERY UTAMA DATA CUSTOMER
@@ -59,14 +58,17 @@ class ChannelUpdateCustomerCollector
             ->where('customers.activation', '=', 'true')
             ->where('cs.status', '=', 'active')
 
-            // --- FILTER STATUS BILLING ---
-            ->whereIn('b.status', ['BL', 'PL']);
+            // --- FILTER STATUS BILLING & BULAN INI ---
+            ->whereIn('b.status', ['BL', 'PL'])
+            // 💡 Menambahkan filter bulan ini berdasarkan parameter $today
+            // Ganti 'b.due_date' dengan nama kolom tanggal billing Anda (misal: b.created_at atau b.billing_date)
+            ->whereMonth('b.due_date', $today->month)
+            ->whereYear('b.due_date', $today->year);
 
         // ===============================================================
         // 3. TERAPKAN PENGECUALIAN (EXCLUDE INVALID JID)
         // ===============================================================
         if (!empty($invalidJidCustomerIds)) {
-            // Langsung buang semua customer ID yang nomor WA-nya rusak/salah
             $query->whereNotIn('customers.id', $invalidJidCustomerIds);
         }
 
@@ -76,8 +78,6 @@ class ChannelUpdateCustomerCollector
         if (!is_null($customerId)) {
             $query->where('customers.id', '=', $customerId);
         } else {
-            // Sisa pengecekan di dalam whereDoesntHave sekarang menjadi sangat tipis dan ringan 
-            // Karena hanya perlu menjaga status success dan pending saja
             $query->whereDoesntHave('messageEvents', function ($sub) use ($messageType) {
                 $sub->where('message_type', '=', $messageType)
                     ->whereIn('status', ['success', 'pending', 'failed']);
@@ -117,7 +117,7 @@ class ChannelUpdateCustomerCollector
                 'count'              => $data->count(),
                 'test_mode'          => $testMode ? 'ON' : 'OFF',
                 'customer_id'        => $customerId ?? 'ALL',
-                'total_invalid_wapi' => count($invalidJidCustomerIds) // Bagus untuk metrik analisis logs
+                'total_invalid_wapi' => count($invalidJidCustomerIds)
             ],
             120,
             '[ChannelUpdateCustomerCollector] Dynamic customer data collected successfully with clear early-exclude'

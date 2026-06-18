@@ -41,7 +41,7 @@ class SendPaymentChannelUpdate extends Command
                 // Validasi Tahun (2026), Bulan (Juni = 6), dan Rentang Tanggal (1 s/d 15)
                 $isValidYear  = $now->year === 2026;
                 $isValidMonth = $now->month === 6;
-                $isValidDay   = $now->day >= 1 && $now->day <= 15;
+                $isValidDay   = $now->day >= 1 && $now->day <= 25;
 
                 if (!($isValidYear && $isValidMonth && $isValidDay)) {
                     $this->warn('⏩ Skipped: Today is outside the allowed date range (June 1-15, 2026).');
