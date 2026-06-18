@@ -34,9 +34,10 @@ return [
         'customer_email' => 'Masukkan email pelanggan',
         'customer_phone' => 'Masukkan no. telepon pelanggan',
         'periode' => 'Pilih periode',
-        'select_customer_name' => '-- Pilih Pelanggan --',
-        'select_teller' => '-- Pilih Teller --',
+        'select_customer_name' => 'Pilih Pelanggan',
+        'select_teller' => 'Pilih Teller',
         'select_date' => 'Pilih Tanggal...',
+        'select_payment_method' => 'Pilih Metode Pembayaran',
     ],
     'label' => [
         'customer_name' => 'Nama Pelanggan',

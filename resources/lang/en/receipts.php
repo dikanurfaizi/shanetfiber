@@ -34,9 +34,10 @@ return [
         'customer_email' => 'Enter customer email',
         'customer_phone' => 'Enter customer phone',
         'periode' => 'Select periode',
-        'select_customer_name' => '-- Select Customer --',
-        'select_teller' => '-- Select Teller --',
+        'select_customer_name' => 'Select Customer',
+        'select_teller' => 'Select Teller',
         'select_date' => 'Select Date...',
+        'select_payment_method' => 'Select Payment Method',
     ],
     'label' => [
         'customer_name' => 'Customer Name',

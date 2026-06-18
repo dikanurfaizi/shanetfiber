@@ -50,6 +50,7 @@ class ReceiptController extends Controller
         // === 📥 Ambil parameter FILTER BARU (Dropdown & Date) ===
         $filterCustomer = $request->get('filter_customer');
         $filterTeller = $request->get('filter_teller');
+        $filterPaymentMethod = $request->get('filter_payment_method');
         $filterDate = $request->get('filter_date');
 
         $accountName = null;
@@ -100,6 +101,10 @@ class ReceiptController extends Controller
             $query->where('teller_name', $filterTeller);
         }
 
+        if (!empty($filterPaymentMethod)) {
+            $query->whereRaw('LOWER(payment_methode) = ?', [strtolower($filterPaymentMethod)]);
+        }
+
         if (!empty($filterDate)) {
             $query->whereDate('payment_time', $filterDate);
         }
@@ -117,10 +122,16 @@ class ReceiptController extends Controller
             ->pluck('periode', 'periode');
 
         // === 👥 Ambil List Unik untuk Dropdown Filter (Tanpa AJAX) ===
-        $customers = Receipt::whereNotNull('customer_name')
+        // $customers = Receipt::whereNotNull('customer_name')
+        //     ->distinct()
+        //     ->orderBy('customer_name', 'asc')
+        //     ->pluck('customer_name', 'customer_name');
+
+        $paymentMethods = Receipt::whereNotNull('payment_methode')
             ->distinct()
-            ->orderBy('customer_name', 'asc')
-            ->pluck('customer_name', 'customer_name');
+            ->orderBy('payment_methode', 'asc')
+            ->pluck('payment_methode', 'payment_methode')
+            ->map(fn($item) => strtoupper($item));
 
         $tellers = Receipt::whereNotNull('teller_name')
             ->distinct()
@@ -136,7 +147,7 @@ class ReceiptController extends Controller
         ], 200, 'Successfully retrieved receipt index with local filters', $traceId, $duration);
 
         // Kirim $customers dan $tellers ke view
-        return view('receipts.index', compact('receipts', 'totalPrice', 'periods', 'customers', 'tellers'))
+        return view('receipts.index', compact('receipts', 'totalPrice', 'periods', 'tellers', 'paymentMethods'))
             ->with('i', (request()->input('page', 1) - 1) * $paginate);
     }
 

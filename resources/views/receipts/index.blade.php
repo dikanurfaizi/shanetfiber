@@ -36,7 +36,7 @@
                 ]) !!}
 
                 {{-- Pertahankan parameter search/pagination lain --}}
-                @foreach (request()->except(['filter_customer', 'filter_teller', 'filter_date', 'page']) as $key => $value)
+                @foreach (request()->except(['filter_payment_method', 'filter_teller', 'filter_date', 'page']) as $key => $value)
                     @if (is_array($value))
                         @foreach ($value as $v)
                             <input type="hidden" name="{{ $key }}[]" value="{{ $v }}">
@@ -46,19 +46,19 @@
                     @endif
                 @endforeach
 
-                <div class="form-group mr-2 my-1" style="min-width: 200px;">
-                    {!! Form::select('filter_customer', $customers, request('filter_customer'), [
-                        'placeholder' => __('receipts.placeholder.select_customer_name'),
-                        'id' => 'filterCustomer',
-                        'class' => 'form-control form-control-sm select2-local w-100',
+                <div class="form-group mr-2 my-1">
+                    {!! Form::select('filter_payment_method', $paymentMethods, request('filter_payment_method'), [
+                        'placeholder' => __('receipts.placeholder.select_payment_method'),
+                        'id' => 'filterPaymentMethod',
+                        'class' => 'form-control form-control-sm select2-local',
                     ]) !!}
                 </div>
 
-                <div class="form-group mr-2 my-1" style="min-width: 180px;">
+                <div class="form-group mr-2 my-1">
                     {!! Form::select('filter_teller', $tellers, request('filter_teller'), [
                         'placeholder' => __('receipts.placeholder.select_teller'),
                         'id' => 'filterTeller',
-                        'class' => 'form-control form-control-sm select2-local w-100',
+                        'class' => 'form-control form-control-sm select2-local',
                     ]) !!}
                 </div>
 
@@ -73,7 +73,7 @@
                     <i class="fas fa-search mr-1"></i> {{ __('receipts.button.filter') }}
                 </button>
 
-                @if (request('filter_customer') || request('filter_teller') || request('filter_date'))
+                @if (request('filter_payment_method') || request('filter_teller') || request('filter_date'))
                     <a href="{{ url()->current() }}"
                         class="btn btn-secondary btn-sm my-1">{{ __('receipts.button.reset') }}</a>
                 @endif
@@ -186,18 +186,18 @@
                                 @endphp
                                 <span class="badge bg-success text-white text-left d-inline-block"
                                     style="max-width: 100%;">
-                                    <i class="fas fa-check-circle"></i> {{ $method }}
+                                    <i class="fas fa-check-circle"></i> {{ $method }},
                                     @if ($isInline)
-                                        {{ __('receipts.label.on') }} {{ $formattedDate }}
+                                        {{ $formattedDate }}
                                     @else
-                                        <div class="mt-1">{{ __('receipts.label.on') }} {{ $formattedDate }}</div>
+                                        <div class="mt-1">{{ $formattedDate }}</div>
                                         @if ($data->payment_methode === 'transfer')
                                             <div class="mt-1" style="font-size: 90%; opacity: 0.9;">
-                                                {{ __('receipts.label.to_account') }} {{ $data->bank_name }} -
+                                                {{ $data->bank_name }} -
                                                 {{ $data->account_number }}
                                             </div>
                                             <div class="mt-1" style="font-size: 90%; opacity: 0.9;">
-                                                {{ __('receipts.label.on_behalf_of') }} {{ $data->account_name }}
+                                                {{ $data->account_name }}
                                             </div>
                                         @endif
                                     @endif
@@ -273,7 +273,8 @@
                                 <div class="col-12 mb-2">
                                     <strong>{{ __('receipts.table.payment_method') }}:</strong>
                                     <div class="mt-1">
-                                        <span class="badge bg-success text-white text-left d-block w-100 p-2"
+                                        <span
+                                            class="badge bg-success text-white text-left d-block w-100 p-2 text-uppercase"
                                             style="white-space: normal;">
                                             <i class="fas fa-check-circle"></i> {{ $method }}
                                             @if ($isInline)
@@ -337,12 +338,12 @@
 
         <script>
             $(document).ready(function() {
-                $('#filterCustomer').select2({
+                $('#filterPaymentMethod').select2({
                     placeholder: function() {
                         return $(this).attr('placeholder') || $(this).data('placeholder');
                     },
                     allowClear: true,
-                    width: 'resolve'
+                    width: 'auto'
                 });
 
                 $('#filterTeller').select2({
@@ -350,7 +351,7 @@
                         return $(this).attr('placeholder') || $(this).data('placeholder');
                     },
                     allowClear: true,
-                    width: 'resolve'
+                    width: 'auto'
                 });
 
                 // Inisialisasi Datepicker
