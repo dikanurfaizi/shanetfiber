@@ -129,7 +129,37 @@ class WhatsappMessageService
             $event->update(['stage' => 'SEND_REQUEST']);
 
             $resolved = app(GatewayHelper::class)->resolve($gateway);
-            $url      = rtrim($resolved['base_url'], '/') . '/send/message';
+            $baseUrl  = rtrim($resolved['base_url'], '/');
+
+            // 🛑 STEP 1: TRIGGER EFFECT TYPING
+            try {
+                $presenceUrl = $baseUrl . '/send/presence';
+                Http::withOptions($resolved['options'])
+                    ->withHeaders([
+                        'X-Device-Id' => $deviceId,
+                    ])
+                    ->timeout(5) // Timeout singkat saja agar tidak membebani antrean jika gagal
+                    ->post($presenceUrl, [
+                        'phone' => $receiver,
+                        'type'  => 'COMPOSING' // Mengaktifkan status "typing..."
+                    ]);
+
+                // 🛑 STEP 2: BERI JEDA (DELAY) 1-2 DETIK
+                // Supaya status mengetik sempat ter-render di aplikasi WhatsApp penerima sebelum pesan masuk
+                sleep(2);
+            } catch (Throwable $presenceEx) {
+                // Di-catch agar jika fitur typing gagal/timeout, pengiriman pesan utama tetap berjalan
+                LogHelper::logError(
+                    null,
+                    ['error' => $presenceEx->getMessage()],
+                    500,
+                    "[WhatsappMessageService] Failed to trigger typing presence effect",
+                    $traceId
+                );
+            }
+
+            // 🛑 STEP 3: SEND ACTUAL MESSAGE
+            $url = $baseUrl . '/send/message';
 
             $response = Http::withOptions($resolved['options'])
                 ->withHeaders([

@@ -4,7 +4,7 @@ namespace App\Services\Notification;
 
 use App\DataTransferObjects\TelegramJobDto;
 use App\Enums\TelegramAction;
-use App\Enums\WhatsappAction;
+use App\Enums\WhatsAppAction;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Models\Billings\Billing;
