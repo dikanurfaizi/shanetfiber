@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Whatsapp;
 
+use App\Helpers\ExecutionTimer;
 use App\Http\Controllers\Controller;
 use App\Services\WhatsappWebhook\WebhookValidator;
 use App\Services\WhatsappWebhook\WebhookEventRouter;
@@ -24,6 +25,7 @@ class WhatsappWebhookController extends Controller
         WebhookEventRouter $router
     ) {
         $traceId = (string) Str::uuid();
+        $timer = new ExecutionTimer();
         $payload = $request->getContent();
 
         if (! $validator->validateSignature($payload, $request)) {
@@ -53,7 +55,7 @@ class WhatsappWebhookController extends Controller
                 'error' => $e->getMessage(),
                 'line'  => $e->getLine(),
                 'file'  => $e->getFile(),
-            ], 500, '[ONPREM] Error handling event', $traceId);
+            ], 500, '[ONPREM] Error handling event', $traceId, $timer->lap());
 
             return response()->json(
                 ['error' => 'Server error'],

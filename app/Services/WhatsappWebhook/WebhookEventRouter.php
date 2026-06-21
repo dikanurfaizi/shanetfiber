@@ -2,6 +2,7 @@
 
 namespace App\Services\WhatsappWebhook;
 
+use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
 use App\Services\WhatsappWebhook\DTO\WebhookPayload;
 use App\Services\WhatsappWebhook\Handlers\MessageAckHandler;
@@ -20,6 +21,7 @@ class WebhookEventRouter
 
     public function route(array $data, string $traceId): void
     {
+        $timer = new ExecutionTimer();
         $payload = WebhookPayload::fromArray($data);
 
         // ===== BASIC TRACE LOG (1 BARIS SAJA) =====
@@ -32,7 +34,8 @@ class WebhookEventRouter
             ],
             200,
             '[Webhook] Event received',
-            $traceId
+            $traceId,
+            $timer->lap()
         );
 
         // ===== DEVICE VALIDATION =====
@@ -45,36 +48,43 @@ class WebhookEventRouter
                 ],
                 400,
                 '[Webhook] Missing device_id',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
             return;
         }
 
         match ($payload->event) {
 
-            'message.ack' => $this->ackHandler->handle($payload, $traceId),
+            'message.ack' => $this->ackHandler->handle($payload, $traceId, $timer),
 
-            'group.participants' => $this->groupHandler->handle($payload, $traceId),
+            'group.participants' => $this->groupHandler->handle($payload, $traceId, $timer),
 
-            'message' => $this->handleMessage($payload, $traceId),
+            'message' => $this->handleMessage($payload, $traceId, $timer),
 
-            default => $this->logUnhandled($payload, $traceId),
+            default => $this->logUnhandled($payload, $traceId, $timer),
         };
     }
 
-    private function handleMessage(WebhookPayload $payload, string $traceId): void
+    private function handleMessage(WebhookPayload $payload, string $traceId, ExecutionTimer $timer): void
     {
-        if ($payload->isText()) {
-            $this->textHandler->handle($payload, $traceId);
+        if ($payload->isGroupMessage()) {
+            LogHelper::logInfo(null, [
+                'trace_id' => $traceId,
+                'chat_id'  => $payload->payload['chat_id'] ?? null,
+                'sender'   => $payload->sender()
+            ], 200, '[Webhook] Group message skipped. Bot auto-reply is muted for groups.', $traceId, $timer->lap());
+
             return;
         }
 
-        if (
-            $payload->isImage() ||
-            $payload->isVideo() ||
-            $payload->isDocument()
-        ) {
-            $this->mediaHandler->handle($payload, $traceId);
+        if ($payload->isText()) {
+            $this->textHandler->handle($payload, $traceId, $timer);
+            return;
+        }
+
+        if ($payload->hasMedia()) {
+            $this->mediaHandler->handle($payload, $traceId, $timer);
             return;
         }
 
@@ -87,11 +97,12 @@ class WebhookEventRouter
             ],
             400,
             '[Webhook] Unsupported message type',
-            $traceId
+            $traceId,
+            $timer->lap()
         );
     }
 
-    private function logUnhandled(WebhookPayload $payload, string $traceId): void
+    private function logUnhandled(WebhookPayload $payload, string $traceId, ExecutionTimer $timer): void
     {
         LogHelper::logWarning(
             null,

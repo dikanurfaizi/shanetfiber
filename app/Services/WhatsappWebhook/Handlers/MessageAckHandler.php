@@ -2,13 +2,14 @@
 
 namespace App\Services\WhatsappWebhook\Handlers;
 
+use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
 use App\Jobs\Whatsapp\ProcessMessageAckJob;
 use App\Services\WhatsappWebhook\DTO\WebhookPayload;
 
 class MessageAckHandler extends BaseHandler
 {
-    public function handle(WebhookPayload $payload, string $traceId): void
+    public function handle(WebhookPayload $payload, string $traceId, ExecutionTimer $timer): void
     {
         $p = $payload->payload ?? [];
 
@@ -16,9 +17,9 @@ class MessageAckHandler extends BaseHandler
             'receipt_type' => $p['receipt_type'] ?? '-',
             'ids'          => $p['ids'] ?? [],
             'chat_id'      => $p['chat_id'] ?? '-',
-        ], 200, '[Webhook] Message ACK', $traceId);
+        ], 200, '[Webhook] Message ACK', $traceId, $timer->lap());
 
-        // Offload ke job (opsional tapi sehat untuk scale)
+        // ✅ BERSIH: Cukup kirim data mentah array ($payload->raw) dan string ($traceId) ke Job
         ProcessMessageAckJob::dispatch($payload->raw, $traceId)->onQueue('notification');
     }
 }

@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use App\Console\Commands\BillingCheckAndUpdateProfile;
 use App\Console\Commands\SendMessages;
 use App\Console\Commands\FetchMikrotikInfoCommand;
+use App\Jobs\Whatsapp\CloseIdleHumanChatSessionsJob; // 👈 PENTING: Import class Job Anda di sini
 use App\Helpers\LogHelper;
 use App\Models\Websystem;
 
@@ -19,11 +20,13 @@ class Kernel extends ConsoleKernel
      * @var array
      */
     protected $commands = [
-        //      CreateBillingCron::class,
+        //       CreateBillingCron::class,
+        //       CloseIdleHumanChatSessionsJob::class, // Jika berbentuk Job, tidak wajib didaftarkan di property $commands ini, cukup di $schedule
         BillingCheckAndUpdateProfile::class,
         SendMessages::class,
         FetchMikrotikInfoCommand::class
     ];
+
     /**
      * Define the application's command schedule.
      */
@@ -132,7 +135,6 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping(30)
             ->appendOutputTo(storage_path('logs/scheduler-reminder.log'));
 
-
         /*
         |--------------------------------------------------------------------------
         | 6. ARCHIVE LARAVEL LOGS
@@ -162,7 +164,6 @@ class Kernel extends ConsoleKernel
             ->onOneServer()
             ->evenInMaintenanceMode()
             ->appendOutputTo(storage_path('logs/scheduler-cleanup.log'));
-
 
         /*
         |--------------------------------------------------------------------------
@@ -230,15 +231,28 @@ class Kernel extends ConsoleKernel
         | Output otomatis di-append ke custom log file.
         | */
         $schedule->command('reminder:payment-channel-update-send')
-            ->cron('0 */5 * * *') // 🔄 Menggantikan ->everyFiveHours() dengan standard cron setiap 5 jam
+            ->cron('0 */5 * * *')
             ->when(function () {
-                // 📅 Memastikan scheduler hanya berjalan dari tanggal 1 hingga 15 Juni 2026
                 return now()->between('2026-06-01 00:00:00', '2026-06-25 23:59:59');
             })
             ->onFailure(fn() => LogHelper::logError(null, ['time' => now()], 500, '[Scheduler] reminder:payment-channel-update-send failed'))
             ->onSuccess(fn() => LogHelper::logInfo(null, ['time' => now()], 200, '[Scheduler] reminder:payment-channel-update-send finished successfully'))
             ->withoutOverlapping(10)
             ->appendOutputTo(storage_path('logs/scheduler-payment-channel.log'));
+
+        /*
+        |--------------------------------------------------------------------------
+        | 13. AUTOMATICALLY CLOSE IDLE HUMAN CHAT SESSIONS (UBAH KE COMMAND)
+        |--------------------------------------------------------------------------
+        | Mengecek dan menutup sesi obrolan dengan admin manusia yang tidak aktif 
+        | selama 15 menit secara real-time setiap menit.
+        | */
+        $schedule->command('whatsapp:close-idle-sessions') // 👈 Menggunakan signature command baru Anda
+            ->everyMinute()
+            ->timezone($defaultTimezone)
+            ->withoutOverlapping(5)
+            ->onOneServer()
+            ->appendOutputTo(storage_path('logs/scheduler-whatsapp-timeout.log'));
     }
 
     /**

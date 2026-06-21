@@ -17,8 +17,7 @@ class FormatReceiver
         }
 
         try {
-
-            // hapus semua non digit
+            // hapus semua non-digit (termasuk spasi, strip, tanda plus, dll)
             $contact = preg_replace('/\D/', '', $contact);
 
             if (!$contact) {
@@ -47,7 +46,6 @@ class FormatReceiver
 
             return $contact;
         } catch (\Throwable $e) {
-
             LogHelper::logWarning(
                 null,
                 null,
@@ -67,7 +65,7 @@ class FormatReceiver
     {
         $contact = $this->normalize($contact);
 
-        return '0' . substr($contact, 2);
+        return $contact ? '0' . substr($contact, 2) : '';
     }
 
     /**
@@ -77,6 +75,7 @@ class FormatReceiver
     public function broadcast(string $contact): string
     {
         $local = $this->display($contact);
+        if (!$local) return '';
 
         return substr($local, 0, 4)
             . '-' . substr($local, 4, 4)
@@ -91,22 +90,17 @@ class FormatReceiver
     {
         $contact = $this->normalize($contact);
 
-        return $contact . '@s.whatsapp.net';
+        return $contact ? $contact . '@s.whatsapp.net' : '';
     }
 
     /**
      * Format homepage dinamis untuk segala panjang nomor (termasuk 13-14 digit)
-     * Contoh hasil: 
-     * - 10 digit: +62 812-345-6789
-     * - 11-12 digit: +62 812-3456-7890
-     * - 13-14 digit: +62 812-3456-7890-1234
      */
     public function homepage(string $contact): string
     {
-        // 1. Bersihkan nomor (misal hasil: 628123456789012)
         $contact = $this->normalize($contact);
+        if (!$contact) return '';
 
-        // 2. Ambil nomor setelah "62" (misal hasil: 8123456789012)
         $number = substr($contact, 2);
         $length = strlen($number);
 
@@ -114,18 +108,15 @@ class FormatReceiver
             return '+62 ' . $number;
         }
 
-        // 3. Jika nomor super panjang (13 digit atau lebih)
         if ($length >= 13) {
-            // Pola: 3-4-4-Sisa (Maksimal 4 digit di setiap grup)
             $part1 = substr($number, 0, 3);
             $part2 = substr($number, 3, 4);
             $part3 = substr($number, 7, 4);
-            $part4 = substr($number, 11); // Mengambil semua sisa angka di belakang
+            $part4 = substr($number, 11);
 
             return "+62 $part1-$part2-$part3-$part4";
         }
 
-        // 4. Jika nomor standar pendek (10 digit)
         if ($length === 10) {
             $part1 = substr($number, 0, 3);
             $part2 = substr($number, 3, 3);
@@ -134,7 +125,6 @@ class FormatReceiver
             return "+62 $part1-$part2-$part3";
         }
 
-        // 5. Jika nomor standar umum (11 - 12 digit)
         $part1 = substr($number, 0, 3);
         $part2 = substr($number, 3, 4);
         $part3 = substr($number, 7);
@@ -148,7 +138,6 @@ class FormatReceiver
     public function formatReceiver($contact, $action = null, $whatsappFormat = false)
     {
         try {
-
             if ($whatsappFormat) {
                 return $this->whatsapp($contact);
             }
@@ -167,7 +156,6 @@ class FormatReceiver
 
             return $this->normalize($contact);
         } catch (\Throwable $e) {
-
             LogHelper::logWarning(
                 null,
                 null,
@@ -180,10 +168,11 @@ class FormatReceiver
     }
 
     /**
-     * Normalisasi sender dari WhatsApp gateway
+     * 🌟 PERBAIKAN UTAMA: Normalisasi sender dari berbagai jenis payload data raw gateway
      */
     public function normalizeSender(string $raw): string
     {
+        // 1. Ekstrak string jika mengandung data " in " (grup) atau JID pecahan ":"
         if (str_contains($raw, ' in ')) {
             $raw = explode(' in ', $raw)[0];
         }
@@ -192,6 +181,15 @@ class FormatReceiver
             $raw = explode(':', $raw)[0];
         }
 
-        return str_replace('@s.whatsapp.net', '', $raw);
+        // 2. Buang suffix WhatsApp domain jika ada
+        $cleanNumber = str_replace('@s.whatsapp.net', '', $raw);
+
+        // 3. 🌟 PROTEKSI TAMBAHAN: Jalankan fungsi normalize() bawaan
+        // Agar jika ada nomor berawalan '08xxx' atau '+62xxx' masuk ke method ini,
+        // dia langsung dipaksa menjadi berformat canonical internasional '628xxx'
+        $canonical = $this->normalize($cleanNumber);
+
+        // Jika karena suatu alasan formatnya rusak total, kembalikan string pembersihan awal
+        return $canonical ?? $cleanNumber;
     }
 }
