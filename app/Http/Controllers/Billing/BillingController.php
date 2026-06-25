@@ -76,6 +76,7 @@ class BillingController extends Controller
     public function index(Request $request)
     {
         $traceId = (string) Str::uuid();
+        $timer = new ExecutionTimer();
         $paginate = $request->input('perPage', 25);
 
         // query sudah dipindah ke service
@@ -118,7 +119,8 @@ class BillingController extends Controller
             ],
             200,
             'Successfully retrieved billing data',
-            $traceId
+            $traceId,
+            $timer->lap()
         );
 
         return view('billings.index', array_merge(
@@ -128,7 +130,7 @@ class BillingController extends Controller
                 'searchStatus' => $searchParams['status'],
                 'searchName' => $searchParams['name'],
                 'searchAddress' => $searchParams['address'],
-                'statuses' => $this->billingQueryService->getStatuses(),
+                'statuses' => $this->billingQueryService->getStatuses($traceId),
                 'selectedPeriod' => $request->period,
                 'periode' => $periode,
             ],

@@ -101,7 +101,7 @@ class BillingHelper
                     $html .= __('billing.label.to_account') . ' ' . e($bankName) . ' - ' . e($accountNumber);
                     $html .= '</div>';
                     $html .= '<div class="mt-1" style="font-size: 90%; opacity: 0.9;">';
-                    $html .= __('billing.label.on_behalf_of') . ' ' . e($accountName);
+                    $html .= e($accountName);
                     $html .= '</div>';
                 }
             }

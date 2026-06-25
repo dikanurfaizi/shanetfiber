@@ -2,6 +2,7 @@
 
 namespace App\Services\Billings;
 
+use App\Helpers\ExecutionTimer;
 use App\Models\Billings\Billing;
 use App\Models\Billings\BillingPeriode;
 use App\Models\User;
@@ -15,6 +16,9 @@ class BillingQueryService
 {
     public function buildBillingQuery(Request $request, string $traceId, bool $showAllPeriods = false)
     {
+        $timer = new ExecutionTimer();
+
+        // 1. Mulai Query dasar & Eager Loading relasi yang dibutuhkan untuk View
         $query = Billing::select('billings.*')
             ->with([
                 'customer',
@@ -22,28 +26,41 @@ class BillingQueryService
                 'billingPayment'
             ]);
 
-        // filter by status
+        // 2. Lakukan Left Join di awal agar sub-fungsi bisa langsung menggunakan kolom tabel relasi (Lebih Cepat dari whereHas)
+        $query->leftJoin('billing_subscription_periodes as bsp', 'billings.billing_subscription_id', '=', 'bsp.id')
+            ->leftJoin('billing_periodes', 'bsp.billing_periode_id', '=', 'billing_periodes.id')
+            ->leftJoin('customers', 'billings.customer_id', '=', 'customers.id');
+
+        // Filter langsung berdasarkan status utama
         if ($request->filled('status')) {
             $query->where('billings.status', $request->status);
         }
 
+        // Optimasi: Ganti whereHas dengan langsung tembak kolom bsp dari hasil join
         if ($request->filled('periode_id')) {
-            $query->whereHas('billingSubscription.billingPeriode', function ($q) use ($request) {
-                $q->where('id', $request->periode_id);
-            });
+            $query->where('bsp.billing_periode_id', $request->periode_id);
         }
 
-        $query = $this->applySearchFilters($query, $request, $traceId, $showAllPeriods);
-        $query = $this->applyOrdering($query);
+        // Jalankan filter pencarian & ordering internal
+        $searchParams = $this->applySearchFilters($query, $request, $showAllPeriods);
+        $this->applyOrdering($query);
+
+        // 3. Log Tunggal - Simpel, Bersih, dan Informatif untuk Production
+        LogHelper::logInfo(null, [
+            'user_id' => $this->getUserAuthData()['userId'] ?? null,
+            'active_filters' => array_filter($searchParams),
+            'status_direct' => $request->status
+        ], 200, "[BillingQueryService] Query built successfully", $traceId, $timer->lap());
 
         return $query;
     }
 
-    private function applySearchFilters($query, Request $request, string $traceId, bool $showAllPeriods = false)
+    private function applySearchFilters($query, Request $request, bool $showAllPeriods = false): array
     {
         $searchParams = $this->prepareSearchParams($request, $showAllPeriods);
 
         $hasFilter =
+            $request->filled('status') ||
             $searchParams['name'] ||
             !is_null($searchParams['status']) ||
             $searchParams['user_id'] ||
@@ -53,90 +70,60 @@ class BillingQueryService
             $query->where('billings.status', '!=', 'VD');
         }
 
-        // Filter berdasarkan kolom di tabel billings
+        // Optimasi: Menggunakan kolom tabel hasil join langsung (customers.name)
         if ($searchParams['name']) {
-            $name = $searchParams['name'];
-            $query->whereHas('customer', function ($q) use ($name) {
-                $q->where('name', 'like', "%{$name}%");
-            });
+            $query->where('customers.name', 'like', "%{$searchParams['name']}%");
         }
 
-        // Filter berdasarkan relasi customer slug
         if ($searchParams['customer_slug']) {
-            $slug = $searchParams['customer_slug'];
-            $query->whereHas('customer', function ($q) use ($slug) {
-                if ($slug === null) {
-                    $q->whereNull('slug');
-                } else {
-                    $q->where('slug', $slug);
-                }
-            });
+            if ($searchParams['customer_slug'] === null) {
+                $query->whereNull('customers.slug');
+            } else {
+                $query->where('customers.slug', $searchParams['customer_slug']);
+            }
         }
 
-        // Filter berdasarkan relasi customer address
         if ($searchParams['address']) {
-            $address = $searchParams['address'];
-            $query->whereHas('customer', function ($q) use ($address) {
-                if ($address === 'no-address') {
-                    $q->whereNull('address');
-                } else {
-                    $q->where('address', $address);
-                }
-            });
+            if ($searchParams['address'] === 'no-address') {
+                $query->whereNull('customers.address');
+            } else {
+                $query->where('customers.address', $searchParams['address']);
+            }
         }
 
-        // Filter berdasarkan periode - handle null billingSubscription
+        // Optimasi: Menggunakan kolom tabel hasil join langsung (billing_periodes.name)
         if ($searchParams['periode'] && !$searchParams['show_all_periods']) {
-            $periode = $searchParams['periode'];
-            $query->where(function ($q) use ($periode) {
-                $q->whereHas('billingSubscription.billingPeriode', function ($q) use ($periode) {
-                    $q->where('name', 'like', "%{$periode}%");
-                });
-            });
+            $query->where('billing_periodes.name', 'like', "%{$searchParams['periode']}%");
         }
 
-        // Filter status dan due date di tabel billings
         if (!is_null($searchParams['status'])) {
-            $this->applyStatusFilter($query, $searchParams['status'], $searchParams['duedate'], $traceId);
+            $this->applyStatusFilter($query, $searchParams['status'], $searchParams['duedate']);
         }
 
-        // Filter user_id melalui relasi customer.user_id
         if ($searchParams['user_id']) {
-            $userId = $searchParams['user_id'];
-            $query->whereHas('customer', function ($q) use ($userId) {
-                if ($userId === 'Not Linked User' || $userId === 0) {
-                    $q->whereNull('user_id');
-                } else {
-                    $q->where('user_id', $userId);
-                }
-            });
+            if ($searchParams['user_id'] === 'Not Linked User' || $searchParams['user_id'] === 0) {
+                $query->whereNull('customers.user_id');
+            } else {
+                $query->where('customers.user_id', $searchParams['user_id']);
+            }
         }
 
-        // === 🔒 Role-based visibility ===
+        // === 🔒 Role-based visibility (Optimasi: Gunakan kolom tabel hasil join langsung) ===
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
 
-        if ($user->can('view-bill-top-bar-total')) {
-            // Global admin → bisa lihat semua billing
-        } elseif ($user->can('investor-billing-total')) {
-            // Investor → billing milik dirinya dan admin yang terhubung
-            $linkedAdminIds = InvestorAdmin::where('investor_id', $user->id)
-                ->pluck('admin_id')
-                ->toArray();
+        if (!$user->can('view-bill-top-bar-total')) {
+            if ($user->can('investor-billing-total')) {
+                $linkedAdminIds = InvestorAdmin::where('investor_id', $user->id)->pluck('admin_id')->toArray();
+                $visibleUserIds = array_merge([$user->id], $linkedAdminIds);
 
-            $visibleUserIds = array_merge([$user->id], $linkedAdminIds);
-
-            $query->whereHas('customer', function ($q) use ($visibleUserIds) {
-                $q->whereIn('user_id', $visibleUserIds);
-            });
-        } else {
-            // Default user → hanya billing miliknya sendiri
-            $query->whereHas('customer', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
-            });
+                $query->whereIn('customers.user_id', $visibleUserIds);
+            } else {
+                $query->where('customers.user_id', $user->id);
+            }
         }
 
-        return $query;
+        return $searchParams;
     }
 
     public function prepareSearchParams(Request $request, bool $showAllPeriods = false): array
@@ -153,19 +140,16 @@ class BillingQueryService
         $searchDuedate = $request->duedate;
         $customerSlug = $request->customer;
 
-        // Konversi admin_name (ID -> nama user)
         $searchUserId = null;
         if ($request->filled('admin_name')) {
             $userById = User::where('name', $request->admin_name)->first();
             $searchUserId = $userById?->id;
         }
 
-        // Fallback: jika tidak ada dari request, pakai user yang login jika punya izin
         if (empty($searchUserId) && $user && $user->can('view-customers-widget-related')) {
             $searchUserId = $auth['userId'];
         }
 
-        // Hanya set default periode jika tidak menampilkan semua periode
         if (!$showAllPeriods && !$customerSlug && !$searchName && !$searchMonth && !$searchYear && !$searchStatus && !$searchAddress && !$searchDuedate) {
             $latestPeriode = BillingPeriode::latest('created_at')->value('name');
             $searchPeriode = $latestPeriode;
@@ -183,11 +167,11 @@ class BillingQueryService
             'user_id' => $searchUserId,
             'month' => $searchMonth,
             'year' => $searchYear,
-            'show_all_periods' => $showAllPeriods, // Tambahkan flag ini
+            'show_all_periods' => $showAllPeriods,
         ];
     }
 
-    private function applyStatusFilter($query, $status, $duedate, string $traceId)
+    private function applyStatusFilter($query, $status, $duedate)
     {
         $statuses = explode('-', $status);
         $excludes = array_filter($statuses, fn($s) => str_starts_with($s, '!'));
@@ -203,24 +187,17 @@ class BillingQueryService
             $query->where('billings.status', $statuses[0]);
 
             if ($duedate) {
-                $field = $statuses[0] === 'LS' ? 'payment_time' : 'pay_later';
+                $field = $statuses[0] === 'LS' ? 'billings.payment_time' : 'billings.pay_later';
                 $query->where($field, 'like', "%{$duedate}%");
             }
-        } else {
-            LogHelper::logInfo(null, [], 404, '[Billing Index] Status filter not applied', $traceId);
         }
     }
 
     private function applyOrdering($query)
     {
-        $query->leftJoin('billing_subscription_periodes as bsp', 'billings.billing_subscription_id', '=', 'bsp.id')
-            ->leftJoin('billing_periodes', 'bsp.billing_periode_id', '=', 'billing_periodes.id')
-            ->leftJoin('customers', 'billings.customer_id', '=', 'customers.id')
-            ->orderByDesc('billing_periodes.created_at')
-            ->orderBy('customers.name', 'asc')
-            ->select('billings.*'); // Pastikan select hanya kolom billing
-
-        return $query;
+        // Tinggal menerapkan aturan ordering karena Join sudah dilakukan di atas.
+        $query->orderByDesc('billing_periodes.created_at')
+            ->orderBy('customers.name', 'asc');
     }
 
     private function getUserAuthData()
@@ -228,8 +205,10 @@ class BillingQueryService
         return UserAuth::getUserDetails();
     }
 
-    public function getStatuses()
+    public function getStatuses(string $traceId)
     {
+        $timer = new ExecutionTimer();
+
         $statusLabels = [
             'LS' => 'PAID',
             'BL' => 'UNPAID',
@@ -238,7 +217,10 @@ class BillingQueryService
         ];
 
         $raw = Billing::select('status')->distinct()->pluck('status');
+        $result = $raw->mapWithKeys(fn($st) => [$st => $statusLabels[$st] ?? $st]);
 
-        return $raw->mapWithKeys(fn($st) => [$st => $statusLabels[$st] ?? $st]);
+        LogHelper::logInfo(null, $result->toArray(), 200, "[BillingQueryService] Successfully retrieved billing statuses", $traceId, $timer->lap());
+
+        return $result;
     }
 }
