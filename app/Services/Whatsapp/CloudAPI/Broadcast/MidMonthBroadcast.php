@@ -2,6 +2,7 @@
 
 namespace App\Services\Whatsapp\CloudAPI\Broadcast;
 
+use App\Helpers\ExecutionTimer;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Helpers\MaskCustomerName;
@@ -27,7 +28,8 @@ class MidMonthBroadcast
 
     public function run(string $traceId)
     {
-        LogHelper::logInfo(null, [], 100, '[MidMonthBroadcast] Start', $traceId);
+        $timer = new ExecutionTimer();
+        LogHelper::logInfo(null, [], 100, '[MidMonthBroadcast] Start', $traceId, $timer->lap());
 
         $templateName1 = 'pengingat_pembayaran_v3';    // 2 Bank + 1 E-Wallet
         $templateName2 = 'pengingat_pembayaran_v2_2';  // 1 Bank + 1 E-Wallet
@@ -37,10 +39,10 @@ class MidMonthBroadcast
 
         LogHelper::logInfo(null, [
             'count' => $billings->count()
-        ], 110, '[MidMonthBroadcast] Billing collected', $traceId);
+        ], 110, '[MidMonthBroadcast] Billing collected', $traceId, $timer->lap());
 
         if ($billings->isEmpty()) {
-            LogHelper::logInfo(null, [], 111, '[MidMonthBroadcast] No billing to process', $traceId);
+            LogHelper::logInfo(null, [], 111, '[MidMonthBroadcast] No billing to process', $traceId, $timer->lap());
             return;
         }
 
@@ -55,7 +57,7 @@ class MidMonthBroadcast
             ->first();
 
         if (!$gateway || $gateway->accounts->isEmpty()) {
-            LogHelper::logError(null, [], 120, '[MidMonthBroadcast] Gateway/Account invalid', $traceId);
+            LogHelper::logError(null, [], 120, '[MidMonthBroadcast] Gateway/Account invalid', $traceId, $timer->lap());
             return;
         }
 
@@ -129,7 +131,7 @@ class MidMonthBroadcast
             $delay = now()->addSeconds($delayInSeconds);
         }
 
-        LogHelper::logInfo(null, [], 900, '[MidMonthBroadcast] Finished dispatch to Queue', $traceId);
+        LogHelper::logInfo(null, [], 900, '[MidMonthBroadcast] Finished dispatch to Queue', $traceId, $timer->lap());
     }
 
     private function getNextDelay(string $queue, string $traceId): Carbon

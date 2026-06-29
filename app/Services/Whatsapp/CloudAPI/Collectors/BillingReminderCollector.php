@@ -2,6 +2,7 @@
 
 namespace App\Services\Whatsapp\CloudAPI\Collectors;
 
+use App\Helpers\ExecutionTimer;
 use App\Models\Billings\Billing;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,7 @@ class BillingReminderCollector
      */
     public function collect(Carbon $today, string $slug1, string $slug2, string $slug3): Collection
     {
+        $timer = new ExecutionTimer();
         $slugs = [$slug1, $slug2, $slug3];
 
         $query = Billing::query()

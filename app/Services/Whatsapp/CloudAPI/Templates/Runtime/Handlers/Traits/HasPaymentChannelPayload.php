@@ -51,4 +51,28 @@ trait HasPaymentChannelPayload
             $payload['bank2_an'] ?? '-',
         ];
     }
+
+    /**
+     * 💡 BARU - Helper: Hanya 1 Bank (Total 3 Elemen)
+     */
+    protected function getOneBankOnly(array $payload): array
+    {
+        return [
+            $payload['bank1_name'] ?? '-',
+            $payload['bank1_no'] ?? '-',
+            $payload['bank1_an'] ?? '-',
+        ];
+    }
+
+    /**
+     * 💡 BARU - Helper: Hanya 1 E-Wallet (Total 3 Elemen)
+     */
+    protected function getOneWalletOnly(array $payload): array
+    {
+        return [
+            $payload['wallet_name'] ?? 'DANA',
+            $payload['wallet_no'] ?? '-',
+            $payload['wallet_an'] ?? '-',
+        ];
+    }
 }

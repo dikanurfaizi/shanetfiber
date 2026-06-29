@@ -2,6 +2,7 @@
 
 namespace App\Services\Whatsapp\CloudAPI\Broadcast;
 
+use App\Helpers\ExecutionTimer;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Jobs\Whatsapp\CloudAPI\Broadcast\OverdueReminderJob;
@@ -25,7 +26,8 @@ class OverdueBroadcast
 
     public function run(string $traceId)
     {
-        LogHelper::logInfo(null, [], 100, '[OverdueBroadcast] Start', $traceId);
+        $timer = new ExecutionTimer();
+        LogHelper::logInfo(null, [], 100, '[OverdueBroadcast] Start', $traceId, $timer->lap());
 
         $templateName1 = 'pembayaran_terlambat_1';    // 2 Bank + 1 E-Wallet
         $templateName2 = 'pembayaran_terlambat_v3';  // 1 Bank + 1 E-Wallet
@@ -36,10 +38,10 @@ class OverdueBroadcast
 
         LogHelper::logInfo(null, [
             'count' => $billings->count()
-        ], 110, '[OverdueBroadcast] Billing collected', $traceId);
+        ], 110, '[OverdueBroadcast] Billing collected', $traceId, $timer->lap());
 
         if ($billings->isEmpty()) {
-            LogHelper::logInfo(null, [], 111, '[OverdueBroadcast] No billing to process', $traceId);
+            LogHelper::logInfo(null, [], 111, '[OverdueBroadcast] No billing to process', $traceId, $timer->lap());
             return;
         }
 
@@ -54,7 +56,7 @@ class OverdueBroadcast
             ->first();
 
         if (!$gateway || $gateway->accounts->isEmpty()) {
-            LogHelper::logError(null, [], 120, '[OverdueBroadcast] Gateway/Account invalid', $traceId);
+            LogHelper::logError(null, [], 120, '[OverdueBroadcast] Gateway/Account invalid', $traceId, $timer->lap());
             return;
         }
 
@@ -106,7 +108,7 @@ class OverdueBroadcast
                 'customer_id'   => $data->customer_id,
                 'template'      => $resolvedTemplate,
                 'delay_at'      => $delay->toDateTimeString(),
-            ], 200, '[OverdueBroadcast] Dispatch job to queue', $traceId);
+            ], 200, '[OverdueBroadcast] Dispatch job to queue', $traceId, $timer->lap());
 
             // Kirim payload lengkap menuju job antrean background
             OverdueReminderJob::dispatch(
@@ -130,7 +132,7 @@ class OverdueBroadcast
             $delay = now()->addSeconds($delayInSeconds);
         }
 
-        LogHelper::logInfo(null, [], 900, '[OverdueBroadcast] Finished dispatch loop', $traceId);
+        LogHelper::logInfo(null, [], 900, '[OverdueBroadcast] Finished dispatch loop', $traceId, $timer->lap());
     }
 
     private function getNextDelay(string $queue, string $traceId): Carbon

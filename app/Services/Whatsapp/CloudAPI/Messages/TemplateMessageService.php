@@ -3,11 +3,13 @@
 namespace App\Services\Whatsapp\CloudAPI\Messages;
 
 use App\Helpers\LogHelper;
+use App\Services\Whatsapp\CloudAPI\Broadcast\MonthlyKickOffBroadcast;
 use App\Services\Whatsapp\CloudAPI\Messaging\MessageDispatcher;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\BroadcastMidMonthCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\CustomerActivationCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPayLaterCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPembayaranCommand;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\MonthlyKickOffBroadcastCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\OverdueBroadcastCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\PaymentChannelUpdateCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\TestMessageCommand;
@@ -141,6 +143,24 @@ class TemplateMessageService
             customerName: $data['customer_name'],
             recipient: $data['recipient'],
             channelUpdateDate: $data['channel_update_date'],
+            channel: $data['channel'],
+            bankPayload: $data['bank_payload'],
+            contactAdmin: $data['contact_admin'],
+            contactWhatsapp: $data['contact_whatsapp']
+        );
+
+        return $this->dispatcher->dispatch($command, null);
+    }
+
+    public function sendMonthlyKickOffBroadcast(array $data)
+    {
+        $command = new MonthlyKickOffBroadcastCommand(
+            account: $data['account'],
+            templateName: $data['templateName'],
+            customerId: $data['customer_id'],
+            customerName: $data['customer_name'],
+            recipient: $data['recipient'],
+            initialDate: $data['initial_date'],
             channel: $data['channel'],
             bankPayload: $data['bank_payload'],
             contactAdmin: $data['contact_admin'],

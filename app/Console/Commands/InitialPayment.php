@@ -103,11 +103,9 @@ class InitialPayment extends Command
             // ===============================================================
             // DATE RANGE & DISPATCH
             // ===============================================================
-            [$startDate, $endDate] = $this->getAllowedDateRange($effectiveDays, $now);
+            [$startDate, $endDate] = $this->getAllowedDateRange($now);
 
             event(new MonthlyKickoffBroadcastTriggered(
-                $startDate,
-                $endDate,
                 WhatsAppAction::CREATE_NEW_BILL->value,
                 $feature->type,
                 $traceId
@@ -156,12 +154,14 @@ class InitialPayment extends Command
         }
     }
 
-    private function getAllowedDateRange(array $days, Carbon $base): array
+    private function getAllowedDateRange(Carbon $base): array
     {
-        $month = $base->copy()->startOfMonth();
+        // Karena sekarang berjalan sekali di tanggal 1, 
+        // Ambil start dari awal bulan ini jam 00:00:00
+        $start = $base->copy()->startOfMonth();
 
-        $start = $month->copy()->day(min($days))->startOfDay();
-        $end   = $month->copy()->day(max($days))->addDay()->startOfDay();
+        // Tarik batas akhir hingga akhir bulan jam 23:59:59
+        $end   = $base->copy()->endOfMonth();
 
         return [$start, $end];
     }

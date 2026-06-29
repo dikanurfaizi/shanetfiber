@@ -92,18 +92,17 @@ class Kernel extends ConsoleKernel
         |--------------------------------------------------------------------------
         | 3. INITIAL PAYMENT BROADCAST
         |--------------------------------------------------------------------------
-        | Dijalankan setiap 15 menit hanya pada tanggal 1, 2, dan 3,
-        | serta hanya antara jam 08:00 - 22:00 (WIB).
-        | Jika kondisi tidak terpenuhi, dilewati (tidak error).
+        | Dijalankan harian hanya pada tanggal 1 pukul 08:00 (WIB).
+        | Satu kali jalan langsung mengirimkan semua data.
         */
-        // $schedule->command('initial-payment:messages-send')
-        //     ->everyFifteenMinutes()
-        //     ->timezone($defaultTimezone)
-        //     ->when(fn() => in_array(now()->day, [1, 2, 3]) && now()->hour >= 8 && now()->hour < 22)
-        //     ->onFailure(fn() => LogHelper::logError(null, ['time' => now()], 500, '[Scheduler] initial-payment:messages-send failed'))
-        //     ->onSuccess(fn() => LogHelper::logInfo(null, ['time' => now()], 200, '[Scheduler] initial-payment:messages-send finished successfully'))
-        //     ->withoutOverlapping(30)
-        //     ->appendOutputTo(storage_path('logs/scheduler-initial-payment.log'));
+        $schedule->command('initial-payment:messages-send')
+            ->dailyAt('08:00')
+            ->timezone($defaultTimezone)
+            ->when(fn() => now()->day === 1)
+            ->onFailure(fn() => LogHelper::logError(null, ['time' => now()], 500, '[Scheduler] initial-payment:messages-send failed'))
+            ->onSuccess(fn() => LogHelper::logInfo(null, ['time' => now()], 200, '[Scheduler] initial-payment:messages-send finished successfully'))
+            ->withoutOverlapping(30)
+            ->appendOutputTo(storage_path('logs/scheduler-initial-payment.log'));
 
         /*
         |--------------------------------------------------------------------------

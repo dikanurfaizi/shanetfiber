@@ -3,6 +3,7 @@
 namespace App\Services\Whatsapp\CloudAPI\Broadcast;
 
 use App\Enums\WhatsAppAction;
+use App\Helpers\ExecutionTimer;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Jobs\Whatsapp\CloudAPI\Broadcast\PaymentChannelUpdateJob;
@@ -28,7 +29,8 @@ class PaymentChannelUpdate
 
     public function run(string $traceId)
     {
-        LogHelper::logInfo(null, [], 100, '[PaymentChannelUpdate] Start process', $traceId);
+        $timer = new ExecutionTimer();
+        LogHelper::logInfo(null, [], 100, '[PaymentChannelUpdate] Start process', $traceId, $timer->lap());
 
         $templateName1 = 'info_perubahan_rekening_pembayaran_2_bank_1_ewallet';
         $templateName2 = 'info_perubahan_rekening_pembayaran_1_bank_1_ewallet';
@@ -103,7 +105,7 @@ class PaymentChannelUpdate
             $delay = now()->addSeconds($delayInSeconds);
         }
 
-        LogHelper::logInfo(null, ['total_dispatched' => $customers->count()], 900, '[PaymentChannelUpdate] Finished process', $traceId);
+        LogHelper::logInfo(null, ['total_dispatched' => $customers->count()], 900, '[PaymentChannelUpdate] Finished process', $traceId, $timer->lap());
     }
 
     private function getNextDelay(string $queue, string $traceId): Carbon

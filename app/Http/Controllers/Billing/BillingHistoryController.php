@@ -99,7 +99,7 @@ class BillingHistoryController extends Controller
                 'searchStatus'  => $searchParams['status'],
                 'searchName'    => $searchParams['name'],
                 'searchAddress' => $searchParams['address'],
-                'statuses'      => $this->billingQueryService->getStatuses(),
+                'statuses'      => $this->billingQueryService->getStatuses($traceId),
                 'selectedPeriod' => $request->period,
                 'periode'       => $periode,
                 'years'         => $years

@@ -6,6 +6,7 @@ use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\BroadcastMidMonthC
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\CustomerActivationCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPayLaterCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPembayaranCommand;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\MonthlyKickOffBroadcastCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\OverdueBroadcastCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\PaymentChannelUpdateCommand;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\ReplyMessageCommand;
@@ -14,6 +15,7 @@ use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\BroadcastMidMonthH
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\CustomerActivationHandler;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\InfoPayLaterHandler;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\InfoPembayaranHandler;
+use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\MonthlyKickOffBroadcastHandler;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\OverdueBroadcastHandler;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\PaymentChannelUpdateHandler;
 use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\ReplyMessageHandler;
@@ -47,6 +49,7 @@ class WhatsAppServiceProvider extends ServiceProvider
             OverdueBroadcastCommand::class => OverdueBroadcastHandler::class,
             ReplyMessageCommand::class => ReplyMessageHandler::class,
             PaymentChannelUpdateCommand::class => PaymentChannelUpdateHandler::class,
+            MonthlyKickOffBroadcastCommand::class => MonthlyKickOffBroadcastHandler::class,
         ];
     }
 }

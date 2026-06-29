@@ -15,8 +15,6 @@ class SendMonthlyKickOffBroadcastNotificationJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public function __construct(
-        public Carbon $startDate,
-        public Carbon $endDate,
         public string $action,
         public string $gatewayType,
         public string $traceId
@@ -24,9 +22,7 @@ class SendMonthlyKickOffBroadcastNotificationJob implements ShouldQueue
 
     public function handle(MonthlyKickoffBroadcastService $service): void
     {
-        $service->send(
-            $this->startDate,
-            $this->endDate,
+        $service->run(
             $this->action,
             $this->gatewayType,
             $this->traceId

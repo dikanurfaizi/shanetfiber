@@ -11,16 +11,18 @@ use Carbon\Carbon;
 class ActiveCustomerCollector
 {
     /**
-     * Mengumpulkan data customer yang belum pernah menerima pesan broadcast tipe ini.
-     * * @param Carbon $today Tanggal hari ini (tetap dipertahankan untuk log)
+     * Mengumpulkan semua data customer yang belum pernah menerima pesan broadcast tipe ini.
+     * 
+     * @param Carbon $today Tanggal hari ini (tetap dipertahankan untuk log)
      * @param string $messageType Slug utama pengiriman (e.g., 'info_perubahan_rekening_pembayaran')
-     * @param string $slug1 Tambahan pengecekan slug pembanding 1
-     * @param string $slug2 Tambahan pengecekan slug pembanding 2
-     * @param string $slug3 Tambahan pengecekan slug pembanding 3
+     * @param string ...$slugs Berapapun jumlah template slug yang ingin dicek (Dinamis)
      */
-    public function collect(Carbon $today, string $messageType, string $slug1, string $slug2, string $slug3): Collection
+    public function collect(Carbon $today, string $messageType, string ...$slugs): Collection
     {
         $testMode = config('messaging.reminder_allow_test', false);
+
+        // Gabungkan semua slug (termasuk messageType) ke dalam satu array untuk keperluan logging
+        $allSlugs = array_merge([$messageType], $slugs);
 
         $query = Customer::query()
             ->select([
@@ -40,14 +42,18 @@ class ActiveCustomerCollector
             ->leftJoin('packages as p', 'cs.package_id', '=', 'p.id')
 
             // --- FILTER ANTI-DOUBLE (MESSAGE EVENTS) ---
-            // Pengecekan murni berdasarkan message_type & tambahan slugs tanpa filter tanggal me.created_at
-            ->leftJoin('message_events as me', function ($join) use ($messageType, $slug1, $slug2, $slug3) {
+            // Menggunakan array $allSlugs secara dinamis di dalam query
+            ->leftJoin('message_events as me', function ($join) use ($messageType, $slugs) {
                 $join->on('customers.id', '=', 'me.customer_id')
                     ->whereIn('me.status', ['success', 'failed', 'pending'])
-                    ->where(function ($q) use ($messageType, $slug1, $slug2, $slug3) {
-                        // Cek apakah customer sudah pernah menerima slug utama ATAU slugs tambahan lainnya
-                        $q->where('me.message_type', '=', $messageType)
-                            ->orWhereIn('me.message_type', [$slug1, $slug2, $slug3]);
+                    ->where(function ($q) use ($messageType, $slugs) {
+                        // Cek apakah customer sudah pernah menerima slug utama
+                        $q->where('me.message_type', '=', $messageType);
+
+                        // Jika ada tambahan template slugs lain, masukkan ke dalam orWhereIn
+                        if (!empty($slugs)) {
+                            $q->orWhereIn('me.message_type', $slugs);
+                        }
                     });
             })
             ->whereNull('me.id')
@@ -62,13 +68,7 @@ class ActiveCustomerCollector
             'customers.user_id'
         ]);
 
-        // ===============================================================
-        // RATE LIMITER ENGINE (THROTTLING)
-        // ===============================================================
-        if (!$testMode) {
-            $query->limit(10); // Tetap di-limit 10 data per eksekusi
-        }
-
+        // Mengambil semua data tanpa limitasi kuota penarikan data
         $data = $query->get();
 
         // ===============================================================
@@ -86,7 +86,7 @@ class ActiveCustomerCollector
                 'date'      => $today->toDateString(),
                 'count'     => $data->count(),
                 'test_mode' => $testMode ? 'ON' : 'OFF',
-                'slugs'     => [$messageType, $slug1, $slug2, $slug3]
+                'slugs'     => $allSlugs // Log semua slug yang dilewati secara dinamis
             ],
             120,
             '[ActiveCustomerCollector] Dynamic customer data collected successfully'
