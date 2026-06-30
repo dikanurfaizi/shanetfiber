@@ -116,8 +116,8 @@ class BillingCreateService
                 'source_id' => $customerSubscription->package_id,
                 'item_name' => $customerSubscription->package->name,
                 'qty' => 1,
-                'price'    => $customerSubscription->package->price,
-                'subtotal' => $customerSubscription->package->price,
+                'price'    => $customerSubscription->price_final,
+                'subtotal' => 1 * $customerSubscription->price_final,
                 'created_at' => now(),
                 'updated_at' => now()
             ];
@@ -128,33 +128,33 @@ class BillingCreateService
             /** ----------------------------------------------------
              * 6. Add Discount Item (if exists)
              * ---------------------------------------------------- */
-            if ($customerSubscription->discount_type_final !== 'none') {
+            // if ($customerSubscription->discount_type_final !== 'none') {
 
-                $discountLabel = $customerSubscription->discount_type_final === 'percent'
-                    ? "{$customerSubscription->discount_value_final}% Discount"
-                    : "Discount";
+            //     $discountLabel = $customerSubscription->discount_type_final === 'percent'
+            //         ? "{$customerSubscription->discount_value_final}% Discount"
+            //         : "Discount";
 
-                $discountAmount = $customerSubscription->discount_type_final === 'percent'
-                    ? ($customerSubscription->discount_value_final / 100) * $customerSubscription->price_final
-                    : $customerSubscription->discount_value_final;
+            //     $discountAmount = $customerSubscription->discount_type_final === 'percent'
+            //         ? ($customerSubscription->discount_value_final / 100) * $customerSubscription->price_final
+            //         : $customerSubscription->discount_value_final;
 
-                $discountAmount = -abs($discountAmount);
+            //     $discountAmount = -abs($discountAmount);
 
-                $item = [
-                    'billing_id' => $billing->id,
-                    'item_type' => 'discount',
-                    'source_type' => 'package_duration',
-                    'source_id' => $customerSubscription->package_duration_id,
-                    'item_name' => $discountLabel,
-                    'qty' => 1,
-                    'price' => $discountAmount,
-                    'subtotal' => $discountAmount,
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ];
+            //     $item = [
+            //         'billing_id' => $billing->id,
+            //         'item_type' => 'discount',
+            //         'source_type' => 'package_duration',
+            //         'source_id' => $customerSubscription->package_duration_id,
+            //         'item_name' => $discountLabel,
+            //         'qty' => 1,
+            //         'price' => $discountAmount,
+            //         'subtotal' => $discountAmount,
+            //         'created_at' => now(),
+            //         'updated_at' => now()
+            //     ];
 
-                $items[] = $item;
-            }
+            //     $items[] = $item;
+            // }
 
             /** ----------------------------------------
              * 7. Billing Items – MEMBERSHIP DISCOUNT

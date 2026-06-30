@@ -16,6 +16,7 @@ use App\Models\Membership\Membership;
 use App\Models\Billings\BillingPeriode;
 use App\Services\Customers\CustomerCreateService;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class CustomerWizardController extends Controller
 {
@@ -143,28 +144,19 @@ class CustomerWizardController extends Controller
             return redirect()->route('wizard.step2');
         }
 
-        // Ambil paket berdasarkan mikrotik server dari step 2
+        // 💡 PERBAIKAN: Ambil paket tanpa mapWithKeys dulu agar data 'price' murni tidak hilang saat di Blade loop
         $packages = Package::where('disabled', 'false')
             ->select('id', 'name', 'price')
-            ->get()
-            ->mapWithKeys(function ($pkg) {
-                return [
-                    $pkg->id => $pkg->name . ' — Rp ' . number_format($pkg->price, 0, ',', '.')
-                ];
-            });
+            ->get();
 
         $members = Membership::where('is_active', true)->get();
-
         $last = BillingPeriode::orderByDesc('id')->first();
 
         if (!$last) {
             return collect();
         }
 
-        // Parse dari name, contoh: "December 2025"
         $current = Carbon::createFromFormat('F Y', $last->name);
-
-        // Generate 3 bulan
         $periodes = collect();
 
         for ($i = 0; $i < 3; $i++) {
@@ -180,55 +172,80 @@ class CustomerWizardController extends Controller
 
     public function step3Post(Request $request)
     {
+        // 1. Tambahkan validasi untuk input 'is_prorate'
         $validated = $request->validate([
             'package_id'           => 'required|exists:packages,id',
             'package_duration_id'  => 'required|exists:package_durations,id',
             'member_id'            => 'nullable|exists:memberships,id',
             'billing_option'       => 'required|in:monthly,one_time',
             'billing_periode_name' => 'required_if:billing_option,one_time',
+            'is_prorate'           => 'required|in:0,1', // 💡 Wajib dikirim oleh FE
         ]);
 
-        // Ambil package
+        // Ambil data package
         $package = Package::find($validated['package_id']);
         $validated['package_name'] = $package->name;
         $packagePrice = $package->price;
 
-        // duration label
+        // Ambil data duration label
         $duration = $package->packageDurations()->find($validated['package_duration_id']);
         $validated['duration_label'] = $duration?->duration?->name_en ?? '-';
 
-        // ========== MEMBERSHIP HANDLING ==========
+        // ========== MEMBERSHIP & DISCOUNT HANDLING ==========
+        $discountNominal = 0;
+        $discountPercent = 0;
+
         if ($validated['member_id']) {
             $member = Membership::find($validated['member_id']);
             $validated['member_label'] = $member->name;
 
-            $discountNominal = 0;
-            $discountPercent = 0;
-
             if ($member->discount_type === 'percent') {
-
-                // contoh: 10% dari price
                 $discountPercent = $member->discount_value ?? 0;
                 $discountNominal = max(($discountPercent / 100) * $packagePrice, 0);
             } elseif ($member->discount_type === 'amount') {
-
-                // contoh: potongan Rp 50.000
                 $discountNominal = max($member->discount_value ?? 0, 0);
-                $discountPercent = ($packagePrice > 0)
-                    ? round(($discountNominal / $packagePrice) * 100, 2)
-                    : 0;
+                $discountPercent = ($packagePrice > 0) ? round(($discountNominal / $packagePrice) * 100, 2) : 0;
             }
-
-            // simpan
-            $validated['discount_nominal'] = $discountNominal;
-            $validated['discount_percent'] = $discountPercent;
         } else {
-
-            // tidak ada membership
             $validated['member_label'] = 'Non Member';
-            $validated['discount_nominal'] = 0;
-            $validated['discount_percent'] = 0;
         }
+
+        $validated['discount_nominal'] = $discountNominal;
+        $validated['discount_percent'] = $discountPercent;
+
+        // ========== 💡 ENGINE VALIDASI & KALKULATOR PRORATE BE ==========
+        $now = Carbon::now();
+        $currentDay = $now->day;
+        $totalDaysInMonth = $now->daysInMonth;
+
+        // Dapatkan nama bulan dalam bahasa lokal aplikasi saat ini
+        $currentMonthName = $now->translatedFormat('F');
+
+        $activeDays = ($totalDaysInMonth - $currentDay) + 1;
+        $basePriceAfterDiscount = max(0, $packagePrice - $discountNominal);
+
+        if ($validated['is_prorate'] == '1' && $currentDay <= 15) {
+            throw ValidationException::withMessages([
+                'is_prorate' => __('customer.wizard.message.prorate_not_available')
+            ]);
+        }
+
+        if ($validated['is_prorate'] == '1' && $currentDay > 15) {
+            $exactProratePrice = ($activeDays / $totalDaysInMonth) * $basePriceAfterDiscount;
+            $finalBillPrice = ceil($exactProratePrice / 500) * 500;
+            $validated['calculation_type_label'] = __('customer.wizard.label.prorate');
+        } else {
+            $finalBillPrice = $basePriceAfterDiscount;
+            $validated['calculation_type_label'] = __('customer.wizard.label.full_cost');
+        }
+
+        // 💡 Masukkan data rincian tambahan ke session untuk Step 5
+        $validated['package_price']     = $packagePrice;
+        $validated['final_bill_price']  = $finalBillPrice;
+        $validated['active_days']       = $activeDays;
+        $validated['total_days']        = $totalDaysInMonth;
+        $validated['current_day']       = $currentDay;
+        $validated['current_month']     = $currentMonthName;
 
         session(['wizard.step3' => $validated]);
 
@@ -320,16 +337,13 @@ class CustomerWizardController extends Controller
             ['addons' => session('wizard.step4', [])]
         );
 
+        // Pastikan baris ini ikut divalidasi ringan di dalam function process() Controller Anda:
         $validator = Validator::make($payload, [
-
-            'name' => 'required|string|min:3',
-
-            'email' => 'required|email',
-
-            'contact' => 'required|regex:/^62[0-9]{8,14}$/',
-
-            'user_id' => 'required|exists:users,id',
-
+            'name'       => 'required|string|min:3',
+            'email'      => 'required|email',
+            'contact'    => 'required|regex:/^62[0-9]{8,14}$/',
+            'user_id'    => 'required|exists:users,id',
+            'is_prorate' => 'required|in:0,1', // 💡 Tambahkan ini agar aman masuk payload service
         ]);
 
         if ($validator->fails()) {

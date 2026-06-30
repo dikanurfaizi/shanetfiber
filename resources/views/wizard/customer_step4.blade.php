@@ -2,23 +2,23 @@
 
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">Step 4: Addons</h5>
+            <h5 class="mb-0">{{ __('customer.wizard.step.4') }}</h5>
         </div>
 
         <form method="POST" action="{{ route('wizard.step4') }}">
             @csrf
 
             <div class="card-body">
-                <p>Pilih addons tambahan untuk pelanggan (opsional).</p>
+                <p>{{ __('customer.wizard.message.addons_instruction') }}</p>
 
                 <table class="table table-bordered">
                     <thead>
                         <tr>
-                            <th>Pilih</th>
-                            <th>Addon</th>
-                            <th>Harga</th>
-                            <th width="140px">Qty</th>
-                            <th>Subtotal</th>
+                            <th>{{ __('customer.wizard.label.select_addon') }}</th>
+                            <th>{{ __('customer.wizard.label.addon_name') }}</th>
+                            <th>{{ __('customer.wizard.label.price') }}</th>
+                            <th width="140px">{{ __('customer.wizard.label.qty') }}</th>
+                            <th>{{ __('customer.wizard.label.subtotal') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -54,8 +54,9 @@
             </div>
 
             <div class="card-footer text-end">
-                <a href="{{ route('wizard.step3') }}" class="btn btn-secondary">← Back</a>
-                <button class="btn btn-primary">Next Step →</button>
+                <a href="{{ route('wizard.step3') }}"
+                    class="btn btn-secondary">{{ __('customer.wizard.button.back') }}</a>
+                <button class="btn btn-primary">{{ __('customer.wizard.button.next_step') }}</button>
             </div>
 
         </form>

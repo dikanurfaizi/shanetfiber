@@ -2,7 +2,7 @@
 
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">Step 2: Service Configuration</h5>
+            <h5 class="mb-0">{{ __('customer.wizard.step.2') }}</h5>
         </div>
 
         <form method="POST" action="{{ route('wizard.step2') }}">
@@ -12,9 +12,10 @@
 
                 {{-- SERVER --}}
                 <div class="form-group mb-3">
-                    <label><strong>Mikrotik Server</strong> <span class="text-danger">*</span></label>
+                    <label><strong>{{ __('customer.wizard.label.mikrotik_server') }}</strong> <span
+                            class="text-danger">*</span></label>
                     <select name="mikrotik_id" id="server-dropdown" class="form-control">
-                        <option value="">Select Server</option>
+                        <option value="">{{ __('customer.wizard.placeholder.select_server') }}</option>
                         @foreach ($mikrotiks as $id => $name)
                             <option value="{{ $id }}">{{ $name }}</option>
                         @endforeach
@@ -26,11 +27,12 @@
 
                 {{-- INTERNET SERVICE --}}
                 <div class="form-group mb-3">
-                    <label><strong>Internet Service</strong> <span class="text-danger">*</span></label>
+                    <label><strong>{{ __('customer.wizard.label.internet_service') }}</strong> <span
+                            class="text-danger">*</span></label>
                     <select name="internet_service" id="service-dropdown" class="form-control">
-                        <option value="">Select Service</option>
-                        <option value="ppp">PPP</option>
-                        <option value="ip_static">IP Static</option>
+                        <option value="">{{ __('customer.wizard.placeholder.select_service') }}</option>
+                        <option value="ppp">{{ __('customer.wizard.placeholder.ppp') }}</option>
+                        <option value="ip_static">{{ __('customer.wizard.placeholder.ip_static') }}</option>
                     </select>
                     @error('internet_service')
                         <small class="text-danger">{{ $message }}</small>
@@ -39,7 +41,7 @@
 
                 {{-- PPP TYPE --}}
                 <div id="input-ppp" class="form-group mb-3 d-none">
-                    <label><strong>PPP Type</strong></label>
+                    <label><strong>{{ __('customer.wizard.label.ppp_type') }}</strong></label>
                     <select name="ppp_type_id" id="ppp_type_id" class="form-control">
                         <option value="">Select PPP Type</option>
                         @foreach ($pppservices as $id => $name)
@@ -56,9 +58,9 @@
 
                     {{-- Interface --}}
                     <div class="form-group mb-3">
-                        <label><strong>Interface</strong></label>
+                        <label><strong>{{ __('customer.wizard.label.interface') }}</strong></label>
                         <select name="interface" id="interface-dropdown" class="form-control">
-                            <option value="">Select Interface</option>
+                            <option value="">{{ __('customer.wizard.label.select_interface') }}</option>
                         </select>
                         @error('interface')
                             <small class="text-danger">{{ $message }}</small>
@@ -67,7 +69,7 @@
 
                     {{-- IP Address --}}
                     <div class="form-group mb-3">
-                        <label><strong>IP Static</strong></label>
+                        <label><strong>{{ __('customer.wizard.label.ip_static') }}</strong></label>
                         <input type="text" name="ip_static" class="form-control" placeholder="192.168.1.10">
                         @error('ip_static')
                             <small class="text-danger">{{ $message }}</small>
@@ -76,7 +78,7 @@
 
                     {{-- MAC Address --}}
                     <div class="form-group mb-3">
-                        <label><strong>MAC Address</strong></label>
+                        <label><strong>{{ __('customer.wizard.label.mac_address') }}</strong></label>
                         <input type="text" name="mac_address" class="form-control" placeholder="AA:BB:CC:DD:EE:FF">
                         @error('mac_address')
                             <small class="text-danger">{{ $message }}</small>
@@ -88,8 +90,9 @@
             </div>
 
             <div class="card-footer text-end">
-                <a href="{{ route('wizard.step1') }}" class="btn btn-secondary">← Back</a>
-                <button class="btn btn-primary">Next Step →</button>
+                <a href="{{ route('wizard.step1') }}"
+                    class="btn btn-secondary">{{ __('customer.wizard.button.back') }}</a>
+                <button class="btn btn-primary">{{ __('customer.wizard.button.next_step') }}</button>
             </div>
         </form>
     </div>

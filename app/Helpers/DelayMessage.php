@@ -11,7 +11,7 @@ class DelayMessage
 {
     /**
      * Mengkalkulasi delay dinamis: Titik Akhir Antrean + Input Detik dari Depan + Jeda Pengaman
-     * Mendukung bypass instan untuk pesan respons interaktif pelanggan berbasis Database.
+     * Mendukung bypass instan penuh melalui konfigurasi .env untuk kebutuhan testing.
      */
     public function calculation(string $action, string $traceId, int $inputDelaySeconds = 0, string $queue = 'notification', float $startTime = 0): Carbon
     {
@@ -22,82 +22,80 @@ class DelayMessage
         $lastEvent      = null;
 
         // ===============================================================
-        // 1. DYNAMIC CHECK: INTERACTIVE BYPASS VIA DATABASE
+        // 0. GLOBAL DELAY BYPASS VIA .ENV (💡 FITUR BARU)
         // ===============================================================
-        // Gunakan cache static internal agar kueri ke DB tidak duplikat di dalam looping massal
-        static $interactiveCache = [];
-
-        if (!isset($interactiveCache[$action])) {
-            // Menggunakan nama model konfigurasi pesan Anda (misal: WhatsappMessage)
-            // Pastikan namespace model ini sudah di-use di bagian atas file class
-            $interactiveCache[$action] = WhatsappMessage::where('category', 'INTERACTIVE')
-                ->where('slug', $action)
-                ->exists();
-        }
-
-        // 👈 FIX: Sekarang kondisi if mengecek langsung hasil kueri dinamis database
-        if ($interactiveCache[$action]) {
-            // Untuk pesan interaktif, potong kompas langsung instan + 5 detik sebagai buffer urutan antrean
-            $baseTime    = now();
-            $final_delay = $baseTime->copy()->addSeconds(rand(10, 50));
-            $source      = 'interactive_bypass';
+        if (filter_var(env('DELAY_MESSAGE_BYPASS', false), FILTER_VALIDATE_BOOLEAN)) {
+            $baseTime          = now();
+            $final_delay       = $baseTime; // Kirim instan saat ini juga
+            $source            = 'env_delay_bypass';
+            $safetyInterval    = 0;
+            $inputDelaySeconds = 0;
         } else {
             // ===============================================================
-            // 2. NORMAL FLOW: AMBIL DATA ANTREAN TERAKHIR (JOBS / EVENTS)
+            // 1. DYNAMIC CHECK: INTERACTIVE BYPASS VIA DATABASE
             // ===============================================================
+            static $interactiveCache = [];
 
-            // Ambil kriteria job terakhir di tabel antrean (Berdasarkan ID terbesar)
-            $lastJob = DB::table('jobs')
-                ->where('queue', $queue)
-                ->orderByDesc('id')
-                ->first();
+            if (!isset($interactiveCache[$action])) {
+                $interactiveCache[$action] = WhatsappMessage::where('category', 'INTERACTIVE')
+                    ->where('slug', $action)
+                    ->exists();
+            }
 
-            if ($lastJob) {
-                $baseTime = Carbon::createFromTimestamp($lastJob->available_at);
-                $source   = 'jobs';
+            if ($interactiveCache[$action]) {
+                // Untuk pesan interaktif, potong kompas langsung instan + buffer urutan antrean
+                $baseTime    = now();
+                $final_delay = $baseTime->copy()->addSeconds(rand(10, 50));
+                $source      = 'interactive_bypass';
             } else {
-                // Fallback ke data riwayat message_events jika tabel jobs kosong
-                $lastEvent = MessageEvent::where('channel', 'go_whatsapp')
+                // ===============================================================
+                // 2. NORMAL FLOW: AMBIL DATA ANTREAN TERAKHIR (JOBS / EVENTS)
+                // ===============================================================
+
+                $lastJob = DB::table('jobs')
+                    ->where('queue', $queue)
                     ->orderByDesc('id')
                     ->first();
 
-                if ($lastEvent) {
-                    $scheduled = $lastEvent->scheduled_at ? Carbon::parse($lastEvent->scheduled_at) : null;
-                    $sent      = $lastEvent->sent_at ? Carbon::parse($lastEvent->sent_at) : null;
+                if ($lastJob) {
+                    $baseTime = Carbon::createFromTimestamp($lastJob->available_at);
+                    $source   = 'jobs';
+                } else {
+                    $lastEvent = MessageEvent::where('channel', 'go_whatsapp')
+                        ->orderByDesc('id')
+                        ->first();
 
-                    // Skenario A: Jika kedua kolom terisi
-                    if ($scheduled && $sent) {
-                        $baseTime = $scheduled->greaterThan($sent) ? $scheduled : $sent;
-                        $source   = $scheduled->greaterThan($sent) ? 'message_events_scheduled' : 'message_events_sent';
-                    }
-                    // Skenario B: Jika hanya scheduled_at saja yang terisi (Pesan masih antre)
-                    elseif ($scheduled) {
-                        $baseTime = $scheduled;
-                        $source   = 'message_events_only_scheduled';
-                    }
-                    // Skenario C: Jika hanya sent_at saja yang terisi
-                    elseif ($sent) {
-                        $baseTime = $sent;
-                        $source   = 'message_events_only_sent';
+                    if ($lastEvent) {
+                        $scheduled = $lastEvent->scheduled_at ? Carbon::parse($lastEvent->scheduled_at) : null;
+                        $sent      = $lastEvent->sent_at ? Carbon::parse($lastEvent->sent_at) : null;
+
+                        if ($scheduled && $sent) {
+                            $baseTime = $scheduled->greaterThan($sent) ? $scheduled : $sent;
+                            $source   = $scheduled->greaterThan($sent) ? 'message_events_scheduled' : 'message_events_sent';
+                        } elseif ($scheduled) {
+                            $baseTime = $scheduled;
+                            $source   = 'message_events_only_scheduled';
+                        } elseif ($sent) {
+                            $baseTime = $sent;
+                            $source   = 'message_events_only_sent';
+                        }
                     }
                 }
-            }
 
-            // ===============================================================
-            // PENJAGAAN STALE DATA (KOREKSI WAKTU LAMPAU)
-            // ===============================================================
-            if (!$baseTime || $baseTime->isPast()) {
-                $baseTime = now();
-                $source   = ($baseTime === null) ? 'fallback_now' : $source . '_adjusted_to_now';
-            }
+                // PENJAGAAN STALE DATA (KOREKSI WAKTU LAMPAU)
+                if (!$baseTime || $baseTime->isPast()) {
+                    $baseTime = now();
+                    $source   = ($baseTime === null) ? 'fallback_now' : $source . '_adjusted_to_now';
+                }
 
-            // ===============================================================
-            // 3. KALKULASI RENTANG ANTREAN NORMAL
-            // ===============================================================
-            $safetyInterval = rand(60, 270); // Jeda pengiriman acak
-            $final_delay = $baseTime->copy()
-                ->addSeconds($inputDelaySeconds)
-                ->addSeconds($safetyInterval);
+                // ===============================================================
+                // 3. KALKULASI RENTANG ANTREAN NORMAL
+                // ===============================================================
+                $safetyInterval = rand(60, 270);
+                $final_delay = $baseTime->copy()
+                    ->addSeconds($inputDelaySeconds)
+                    ->addSeconds($safetyInterval);
+            }
         }
 
         // ===============================================================
@@ -116,7 +114,7 @@ class DelayMessage
                 'last_event_scheduled_at'       => $lastEvent ? $lastEvent->scheduled_at : null,
             ],
             200,
-            "[MessageDispatcher] Dynamic relative delay calculated (" . ($source === 'interactive_bypass' ? 'BYPASS' : 'QUEUED') . ")",
+            "[MessageDispatcher] Dynamic relative delay calculated (" . ($source === 'env_delay_bypass' ? 'GLOBAL_BYPASS' : ($source === 'interactive_bypass' ? 'BYPASS' : 'QUEUED')) . ")",
             $traceId,
             round(microtime(true) - $startTime, 4)
         );

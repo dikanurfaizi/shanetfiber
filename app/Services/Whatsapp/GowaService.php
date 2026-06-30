@@ -62,7 +62,8 @@ class GowaService
         string $action,
         ?int $eventId,
         string $deviceId,
-        string $traceId
+        string $traceId,
+        array $extraProrateData = [] // 💡 Tambahkan parameter array penampung data valid di sini
     ): void {
         $queueName = 'notification';
         try {
@@ -82,7 +83,6 @@ class GowaService
                     '[Activation] Empty contact number',
                     $traceId
                 );
-
                 return;
             }
 
@@ -93,7 +93,8 @@ class GowaService
                     customerSubscription: $customerSubscription,
                     builder: $this->builder,
                     getBankInfo: fn($userId) => $this->bankInfoCollector->getBankInfo($userId),
-                    category: $category
+                    category: $category,
+                    extraProrateData: $extraProrateData
                 ),
                 queue: $queueName,
                 traceId: $traceId,
@@ -103,7 +104,7 @@ class GowaService
             );
         } catch (\Throwable $e) {
             LogHelper::logError(null, [
-                'customer_id' => $customerId ?? null,
+                'customer_id' => $customerSubscription->customer_id ?? null,
                 'action' => $action,
                 'error' => [
                     'code' => $e->getCode(),
@@ -541,7 +542,7 @@ class GowaService
         }
     }
 
-    public function menu($custName, $custContact, ?int $eventId, string $deviceId, string $traceId)
+    public function menu(string $custName, string $custContact, ?int $eventId, string $deviceId, string $traceId)
     {
         $queueName = 'notification';
         $globalIndex = 1;

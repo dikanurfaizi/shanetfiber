@@ -111,46 +111,69 @@ class CustomerCreateService
 
 
             /** ----------------------------------------------------
-             * 6. Calculate Pricing
+             * 6. Calculate Pricing (💡 Diperbarui sesuai Logika Prorate/Full Cost Step 3)
              * ---------------------------------------------------- */
             $months = $duration->duration_months;
-            $baseTotal = $package->price * $months;
+
+            // Ambil potongan nominal diskon membership yang sudah dihitung valid di Step 3
+            // Jika tidak ada diskon, nilainya otomatis 0
+            $discountNominalStep3 = $data['discount_nominal'] ?? 0;
 
             $discountType  = 'none';
             $discountValue = 0;
-            $priceFinal    = $baseTotal;
 
-            if ($packageDuration->discount_type === 'percent' && $packageDuration->discount_value > 0) {
-                $discountType  = 'percent';
-                $discountValue = $packageDuration->discount_value;
-
-                $discountAmount = $baseTotal * ($discountValue / 100);
-                $priceFinal     = max($baseTotal - $discountAmount, 0);
-            } elseif ($packageDuration->discount_type === 'amount' && $packageDuration->discount_value > 0) {
-
+            // Jika ada diskon dari keanggotaan/membership, catat tipenya
+            if ($discountNominalStep3 > 0) {
+                // Sifat data mengikuti kalkulasi asal di database
                 $discountType  = 'amount';
-                $discountValue = $packageDuration->discount_value;
+                $discountValue = $discountNominalStep3;
+            }
 
-                $priceFinal = max($baseTotal - $discountValue, 0);
+            // Jalankan Engine Kalkulasi Ulang Back-End Terproteksi
+            $now = Carbon::now();
+            $currentDay = $now->day;
+            $totalDaysInMonth = $now->daysInMonth;
+
+            // Sisa hari aktif pendaftaran reguler
+            $activeDays = ($totalDaysInMonth - $currentDay) + 1;
+
+            // Harga dasar setelah dipotong nominal diskon keanggotaan
+            $basePriceAfterDiscount = max(0, $package->price - $discountNominalStep3);
+
+            // Tentukan harga final langganan berdasarkan keputusan 'is_prorate'
+            if (isset($data['is_prorate']) && $data['is_prorate'] == '1' && $currentDay > 15) {
+                // Rumus Prorate murni proporsional sisa hari
+                $exactProratePrice = ($activeDays / $totalDaysInMonth) * $basePriceAfterDiscount;
+
+                // Pembulatan ke kelipatan Rp 500 ke atas murni
+                $priceFinal = ceil($exactProratePrice / 500) * 500;
+            } else {
+                // Default / Full Cost: Menggunakan harga penuh satu bulan reguler
+                $priceFinal = $basePriceAfterDiscount;
+            }
+
+            // Jika durasi paket lebih dari 1 bulan (multi-months), kalikan sisa bulan tambahannya
+            if ($months > 1) {
+                $priceFinal += ($package->price * ($months - 1));
             }
 
 
             /** ----------------------------------------------------
              * 7. Create Customer Subscription
              * ---------------------------------------------------- */
-            $months = $packageDuration->duration->duration_months;
-            $endDate = now()->addMonths($months)->day(15);
+            // Siklus penagihan jatuh tempo (Default: tanggal 15 setelah masa durasi bulan habis)
+            $subscriptionEndDate = now()->addMonths($months)->day(15);
 
             $subscription = CustomerSubscription::create([
-                'customer_id'         => $customer->id,
-                'package_id'          => $package->id,
-                'package_duration_id' => $packageDuration->id,
-                'status'              => 'active',
-                'start_date'          => now(),
-                'end_date'            => $endDate,
-                'price_final'         => $priceFinal,
-                'discount_type_final' => $discountType,
-                'discount_value_final' => $discountValue,
+                'customer_id'          => $customer->id,
+                'package_id'           => $package->id,
+                'package_duration_id'  => $packageDuration->id,
+                'status'               => 'active',
+                'start_date'           => now(),
+                'end_date'             => $subscriptionEndDate,
+                'price_final'          => $priceFinal,         // 💡 Menyimpan hasil akhir kalkulasi prorate/full cost
+                'discount_type_final'  => $discountType,       // 💡 Menyimpan tipe diskon membership
+                'discount_value_final' => $discountValue,      // 💡 Menyimpan nominal potongan diskon membership
             ]);
 
 
