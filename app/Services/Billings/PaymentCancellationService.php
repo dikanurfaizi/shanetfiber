@@ -4,6 +4,7 @@ namespace App\Services\Billings;
 
 use App\Enums\OrderStatus;
 use App\Events\PaymentCancelled;
+use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
 use App\Jobs\CancelPaymentAfterDueDateJob;
 use App\Jobs\CancelPaymentBeforeDueDateJob;
@@ -26,50 +27,67 @@ class PaymentCancellationService
      */
     public function cancelPayment(BillingPayment $payment, string $traceId): array
     {
+        $timer = new ExecutionTimer();
         $mikrotikResult = [
             'status' => 'skipped',
             'reason' => 'mikrotik_action_disabled',
         ];
+        $originalReceipt = null;
+
+        $billingId = $payment->billing_id;
+        $customerId = $payment->billing?->customer_id;
+
         try {
-            DB::transaction(function () use ($payment, $traceId, &$originalReceipt) {
+            // LOG INTERNAL: Parameter pertama berupa string nama aksi/method
+            LogHelper::logInfo('CancelPayment', [
+                'billing_id' => $billingId,
+                'payment_id' => $payment->id,
+                'customer_id' => $customerId,
+            ], 200, 'Starting transaction for payment cancellation.', $traceId, $timer->lap());
 
+            DB::transaction(function () use ($payment, $traceId, &$originalReceipt, $timer) {
                 $payment->lockForUpdate();
-
                 $billing = $payment->billing()->lockForUpdate()->firstOrFail();
 
-                $originalReceipt = $this->handleReceipt($payment);
+                // Proses hapus receipt & payment
+                $originalReceipt = $this->handleReceipt($payment, $traceId);
 
                 $this->updateBillingStatus($billing, $traceId);
                 $this->updateRelatedOrders($billing, $traceId);
             });
 
             if (config('services.shanetfiber.allow_mikrotik_actions')) {
-                // 5) Setelah DB commit → operasi ke sistem eksternal (Mikrotik)
+                LogHelper::logInfo('CancelPayment', [
+                    'customer_id' => $customerId,
+                ], 200, 'Mikrotik action is enabled. Processing Mikrotik cancellation.', $traceId, $timer->lap());
+
                 $mikrotikResult = $this->processMikrotikCancellation($payment->billing->customer, $traceId);
             }
 
-            // 6) NOTIFIKASI → LEWAT EVENT
-            // event(new PaymentCancelled(
-            //     billingId: $payment->billing_id,
-            //     receiptId: $originalReceipt['id'] ?? null,
-            //     receiptData: $originalReceipt,
-            //     traceId: $traceId,
-            // ));
+            LogHelper::logInfo('CancelPayment', [
+                'billing_id' => $billingId,
+                'payment_id' => $payment->id,
+                'receipt_id' => $originalReceipt['id'] ?? null,
+                'mikrotik_result' => $mikrotikResult,
+            ], 200, 'Payment cancellation processed successfully.', $traceId, $timer->lap());
 
             return [
                 'success' => true,
-                'message' => 'Pembatalan pembayaran untuk ' . $payment->billing->customer->name . ' berhasil diproses.',
-                'receipt' => $originalReceipt,
+                'message' => 'Pembatalan pembayaran untuk ' . ($payment->billing->customer->name ?? 'Pelanggan') . ' berhasil diproses.',
+                'originalReceipt' => $originalReceipt,
                 'mikrotik' => $mikrotikResult,
             ];
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            LogHelper::logError(null, [
-                'billing_id' => $payment->billing_id,
+            LogHelper::logError('CancelPayment', [
+                'billing_id' => $billingId,
+                'payment_id' => $payment->id,
+                'customer_id' => $customerId,
                 'exception' => get_class($e),
                 'message' => $e->getMessage(),
-            ], 500, 'Failed to cancel payment.', $traceId);
+                'trace' => $e->getTraceAsString()
+            ], 500, 'Failed to cancel payment. Transaction rolled back.', $traceId, $timer->lap());
 
             return [
                 'success' => false,
@@ -80,10 +98,10 @@ class PaymentCancellationService
 
     /**
      * Menyiapkan pembatalan di Mikrotik: hitung due date/comment lalu dispatch job ke queue.
-     * Tidak ikut transaksi DB.
      */
     public function processMikrotikCancellation(Customer $customer, string $traceId): ?array
     {
+        $timer = new ExecutionTimer();
         $router = Mikrotik::find($customer->mikrotik_id);
         $autoIsolir = AutoIsolir::where('mikrotik_id', $customer->mikrotik_id)->first();
 
@@ -93,9 +111,9 @@ class PaymentCancellationService
                 'mikrotik_id' => $customer->mikrotik_id,
                 'router_found' => (bool) $router,
                 'auto_isolir_found' => (bool) $autoIsolir,
-            ], 404, 'Router or AutoIsolir not found for Mikrotik cancellation.', $traceId);
+            ], 404, 'Router or AutoIsolir not found for Mikrotik cancellation.', $traceId, $timer->lap());
 
-            return null;
+            return ['status' => 'failed', 'reason' => 'router_or_autoisolir_not_found'];
         }
 
         $day = Carbon::now()->format('d');
@@ -107,65 +125,53 @@ class PaymentCancellationService
                 'customer_id' => $customer->id,
                 'due_date' => $dueDate,
                 'comment_unpayment' => $commentUnpayment,
-            ], 400, 'Skipping Mikrotik cancellation because due date or comment is null.', $traceId);
+            ], 400, 'Skipping Mikrotik cancellation because due date or comment is null.', $traceId, $timer->lap());
 
-            return null;
+            return ['status' => 'failed', 'reason' => 'due_date_or_comment_null'];
         }
 
         if ($customer->internet_service === 'ppp') {
             $this->cancelPppPayment($router, $customer, $day, $dueDate, $commentUnpayment, $autoIsolir, $traceId);
-
             return ['type' => 'ppp', 'scheduled' => true];
         }
 
         if ($customer->internet_service === 'ip_static') {
             $this->cancelIpStaticPayment($router, $customer, $day, $dueDate, $commentUnpayment, $autoIsolir, $traceId);
-
             return ['type' => 'ip_static', 'scheduled' => true];
         }
 
         LogHelper::logWarning('ProcessMikrotikCancellation', [
             'customer_id' => $customer->id,
             'internet_service' => $customer->internet_service,
-        ], 400, 'Unknown internet_service for Mikrotik cancellation.', $traceId);
+        ], 400, 'Unknown internet_service for Mikrotik cancellation.', $traceId, $timer->lap());
 
-        return null;
+        return ['status' => 'failed', 'reason' => 'unknown_internet_service'];
     }
 
     public function getDueDate(AutoIsolir $autoIsolir, Customer $customer, string $traceId): ?string
     {
-        $startTime = microtime(true);
+        $timer = new ExecutionTimer();
 
         try {
-            LogHelper::logInfo('GetDueDate', [
-                'trace_id' => $traceId,
-                'auto_isolir_id' => $autoIsolir->id ?? null,
-                'customer_id' => $customer->id ?? null,
-                'activation_date_flag' => $autoIsolir->activation_date,
-            ], 200, 'Starting getDueDate process', $traceId);
-
             if ($autoIsolir->activation_date === 'false') {
                 $dueDate = $autoIsolir->due_date;
             } else {
                 $dueDate = Carbon::parse($customer->activation_date)->format('d');
             }
 
-            $executionTime = round(microtime(true) - $startTime, 3);
-
             LogHelper::logInfo('GetDueDate', [
-                'trace_id' => $traceId,
+                'customer_id' => $customer->id,
+                'activation_date_flag' => $autoIsolir->activation_date,
                 'due_date' => $dueDate,
-                'execution_seconds' => $executionTime,
-            ], 200, 'Successfully retrieved due date', $traceId);
+            ], 200, 'Successfully retrieved due date', $traceId, $timer->lap());
 
             return $dueDate;
         } catch (\Throwable $e) {
             LogHelper::logError('GetDueDate', [
-                'trace_id' => $traceId,
+                'customer_id' => $customer->id,
                 'exception' => get_class($e),
                 'error_message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ], 500, 'Failed to get due date', $traceId);
+            ], 500, 'Failed to get due date', $traceId, $timer->lap());
 
             return null;
         }
@@ -173,16 +179,9 @@ class PaymentCancellationService
 
     public function getCommentUnpayment(AutoIsolir $autoIsolir, Customer $customer, string $traceId): ?string
     {
-        $startTime = microtime(true);
+        $timer = new ExecutionTimer();
 
         try {
-            LogHelper::logInfo('GetCommentUnpayment', [
-                'trace_id' => $traceId,
-                'auto_isolir_id' => $autoIsolir->id ?? null,
-                'customer_id' => $customer->id ?? null,
-                'activation_date_flag' => $autoIsolir->activation_date,
-            ], 200, 'Starting getCommentUnpayment process', $traceId);
-
             if ($autoIsolir->activation_date === 'false') {
                 $comment = $autoIsolir->comment_unpayment;
             } else {
@@ -199,22 +198,18 @@ class PaymentCancellationService
                 $comment = $autoIsolir->comment_unpayment . '_' . $date . '_' . $month . '_' . $year;
             }
 
-            $executionTime = round(microtime(true) - $startTime, 3);
-
             LogHelper::logInfo('GetCommentUnpayment', [
-                'trace_id' => $traceId,
-                'comment_unpayment' => $comment,
-                'execution_seconds' => $executionTime,
-            ], 200, 'Successfully retrieved comment unpayment', $traceId);
+                'customer_id' => $customer->id,
+                'comment_unpayment' => $comment
+            ], 200, 'Successfully retrieved comment unpayment', $traceId, $timer->lap());
 
             return $comment;
         } catch (\Throwable $e) {
             LogHelper::logError('GetCommentUnpayment', [
-                'trace_id' => $traceId,
+                'customer_id' => $customer->id,
                 'exception' => get_class($e),
                 'error_message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ], 500, 'Failed to get comment unpayment', $traceId);
+            ], 500, 'Failed to get comment unpayment', $traceId, $timer->lap());
 
             return null;
         }
@@ -229,17 +224,9 @@ class PaymentCancellationService
         AutoIsolir $autoIsolir,
         string $traceId
     ): void {
-        $startTime = microtime(true);
+        $timer = new ExecutionTimer();
 
         try {
-            LogHelper::logInfo('CancelPppPayment', [
-                'trace_id' => $traceId,
-                'customer_id' => $customer->id ?? null,
-                'router_id' => $router->id ?? null,
-                'day' => $day,
-                'due_date' => $dueDate,
-            ], 200, 'Starting cancel PPP payment process', $traceId);
-
             if ($day <= $dueDate) {
                 dispatch(new CancelPaymentBeforeDueDateJob(
                     $router,
@@ -262,19 +249,18 @@ class PaymentCancellationService
                 $message = 'Successfully dispatched cancel PPP payment after due date job';
             }
 
-            $executionTime = round(microtime(true) - $startTime, 3);
-
             LogHelper::logInfo('CancelPppPayment', [
-                'trace_id' => $traceId,
-                'execution_seconds' => $executionTime,
-            ], 200, $message, $traceId);
+                'customer_id' => $customer->id,
+                'router_id' => $router->id,
+                'day' => $day,
+                'due_date' => $dueDate,
+            ], 200, $message, $traceId, $timer->lap());
         } catch (\Throwable $e) {
             LogHelper::logError('CancelPppPayment', [
-                'trace_id' => $traceId,
+                'customer_id' => $customer->id,
                 'exception' => get_class($e),
                 'error_message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ], 500, 'Failed to cancel PPP payment', $traceId);
+            ], 500, 'Failed to dispatch PPP cancellation job', $traceId, $timer->lap());
         }
     }
 
@@ -287,17 +273,9 @@ class PaymentCancellationService
         AutoIsolir $autoIsolir,
         string $traceId
     ): void {
-        $startTime = microtime(true);
+        $timer = new ExecutionTimer();
 
         try {
-            LogHelper::logInfo('CancelIpStaticPayment', [
-                'trace_id' => $traceId,
-                'customer_id' => $customer->id ?? null,
-                'router_id' => $router->id ?? null,
-                'day' => $day,
-                'due_date' => $dueDate,
-            ], 200, 'Starting cancel IP Static payment process', $traceId);
-
             $comment = $customer->username . '_' . $commentUnpayment;
 
             if ($day <= $dueDate) {
@@ -322,48 +300,75 @@ class PaymentCancellationService
                 $message = 'Successfully dispatched cancel IP static payment after due date job';
             }
 
-            $executionTime = round(microtime(true) - $startTime, 3);
-
             LogHelper::logInfo('CancelIpStaticPayment', [
-                'trace_id' => $traceId,
-                'execution_seconds' => $executionTime,
-            ], 200, $message, $traceId);
+                'customer_id' => $customer->id,
+                'router_id' => $router->id,
+                'day' => $day,
+                'due_date' => $dueDate,
+            ], 200, $message, $traceId, $timer->lap());
         } catch (\Throwable $e) {
             LogHelper::logError('CancelIpStaticPayment', [
-                'trace_id' => $traceId,
+                'customer_id' => $customer->id,
                 'exception' => get_class($e),
                 'error_message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ], 500, 'Failed to cancel IP Static payment', $traceId);
+            ], 500, 'Failed to dispatch IP Static cancellation job', $traceId, $timer->lap());
         }
     }
 
     /**
-     * Update status billing. Biarkan exception bubble ke cancelPayment().
+     * Update status billing.
      */
     public function updateBillingStatus(Billing $billing, string $traceId): void
     {
+        $timer = new ExecutionTimer();
+        $userId = auth()->check() ? auth()->user()->id : null;
+
         $billing->update([
-            'updated_by' => auth()->user()->id,
+            'updated_by' => $userId,
             'status' => 'BL',
         ]);
+
+        LogHelper::logInfo('UpdateBillingStatus', [
+            'billing_id' => $billing->id,
+            'status_before' => $billing->getOriginal('status'),
+            'status_after' => 'BL',
+            'updated_by' => $userId,
+        ], 200, 'Successfully reverted billing status to BL (Belum Lunas).', $traceId, $timer->lap());
     }
 
     /**
-     * Ambil data receipt asli, soft delete, dan lepaskan relasi dari billing.
-     * Return array data receipt (untuk referensi notifikasi), atau null jika tidak ada.
+     * Ambil data receipt asli, hard delete receipt, dan hard delete billing payment.
      */
-    public function handleReceipt(BillingPayment $payment): ?array
+    public function handleReceipt(BillingPayment $payment, string $traceId): ?array
     {
+        $timer = new ExecutionTimer();
         $payment->loadMissing('receipt');
-
         $receipt = $payment->receipt;
+        $payment_id = $payment->id;
+        $billing_id = $payment->billing_id;
+
         if (! $receipt) {
+            LogHelper::logWarning('HandleReceipt', [
+                'payment_id' => $payment_id,
+                'billing_id' => $billing_id,
+            ], 404, 'No receipt associated with this payment. Skipping delete.', $traceId, $timer->lap());
+
             return null;
         }
 
         $data = $receipt->toArray();
-        $receipt->delete(); // soft delete
+
+        // 1. Hard delete si receipt
+        $receipt->forceDelete();
+
+        // 2. Hard delete si billing payment
+        $payment->forceDelete();
+
+        LogHelper::logInfo('HandleReceipt', [
+            'receipt_id' => $data['id'] ?? null,
+            'payment_id' => $payment_id,
+            'billing_id' => $billing_id,
+        ], 200, 'Successfully executed hard delete on both Receipt and BillingPayment.', $traceId, $timer->lap());
 
         return $data;
     }
@@ -373,16 +378,13 @@ class PaymentCancellationService
      */
     public function updateRelatedOrders(Billing $billing, string $traceId): void
     {
+        $timer = new ExecutionTimer();
         $orders = Order::where('billing_id', $billing->id)->get();
 
         if ($orders->isEmpty()) {
-            LogHelper::logWarning(
-                null,
-                ['billing_id' => $billing->id],
-                404,
-                'No orders found',
-                $traceId
-            );
+            LogHelper::logWarning('UpdateRelatedOrders', [
+                'billing_id' => $billing->id
+            ], 404, 'No related orders found for this billing.', $traceId, $timer->lap());
 
             return;
         }
@@ -393,12 +395,10 @@ class PaymentCancellationService
             ]);
         }
 
-        LogHelper::logInfo(
-            null,
-            ['order_count' => $orders->count(), 'billing_id' => $billing->id],
-            200,
-            'Canceled orders',
-            $traceId
-        );
+        LogHelper::logInfo('UpdateRelatedOrders', [
+            'billing_id' => $billing->id,
+            'order_ids' => $orders->pluck('id')->toArray(),
+            'order_count' => $orders->count(),
+        ], 200, 'Successfully updated related orders status to CANCELED.', $traceId, $timer->lap());
     }
 }

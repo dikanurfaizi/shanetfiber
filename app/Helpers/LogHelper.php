@@ -14,6 +14,8 @@ class LogHelper
         'new_password',
         'token',
         'authorization',
+        'secret',
+        'api_key', // Tambahan field sensitif yang sering ada di API pihak ketiga
     ];
 
     public static function logInfo($uri, $body, $statusCode, $description, $traceId = null, $resTime = null)
@@ -48,10 +50,18 @@ class LogHelper
     {
         $caller      = self::getCaller();
         $traceId     = $traceId ?? (string) Str::uuid();
-        $uri         = $uri ?? request()?->path() ?? 'null';
         $statusCode  = $statusCode !== null ? (int) $statusCode : null;
         $description = $description ?? 'null';
         $resTime     = $resTime !== null ? (int) $resTime : 0;
+
+        // 1. Tentukan URL secara dinamis (Internal Request vs Third-Party API)
+        if (is_string($uri) && (str_starts_with($uri, 'http://') || str_starts_with($uri, 'https://'))) {
+            // Jika $uri adalah URL penuh (pihak ketiga), pakai langsung
+            $logUrl = $uri;
+        } else {
+            // Jika $uri berupa action name / null, gunakan fullUrl request internal saat ini sebagai fallback
+            $logUrl = request()?->fullUrl() ?? ($uri ?? 'null');
+        }
 
         // Convert request object ke array
         if ($body instanceof \Illuminate\Http\Request) {
@@ -63,20 +73,21 @@ class LogHelper
             $body = self::maskSensitiveFields($body);
         }
 
-        // 🔥 STRATEGI JSON: Menyusun data log ke dalam struktur associative array baku
+        // STRATEGI JSON: Menyusun data log ke dalam struktur associative array baku
         $logPayload = [
-            'timestamp'    => now()->toIso8601String(), // Standar waktu ISO-8601 (Sangat disukai Elasticsearch)
-            'level'        => $level,
-            'trace_id'     => $traceId,
-            'method'       => request()?->method() ?? 'CLI',
-            'status_code'  => $statusCode,
+            'timestamp'     => now()->toIso8601String(),
+            'level'         => $level,
+            'trace_id'      => $traceId,
+            'method'        => request()?->method() ?? 'CLI',
+            'status_code'   => $statusCode,
             'response_time' => $resTime,
-            'caller'       => $caller,
-            'client_ip'    => request()?->ip() ?? 'unknown',
-            'user'         => Auth::user()?->name ?? 'guest',
-            'url'          => request()?->fullUrl() ?? $uri,
-            'description'  => $description,
-            'payload'      => $body // Menyimpan data objek/array murni tanpa double json_encode string
+            'caller'        => $caller,
+            'client_ip'     => request()?->ip() ?? 'unknown',
+            'user'          => Auth::user()?->name ?? 'guest',
+            'url'           => $logUrl, // Menggunakan variabel dinamis hasil filter di atas
+            'action'        => is_string($uri) && !str_starts_with($uri, 'http') ? $uri : 'API_CALL', // Tambahan info penanda aksi internal
+            'description'   => $description,
+            'payload'       => $body
         ];
 
         // Encode seluruh wrapper menjadi single-line JSON string bersih
