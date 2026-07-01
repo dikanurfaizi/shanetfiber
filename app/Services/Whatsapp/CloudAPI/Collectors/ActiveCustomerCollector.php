@@ -56,10 +56,15 @@ class ActiveCustomerCollector
                         }
                     });
             })
-            ->whereNull('me.id')
 
-            // --- FILTER USER ID BUKAN ADMIN UTAMA (Bukan ID 1) ---
-            ->where('customers.user_id', '!=', 1);
+            // --- JOIN DAN FILTER BILLING STATUS ---
+            // Menggunakan join biasa (Inner Join) karena status wajib berstatus BL atau PL
+            ->join('billings as b', 'customers.id', '=', 'b.customer_id')
+
+            // --- CONDITIONS / WHERE CLAUSES ---
+            ->whereNull('me.id')
+            ->where('customers.user_id', '!=', 1)
+            ->whereIn('b.status', ['BL', 'PL']);
 
         $query->groupBy([
             'customers.id',
@@ -81,7 +86,7 @@ class ActiveCustomerCollector
         }
 
         LogHelper::logInfo(
-            null,
+            'ActiveCustomerCollector', // Mengisi channel name log agar tidak null
             [
                 'date'      => $today->toDateString(),
                 'count'     => $data->count(),

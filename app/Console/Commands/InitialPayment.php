@@ -9,6 +9,7 @@ use App\Models\Billings\BillingPeriode;
 use App\Helpers\LogHelper;
 use App\Enums\WhatsAppAction;
 use App\Events\MonthlyKickoffBroadcastTriggered;
+use App\Helpers\ExecutionTimer;
 use App\Models\Whatsapp\WhatsappFeature;
 
 class InitialPayment extends Command
@@ -19,7 +20,7 @@ class InitialPayment extends Command
     public function handle(): int
     {
         $traceId   = (string) Str::uuid();
-        $startedAt = microtime(true);
+        $timer = new ExecutionTimer();
         $testMode  = config('messaging.initial_payment_allow_test', false);
 
         // ===============================================================
@@ -29,11 +30,36 @@ class InitialPayment extends Command
 
         if (!$feature || !$feature->is_active || $feature->type !== 'cloud' || !$feature->is_scheduled) {
             $this->warn('⏩ Initial payment broadcast skipped (feature disabled / invalid).');
+
+            LogHelper::logInfo(
+                'InitialPayment',
+                [
+                    'feature_exists' => (bool)$feature,
+                    'is_active' => $feature?->is_active,
+                    'type' => $feature?->type,
+                    'is_scheduled' => $feature?->is_scheduled,
+                ],
+                200,
+                'Initial payment broadcast skipped: feature is disabled, not cloud, or not scheduled.',
+                $traceId,
+                $timer->lap()
+            );
+
             return Command::SUCCESS;
         }
 
         if (empty($feature->schedule)) {
             $this->warn('⛔ Schedule config empty. Job skipped.');
+
+            LogHelper::logInfo(
+                'InitialPayment',
+                ['feature_id' => $feature->id],
+                200,
+                'Initial payment broadcast skipped: schedule configuration is empty.',
+                $traceId,
+                $timer->lap()
+            );
+
             return Command::SUCCESS;
         }
 
@@ -48,6 +74,16 @@ class InitialPayment extends Command
 
         if (empty($days)) {
             $this->warn('⛔ No scheduled days configured.');
+
+            LogHelper::logInfo(
+                'InitialPayment',
+                ['feature_id' => $feature->id, 'schedule' => $schedule],
+                200,
+                'Initial payment broadcast skipped: no scheduled days found in config.',
+                $traceId,
+                $timer->lap()
+            );
+
             return Command::SUCCESS;
         }
 
@@ -64,10 +100,17 @@ class InitialPayment extends Command
                 'feature_id' => $feature->id,
                 'timestamp' => $now->toDateTimeString(),
                 'test_mode' => $testMode,
+                'schedule_config' => [
+                    'days' => $days,
+                    'time_start' => $timeStart,
+                    'time_end' => $timeEnd,
+                    'timezone' => $timezone
+                ]
             ],
             200,
             'Initial payment scheduler started',
-            $traceId
+            $traceId,
+            $timer->lap()
         );
 
         try {
@@ -75,17 +118,43 @@ class InitialPayment extends Command
             // DATE & TIME VALIDATION
             // ===============================================================
             $lastDay = $now->copy()->endOfMonth()->day;
-            $effectiveDays = array_map(fn($d) => min($d, $lastDay), $days);
+            $effectiveDays = array_map(fn($d) => (int) min($d, $lastDay), $days);
 
             if (!$testMode) {
                 if (!in_array($now->day, $effectiveDays, true)) {
                     $this->warn('⏩ Skipped: today not in scheduled days.');
+
+                    LogHelper::logInfo(
+                        'InitialPayment',
+                        [
+                            'current_day' => $now->day,
+                            'effective_days' => $effectiveDays,
+                        ],
+                        200,
+                        'Initial payment broadcast skipped: today is not within the scheduled days.',
+                        $traceId,
+                        $timer->lap()
+                    );
+
                     return Command::SUCCESS;
                 }
 
                 $currentTime = $now->format('H:i');
                 if ($currentTime < $timeStart || $currentTime > $timeEnd) {
                     $this->warn('⏩ Skipped: outside time window.');
+
+                    LogHelper::logInfo(
+                        'InitialPayment',
+                        [
+                            'current_time' => $currentTime,
+                            'time_window' => ['start' => $timeStart, 'end' => $timeEnd],
+                        ],
+                        200,
+                        'Initial payment broadcast skipped: current time is outside the allowed time window.',
+                        $traceId,
+                        $timer->lap()
+                    );
+
                     return Command::SUCCESS;
                 }
             }
@@ -97,6 +166,16 @@ class InitialPayment extends Command
             $billing = BillingPeriode::where('name', $periodName)->first();
 
             if (!$billing) {
+                LogHelper::logError(
+                    'InitialPayment', // Disamakan channel-nya agar tidak null
+                    [
+                        'period_name' => $periodName,
+                    ],
+                    404,
+                    "Billing period '{$periodName}' not found.",
+                    $traceId,
+                    $timer->lap()
+                );
                 throw new \RuntimeException("Billing period '{$periodName}' not found.");
             }
 
@@ -111,7 +190,7 @@ class InitialPayment extends Command
                 $traceId
             ));
 
-            $duration = round(microtime(true) - $startedAt, 3);
+            $duration = $timer->lap();
 
             $this->info("✅ Broadcast dispatched ({$duration}s)");
 
@@ -127,8 +206,9 @@ class InitialPayment extends Command
                     'execution_time' => $duration,
                 ],
                 200,
-                'Initial payment broadcast dispatched',
-                $traceId
+                'Initial payment broadcast dispatched successfully',
+                $traceId,
+                $duration
             );
 
             return Command::SUCCESS;
@@ -147,7 +227,8 @@ class InitialPayment extends Command
                 ],
                 500,
                 'Initial payment scheduler failed',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
 
             return Command::FAILURE;
@@ -156,11 +237,7 @@ class InitialPayment extends Command
 
     private function getAllowedDateRange(Carbon $base): array
     {
-        // Karena sekarang berjalan sekali di tanggal 1, 
-        // Ambil start dari awal bulan ini jam 00:00:00
         $start = $base->copy()->startOfMonth();
-
-        // Tarik batas akhir hingga akhir bulan jam 23:59:59
         $end   = $base->copy()->endOfMonth();
 
         return [$start, $end];
