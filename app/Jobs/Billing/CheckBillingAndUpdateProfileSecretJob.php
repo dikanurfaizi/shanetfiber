@@ -34,7 +34,7 @@ class CheckBillingAndUpdateProfileSecretJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $latestPeriod = BillingPeriode::latest('created_at')->first();
+        $latestPeriod = BillingPeriode::where('status', 'active')->first();
         $periodeId = $latestPeriod->id;
 
         $billingsPayment = Billing::whereHas('billingSubscription', function ($query) use ($periodeId) {

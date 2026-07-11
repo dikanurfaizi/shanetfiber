@@ -363,6 +363,7 @@ Route::group(['prefix' => 'cpanel'], function () {
         // Export Settings
         Route::get('settings/exports', [ExportController::class, 'index'])->name('export.index');
         Route::post('settings/exports', [ExportController::class, 'exportToRouter'])->name('export.post');
+        Route::post('settings/exports/sync-comment', [ExportController::class, 'syncComment'])->name('export.sync.comment');
 
         // Web System Settings
         Route::patch('settings/{webSystem:slug}/payment-gateway', [WebsystemController::class, 'update_paymentgateway'])->name('websystem.updatepaymentgateway');

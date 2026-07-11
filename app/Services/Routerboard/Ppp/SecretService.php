@@ -10,6 +10,7 @@ use RouterOS\Exceptions\ConnectException;
 use RouterOS\Exceptions\QueryException;
 use RouterOS\Query;
 use App\Helpers\LogHelper;
+use App\Models\Mikrotik;
 use App\Services\Routerboard\MikrotikConnectionService;
 use App\Services\Routerboard\MikrotikService;
 
@@ -553,27 +554,27 @@ class SecretService
         }
     }
 
-    public function getSecretById($mikrotik, $id, string $traceId)
+    public function getSecretById(Mikrotik $mikrotik, string $id, string $traceId)
     {
         return $this->getSecret($mikrotik, ['.id' => $id], 'ID', $id, $traceId);
     }
 
-    public function getSecretByName($mikrotik, $username, string $traceId)
+    public function getSecretByName(Mikrotik $mikrotik, string $username, string $traceId)
     {
         return $this->getSecret($mikrotik, ['name' => $username], 'Username', $username, $traceId);
     }
 
-    public function getSecretByProfile($mikrotik, $profile, string $traceId)
+    public function getSecretByProfile(Mikrotik $mikrotik, string $profile, string $traceId)
     {
         return $this->getSecret($mikrotik, ['profile' => $profile], 'Profile', $profile, $traceId);
     }
 
-    public function getSecretByNameProfile($mikrotik, $name, $profile, string $traceId)
+    public function getSecretByNameProfile(Mikrotik $mikrotik, string $name, string $profile, string $traceId)
     {
         return $this->getSecret($mikrotik, ['name' => $name, 'profile' => $profile], 'Name and Profile', "$name | $profile", $traceId);
     }
 
-    private function getSecret($mikrotik, $filters, $filterType, $filterValue, string $traceId)
+    private function getSecret(Mikrotik $mikrotik, array $filters, string $filterType, string $filterValue, string $traceId)
     {
         try {
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);

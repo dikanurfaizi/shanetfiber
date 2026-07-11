@@ -2,6 +2,7 @@
 
 namespace App\Jobs\ExportMikrotik;
 
+use App\Helpers\ExecutionTimer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -18,35 +19,35 @@ class CreatePppProfileToRouter implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, Batchable;
 
-    protected int $routerId;
-    protected int $profileId;
+    protected Mikrotik $router;
+    protected PppProfile $profile;
     protected string $traceId;
 
-    public function __construct(int $routerId, int $profileId, ?string $traceId = null)
+    public function __construct(Mikrotik $router, PppProfile $profile, ?string $traceId = null)
     {
-        $this->routerId  = $routerId;
-        $this->profileId = $profileId;
+        $this->router  = $router;
+        $this->profile = $profile;
         $this->traceId = $traceId ?? (string) Str::uuid();
     }
 
     public function handle(SecretService $secretService): void
     {
-        $startTime = microtime(true);
+        $timer = new ExecutionTimer();
         LogHelper::logInfo(
             null,
             [
-                'routerId' => $this->routerId,
-                'profileId' => $this->profileId,
+                'routerId' => $this->router->id,
+                'profileId' => $this->profile->id,
                 'traceId' => $this->traceId
             ],
             200,
             '[CreatePppProfileToRouter] Job started',
             $this->traceId,
-            round((microtime(true) - $startTime) * 1000, 2)
+            $timer->lap()
         );
 
-        $routerId  = $this->routerId;
-        $profileId = $this->profileId;
+        $routerId  = $this->router->id;
+        $profileId = $this->profile->id;
         $router = Mikrotik::find($routerId);
         $profile = PppProfile::find($profileId);
 
@@ -58,7 +59,6 @@ class CreatePppProfileToRouter implements ShouldQueue
             $exists = $secretService
                 ->getPppProfileByName($router, $profile->profile_name, $this->traceId);
 
-            $stepStart = microtime(true);
             LogHelper::logInfo(
                 null,
                 [
@@ -69,7 +69,7 @@ class CreatePppProfileToRouter implements ShouldQueue
                 200,
                 'Successfully get Ppp Profile By Name',
                 $this->traceId,
-                round((microtime(true) - $stepStart) * 1000, 2)
+                $timer->lap()
             );
         } catch (\Throwable $e) {
             LogHelper::logError(
@@ -82,7 +82,7 @@ class CreatePppProfileToRouter implements ShouldQueue
                 500,
                 'Router Offline',
                 $this->traceId,
-                round((microtime(true) - $startTime) * 1000, 2)
+                $timer->lap()
             );
             return;
         }
@@ -99,7 +99,7 @@ class CreatePppProfileToRouter implements ShouldQueue
                 500,
                 'Terjadi error saat komunikasi dengan Mikrotik',
                 $this->traceId,
-                round((microtime(true) - $startTime) * 1000, 2)
+                $timer->lap()
             );
             return;
         }
@@ -116,12 +116,11 @@ class CreatePppProfileToRouter implements ShouldQueue
                 200,
                 'Profile Already Exists',
                 $this->traceId,
-                round((microtime(true) - $startTime) * 1000, 2)
+                $timer->lap()
             );
             return;
         }
 
-        $stepStart = microtime(true);
         LogHelper::logInfo(
             null,
             [
@@ -132,7 +131,7 @@ class CreatePppProfileToRouter implements ShouldQueue
             200,
             'Exporting Profile',
             $this->traceId,
-            round((microtime(true) - $stepStart) * 1000, 2)
+            $timer->lap()
         );
 
         /** ------------------------------------------------------------
@@ -159,7 +158,6 @@ class CreatePppProfileToRouter implements ShouldQueue
 
         $response = $secretService->createPppProfile($router, $data, $this->traceId);
 
-        $stepStart = microtime(true);
         LogHelper::logInfo(
             null,
             [
@@ -171,7 +169,7 @@ class CreatePppProfileToRouter implements ShouldQueue
             200,
             'PPP Profile export response',
             $this->traceId,
-            round((microtime(true) - $stepStart) * 1000, 2)
+            $timer->lap()
         );
 
         if (
@@ -189,7 +187,7 @@ class CreatePppProfileToRouter implements ShouldQueue
                 500,
                 'Error exporting profile',
                 $this->traceId,
-                round((microtime(true) - $startTime) * 1000, 2)
+                $timer->lap()
             );
             return;
         }
@@ -204,7 +202,7 @@ class CreatePppProfileToRouter implements ShouldQueue
             200,
             'Profile Exported Successfully',
             $this->traceId,
-            round((microtime(true) - $startTime) * 1000, 2)
+            $timer->lap()
         );
     }
 }

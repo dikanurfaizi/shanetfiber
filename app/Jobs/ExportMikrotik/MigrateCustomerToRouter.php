@@ -2,6 +2,7 @@
 
 namespace App\Jobs\ExportMikrotik;
 
+use App\Helpers\ExecutionTimer;
 use App\Models\Customers\Customer;
 use App\Models\AutoIsolir;
 use App\Models\Mikrotik;
@@ -17,17 +18,18 @@ class MigrateCustomerToRouter implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected int $sourceRouterId;
-    protected int $targetRouterId;
+    // Ubah tipe data properti dari int menjadi model Mikrotik
+    protected Mikrotik $sourceRouter;
+    protected Mikrotik $targetRouter;
     protected string $traceId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(int $sourceRouterId, int $targetRouterId, string $traceId)
+    public function __construct(Mikrotik $sourceRouter, Mikrotik $targetRouter, string $traceId)
     {
-        $this->sourceRouterId = $sourceRouterId;
-        $this->targetRouterId = $targetRouterId;
+        $this->sourceRouter = $sourceRouter;
+        $this->targetRouter = $targetRouter;
         $this->traceId = $traceId;
     }
 
@@ -36,11 +38,12 @@ class MigrateCustomerToRouter implements ShouldQueue
      */
     public function handle(SecretService $secretService): void
     {
-        $startTime = microtime(true);
-        $source = Mikrotik::findOrFail($this->sourceRouterId);
-        $target = Mikrotik::findOrFail($this->targetRouterId);
+        $timer = new ExecutionTimer();
 
-        $stepStart = microtime(true);
+        // Dua baris query findOrFail() di sini SUDAH DIHAPUS karena Laravel otomatis meload modelnya
+        $source = $this->sourceRouter;
+        $target = $this->targetRouter;
+
         LogHelper::logInfo(
             null,
             [
@@ -52,12 +55,11 @@ class MigrateCustomerToRouter implements ShouldQueue
             200,
             'Starting customer migration from source to target router',
             $this->traceId,
-            round((microtime(true) - $stepStart) * 1000, 2)
+            $timer->lap()
         );
 
         $customers = Customer::where('mikrotik_id', $source->id)->get();
 
-        $stepStart = microtime(true);
         LogHelper::logInfo(
             null,
             [
@@ -66,18 +68,19 @@ class MigrateCustomerToRouter implements ShouldQueue
             200,
             'Number of customers fetched for migration',
             $this->traceId,
-            round((microtime(true) - $stepStart) * 1000, 2)
+            $timer->lap()
         );
+
+        // N+1 Query Fix: Ambil data isolir sekali saja di luar perulangan agar tidak query berulang kali di dalam foreach
+        $autoIsolirComment = optional(
+            AutoIsolir::where('mikrotik_id', $target->id)->first()
+        )->comment_unpayment ?? 'import_from_customer_management';
 
         foreach ($customers as $customer) {
             $service = optional($customer->pppType)->name;
             $profile = optional($customer->package)->profile;
+            $comment = $autoIsolirComment;
 
-            $comment = optional(
-                AutoIsolir::where('mikrotik_id', $target->id)->first()
-            )->comment_unpayment ?? 'import_from_customer_management';
-
-            $stepStart = microtime(true);
             LogHelper::logInfo(
                 null,
                 [
@@ -91,7 +94,7 @@ class MigrateCustomerToRouter implements ShouldQueue
                 200,
                 'Migrating customer from source to target router',
                 $this->traceId,
-                round((microtime(true) - $stepStart) * 1000, 2)
+                $timer->lap()
             );
 
             $response = $secretService->createSecret(
@@ -110,7 +113,6 @@ class MigrateCustomerToRouter implements ShouldQueue
                     'mikrotik_id' => $target->id,
                 ]);
 
-                $stepStart = microtime(true);
                 LogHelper::logInfo(
                     null,
                     [
@@ -121,10 +123,9 @@ class MigrateCustomerToRouter implements ShouldQueue
                     200,
                     'Customer migrated successfully',
                     $this->traceId,
-                    round((microtime(true) - $stepStart) * 1000, 2)
+                    $timer->lap()
                 );
             } else {
-                $stepStart = microtime(true);
                 LogHelper::logError(
                     null,
                     [
@@ -136,7 +137,7 @@ class MigrateCustomerToRouter implements ShouldQueue
                     500,
                     'Failed to migrate customer',
                     $this->traceId,
-                    round((microtime(true) - $stepStart) * 1000, 2)
+                    $timer->lap()
                 );
 
                 $customer->update(['secret_id' => 0]);
@@ -152,7 +153,7 @@ class MigrateCustomerToRouter implements ShouldQueue
             200,
             'Customer migration process finished',
             $this->traceId,
-            round((microtime(true) - $startTime) * 1000, 2)
+            $timer->lap()
         );
     }
 }

@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\Billing\CheckBillingAndUpdateProfileSecretJob as BillingCheckBillingAndUpdateProfileSecretJob;
 use Illuminate\Console\Command;
-use App\Jobs\CheckBillingAndUpdateProfileSecretJob;
 use Illuminate\Support\Str;
 
 class BillingCheckAndUpdateProfile extends Command
@@ -28,7 +28,7 @@ class BillingCheckAndUpdateProfile extends Command
     public function handle(): void
     {
         $traceId = (string) Str::uuid();
-        dispatch(new CheckBillingAndUpdateProfileSecretJob($traceId))->onQueue('default');
+        dispatch(new BillingCheckBillingAndUpdateProfileSecretJob($traceId))->onQueue('default');
         $this->info('Job CheckBillingAndUpdateProfileSecretJob sudah dikirim ke queue.');
     }
 }
