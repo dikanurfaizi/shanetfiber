@@ -13,6 +13,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use App\Helpers\LogHelper;
+use App\Models\Customers\CustomerSubscription;
 
 class MigrateCustomerToRouter implements ShouldQueue
 {
@@ -78,7 +79,7 @@ class MigrateCustomerToRouter implements ShouldQueue
 
         foreach ($customers as $customer) {
             $service = optional($customer->pppType)->name;
-            $profile = optional($customer->package)->profile;
+            $profile = $customer->active_package->profile ?? null;
             $comment = $autoIsolirComment;
 
             LogHelper::logInfo(
