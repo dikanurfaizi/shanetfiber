@@ -40,8 +40,10 @@ class BillingHelper
             $expired = now()->gt(Carbon::parse($billing->due_date));
             $color = $expired ? 'bg-danger' : 'bg-primary';
 
-            $html .= '<span class="badge ' . $color . ' text-white"><i class="fas fa-ban"></i> '
-                . __('billing.state.belum-lunas') . '. ' . __('billing.state.due-date') . ' ' . Carbon::parse($billing->due_date)->translatedFormat('d F, Y') . '</span>';
+            // Diubah menggunakan koma, lalu teks jatuh tempo dimasukkan ke dalam <div> agar turun ke bawah
+            $html .= '<span class="badge ' . $color . ' text-white text-left d-inline-block" style="padding: 0.4rem 0.6rem;"><i class="fas fa-ban"></i> '
+                . __('billing.state.belum-lunas') . ', '
+                . '<div class="mt-1" style="font-weight: normal; opacity: 0.95;">' . __('billing.state.due-date') . ' ' . Carbon::parse($billing->due_date)->translatedFormat('d F, Y') . '</div></span>';
         }
 
         $unpaidOther = count($billingsUnpaid) - $countBillingCustomerUnpaid;
@@ -59,7 +61,7 @@ class BillingHelper
         // Jika status NP
         if ($billing->status === 'VD') {
             return '<span class="badge bg-primary text-white">
-        <i class="fas fa-times-circle"></i> ' .
+    <i class="fas fa-times-circle"></i> ' .
                 __('billing.state.confirm-on') . ' ' .
                 e(Carbon::parse($billing->updated_at)->translatedFormat('d F, Y')) .
                 '</span>';
@@ -72,64 +74,73 @@ class BillingHelper
                 ? Carbon::parse($billing->billingPayment->payment_time)->translatedFormat('d F, Y')
                 : '';
 
-            // Menentukan label metode pembayaran (gunakan translation jika tersedia)
+            // Menentukan label metode pembayaran
             $methodLabel = match ($paymentMethod) {
                 'cash' => __('billing.label.cash'),
                 'transfer' => __('billing.label.transfer'),
                 default => ucfirst(e($paymentMethod)),
             };
 
-            // Menggunakan gaya text-left d-inline-block khas Bootstrap 4 agar rapi ke bawah jika transfer
-            $html = '<span class="badge bg-success text-white text-left d-inline-block" style="max-width: 100%; font-weight: normal; padding: 0.5rem 0.75rem;">';
-            $html .= '<i class="fas fa-check-circle"></i> <strong>' . $methodLabel . '</strong>';
+            // 1. Badge Utama (Hijau ringkas hanya untuk status & metode)
+            $html = '<span class="badge bg-success text-white">';
+            $html .= '<i class="fas fa-check-circle mr-1"></i> ' . $methodLabel;
+            $html .= '</span>';
 
+            // 2. Detail Waktu & Informasi Bank di luar badge utama
             if ($paymentMethod === 'cash') {
-                // Jika cash, tampilkan sejajar kesamping (inline)
-                $html .= ' ' . __('billing.label.on') . ' ' . e($paymentTime);
+                // Jika cash, tampilkan tanggal di bawah badge dengan warna muted
+                $html .= '<div class="small text-muted mt-1">' . __('billing.label.on') . ' ' . e($paymentTime) . '</div>';
             } else {
-                // Jika selain cash (termasuk transfer), turunkan tanggal ke bawah
-                $html .= '<div class="mt-1">' . __('billing.label.on') . ' ' . e($paymentTime) . '</div>';
+                // Jika selain cash (termasuk transfer), turunkan tanggal
+                $html .= '<div class="small text-muted mt-1">' . __('billing.label.on') . ' ' . e($paymentTime) . '</div>';
 
-                // Jika metodenya transfer, tambahkan detail informasi rekening bank
+                // Jika metodenya transfer, tambahkan detail informasi rekening bank dengan warna brand
                 if ($paymentMethod === 'transfer') {
-                    // Ambil data bank langsung dari relation billingPayment Anda
                     $bankName = $billing->billingPayment->receipt->bank_name ?? '-';
                     $accountNumber = $billing->billingPayment->receipt->account_number ?? '-';
-                    $accountName = $billing->billingPayment->receipt->account_name ?? '-';
 
-                    $html .= '<div class="mt-1" style="font-size: 90%; opacity: 0.9;">';
-                    $html .= __('billing.label.to_account') . ' ' . e($bankName) . ' - ' . e($accountNumber);
-                    $html .= '</div>';
-                    $html .= '<div class="mt-1" style="font-size: 90%; opacity: 0.9;">';
-                    $html .= e($accountName);
+                    // Normalisasi nama bank ke lowercase untuk mendeteksi warna brand
+                    $bankKey = strtolower(trim($bankName));
+
+                    // Tentukan style warna berdasarkan nama bank
+                    $bankStyle = match (true) {
+                        str_contains($bankKey, 'bca') => 'color: #0056a3; font-weight: bold;',     // Biru BCA
+                        str_contains($bankKey, 'mandiri') => 'color: #fdbb11; font-weight: bold;', // Kuning Emas Mandiri
+                        str_contains($bankKey, 'dana') => 'color: #118eea; font-weight: bold;',    // Biru DANA
+                        default => 'font-weight: bold; color: #495057;'
+                    };
+
+                    // Output baris bank dan nomor rekening (Nama pemilik $accountName sudah dibuang)
+                    $html .= '<div class="mt-1" style="font-size: 13px; line-height: 1.4;">';
+                    $html .= '<span style="' . $bankStyle . '">' . e($bankName) . '</span> ';
+                    $html .= '<span class="text-secondary">- ' . e($accountNumber) . '</span>';
                     $html .= '</div>';
                 }
             }
-
-            $html .= '</span>';
 
             return $html;
         }
 
         // Jika user TIDAK punya permission billing-edit → hanya tampilkan label merah
         if (!auth()->user() || !auth()->user()->can('billing-edit')) {
-            // Jika belum lunas (status selain NP dan LS)
             $dueDate = $billing->due_date
                 ? Carbon::parse($billing->due_date)->translatedFormat('d F Y')
                 : '-';
 
-            $label = '<span class="badge bg-danger text-white">
-    <i class="fas fa-exclamation-circle"></i> ' . __('billing.state.belum-lunas') . ', ' . __('billing.state.due-date') . ' ' . e($dueDate) . '
-    </span>';
+            // Ditambahkan <div class="mt-1"> setelah koma agar teks jatuh tempo turun ke bawah
+            $label = '<span class="badge bg-danger text-white text-left d-inline-block" style="padding: 0.4rem 0.6rem;">
+<i class="fas fa-exclamation-circle"></i> ' . __('billing.state.belum-lunas') . ',
+<div class="mt-1" style="font-weight: normal; opacity: 0.95;">' . __('billing.state.due-date') . ' ' . e($dueDate) . '</div>
+</span>';
 
             return $label;
         }
 
         // Jika user punya permission billing-edit → tampilkan dropdown payment method
         $html = '<select name="payment_method"
-        class="form-control form-control-sm billing-method-select mt-1"
-        data-slug="' . e($billing->slug) . '"
-        style="min-width: 180px; width: max-content;">';
+    class="form-control form-control-sm billing-method-select mt-1"
+    data-slug="' . e($billing->slug) . '"
+    style="min-width: 180px; width: max-content;">';
 
         $html .= '<option value="cash">' . __('billing.state.cash') . '</option>';
 

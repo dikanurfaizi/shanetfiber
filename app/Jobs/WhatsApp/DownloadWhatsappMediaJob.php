@@ -92,10 +92,45 @@ class DownloadWhatsappMediaJob implements ShouldQueue
             // nama original (jika ada)
             $generatedName = $media->wa_media_id . '.' . $extension;
 
-            $storagePath = now()->format('Y/m/') . $generatedName;
+            $subFolder = now()->format('Y/m/');
+            $storagePath = $subFolder . $generatedName;
 
-            // Storage::disk($media->storage_disk)->put($storagePath, $fileContent);
-            Storage::disk('whatsapp_private')->put($storagePath, $fileContent, 'public');
+            // Ambil path absolut dari disk whatsapp_private sebelum file ditaruh
+            $diskRoot = config('filesystems.disks.whatsapp_private.root');
+            $absoluteFolderPath = rtrim($diskRoot, '/') . '/' . rtrim($subFolder, '/');
+
+            // Ambil info group/user www-data dari OS Linux
+            $targetUser = 'www-data';
+            $targetGroup = 'www-data';
+
+            // Simpan file menggunakan Laravel seperti biasa
+            Storage::disk('whatsapp_private')->put($storagePath, $fileContent);
+
+            // --- FORCE PERMISSION VIA CODE (Karena dijalankan oleh Root) ---
+            $absoluteFilePath = rtrim($diskRoot, '/') . '/' . $storagePath;
+
+            if (file_exists($absoluteFilePath)) {
+                // 1. Ubah owner & permission File
+                chown($absoluteFilePath, $targetUser);
+                chgrp($absoluteFilePath, $targetGroup);
+                chmod($absoluteFilePath, 0664);
+
+                // 2. Ubah owner & permission Folder Bulan (misal: 2026/08)
+                if (is_dir($absoluteFolderPath)) {
+                    chown($absoluteFolderPath, $targetUser);
+                    chgrp($absoluteFolderPath, $targetGroup);
+                    chmod($absoluteFolderPath, 0775);
+
+                    // 3. Ubah owner & permission Folder Tahun (misal: 2026)
+                    $absoluteYearPath = dirname($absoluteFolderPath);
+                    if (is_dir($absoluteYearPath)) {
+                        chown($absoluteYearPath, $targetUser);
+                        chgrp($absoluteYearPath, $targetGroup);
+                        chmod($absoluteYearPath, 0775);
+                    }
+                }
+            }
+            // ---------------------------------------------------------------
 
             $fileSize = strlen($fileContent);
 

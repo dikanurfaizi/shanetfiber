@@ -425,6 +425,7 @@ Route::group(['prefix' => 'cpanel'], function () {
 
             Route::get('/{id}', [WhatsappConversationController::class, 'show'])->name('whatsapp.conversations.show');
             Route::post('/send', [WhatsappConversationController::class, 'sendMessage'])->name('whatsapp.conversations.send');
+            Route::post('/{id}/mark-as-read', [WhatsappConversationController::class, 'markAsRead'])->name('whatsapp.conversations.markAsRead');
         });
 
         // ==================== MESSAGE EVENTS ====================

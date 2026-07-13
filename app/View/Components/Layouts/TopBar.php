@@ -3,6 +3,7 @@
 namespace App\View\Components\Layouts;
 
 use App\Models\Billings\Billing;
+use App\Models\Whatsapp\WhatsappConversation;
 use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
@@ -26,6 +27,8 @@ class TopBar extends Component
     {
         $auth = UserAuth::getUserDetails();
         $user = $auth['user'];
+
+        $unreadChatCount = WhatsappConversation::where('has_unread', true)->count();
 
         // Ambil semua billing dengan relasi customer & user
         $billings = Billing::with([
@@ -66,6 +69,6 @@ class TopBar extends Component
             );
         }
 
-        return view('components.layouts.top-bar', compact('billingsToShow'));
+        return view('components.layouts.top-bar', compact('billingsToShow', 'unreadChatCount'));
     }
 }

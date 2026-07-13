@@ -28,8 +28,15 @@
                                 <small class="text-truncate text-muted" style="max-width: 180px;">
                                     <span x-text="conv.last_message_body || ''"></span>
                                 </small>
-                                <span x-show="conv.has_unread" class="badge badge-success rounded-circle p-1"
-                                    style="background-color: #25d366; width: 20px; height: 20px;">&nbsp;</span>
+
+                                {{-- Bungkus menggunakan template x-if --}}
+                                <template x-if="conv.unread_count > 0">
+                                    <span
+                                        class="badge rounded-circle d-flex align-items-center justify-content-center text-white p-0 shadow-sm"
+                                        style="background-color: #25d366; width: 22px; height: 22px; font-size: 0.75rem; font-weight: 600;"
+                                        x-text="conv.unread_count">
+                                    </span>
+                                </template>
                             </div>
                         </li>
                     </template>
@@ -552,7 +559,6 @@
                     fetchLatestMessages() {
                         if (!this.selectedConversation) return;
 
-                        // Ambil ID internal terakhir dari array messages
                         const lastMsg = this.sortedMessages[this.sortedMessages.length - 1];
                         const lastInternalId = lastMsg ? lastMsg.id : 0;
 
@@ -565,8 +571,14 @@
                             .then(response => response.json())
                             .then(data => {
                                 if (data.new_messages && data.new_messages.length > 0) {
-                                    // Gunakan spread operator untuk menambahkan pesan baru tanpa merusak state lama
                                     this.selectedConversation.messages.push(...data.new_messages);
+
+                                    // --- PENTING UNTUK POLLING ---
+                                    // Jika sedang membuka chat lain, dan ada pesan masuk di percakapan aktif ini, 
+                                    // pastikan unread_count-nya tetap disinkronkan (atau jika ada polling global nantinya).
+                                    if (this.selectedConversation.id === data.conversation_id) {
+                                        this.selectedConversation.unread_count = 0;
+                                    }
 
                                     this.$nextTick(() => this.scrollToBottom());
                                 }
@@ -601,11 +613,49 @@
 
                     selectConversation(conv) {
                         this.selectedConversation = conv;
-                        // Di mobile, ubah view ke chat. Di desktop, mobileView tetap null
+
+                        // Jika ada pesan belum dibaca, langsung reset ke 0 di UI dan kirim sync ke server
+                        if (conv.unread_count > 0) {
+                            conv.unread_count = 0; // Trik ini yang membuat x-show="conv.unread_count > 0" langsung HILANG
+                            this.markAsRead(conv.id);
+                        }
+
                         if (window.innerWidth < 768) {
                             this.mobileView = 'chat';
                         }
                         this.$nextTick(() => this.scrollToBottom());
+                    },
+
+                    markAsRead(conversationId) {
+                        let url = "{{ route('whatsapp.conversations.markAsRead', '99999') }}";
+                        url = url.replace('99999', conversationId);
+
+                        fetch(url, {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json'
+                                }
+                            })
+                            .then(response => {
+                                if (!response.ok) throw new Error('Failed to mark as read');
+
+                                // --- LOGIKA DINAMIS UNTUK LONCENG TOP BAR ---
+                                const topbarBadge = document.getElementById('topbar-unread-badge');
+                                if (topbarBadge) {
+                                    // Ambil total count unread saat ini di topbar, lalu kurangi 1
+                                    let currentCount = parseInt(topbarBadge.innerText) || 0;
+                                    let newCount = currentCount - 1;
+
+                                    if (newCount > 0) {
+                                        topbarBadge.innerText = newCount; // Kurangi angka lonceng
+                                    } else {
+                                        topbarBadge.remove(); // Jika sudah 0, hapus badge merah sepenuhnya
+                                    }
+                                }
+                            })
+                            .catch(error => console.error(error));
                     },
 
                     showList() {

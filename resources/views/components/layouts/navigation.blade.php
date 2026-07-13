@@ -230,20 +230,24 @@
     @endcanany
 
     @canany(['conversation-list'])
-        <li class="nav-item @if (request()->routeIs('conversations*')) active @endif">
-            <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseConversations">
-                <i class="fab fa-telegram-plane"></i>
-                <span>{{ __('navigation.conversations.nav-item') }}</span>
-            </a>
-            <div id="collapseConversations" class="collapse @if (request()->routeIs('conversations*')) show @endif"
-                data-parent="#accordionSidebar">
-                <div class="bg-white py-2 collapse-inner rounded">
-                    <a class="collapse-item @if (request()->routeIs('whatsapp.conversations.index')) active @endif"
-                        href="{{ route('whatsapp.conversations.index') }}">
-                        {{ __('navigation.conversations.index') }}
-                    </a>
+        {{-- Deteksi active diperluas ke semua sub-route whatsapp.conversations --}}
+        <li class="nav-item @if (request()->routeIs('whatsapp.conversations*')) active @endif">
+            <a class="nav-link d-flex align-items-center justify-content-between"
+                href="{{ route('whatsapp.conversations.index') }}">
+                <div>
+                    {{-- Gunakan warna hijau WhatsApp agar senada dengan Topbar --}}
+                    <i class="fab fa-whatsapp mr-2" style="color: #25D366; font-size: 1.1rem;"></i>
+                    <span>{{ __('navigation.conversations.index') }}</span>
                 </div>
-            </div>
+
+                {{-- 🟢 KONDISI TAMBAHAN: Munculkan badge jumlah unread di sidebar jika ada pesan masuk --}}
+                @if (isset($unreadChatCount) && $unreadChatCount > 0)
+                    <span id="sidebar-unread-badge" class="badge badge-danger badge-pill px-2 py-1"
+                        style="font-size: 0.7rem; font-weight: 700;">
+                        {{ $unreadChatCount }}
+                    </span>
+                @endif
+            </a>
         </li>
     @endcanany
 

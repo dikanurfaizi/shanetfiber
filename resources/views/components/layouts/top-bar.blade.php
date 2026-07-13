@@ -1,6 +1,22 @@
 <nav class="navbar navbar-expand navbar-light topbar-premium mb-4 static-top">
     <a class="nav-link pr-3 border-right" href="/cpanel/home">
         <img src="/images/donate.png" style="height:22px;">
+
+        {{-- 🔔 Lonceng Notifikasi WhatsApp Chat --}}
+        <a class="nav-link p-0 position-relative text-gray-600 dropdown-toggle no-arrow"
+            href="{{ route('whatsapp.conversations.index') }}" title="WhatsApp Chat"
+            style="cursor: pointer; text-decoration: none; margin-left: 10px; margin-right: 10px;">
+            <i class="fab fa-whatsapp" style="font-size: 1.15rem;"></i>
+
+            @if ($unreadChatCount > 0)
+                {{-- TAMBAHKAN id="topbar-unread-badge" DI SINI --}}
+                <span id="topbar-unread-badge"
+                    class="badge bg-danger text-white rounded-circle position-absolute d-flex align-items-center justify-content-center"
+                    style="top: -6px; right: -10px; min-width: 18px; height: 18px; font-size: 0.65rem; font-weight: 700; padding: 2px; border: 2px solid #fff;">
+                    {{ $unreadChatCount }}
+                </span>
+            @endif
+        </a>
     </a>
 
     <ul class="navbar-nav ml-auto align-items-center">

@@ -94,7 +94,7 @@ return [
     ],
     'conversations' => [
         'nav-item' => 'Messages',
-        'index' => 'WhatsApp Gateway'
+        'index' => 'WhatsApp'
     ],
     'settings' => [
         'nav-item' => 'Settings',

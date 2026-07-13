@@ -60,18 +60,7 @@ return [
             'driver' => 'local',
             'root' => storage_path('app/whatsapp'),
             'throw' => false,
-            'permissions' => [
-                'file' => [
-                    'public' => 0664,  // User & Group bisa baca-tulis, Other hanya baca
-                    'private' => 0600,
-                ],
-                'dir' => [
-                    'public' => 0775,  // Folder bisa diakses oleh Group (www-data)
-                    'private' => 0700,
-                ],
-            ],
         ],
-
     ],
 
     /*

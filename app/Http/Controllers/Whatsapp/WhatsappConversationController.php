@@ -25,23 +25,53 @@ class WhatsappConversationController extends Controller
             'customer',
             'messages.media'
         ])
+            // 1. Taruh chat yang belum dibaca (has_unread = 1) di paling atas
+            ->orderByDesc('has_unread')
+            // 2. Diikuti urutan tanggal pesan terakhir dari yang terbaru
             ->orderByDesc('last_message_at')
             ->get();
 
         $conversationsJson = $conversations->map(function ($c) {
+
+            // --- LOGIKA MENGHITUNG ANGKA UNREAD SECARA DINAMIS ---
+            $unreadCount = 0;
+
+            // Jika dari kolom master percakapan terdeteksi ADA pesan belum dibaca
+            if ($c->has_unread) {
+
+                // Urutkan pesan dari yang paling baru ke paling lama
+                $sortedMessages = $c->messages->sortByDesc('timestamp_wa');
+
+                foreach ($sortedMessages as $msg) {
+                    // Jika pesan dari customer (incoming), naikkan hitungan unread
+                    if ($msg->direction === 'incoming') {
+                        $unreadCount++;
+                    } else {
+                        // BEGITU KETEMU PESAN KELUAR (outgoing) dari Admin, stop loop.
+                        break;
+                    }
+                }
+
+                // Failsafe
+                if ($unreadCount === 0) {
+                    $unreadCount = 1;
+                }
+            }
+
             return [
                 'id' => $c->id,
                 'customer_name' => $c->customer_name,
                 'customer_number' => $c->customer_number,
                 'last_message_at' => $c->last_message_at?->timestamp,
-                'has_unread' => $c->has_unread,
+                'has_unread' => $c->has_unread, // Pastikan menggunakan nama kolom asli di database Anda
+                'unread_count' => $unreadCount,
                 'messages' => $c->messages->map(function ($m) {
                     return [
                         'id' => $m->id,
-                        'wa_message_id' => $m->wa_message_id, // PENTING: Harus ada untuk Reply
+                        'wa_message_id' => $m->wa_message_id,
                         'text_body' => $m->text_body,
                         'direction' => $m->direction,
-                        'status' => $m->status, // PENTING: Untuk statusClass()
+                        'status' => $m->status,
                         'timestamp_wa' => $m->timestamp_wa?->timestamp,
                         'media' => $m->media->map(function ($media) {
                             return [
@@ -185,5 +215,20 @@ class WhatsappConversationController extends Controller
         return response()->json([
             'new_messages' => $formattedMessages
         ]);
+    }
+
+    public function markAsRead(int $id)
+    {
+        LogHelper::logInfo(null, ['conversation_id' => $id], 200, "[ChatController] Marking conversation as read", Str::uuid()->toString());
+        // Cari percakapan berdasarkan ID
+        $conversation = WhatsappConversation::find($id);
+
+        if ($conversation) {
+            // Update status di database (sesuaikan nama kolomnya)
+            $conversation->update(['has_unread' => false, 'status' => 'read']); // Ganti 'has_unread' dengan nama kolom yang sesuai
+            return response()->json(['success' => true]);
+        }
+
+        return response()->json(['success' => false], 404);
     }
 }
