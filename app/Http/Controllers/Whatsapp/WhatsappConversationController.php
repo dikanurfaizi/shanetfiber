@@ -21,13 +21,27 @@ class WhatsappConversationController extends Controller
 
     public function index()
     {
-        $conversations = WhatsappConversation::with([
+        // 1. Ambil data user yang sedang login saat ini
+        $currentUser = auth()->user();
+
+        // 2. Karena menggunakan Spatie, kita bisa langsung cek nama rolenya secara spesifik
+        $isKasir = $currentUser->hasRole('Kasir');
+
+        $query = WhatsappConversation::with([
             'customer',
             'messages.media'
-        ])
-            // 1. Taruh chat yang belum dibaca (has_unread = 1) di paling atas
-            ->orderByDesc('has_unread')
-            // 2. Diikuti urutan tanggal pesan terakhir dari yang terbaru
+        ]);
+
+        // 3. JIKA BUKAN KASIR (Artinya dia Admin atau Super Admin)
+        // Maka hanya boleh melihat percakapan dari customer yang miliknya sendiri (berdasarkan user_id)
+        if (!$isKasir) {
+            $query->whereHas('customer', function ($q) use ($currentUser) {
+                $q->where('user_id', $currentUser->id);
+            });
+        }
+
+        // 4. Lanjutkan proses sorting dan mapping JSON seperti biasa
+        $conversations = $query->orderByDesc('has_unread')
             ->orderByDesc('last_message_at')
             ->get();
 
@@ -36,23 +50,17 @@ class WhatsappConversationController extends Controller
             // --- LOGIKA MENGHITUNG ANGKA UNREAD SECARA DINAMIS ---
             $unreadCount = 0;
 
-            // Jika dari kolom master percakapan terdeteksi ADA pesan belum dibaca
             if ($c->has_unread) {
-
-                // Urutkan pesan dari yang paling baru ke paling lama
                 $sortedMessages = $c->messages->sortByDesc('timestamp_wa');
 
                 foreach ($sortedMessages as $msg) {
-                    // Jika pesan dari customer (incoming), naikkan hitungan unread
                     if ($msg->direction === 'incoming') {
                         $unreadCount++;
                     } else {
-                        // BEGITU KETEMU PESAN KELUAR (outgoing) dari Admin, stop loop.
                         break;
                     }
                 }
 
-                // Failsafe
                 if ($unreadCount === 0) {
                     $unreadCount = 1;
                 }
@@ -63,7 +71,7 @@ class WhatsappConversationController extends Controller
                 'customer_name' => $c->customer_name,
                 'customer_number' => $c->customer_number,
                 'last_message_at' => $c->last_message_at?->timestamp,
-                'has_unread' => $c->has_unread, // Pastikan menggunakan nama kolom asli di database Anda
+                'has_unread' => $c->has_unread,
                 'unread_count' => $unreadCount,
                 'messages' => $c->messages->map(function ($m) {
                     return [

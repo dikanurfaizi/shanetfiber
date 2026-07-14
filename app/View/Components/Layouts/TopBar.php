@@ -28,7 +28,21 @@ class TopBar extends Component
         $auth = UserAuth::getUserDetails();
         $user = $auth['user'];
 
-        $unreadChatCount = WhatsappConversation::where('has_unread', true)->count();
+        // --- LOGIKA MENGHITUNG UNREAD CHAT BERDASARKAN ROLE ---
+        $unreadChatQuery = WhatsappConversation::where('has_unread', true);
+
+        // Cek apakah user saat ini MEMILIKI role Kasir
+        $isKasir = $user->hasRole('Kasir');
+
+        // Jika BUKAN Kasir (Admin / Super Admin), filter hanya chat milik customernya saja
+        if (!$isKasir) {
+            $unreadChatQuery->whereHas('customer', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+        }
+
+        $unreadChatCount = $unreadChatQuery->count();
+        // -----------------------------------------------------
 
         // Ambil semua billing dengan relasi customer & user
         $billings = Billing::with([
