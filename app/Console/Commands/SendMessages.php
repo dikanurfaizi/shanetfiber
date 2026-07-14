@@ -25,14 +25,8 @@ class SendMessages extends Command
         // ===============================================================
         $feature = WhatsappFeature::where('alias', 'broadcast_pertengahan_bulan')->first();
 
-        if (
-            !$feature ||
-            !$feature->is_active ||
-            $feature->type !== 'cloud' ||
-            !$feature->is_scheduled ||
-            empty($feature->schedule)
-        ) {
-            $this->warn('⏩ Mid-month broadcast skipped (feature disabled / invalid).');
+        if (!$feature || !$feature->is_active) {
+            $this->warn('⏩ Mid-month broadcast skipped (feature disabled or not found).');
             return Command::SUCCESS;
         }
 
@@ -41,7 +35,7 @@ class SendMessages extends Command
         // ===============================================================
         $schedule  = $feature->schedule;
         $timezone  = data_get($schedule, 'timezone', 'Asia/Jakarta');
-        $days      = data_get($schedule, 'days', []);
+        $days      = data_get($schedule, 'days') ?: [15, 16, 17, 18, 19, 20];
         $timeStart = data_get($schedule, 'time_window.start', '08:00');
         $timeEnd   = data_get($schedule, 'time_window.end', '21:00');
 

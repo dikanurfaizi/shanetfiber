@@ -156,8 +156,15 @@ class HandleOutgoingWhatsappMessage
     private function resolveConversation(string $customerNumber): WhatsappConversation
     {
         return WhatsappConversation::firstOrCreate(
-            ['customer_number' => $customerNumber, 'status' => 'open'],
-            ['channel' => 'whatsapp', 'last_message_at' => now()]
+            // 1. Cek berdasarkan nomornya saja. Apa pun statusnya (open/read/closed), kalau ada, langsung ambil.
+            ['customer_number' => $customerNumber],
+
+            // 2. Kalau nomor ini benar-benar belum pernah terdaftar di DB, baru buat data baru dengan nilai di bawah ini.
+            [
+                'channel'         => 'whatsapp',
+                'status'          => 'open',
+                'last_message_at' => now(),
+            ]
         );
     }
 }

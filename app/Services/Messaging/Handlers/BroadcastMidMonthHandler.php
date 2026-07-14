@@ -13,7 +13,7 @@ class BroadcastMidMonthHandler extends BaseBroadcastAwareHandler implements Mess
 {
     public function __construct(
         private Billing $billing,
-        private string $type,  // 'warning_bill' | 'deadline_bill' | 'reminder_bill'
+        private string $type,  // 'billing_overdue' | 'billing_due_today' | 'billing_due_soon'
         private MessageBuilder $builder,
         private Closure $getBankInfo,
         private Closure $getBillingPackages,
@@ -22,6 +22,7 @@ class BroadcastMidMonthHandler extends BaseBroadcastAwareHandler implements Mess
         string $category
     ) {
         $this->setCategory($category);
+        // Menggunakan null-safe operator untuk menghindari error jika customer kosong
         $this->setRawContact($billing->customer?->contact ?? null);
     }
 
@@ -38,15 +39,24 @@ class BroadcastMidMonthHandler extends BaseBroadcastAwareHandler implements Mess
     public function build(string $traceId): array
     {
         $cust = $this->billing->customer;
-        $admin = $cust->user;
-        $bank = ($this->getBankInfo)($admin->id ?? 1);
-        $packages = ($this->getBillingPackages)($cust->id);
+        $admin = $cust?->user;
+
+        // 1. Jalankan closure untuk mendapatkan bankPayload utuh
+        $bankPayload = ($this->getBankInfo)();
+
+        // Ambil teks list rekening terformat yang dibuat oleh trait MapsBroadcastBankPayload
+        $bankText = $bankPayload['account_list'] ?? '-';
+
+        // 2. Jalankan closure untuk mendapatkan fake collection paket
+        $packages = ($this->getBillingPackages)();
+
+        // Memformat informasi detail paket menggunakan FormatterCollector
         $pkgText = $packages->map(fn($p) => ($this->formatPackageInfo)($p))->implode("\n---\n");
 
-        // Tentukan due date per billing (PL → pay_later, BL → due_date)
+        // 👉 PENYESUAIAN 1: Pastikan menggunakan paylater_until sesuai nama properti di fake object
         $dueDates = $packages->map(function ($p) {
             return $p->status === 'PL'
-                ? $p->pay_later
+                ? $p->paylater_until
                 : $p->due_date;
         });
 
@@ -54,14 +64,23 @@ class BroadcastMidMonthHandler extends BaseBroadcastAwareHandler implements Mess
         $due = $dueDates->filter()->sort()->first();
 
         // Hitung selisih hari dari hari ini
-        $day = $due ? now()->diffInDays(Carbon::parse($due), false) : 0;
+        $day = $due
+            ? now()->startOfDay()->diffInDays(Carbon::parse($due)->startOfDay(), false)
+            : 0;
 
         // Format tanggal untuk template
         $due_date_formatted = $due
             ? Carbon::parse($due)->translatedFormat('d F Y')
             : '-';
 
-        $unpaidSummary = ($this->getUnpaidSummary)($cust->id);
+        LogHelper::logInfo(null, [
+            'due_date' => $due,
+            'due_date_formatted' => $due_date_formatted,
+            'day_difference' => $day,
+        ], 200, 'Mid-month broadcast build data', $traceId);
+
+        // 👉 PENYESUAIAN 2: Hapus ($cust->id) karena closure ini sekarang instant return array statis tanpa query database
+        $unpaidSummary = ($this->getUnpaidSummary)();
 
         return [
             'template_slug' => $this->type,
@@ -71,13 +90,13 @@ class BroadcastMidMonthHandler extends BaseBroadcastAwareHandler implements Mess
                 '%name%'            => $cust->name,
                 '%address%'         => $cust->address,
                 '%customer_id%'     => $cust->customer_id,
-                '%account_bank%'    => $bank,
+                '%account_bank%'    => $bankText,
                 '%packages%'        => $pkgText,
-                '%total-bill%'      => $this->builder->currency($unpaidSummary['total_unpaid']),
-                '%due-date%'        => $due_date_formatted,
+                '%total_bill%'      => $this->builder->currency($unpaidSummary['total_unpaid'] ?? 0),
+                '%due_date%'        => $due_date_formatted,
                 '%day%'             => $day,
                 '%cs_contact%'      => $admin?->contact ?? '-',
-                '%count-bill%'      => $unpaidSummary['count_unpaid'],
+                '%count_bill%'      => $unpaidSummary['count_unpaid'] ?? 0,
             ],
         ];
     }

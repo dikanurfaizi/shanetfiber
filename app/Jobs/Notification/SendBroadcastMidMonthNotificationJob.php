@@ -19,6 +19,8 @@ class SendBroadcastMidMonthNotificationJob implements ShouldQueue
 
     public function handle(BroadcastMidMonthNotificationService $service): void
     {
-        $service->run($this->traceId);
+        $service->run(
+            $this->traceId
+        );
     }
 }

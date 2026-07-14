@@ -80,7 +80,8 @@ class MonthlyKickoffBroadcastService
             if ($sisaKuota <= 0) {
                 LogHelper::logWarning(null, [
                     'total_sent' => $totalSentToday,
-                    'max_limit' => $maxLimit
+                    'max_limit' => $maxLimit,
+                    'remaining_quota' => $sisaKuota
                 ], 200, 'Quota reached or exceeded. Local notifications halted safely.', $traceId, $timer->lap());
                 return;
             }

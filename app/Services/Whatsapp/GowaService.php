@@ -369,49 +369,74 @@ class GowaService
     // ==================================================
     // ===== Broadcast at the middle of the month =======
 
-    public function broadcastMidMonth(?int $eventId, string $deviceId, string $traceId): void
-    {
+    public function broadcastMidMonth(
+        string $eventId,
+        string $deviceId,
+        string $traceId,
+        string $recipient,
+        array $bankPayload,
+        string $resolvedTemplate,
+        bool $isTestMode,
+        ?int $delaySeconds,
+        object $billing
+    ): void {
         $queueName = 'notification';
-        $globalIndex = 1;
         try {
-            $today = Carbon::today();
-            $types = ['past_due', 'due_today', 'upcoming'];
+            $finalDelay = $isTestMode ? 0 : ($delaySeconds ?? 0);
 
-            $delayCounter = 0;
-            foreach ($types as $type) {
-                $billings = $this->collector->collect($today, $type);
-                $count = $billings->count();
-
-                $slug = match ($type) {
-                    'billing_overdue'  => 'billing_overdue',
-                    'billing_due_today' => 'billing_due_today',
-                    'billing_due_soon'  => 'billing_due_soon',
-                    default     => 'billing_due_today',
-                };
-
-                foreach ($billings as $billing) {
-                    // $delayTime = $this->delayMessage($globalIndex, 'broadcast');
-                    $this->dispatcher->dispatch(
-                        $slug,
-                        fn(string $category) => new BroadcastMidMonthHandler(
-                            billing: $billing,
-                            type: $slug,
-                            builder: $this->builder,
-                            getBankInfo: fn($userId) => $this->bankInfoCollector->getBankInfo($userId),
-                            getBillingPackages: fn($custId) => $this->packageCollector->getBillingPackages($custId),
-                            formatPackageInfo: fn($pkg) => $this->formatterCollector->formatPackageInfo($pkg),
-                            getUnpaidSummary: fn($custId) => $this->unpaidSummaryCollector->getUnpaidSummary($custId),
-                            category: $category
-                        ),
-                        queue: $queueName,
-                        traceId: $traceId,
-                        eventId: $eventId,
-                        deviceId: $deviceId,
-                        delaySeconds: 0
-                    );
-                    $globalIndex++;
-                }
+            // Validasi kontak kosong
+            if (empty($recipient)) {
+                LogHelper::logWarning(
+                    null,
+                    ['event_id' => $eventId],
+                    400,
+                    '[Broadcast Mid Month] Empty recipient contact number',
+                    $traceId
+                );
+                return;
             }
+
+            $activeSub = $billing->customer->activeSubscription;
+            $activeMem = $billing->customer->activeMembership;
+
+            $this->dispatcher->dispatch(
+                $resolvedTemplate,
+                fn(string $category) => new BroadcastMidMonthHandler(
+                    billing: $billing,
+                    type: $resolvedTemplate,
+                    builder: $this->builder,
+                    getBankInfo: fn() => $bankPayload,
+
+                    // 👉 Fake Object buatanmu dipertahankan, aman untuk formatPackageInfo asli!
+                    getBillingPackages: fn() => collect([(object)[
+                        'package_name'       => $activeSub->package->name ?? null,
+                        'billing_periode_id' => $billing->billingSubscription->billing_periode_id ?? null,
+                        'price'              => $activeSub->package->price ?? 0,
+                        'package_price'      => $billing->base_price,
+                        'discount'           => $billing->discount_amount,
+                        'type'               => $activeMem->membership->name ?? null,
+                        'status'             => $billing->status,
+                        'due_date'           => $billing->due_date,
+                        'paylater_until'     => $billing->paylater_until,
+                        'periode_name'       => $billing->billingSubscription->billingPeriode->name ?? null,
+                        'total_amount'       => $billing->total_amount,
+                    ]]),
+
+                    formatPackageInfo: fn($pkg) => $this->formatterCollector->formatPackageInfo($pkg),
+
+                    // 👉 Instant return dari subquery, 0 query tambahan saat queue jalan!
+                    getUnpaidSummary: fn() => [
+                        'count_unpaid' => (int) ($billing->count_unpaid ?? 0),
+                        'total_unpaid' => (float) ($billing->total_unpaid ?? 0),
+                    ],
+                    category: $category // Diambil langsung dari callback dispatcher
+                ),
+                queue: $queueName,
+                traceId: $traceId,
+                eventId: $eventId,
+                deviceId: $deviceId,
+                delaySeconds: $finalDelay
+            );
         } catch (\Throwable $e) {
             LogHelper::logError(
                 null,
