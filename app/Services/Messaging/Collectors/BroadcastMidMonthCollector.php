@@ -50,7 +50,7 @@ class BroadcastMidMonthCollector
                             ELSE 'billing_due_soon'
                         END
                     "))
-                    ->whereDate('me.created_at', '=', $todayStr)
+                    // ->whereDate('me.created_at', '=', $todayStr)
                     ->whereIn('me.status', ['success', 'failed']);
             })
             ->whereNull('me.id')

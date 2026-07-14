@@ -37,7 +37,7 @@ class SendMessages extends Command
         $timezone  = data_get($schedule, 'timezone', 'Asia/Jakarta');
         $days      = data_get($schedule, 'days') ?: [15, 16, 17, 18, 19, 20];
         $timeStart = data_get($schedule, 'time_window.start', '08:00');
-        $timeEnd   = data_get($schedule, 'time_window.end', '21:00');
+        $timeEnd   = data_get($schedule, 'time_window.end', '20:00');
 
         if (empty($days)) {
             $this->warn('⛔ No scheduled days configured.');
