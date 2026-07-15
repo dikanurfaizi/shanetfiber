@@ -73,7 +73,7 @@ class BroadcastMidMonthNotificationService
             ], 200, 'Collected billings for mid-month broadcast', $traceId, $timer->lap());
 
             $delayInSeconds = 0;
-            $delayInterval = rand(600, 1200);
+            $delayInterval = rand(60, 120);
             $overrideNumber = config('messaging.phone_number_override', null);
             $sentCounter = 0;
 
@@ -87,7 +87,7 @@ class BroadcastMidMonthNotificationService
                     continue;
                 }
 
-                $recipient = $overrideNumber ? (string) $overrideNumber : $billing->customer_contact;
+                $recipient = $overrideNumber ? (string) $overrideNumber : $billing->customer->contact;
                 $mainSlug = $bankPayload['template'] ?? $billing->dynamic_type;
 
                 $event = MessageEvent::create([
