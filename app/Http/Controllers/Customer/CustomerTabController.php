@@ -21,6 +21,7 @@ use App\Services\Customers\CustomerOntService;
 use App\Services\Customers\CustomerServerService;
 use App\Services\Packages\PackageGetService;
 use Carbon\Carbon;
+use App\Helpers\LogHelper;
 
 class CustomerTabController extends Controller
 {
@@ -32,28 +33,29 @@ class CustomerTabController extends Controller
     public function info(Customer $customer, CustomerBasicInfoService $service)
     {
         $traceId = (string) Str::uuid();
+        $startTime = microtime(true);
 
         // 1. Ambil data customer secara manual termasuk yang terhapus
-        // Kita berasumsi $customer yang dikirim dari route adalah ID atau Slug
         $customerModel = Customer::withTrashed()
-            ->where('id', $customer->id) // atau ->where('slug', $customer) jika menggunakan slug
+            ->where('id', $customer->id)
             ->firstOrFail();
 
         // 2. Masukkan object $customerModel ke service
         $data = $service->getCustomerBasicInfo($customerModel, $traceId);
 
-        // =========================
-        // Explicit edit mode flag
-        // =========================
         $data['isEdit'] = request()->boolean('edit') && auth()->user()->can('customer-edit');
 
-        // =========================
-        // Users list (for edit mode)
-        // =========================
         $data['users'] = User::query()
             ->select('id', 'name')
             ->orderBy('name')
             ->get();
+
+        LogHelper::logInfo(null, [
+            'customer_id'   => $customer->id,
+            'is_deleted'    => $customerModel->trashed(),
+            'edit_mode'     => $data['isEdit'],
+            'load_time_ms'  => round((microtime(true) - $startTime) * 1000, 2)
+        ], 200, "[Customer Tab] Info tab loaded successfully", $traceId);
 
         return view('customers.tabs.info', $data);
     }
@@ -65,12 +67,12 @@ class CustomerTabController extends Controller
         BillingItemService $billingItemService,
     ) {
         $traceId = (string) Str::uuid();
+        $startTime = microtime(true);
 
         $billingInfo    = $customerBillingInfoService->getCustomerBillingInfo($customer, $traceId);
         $membershipInfo = $customerMembershipService->getCustomerMembershipInfo($customer);
         $billingItems   = $billingItemService->getLatestBillingItems($customer);
 
-        // ====== DATA UNTUK EDIT FORM ======
         $packages = Package::where('disabled', 'false')->get();
         $members  = Membership::where('is_active', 1)->get();
 
@@ -91,10 +93,8 @@ class CustomerTabController extends Controller
 
         if ($activeMembership) {
             if (!empty($activeMembership->end_date)) {
-                // ONE TIME
                 $billingOption = 'one_time';
 
-                // Pastikan start_date & end_date di bulan-tahun yang sama
                 if (
                     $activeMembership->start_date &&
                     $activeMembership->end_date &&
@@ -104,7 +104,6 @@ class CustomerTabController extends Controller
                     $billingPeriod = $activeMembership->start_date->format('F Y');
                 }
             } else {
-                // MONTHLY
                 $billingOption = 'monthly';
                 $billingPeriod = null;
             }
@@ -113,13 +112,14 @@ class CustomerTabController extends Controller
         $last = BillingPeriode::orderByDesc('id')->first();
 
         if (!$last) {
+            LogHelper::logWarning(null, [
+                'customer_id' => $customer->id
+            ], 404, "[Customer Tab] Billing tab rendering stopped: No billing period found in database.", $traceId);
+
             return collect();
         }
 
-        // Parse dari name, contoh: "December 2025"
         $current = Carbon::createFromFormat('F Y', $last->name);
-
-        // Generate 3 bulan
         $periodes = collect();
 
         for ($i = 0; $i < 3; $i++) {
@@ -129,7 +129,6 @@ class CustomerTabController extends Controller
         }
 
         $availablePeriodes = $periodes;
-
         $addons = Addon::where('is_active', true)->get();
 
         $activeCustomerAddons = CustomerAddon::where('customer_id', $customer->id)
@@ -146,18 +145,25 @@ class CustomerTabController extends Controller
             );
         }
 
+        LogHelper::logInfo(null, [
+            'customer_id'           => $customer->id,
+            'active_package_id'     => $activeSubscription?->package_id,
+            'active_membership_id'  => $activeMembership?->membership_id,
+            'billing_option'        => $billingOption,
+            'addons_count'          => $activeCustomerAddons->count(),
+            'load_time_ms'          => round((microtime(true) - $startTime) * 1000, 2)
+        ], 200, "[Customer Tab] Billing tab data compiled", $traceId);
+
         return view('customers.tabs.billing', [
             ...$billingInfo,
             ...$membershipInfo,
             ...$billingItems,
 
-            // REQUIRED
             'customer' => $customer,
             'packages' => $packages,
             'members'  => $members,
             'availablePeriodes' => $availablePeriodes,
 
-            // CURRENT STATE
             'current_package_id'     => $activeSubscription?->package_id,
             'current_duration_id'    => $activeSubscription?->package_duration_id,
             'current_duration'       => $currentDuration,
@@ -168,7 +174,6 @@ class CustomerTabController extends Controller
             'activeCustomerAddons'   => $activeCustomerAddons,
             'discountEstimate'       => $discountEstimate,
 
-            // MODE
             'isEdit' => request()->boolean('edit')
                 && auth()->user()->can('billing-edit', $customer),
         ]);
@@ -177,26 +182,39 @@ class CustomerTabController extends Controller
     public function server(Customer $customer, CustomerServerService $service)
     {
         $traceId = (string) Str::uuid();
+        $startTime = microtime(true);
 
-        // Pastikan customer punya package dan subscription ready
         $customer->loadMissing([
-            'activeSubscription.package',  // Ini penting
+            'activeSubscription.package',
         ]);
 
         $data = $service->getServerData($customer, $traceId);
 
-        // Tambahkan package profile ke hasil final
         $data['package_profile'] = $customer->activeSubscription->package->profile ?? null;
         $data['package_name']    = $customer->activeSubscription->package->name ?? null;
 
-        // dd($data);
+        LogHelper::logInfo(null, [
+            'customer_id'     => $customer->id,
+            'mikrotik_id'     => $customer->mikrotik_id ?? 'null',
+            'package_profile' => $data['package_profile'],
+            'load_time_ms'    => round((microtime(true) - $startTime) * 1000, 2)
+        ], 200, "[Customer Tab] Server/Mikrotik tab loaded successfully", $traceId);
 
         return view('customers.tabs.server', $data);
     }
 
     public function ont(Customer $customer, CustomerOntService $service)
     {
+        $traceId = (string) Str::uuid();
+        $startTime = microtime(true);
+
         $ont = $service->getOntForCustomer($customer);
+
+        LogHelper::logInfo(null, [
+            'customer_id'   => $customer->id,
+            'ont_resolved'  => isset($ont),
+            'load_time_ms'  => round((microtime(true) - $startTime) * 1000, 2)
+        ], 200, "[Customer Tab] ONT status tab loaded", $traceId);
 
         return view('customers.tabs.ont', compact('customer', 'ont'));
     }
@@ -204,11 +222,18 @@ class CustomerTabController extends Controller
     public function traffic(Customer $customer, CustomerServerService $service)
     {
         $traceId = (string) Str::uuid();
+        $startTime = microtime(true);
 
-        // SecretActive sudah kamu ambil di CustomerServerService
         $data = $service->getServerData($customer, $traceId);
         $secretActive = $data['secretActive'] ?? null;
         $mikrotik = $customer->mikrotik;
+
+        LogHelper::logInfo(null, [
+            'customer_id'     => $customer->id,
+            'mikrotik_name'   => $mikrotik->name ?? 'unknown',
+            'has_live_secret' => isset($secretActive),
+            'load_time_ms'    => round((microtime(true) - $startTime) * 1000, 2)
+        ], 200, "[Customer Tab] Real-time Traffic tab loaded", $traceId);
 
         return view('customers.tabs.traffic', compact('customer', 'mikrotik', 'secretActive'));
     }

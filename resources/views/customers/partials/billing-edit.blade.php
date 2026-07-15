@@ -51,7 +51,8 @@
                         <option value="{{ $member->id }}"
                             {{ $member->id == $current_membership_id ? 'selected' : '' }}>
                             {{ $member->name }}
-                            (Diskon Rp {{ number_format($member->discount_value) }})
+                            (Diskon
+                            {{ $member->discount_type === 'amount' ? 'Rp ' . number_format($member->discount_value) : (int) $member->discount_value . '%' }})
                         </option>
                     @endforeach
                 </select>

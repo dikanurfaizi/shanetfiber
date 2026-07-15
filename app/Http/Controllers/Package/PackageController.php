@@ -7,6 +7,7 @@ use App\Models\Packages\PackageDuration;
 use App\Models\Packages\Package;
 use App\Models\Membership\Membership;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use App\Http\Requests\PackageStoreRequest;
 use App\Http\Requests\PackageUpdateRequest;
 use App\Http\Controllers\Controller;
@@ -104,15 +105,33 @@ class PackageController extends Controller
 
     public function getDiscount(Request $request)
     {
+        $traceId = (string) Str::uuid();
+
+        // 👉 PERBAIKAN: Ambil package_id yang benar dari request
         $packageId = $request->filled('package_id')
-            ? (int) $request->member_id
+            ? (int) $request->package_id
             : null;
 
         $memberId = $request->filled('member_id')
             ? (int) $request->member_id
             : null;
 
+        // 🟡 LOG INDIKATOR INPUT: Rekam data yang masuk dari request untuk mempermudah debugging
+        LogHelper::logInfo(null, [
+            'raw_all_inputs' => $request->all(),
+            'resolved_package_id' => $packageId,
+            'resolved_member_id'  => $memberId,
+        ], 200, "[Discount Controller] Incoming request parameters resolved", $traceId);
+
+        // Jalankan service kalkulasi
         $discountData = $this->packageGetService->getDiscount($packageId, $memberId);
+
+        // 🟢 LOG INDIKATOR OUTPUT: Rekam hasil kalkulasi akhir sebelum dilempar ke JSON response
+        LogHelper::logInfo(null, [
+            'package_id'    => $packageId,
+            'member_id'     => $memberId,
+            'json_output'   => $discountData
+        ], 200, "[Discount Controller] Returning calculated discount response", $traceId);
 
         return response()->json([
             'package_price'      => $discountData['package_price'],
