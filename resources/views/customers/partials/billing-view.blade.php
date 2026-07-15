@@ -89,7 +89,7 @@
 <hr class="my-4">
 
 <h5 class="mb-3 ms-1">
-    <i class="ti ti-list-details"></i> Billing Breakdown
+    <i class="ti ti-list-details"></i> Billing Breakdown for {{ $periodes }}
 </h5>
 
 <div class="row">

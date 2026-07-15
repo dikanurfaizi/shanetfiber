@@ -176,6 +176,8 @@ class CustomerTabController extends Controller
 
             'isEdit' => request()->boolean('edit')
                 && auth()->user()->can('billing-edit', $customer),
+
+            'periodes' => $last->name,
         ]);
     }
 

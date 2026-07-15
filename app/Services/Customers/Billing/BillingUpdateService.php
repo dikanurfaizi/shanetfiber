@@ -86,24 +86,33 @@ class BillingUpdateService
                 ) {
 
                     $billingOption = $data['billing_option'] ?? 'monthly';
-                    $periodeName  = $data['billing_periode_name'] ?? null;
+                    $periodeName = $data['billing_periode_name'] ?? null; // e.g., 'Juli 2026', 'Agustus 2026'
 
-                    $periodeScope = $periodeName
-                        ? (
-                            $this->billingRuleGuardService->isSamePeriod($periodeName, $currentPeriod)
+                    // 1. Cek status lunas billing berjalan saat ini
+                    $isSettled = $currentBilling && in_array($currentBilling->status, ['LS', 'VD'], true);
+
+                    // 2. Tentukan $periodeScope secara dinamis
+                    if (!empty($periodeName)) {
+                        // Jika FE mengirimkan nama periode (pilihan dari dropdown 3 bulan ke depan)
+                        $periodeScope = $this->billingRuleGuardService->isSamePeriod($periodeName, $currentPeriod)
                             ? 'current'
-                            : 'next'
-                        )
-                        : 'next';
+                            : 'next';
+                    } else {
+                        // Jika FE TIDAK mengirimkan nama periode (seperti mode 'monthly' biasa)
+                        // Jalankan aturan dasar: lunas = next, belum lunas = current
+                        $periodeScope = $isSettled ? 'next' : 'current';
+                    }
 
                     $memberId = (int) ($data['member_id'] ?? 0);
 
+                    // 3. Panggil Guard Service
                     [$ok, $mode, $updateBilling, $reason] =
                         $this->billingRuleGuardService->canChangeMembership(
                             $currentBilling,
                             $memberId,
                             $billingOption,
-                            $periodeScope
+                            $periodeScope,
+                            $traceId // Oper traceId utama dari Controller
                         );
 
                     if (!$ok) {
