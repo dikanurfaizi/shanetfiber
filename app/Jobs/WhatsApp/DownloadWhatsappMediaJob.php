@@ -99,9 +99,9 @@ class DownloadWhatsappMediaJob implements ShouldQueue
             $diskRoot = config('filesystems.disks.whatsapp_private.root');
             $absoluteFolderPath = rtrim($diskRoot, '/') . '/' . rtrim($subFolder, '/');
 
-            // Ambil info group/user www-data dari OS Linux
-            $targetUser = 'www-data';
-            $targetGroup = 'www-data';
+            // Ambil info group/user www dari OS Linux
+            $targetUser = 'www';
+            $targetGroup = 'www';
 
             // Simpan file menggunakan Laravel seperti biasa
             Storage::disk('whatsapp_private')->put($storagePath, $fileContent);
