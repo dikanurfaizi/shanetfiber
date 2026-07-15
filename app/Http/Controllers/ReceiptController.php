@@ -64,19 +64,41 @@ class ReceiptController extends Controller
             $accountNumber = $accountBank[2] ?? null;
         }
 
+        // === 🔍 Deteksi Apakah User Sedang Melakukan Pencarian/Filter Aktif ===
+        // Kita cek semua parameter input dari request.
+        $isFiltering = $searchName
+            || $searchAddress
+            || $paymentMethode
+            || $tellerName
+            || $filterCustomer
+            || $filterTeller
+            || $filterPaymentMethod
+            || $filterDate
+            || $request->account_bank
+            || $request->filled('search_month') // Jika user sengaja memilih bulan di dropdown
+            || $request->filled('search_year'); // Jika user sengaja memilih tahun di dropdown
+
         // === 🔧 Tentukan Periode Pencarian ===
-        if (empty($request->search_month) && empty($request->search_year)) {
+        $searchPeriode = null;
+
+        if (!$isFiltering) {
+            // JIKA TIDAK ADA FILTER SAMA SEKALI (Default pertama kali load):
+            // Batasi hanya menampilkan kuitansi periode bulan berjalan saat ini
             $searchPeriode = date('M-y');
-        } else {
+        } elseif ($request->filled('search_month') || $request->filled('search_year')) {
+            // JIKA USER SENGAJA MEMILIH FILTER BULAN/TAHUN SPESIFIK:
             $year  = $request->search_year ?: date('Y');
             $month = $request->search_month ?: date('m');
             $searchPeriode = date('M-y', strtotime("{$year}-{$month}-01"));
         }
+        // Jika sedang melakukan filter lain (misal cari nama "Dian"), $searchPeriode tetap NULL (mencari ke semua data historis)
+
 
         // === 🧾 Query utama ===
         $query = Receipt::query()
             ->when($searchName, fn($q) => $q->where('customer_name', 'like', "%{$searchName}%"))
             ->when($searchPeriode, function ($q) use ($searchPeriode) {
+                // Hanya membatasi periode jika $searchPeriode tidak NULL
                 $monthShort = date('M-y', strtotime($searchPeriode));
                 $monthFull  = date('F Y', strtotime($searchPeriode));
 
@@ -102,7 +124,17 @@ class ReceiptController extends Controller
         }
 
         if (!empty($filterPaymentMethod)) {
-            $query->whereRaw('LOWER(payment_methode) = ?', [strtolower($filterPaymentMethod)]);
+            if (str_contains($filterPaymentMethod, '|')) {
+                // JIKA USER MEMILIH BANK SPESIFIK (Misal: "transfer|BCA")
+                [$method, $bank] = explode('|', $filterPaymentMethod);
+
+                $query->whereRaw('LOWER(payment_methode) = ?', [strtolower($method)])
+                    ->where('bank_name', $bank);
+            } else {
+                // JIKA USER MEMILIH UMUM (Misal: memilih "TRANSFER" saja, atau "CASH", "QRIS")
+                // Query ini otomatis akan mencari semua yang payment_methode-nya "transfer" tanpa peduli bank_name-nya apa
+                $query->whereRaw('LOWER(payment_methode) = ?', [strtolower($filterPaymentMethod)]);
+            }
         }
 
         if (!empty($filterDate)) {
@@ -127,11 +159,49 @@ class ReceiptController extends Controller
         //     ->orderBy('customer_name', 'asc')
         //     ->pluck('customer_name', 'customer_name');
 
-        $paymentMethods = Receipt::whereNotNull('payment_methode')
+        // 1. Ambil list payment method unik seperti biasa
+        $rawPaymentMethods = Receipt::whereNotNull('payment_methode')
             ->distinct()
             ->orderBy('payment_methode', 'asc')
-            ->pluck('payment_methode', 'payment_methode')
-            ->map(fn($item) => strtoupper($item));
+            ->pluck('payment_methode')
+            ->toArray();
+
+        $paymentMethodsList = [];
+
+        foreach ($rawPaymentMethods as $method) {
+            $upperMethod = strtoupper($method);
+
+            // 2. Jika method adalah 'TRANSFER'
+            if ($upperMethod === 'TRANSFER') {
+                // Tambahkan opsi "TRANSFER" umum terlebih dahulu di paling atas kelompok transfer
+                $paymentMethodsList[$method] = 'TRANSFER';
+
+                // Ambil daftar bank unik yang diurutkan sesuai abjad (A-Z)
+                $banks = Receipt::where('payment_methode', $method)
+                    ->whereNotNull('bank_name')
+                    ->where('bank_name', '!=', '')
+                    ->distinct()
+                    ->orderBy('bank_name', 'asc')
+                    ->pluck('bank_name')
+                    ->toArray();
+
+                if (!empty($banks)) {
+                    foreach ($banks as $bank) {
+                        $bankUpper = strtoupper($bank);
+
+                        // Opsi spesifik dengan pipa '|', misal: "transfer|BCA" -> "TRANSFER - BCA"
+                        $key = $method . '|' . $bank;
+                        $paymentMethodsList[$key] = "TRANSFER - " . $bankUpper;
+                    }
+                }
+            } else {
+                // Untuk payment method non-transfer (misal: CASH, QRIS, dll)
+                $paymentMethodsList[$method] = $upperMethod;
+            }
+        }
+
+        // Ubah ke Collection
+        $paymentMethods = collect($paymentMethodsList);
 
         $tellers = Receipt::whereNotNull('teller_name')
             ->distinct()
