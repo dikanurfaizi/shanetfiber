@@ -121,14 +121,12 @@ class Kernel extends ConsoleKernel
         |--------------------------------------------------------------------------
         | 5. OVERDUE REMINDER WHATSAPP MESSAGES
         |--------------------------------------------------------------------------
-        | Dijalankan setiap 15 menit hanya pada tanggal 25,
-        | serta hanya antara jam 08:00 - 22:00 (WIB).
-        | Jika kondisi tidak terpenuhi, dilewati (tidak error).
+        | Dijalankan setiap 15 menit sepanjang waktu.
+        |
         */
         $schedule->command('reminder:overdue-messages-send')
             ->everyFifteenMinutes()
             ->timezone($defaultTimezone)
-            ->when(fn() => now()->day == 25 && now()->hour >= 8 && now()->hour < 22)
             ->onFailure(fn() => LogHelper::logError(null, ['time' => now()], 500, '[Scheduler] reminder:overdue-messages-send failed'))
             ->onSuccess(fn() => LogHelper::logInfo(null, ['time' => now()], 200, '[Scheduler] reminder:overdue-messages-send finished successfully'))
             ->withoutOverlapping(30)

@@ -15,9 +15,6 @@ use App\Services\Messaging\Collectors\BillingEligibleCollector;
 use App\Services\Messaging\Collectors\BillingPackageCollector;
 use App\Services\Messaging\Collectors\BillingPeriodCollector;
 use App\Services\Messaging\Collectors\FormatterCollector;
-use App\Services\Messaging\Collectors\BroadcastMidMonthCollector;
-use App\Services\Messaging\Collectors\UnpaidSummaryCollector;
-use App\Services\Messaging\Collectors\ChannelUpdateCustomerCollector;
 use App\Services\Messaging\Handlers\ActivationHandler;
 use App\Services\Messaging\Handlers\BillingStatusHandler;
 use App\Services\Messaging\Handlers\BroadcastMonthlyHandler;
@@ -47,10 +44,7 @@ class GowaService
         private BillingEligibleCollector $eligibleCollector,
         private BillingPeriodCollector $periodCollector,
         private FormatterCollector $formatterCollector,
-        private BroadcastMidMonthCollector $collector,
         private FormatReceiver $formatNumber,
-        private UnpaidSummaryCollector $unpaidSummaryCollector,
-        private ChannelUpdateCustomerCollector $channelUpdateCustomerCollector,
     ) {}
 
     // ============================================

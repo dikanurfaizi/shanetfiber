@@ -11,7 +11,7 @@ use App\Services\Whatsapp\CloudAPI\Broadcast\MidMonthBroadcast;
 use App\Services\Whatsapp\WhatsappGatewayResolver;
 use App\Services\Whatsapp\GowaService;
 use App\Services\Messaging\Collectors\AdminBankCollector;
-use App\Services\Messaging\Collectors\BroadcastMidMonthCollector;
+use App\Services\Messaging\Collectors\BroadcastReminderCollector;
 use App\Services\Notification\Traits\MapsBroadcastBankPayload;
 use Illuminate\Support\Carbon;
 
@@ -24,7 +24,7 @@ class BroadcastMidMonthNotificationService
         private WhatsappGatewayResolver $gatewayResolver,
         private GowaService $gowaService,
         private AdminBankCollector $bankCollector,
-        private BroadcastMidMonthCollector $broadcastMidMonthCollector,
+        private BroadcastReminderCollector $broadcastMidMonthCollector,
     ) {}
 
     public function run(string $traceId): void
