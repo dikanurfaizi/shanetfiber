@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Helpers\FormatReceiver;
+use App\Helpers\ProrateCalculator;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -17,6 +18,7 @@ use App\Models\Billings\BillingPeriode;
 use App\Services\Customers\CustomerCreateService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Http\JsonResponse;
 
 class CustomerWizardController extends Controller
 {
@@ -172,37 +174,33 @@ class CustomerWizardController extends Controller
 
     public function step3Post(Request $request)
     {
-        // 1. Tambahkan validasi untuk input 'is_prorate'
         $validated = $request->validate([
             'package_id'           => 'required|exists:packages,id',
             'package_duration_id'  => 'required|exists:package_durations,id',
             'member_id'            => 'nullable|exists:memberships,id',
             'billing_option'       => 'required|in:monthly,one_time',
             'billing_periode_name' => 'required_if:billing_option,one_time',
-            'is_prorate'           => 'required|in:0,1', // 💡 Wajib dikirim oleh FE
+            'is_prorate'           => 'required|in:0,1',
         ]);
 
-        // Ambil data package
         $package = Package::find($validated['package_id']);
         $validated['package_name'] = $package->name;
         $packagePrice = $package->price;
 
-        // Ambil data duration label
         $duration = $package->packageDurations()->find($validated['package_duration_id']);
         $validated['duration_label'] = $duration?->duration?->name_en ?? '-';
+        $months = $duration?->duration?->duration_months ?? 1;
 
-        // ========== MEMBERSHIP & DISCOUNT HANDLING ==========
+        // ========== MEMBERSHIP DISCOUNT HANDLING ==========
         $discountNominal = 0;
         $discountPercent = 0;
-
         if ($validated['member_id']) {
             $member = Membership::find($validated['member_id']);
             $validated['member_label'] = $member->name;
-
             if ($member->discount_type === 'percent') {
                 $discountPercent = $member->discount_value ?? 0;
                 $discountNominal = max(($discountPercent / 100) * $packagePrice, 0);
-            } elseif ($member->discount_type === 'amount') {
+            } else {
                 $discountNominal = max($member->discount_value ?? 0, 0);
                 $discountPercent = ($packagePrice > 0) ? round(($discountNominal / $packagePrice) * 100, 2) : 0;
             }
@@ -213,39 +211,27 @@ class CustomerWizardController extends Controller
         $validated['discount_nominal'] = $discountNominal;
         $validated['discount_percent'] = $discountPercent;
 
-        // ========== 💡 ENGINE VALIDASI & KALKULATOR PRORATE BE ==========
-        $now = Carbon::now();
-        $currentDay = $now->day;
-        $totalDaysInMonth = $now->daysInMonth;
-
-        // Dapatkan nama bulan dalam bahasa lokal aplikasi saat ini
-        $currentMonthName = $now->translatedFormat('F');
-
-        $activeDays = ($totalDaysInMonth - $currentDay) + 1;
-        $basePriceAfterDiscount = max(0, $packagePrice - $discountNominal);
-
-        if ($validated['is_prorate'] == '1' && $currentDay <= 15) {
+        // ========== Proteksi Aturan Bisnis FE ==========
+        if ($validated['is_prorate'] == '1' && Carbon::now()->day <= 15) {
             throw ValidationException::withMessages([
                 'is_prorate' => __('customer.wizard.message.prorate_not_available')
             ]);
         }
 
-        if ($validated['is_prorate'] == '1' && $currentDay > 15) {
-            $exactProratePrice = ($activeDays / $totalDaysInMonth) * $basePriceAfterDiscount;
-            $finalBillPrice = ceil($exactProratePrice / 500) * 500;
-            $validated['calculation_type_label'] = __('customer.wizard.label.prorate');
-        } else {
-            $finalBillPrice = $basePriceAfterDiscount;
-            $validated['calculation_type_label'] = __('customer.wizard.label.full_cost');
-        }
+        // ========== 💡 PANGGIL HELPER BARU ==========
+        $calculation = ProrateCalculator::calculate($packagePrice, $discountNominal, $validated['is_prorate'], $months);
 
-        // 💡 Masukkan data rincian tambahan ke session untuk Step 5
-        $validated['package_price']     = $packagePrice;
-        $validated['final_bill_price']  = $finalBillPrice;
-        $validated['active_days']       = $activeDays;
-        $validated['total_days']        = $totalDaysInMonth;
-        $validated['current_day']       = $currentDay;
-        $validated['current_month']     = $currentMonthName;
+        // Satukan hasil hitungan helper ke dalam array session wizard
+        $validated = array_merge($validated, [
+            'package_price'          => $packagePrice,
+            'price_before_discount'  => $calculation['price_before_discount'], // 💡 Nilai prorate dasar/mentah sebelum diskon
+            'final_bill_price'       => $calculation['price_final'],           // 💡 Nilai bersih setelah dikurangi diskon
+            'calculation_type_label' => $calculation['calculation_type_label'],
+            'active_days'            => $calculation['active_days'],
+            'total_days'             => $calculation['total_days'],
+            'current_day'            => $calculation['current_day'],
+            'current_month'          => $calculation['current_month'],
+        ]);
 
         session(['wizard.step3' => $validated]);
 
@@ -343,7 +329,7 @@ class CustomerWizardController extends Controller
             'email'      => 'required|email',
             'contact'    => 'required|regex:/^62[0-9]{8,14}$/',
             'user_id'    => 'required|exists:users,id',
-            'is_prorate' => 'required|in:0,1', // 💡 Tambahkan ini agar aman masuk payload service
+            'is_prorate' => 'required|boolean', // 💡 Diubah menjadi boolean agar lebih fleksibel dan aman
         ]);
 
         if ($validator->fails()) {
@@ -362,5 +348,42 @@ class CustomerWizardController extends Controller
         return redirect()
             ->route('customers.show', ['customer' => $customer->slug])
             ->with('success', 'Customer created successfully!');
+    }
+
+    /**
+     * Endpoint API untuk kalkulasi prorate secara dinamis (AJAX)
+     */
+    public function calculateProrate(Request $request): JsonResponse
+    {
+        // Validasi input minimal dari AJAX
+        $packagePrice   = (float) $request->input('package_price', 0);
+        $discountAmount = (float) $request->input('discount_amount', 0);
+        $isProrate      = $request->input('is_prorate');
+        $durationMonths = (int) $request->input('duration_months', 1);
+
+        // Panggil Helper tunggal Back-End (DRY Principle)
+        $calculation = ProrateCalculator::calculate(
+            $packagePrice,
+            $discountAmount,
+            $isProrate,
+            $durationMonths
+        );
+
+        // Di dalam CustomerWizardController::calculateProrate Anda:
+        $exactProratePriceRaw = ($packagePrice * $durationMonths) * ($calculation['active_days'] / $calculation['total_days']);
+
+        return response()->json([
+            'success'                 => true,
+            'package_price_raw'       => $packagePrice * $durationMonths, // Harga katalog asli
+            'exact_prorate_raw'       => $exactProratePriceRaw,           // 12/31 x 1.500.000 (Belum dibulatkan)
+            'price_before_discount'   => $calculation['price_before_discount'], // Hasil pembulatan kelipatan 500 (581.000)
+            'discount_amount'         => $discountAmount,                 // Potongan diskon (100.000)
+            'price_final'             => $calculation['price_final'],     // Hasil bersih akhir (481.000)
+            'calculation_type_label'  => $calculation['calculation_type_label'],
+            'active_days'             => $calculation['active_days'],
+            'total_days'              => $calculation['total_days'],
+            'current_day'             => $calculation['current_day'],
+            'current_month'           => $calculation['current_month'],
+        ]);
     }
 }

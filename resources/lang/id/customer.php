@@ -322,7 +322,12 @@ return [
             'prorate_details' => 'Rincian Prorate',
             'date' => 'Tgl',
             'until' => 's.d',
-            'active_day' => 'Hari Aktif'
+            'active_day' => 'Hari Aktif',
+            'basic_price' => 'Harga Dasar',
+            'prorate_formula' => 'Rumus Prorata',
+            'prorate_price_rounded' => 'Harga Prorata yang Dibulatkan',
+            'day' => 'Hari',
+            'month' => 'Bulan'
         ],
         'placeholder' => [
             'select_pic' => 'Pilih PIC / Penanggung Jawab',

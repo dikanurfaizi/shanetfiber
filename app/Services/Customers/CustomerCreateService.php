@@ -5,6 +5,7 @@ namespace App\Services\Customers;
 use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
 use App\Helpers\FormatReceiver;
+use App\Helpers\ProrateCalculator;
 use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerSubscription;
 use App\Models\Customers\CustomerAddon;
@@ -34,14 +35,6 @@ class CustomerCreateService
     public function createCustomer(array $data, string $traceId): Customer
     {
         $timer = new ExecutionTimer();
-        LogHelper::logInfo(
-            null,
-            [],
-            201,
-            'Customer created successfully',
-            $traceId,
-            $timer->lap()
-        );
 
         return DB::transaction(function () use ($data, $traceId, &$timer) {
 
@@ -49,9 +42,8 @@ class CustomerCreateService
              * 1. Password Fallback
              * ---------------------------------------------------- */
             if (empty($data['password']) || trim($data['password']) === '') {
-                $data['password'] = '12345678'; // default
+                $data['password'] = '12345678';
             }
-
 
             /** ----------------------------------------------------
              * 2. Create Customer
@@ -59,37 +51,29 @@ class CustomerCreateService
             $customerData = $this->prepareCustomerData($data, $traceId);
             $customer = Customer::create($customerData);
 
-
             /** ----------------------------------------------------
              * 3. Generate Customer ID
              * ---------------------------------------------------- */
             $websystem = Websystem::where('slug', 'websystem')->firstOrFail();
-
             $longCode = sprintf('%%0%dd', $websystem->long_customer_code);
-
             $customerId = sprintf(
                 '%s%02d-%s',
                 $websystem->customer_code,
                 $data['mikrotik_id'],
                 sprintf($longCode, $customer->id)
             );
-
             $customer->update(['customer_id' => $customerId]);
-
 
             /** ----------------------------------------------------
              * 4. Create ONT
              * ---------------------------------------------------- */
             CustomerOnt::create(['customer_id' => $customer->id]);
 
-
             /** ----------------------------------------------------
              * 4.5 Create Customer Membership (if member selected)
              * ---------------------------------------------------- */
             if (!empty($data['member_id'])) {
-
                 [$startDate, $endDate] = $this->resolveMembershipDates($data);
-
                 CustomerMembership::create([
                     'customer_id'   => $customer->id,
                     'membership_id' => $data['member_id'],
@@ -98,7 +82,6 @@ class CustomerCreateService
                     'is_active'     => 1,
                 ]);
             }
-
 
             /** ----------------------------------------------------
              * 5. Fetch Duration + Package (Eager Loaded)
@@ -109,59 +92,33 @@ class CustomerCreateService
             $package  = $packageDuration->package;
             $duration = $packageDuration->duration;
 
-
             /** ----------------------------------------------------
-             * 6. Calculate Pricing (💡 Diperbarui sesuai Logika Prorate/Full Cost Step 3)
+             * 6. Calculate Pricing (💡 Menggunakan Helper Terpusat)
              * ---------------------------------------------------- */
             $months = $duration->duration_months;
-
-            // Ambil potongan nominal diskon membership yang sudah dihitung valid di Step 3
-            // Jika tidak ada diskon, nilainya otomatis 0
             $discountNominalStep3 = $data['discount_nominal'] ?? 0;
 
             $discountType  = 'none';
             $discountValue = 0;
 
-            // Jika ada diskon dari keanggotaan/membership, catat tipenya
             if ($discountNominalStep3 > 0) {
-                // Sifat data mengikuti kalkulasi asal di database
                 $discountType  = 'amount';
                 $discountValue = $discountNominalStep3;
             }
 
-            // Jalankan Engine Kalkulasi Ulang Back-End Terproteksi
-            $now = Carbon::now();
-            $currentDay = $now->day;
-            $totalDaysInMonth = $now->daysInMonth;
+            // 💡 PANGKAS TOTAL KODE REDUNDAN: Serahkan kalkulasi ke Helper ProrateCalculator
+            $calculation = ProrateCalculator::calculate(
+                packagePrice: $package->price,
+                discountNominal: $discountNominalStep3,
+                isProrate: $data['is_prorate'] ?? 0,
+                durationMonths: $months
+            );
 
-            // Sisa hari aktif pendaftaran reguler
-            $activeDays = ($totalDaysInMonth - $currentDay) + 1;
-
-            // Harga dasar setelah dipotong nominal diskon keanggotaan
-            $basePriceAfterDiscount = max(0, $package->price - $discountNominalStep3);
-
-            // Tentukan harga final langganan berdasarkan keputusan 'is_prorate'
-            if (isset($data['is_prorate']) && $data['is_prorate'] == '1' && $currentDay > 15) {
-                // Rumus Prorate murni proporsional sisa hari
-                $exactProratePrice = ($activeDays / $totalDaysInMonth) * $basePriceAfterDiscount;
-
-                // Pembulatan ke kelipatan Rp 500 ke atas murni
-                $priceFinal = ceil($exactProratePrice / 500) * 500;
-            } else {
-                // Default / Full Cost: Menggunakan harga penuh satu bulan reguler
-                $priceFinal = $basePriceAfterDiscount;
-            }
-
-            // Jika durasi paket lebih dari 1 bulan (multi-months), kalikan sisa bulan tambahannya
-            if ($months > 1) {
-                $priceFinal += ($package->price * ($months - 1));
-            }
-
+            $priceFinal = $calculation['price_before_discount'];
 
             /** ----------------------------------------------------
              * 7. Create Customer Subscription
              * ---------------------------------------------------- */
-            // Siklus penagihan jatuh tempo (Default: tanggal 15 setelah masa durasi bulan habis)
             $subscriptionEndDate = now()->addMonths($months)->day(15);
 
             $subscription = CustomerSubscription::create([
@@ -171,20 +128,18 @@ class CustomerCreateService
                 'status'               => 'active',
                 'start_date'           => now(),
                 'end_date'             => $subscriptionEndDate,
-                'price_final'          => $priceFinal,         // 💡 Menyimpan hasil akhir kalkulasi prorate/full cost
-                'discount_type_final'  => $discountType,       // 💡 Menyimpan tipe diskon membership
-                'discount_value_final' => $discountValue,      // 💡 Menyimpan nominal potongan diskon membership
+                'price_final'          => $priceFinal,         // Hasil dari helper dijamin sinkron!
+                'discount_type_final'  => $discountType,
+                'discount_value_final' => $discountValue,
             ]);
 
-
             /** ----------------------------------------------------
-             * 8. Ambil Billing Periode Aktif (bulan saat ini)
+             * 8. Ambil Billing Periode Aktif
              * ---------------------------------------------------- */
             $now = now();
             $billingPeriode = BillingPeriode::where('year', $now->year)
                 ->where('month', $now->format('F'))
                 ->firstOrFail();
-
 
             /** ----------------------------------------------------
              * 9. Create Billing Subscription Periode
@@ -192,9 +147,8 @@ class CustomerCreateService
             $subscriptionPeriod = BillingSubscriptionPeriode::create([
                 'customer_subscription_id' => $subscription->id,
                 'billing_periode_id'       => $billingPeriode->id,
-                'status'               => 'active',
+                'status'                   => 'active',
             ]);
-
 
             /** ----------------------------------------------------
              * 10. Create Customer Addons (if provided)
@@ -202,7 +156,6 @@ class CustomerCreateService
             if (!empty($data['addons'])) {
                 foreach ($data['addons'] as $addon) {
                     $subtotal = ($addon['qty'] ?? 1) * $addon['unit_price'];
-
                     CustomerAddon::create([
                         'slug'        => Str::uuid(),
                         'customer_id' => $customer->id,
@@ -211,17 +164,16 @@ class CustomerCreateService
                         'unit_price'  => $addon['unit_price'],
                         'subtotal'    => $subtotal,
                         'start_date'  => now(),
-                        'end_date'    => null,   // recurring → null
+                        'end_date'    => null,
                         'is_active'   => 1,
                     ]);
                 }
             }
 
-
             /** ----------------------------------------------------
-             * 11. Create Initial Billing
+             * 11. Create Initial Billing & Logging
              * ---------------------------------------------------- */
-            $result = $this->billingCreateService->createBilling(
+            $this->billingCreateService->createBilling(
                 $websystem,
                 $customer,
                 $subscriptionPeriod,
@@ -230,14 +182,9 @@ class CustomerCreateService
                 $traceId
             );
 
-            /** ----------------------------------------------------
-             * 11. Logging
-             * ---------------------------------------------------- */
             LogHelper::logInfo(
                 null,
-                [
-                    'customer_id'   => $customer->id,
-                ],
+                ['customer_id' => $customer->id],
                 201,
                 'Customer created successfully',
                 $traceId,

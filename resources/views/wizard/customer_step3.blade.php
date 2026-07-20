@@ -52,7 +52,8 @@
                         <option value="">{{ __('customer.wizard.placeholder.non_member') }}</option>
                         @foreach ($members as $member)
                             <option value="{{ $member->id }}">
-                                {{ $member->name }} (Diskon Rp {{ number_format($member->discount_value) }} )
+                                {{ $member->name }} ({{ __('customer.wizard.label.discount') }}
+                                {{ $member->discount_type === 'amount' ? 'Rp ' . number_format($member->discount_value) : (int) $member->discount_value . '%' }})
                             </option>
                         @endforeach
                     </select>
@@ -179,66 +180,76 @@
                 }
 
                 // =======================================================================
-                // ENGINE KALKULATOR PRORATE UTAMA
+                // ENGINE KALKULATOR PRORATE UTAMA (API DRIVEN - 100% DRY & INFORMATIF)
                 // =======================================================================
                 function calculateClientProrate() {
                     const selectedOption = packageDropdown.options[packageDropdown.selectedIndex];
                     currentPackagePrice = selectedOption ? parseFloat(selectedOption.getAttribute('data-price')) : 0;
 
                     if (!packageDropdown.value || currentPackagePrice <= 0) {
-                        // 💡 Diubah menggunakan helper lang Laravel
                         prorateSummaryText.innerText = "{{ __('customer.wizard.message.select_internet_package') }}";
                         prorateInfoBox.className = "alert alert-secondary mt-2";
                         return;
                     }
 
-                    const currentYear = today.getFullYear();
-                    const currentMonth = today.getMonth();
+                    const payload = {
+                        package_price: currentPackagePrice,
+                        discount_amount: currentDiscountValue,
+                        is_prorate: prorateRadioYes.checked ? 1 : 0,
+                        duration_months: 1
+                    };
 
-                    const totalDaysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-                    const activeDays = (totalDaysInMonth - currentDay) + 1;
+                    fetch("{{ route('wizard.calculate-prorate') }}", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRF-TOKEN": "{{ csrf_token() }}"
+                            },
+                            body: JSON.stringify(payload)
+                        })
+                        .then(response => response.json())
+                        .then(res => {
+                            if (!res.success) return;
 
-                    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus",
-                        "September", "Oktober", "November", "Desember"
-                    ];
-                    const currentMonthName = monthNames[currentMonth];
+                            let templateText = "";
 
-                    const basePriceAfterDiscount = Math.max(0, currentPackagePrice - currentDiscountValue);
-                    const exactProratePrice = (activeDays / totalDaysInMonth) * basePriceAfterDiscount;
-                    const roundedProratePrice = Math.ceil(exactProratePrice / 500) * 500;
-                    const nominalDipotong = basePriceAfterDiscount - roundedProratePrice;
+                            // Pilihan A: Prorate disetujui oleh User DAN tanggal saat ini sudah melewati tanggal 15
+                            if (prorateRadioYes.checked && res.current_day > 15) {
+                                prorateInfoBox.className = "alert alert-success mt-2";
 
-                    if (prorateRadioYes.checked && currentDay > 15) {
-                        let templateProrate = `{!! __('customer.wizard.message.prorate_active') !!}`;
+                                templateText = `
+                <div class="d-flex flex-column gap-1 text-sm text-muted">
+                    <div class="fw-bold text-success mb-1">✓ ${res.calculation_type_label} Aktif</div>
+                    <div>• Harga paket asli: <b>Rp ${res.package_price_raw.toLocaleString()}</b></div>
+                    <div>• Periode aktif berjalan: <b>${res.active_days} hari</b> dari total ${res.total_days} hari (${res.current_month})</div>
+                    <div>• Hitung murni prorate: <span class="text-decoration-underline">(${res.active_days}/${res.total_days}) x Rp ${res.package_price_raw.toLocaleString()}</span> = <b>Rp ${res.exact_prorate_raw.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</b></div>
+                    <div>• Pembulatan kelipatan Rp 500 ke atas: <b>Rp ${res.price_before_discount.toLocaleString()}</b></div>
+                    ${res.discount_amount > 0 ? `<div class="text-danger">• Potongan Diskon Membership: <b>- Rp ${res.discount_amount.toLocaleString()}</b></div>` : ''}
+                    <hr class="my-1 border-secondary-subtle">
+                    <div class="text-dark fw-bold">Total Biaya Bulan Pertama: Rp ${res.price_before_discount.toLocaleString()} ${res.discount_amount > 0 ? `- Rp ${res.discount_amount.toLocaleString()}` : ''} = <span class="text-success fs-5">Rp ${res.price_final.toLocaleString()}</span></div>
+                </div>
+            `;
+                            }
+                            // Pilihan B: Menggunakan Full Cost Reguler (Tanpa Prorate)
+                            else {
+                                prorateInfoBox.className = "alert alert-info mt-2";
 
-                        // 💡 Gunakan .replaceAll() alih-alih .replace()
-                        templateProrate = templateProrate
-                            .replaceAll(':currentDay', currentDay)
-                            .replaceAll(':totalDaysInMonth', totalDaysInMonth)
-                            .replaceAll(':currentMonthName', currentMonthName)
-                            .replaceAll(':activeDays', activeDays)
-                            .replaceAll(':basePriceAfterDiscount', basePriceAfterDiscount.toLocaleString())
-                            .replaceAll(':exactProratePrice', exactProratePrice.toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                            }))
-                            .replaceAll(':roundedProratePrice', roundedProratePrice.toLocaleString())
-                            .replaceAll(':nominalDipotong', nominalDipotong.toLocaleString());
+                                templateText = `
+                <div class="d-flex flex-column gap-1 text-sm text-muted">
+                    <div class="fw-bold text-primary mb-1">• ${res.calculation_type_label} Aktif</div>
+                    <div>• Harga paket penuh sebulan: <b>Rp ${res.package_price_raw.toLocaleString()}</b></div>
+                    ${res.discount_amount > 0 ? `<div class="text-danger">• Potongan Diskon Membership: <b>- Rp ${res.discount_amount.toLocaleString()}</b></div>` : ''}
+                    <hr class="my-1 border-secondary-subtle">
+                    <div class="text-dark fw-bold">Total Biaya Bulan Pertama: <span class="text-primary fs-5">Rp ${res.price_final.toLocaleString()}</span></div>
+                </div>
+            `;
+                            }
 
-                        prorateSummaryText.innerHTML = templateProrate;
-                        prorateInfoBox.className = "alert alert-success mt-2";
-
-                    } else {
-                        let templateFullCost = `{!! __('customer.wizard.message.full_cost_active') !!}`;
-
-                        // 💡 Di sini juga ganti dengan .replaceAll()
-                        templateFullCost = templateFullCost
-                            .replaceAll(':basePriceAfterDiscount', basePriceAfterDiscount.toLocaleString())
-                            .replaceAll(':activeDays', activeDays);
-
-                        prorateSummaryText.innerHTML = templateFullCost;
-                        prorateInfoBox.className = "alert alert-info mt-2";
-                    }
+                            prorateSummaryText.innerHTML = templateText;
+                        })
+                        .catch(error => {
+                            console.error("Error calculating prorate:", error);
+                        });
                 }
 
                 // ===================================

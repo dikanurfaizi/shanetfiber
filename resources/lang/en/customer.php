@@ -325,7 +325,12 @@ return [
             'prorate_details' => 'Prorate Details',
             'date' => 'Date',
             'until' => 'until',
-            'active_day' => 'Active Days'
+            'active_day' => 'Active Days',
+            'basic_price' => 'Basic Price',
+            'prorate_formula' => 'Prorate Formula',
+            'prorate_price_rounded' => 'Prorate Price Rounded',
+            'day' => 'Day',
+            'month' => 'Month'
         ],
         'placeholder' => [
             'select_pic' => 'Select PIC / Responsibility',

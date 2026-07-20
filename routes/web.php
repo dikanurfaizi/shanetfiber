@@ -277,16 +277,20 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::patch('/members/{member}/deactivate', [MembershipController::class, 'deactivate'])->name('members.deactivate');
 
         // ==================== Wizard ===============================
-        Route::get('customers/wizard/step1', [CustomerWizardController::class, 'step1'])->name('wizard.step1');
-        Route::post('customers/wizard/step1', [CustomerWizardController::class, 'step1Post']);
-        Route::get('customers/wizard/step2', [CustomerWizardController::class, 'step2'])->name('wizard.step2');
-        Route::post('customers/wizard/step2', [CustomerWizardController::class, 'step2Post']);
-        Route::get('customers/wizard/step3', [CustomerWizardController::class, 'step3'])->name('wizard.step3');
-        Route::post('customers/wizard/step3', [CustomerWizardController::class, 'step3Post']);
-        Route::get('customers/wizard/step4', [CustomerWizardController::class, 'step4'])->name('wizard.step4');
-        Route::post('customers/wizard/step4', [CustomerWizardController::class, 'step4Post']);
-        Route::get('/customer/wizard/step5', [CustomerWizardController::class, 'step5'])->name('wizard.step5');
-        Route::post('/customer/wizard/process', [CustomerWizardController::class, 'process'])->name('wizard.process');
+        Route::prefix('customers/wizard')->name('wizard.')->group(function () {
+            Route::get('step1', [CustomerWizardController::class, 'step1'])->name('step1');
+            Route::post('step1', [CustomerWizardController::class, 'step1Post']);
+            Route::get('step2', [CustomerWizardController::class, 'step2'])->name('step2');
+            Route::post('step2', [CustomerWizardController::class, 'step2Post']);
+            Route::get('step3', [CustomerWizardController::class, 'step3'])->name('step3');
+            Route::post('step3', [CustomerWizardController::class, 'step3Post']);
+            Route::get('step4', [CustomerWizardController::class, 'step4'])->name('step4');
+            Route::post('step4', [CustomerWizardController::class, 'step4Post']);
+            Route::get('step5', [CustomerWizardController::class, 'step5'])->name('step5');
+
+            Route::post('process', [CustomerWizardController::class, 'process'])->name('process');
+            Route::post('calculate-prorate', [CustomerWizardController::class, 'calculateProrate'])->name('calculate-prorate');
+        });
 
         // ==================== BILLING MANAGEMENT ====================
         Route::resource('billings', BillingController::class);
