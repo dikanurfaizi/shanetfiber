@@ -34,7 +34,7 @@ class OverdueBroadcastNotificationService
                 'service' => 'OverdueBroadcast',
             ], 200, 'Starting overdue broadcast notifications engine', $traceId, $timer->lap());
 
-            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, 'broadcast_awal_bulan') ?? [null, null, null];
+            [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, 'broadcast_akhir_bulan') ?? [null, null, null];
 
             if (!$gateway || !$account || !$number) {
                 LogHelper::logWarning(null, [
