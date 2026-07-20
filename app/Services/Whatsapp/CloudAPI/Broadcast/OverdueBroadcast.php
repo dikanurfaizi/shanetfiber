@@ -8,12 +8,10 @@ use App\Helpers\LogHelper;
 use App\Jobs\Whatsapp\CloudAPI\Broadcast\OverdueReminderJob;
 use App\Models\Whatsapp\WhatsappGateway;
 use App\Services\Whatsapp\CloudAPI\Collectors\OverdueBillingCollector;
-use App\Services\Whatsapp\CloudAPI\Collectors\AdminBankCollector; // 💡 Inject collector bank
-// 💡 Gunakan Trait reusable
+use App\Services\Whatsapp\CloudAPI\Collectors\AdminBankCollector;
 use App\Services\Whatsapp\CloudAPI\Broadcast\Traits\MapsBroadcastBankPayload;
 use App\Services\Whatsapp\CloudAPI\Broadcast\Traits\ResolvesAdminContact;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class OverdueBroadcast
 {
@@ -21,7 +19,7 @@ class OverdueBroadcast
 
     public function __construct(
         private OverdueBillingCollector $collector,
-        private AdminBankCollector $bankCollector // 💡 Daftarkan di constructor
+        private AdminBankCollector $bankCollector
     ) {}
 
     public function run(string $traceId)
@@ -72,12 +70,8 @@ class OverdueBroadcast
         $formatter = new FormatReceiver;
         $overrideNumber    = config('messaging.phone_number_override', null);
 
-        // Ambil timing dasar delay antrean
-        $delay = $this->getNextDelay('notification', $traceId);
-        $delayInSeconds = 0;
-
         // ===============================================================
-        // PROCESS ENGINE LOOP
+        // PROCESS ENGINE LOOP (Delay-Free Throttling)
         // ===============================================================
         foreach ($billings as $idx => $data) {
 
@@ -107,10 +101,9 @@ class OverdueBroadcast
                 'index'         => $idx,
                 'customer_id'   => $data->customer_id,
                 'template'      => $resolvedTemplate,
-                'delay_at'      => $delay->toDateTimeString(),
-            ], 200, '[OverdueBroadcast] Dispatch job to queue', $traceId, $timer->lap());
+            ], 200, '[OverdueBroadcast] Dispatch job to queue instantly', $traceId, $timer->lap());
 
-            // Kirim payload lengkap menuju job antrean background
+            // 💡 Diperbaiki: Mengirim job langsung ke queue tanpa rantai ->delay()
             OverdueReminderJob::dispatch(
                 contact: $recipient,
                 customerId: (string) $data->customer_id,
@@ -120,33 +113,13 @@ class OverdueBroadcast
                 note: 'penghentian layanan internet',
                 templateName: $resolvedTemplate,
                 account: $account,
-                bankPayload: $bankPayload,          // 💡 Parameter Baru
-                contactAdmin: $contactAdmin,        // 💡 Parameter Baru
-                contactWhatsapp: $contactWhatsapp   // 💡 Parameter Baru
-            )
-                ->delay($delay)
-                ->onQueue('notification');
-
-            // Tambahkan increment jeda rilis antrean agar tidak menumpuk serentak
-            $delayInSeconds += 2;
-            $delay = now()->addSeconds($delayInSeconds);
+                bankPayload: $bankPayload,
+                contactAdmin: $contactAdmin,
+                contactWhatsapp: $contactWhatsapp
+            )->onQueue('notification');
         }
 
-        LogHelper::logInfo(null, [], 900, '[OverdueBroadcast] Finished dispatch loop', $traceId, $timer->lap());
-    }
-
-    private function getNextDelay(string $queue, string $traceId): Carbon
-    {
-        $last = DB::table('jobs')
-            ->where('queue', $queue)
-            ->orderByDesc('available_at')
-            ->first();
-
-        if (!$last || !$last->reserved_at) {
-            return now();
-        }
-
-        return Carbon::createFromTimestamp($last->reserved_at)->addSeconds(1);
+        LogHelper::logInfo(null, [], 900, '[OverdueBroadcast] Finished dispatch loop safely without application side delays', $traceId, $timer->lap());
     }
 
     private function currency(int|float|null $n): string

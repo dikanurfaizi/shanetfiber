@@ -12,25 +12,30 @@ use Carbon\Carbon;
 class BillingReminderCollector
 {
     /**
-     * Mengumpulkan data billing berdasarkan 3 slug template anti-duplikasi hari ini (Maksimal 10 data).
+     * Mengumpulkan data billing berdasarkan 3 slug template anti-duplikasi hari ini (Tanpa Limit).
      */
     public function collect(Carbon $today, string $slug1, string $slug2, string $slug3): Collection
     {
         $timer = new ExecutionTimer();
         $slugs = [$slug1, $slug2, $slug3];
+        $todayStr = $today->toDateString();
+
+        // Mengoptimalkan filter tanggal (<= 15) menjadi format range ISO Y-m-d agar index database terpakai
+        $startRange = $today->copy()->startOfMonth()->toDateString(); // Tanggal 1 bulan ini
+        $endRange   = $today->copy()->day(15)->toDateString();       // Tanggal 15 bulan ini
 
         $query = Billing::query()
             ->select([
                 'customers.id as customer_id',
                 'customers.name as customer_name',
                 'customers.contact as customer_contact',
-                'customers.user_id as user_id', // 💡 Wajib di-select untuk kebutuhan AdminBankCollector
+                'customers.user_id as user_id',
                 'p.name as package_name',
 
-                // 💡 Menggunakan SUM agar jika ada double tagihan (PL & BL), totalnya otomatis digabung
+                // Menggunakan SUM agar jika ada double tagihan (PL & BL), totalnya otomatis digabung
                 DB::raw('SUM(billings.total_amount) as total'),
 
-                // 💡 Menggunakan MAX untuk mengambil tanggal terjauh/terakhir jika ada dua tagihan
+                // Menggunakan MAX untuk mengambil tanggal terjauh/terakhir jika ada dua tagihan
                 DB::raw('MAX(billings.due_date) as due_date'),
                 DB::raw('MAX(billings.paylater_until) as paylater_until'),
                 DB::raw('MAX(COALESCE(billings.paylater_until, billings.due_date)) as final_due_date'),
@@ -45,36 +50,32 @@ class BillingReminderCollector
             })
             ->leftJoin('packages as p', 'cs.package_id', '=', 'p.id')
 
-            // --- FILTER SAKTI: Cek apakah sudah pernah dikirim salah satu dari 3 template hari ini ---
-            ->leftJoin('message_events as me', function ($join) use ($today, $slugs) {
-                $join->on('billings.customer_id', '=', 'me.customer_id')
-                    ->whereIn('me.message_type', $slugs) // 💡 Menggunakan whereIn untuk 3 jenis template sekaligus
-                    ->whereDate('me.created_at', $today)
+            // 👉 SOLUSI TOTAL ANTI-DUPLIKASI: Menggunakan WHERE NOT EXISTS
+            // Menjamin data yang sudah sukses, failed, atau pending hari ini dengan tipe slug tersebut tidak akan lolos query.
+            ->whereNotExists(function ($q) use ($slugs, $todayStr) {
+                $q->select(DB::raw(1))
+                    ->from('message_events as me')
+                    ->whereColumn('me.customer_id', 'billings.customer_id')
+                    ->whereIn('me.message_type', $slugs)
+                    ->whereDate('me.created_at', $todayStr)
                     ->whereIn('me.status', ['success', 'failed', 'pending']);
             })
 
-            ->whereNull('me.id')
-
-            // --- rule bisnis reminder (BL <= 15 ATAU PL <= 15) ---
-            ->where(function ($q) use ($today) {
-                // Kasus BL (Belum Lunas)
-                $q->where(function ($q) use ($today) {
-                    $q->where('billings.status', 'BL')
-                        ->whereMonth('billings.due_date', $today->month)
-                        ->whereYear('billings.due_date', $today->year)
-                        ->whereDay('billings.due_date', '<=', 15);
+            // --- OPTIMASI QUERY: Menggunakan WhereBetween menggantikan whereMonth/whereDay agar INDEX pada table Billing tetap aktif ---
+            ->where(function ($q) use ($startRange, $endRange) {
+                // Kasus BL (Belum Lunas) jatuh tempo antara tanggal 1 - 15 bulan ini
+                $q->where(function ($subQ) use ($startRange, $endRange) {
+                    $subQ->where('billings.status', 'BL')
+                        ->whereBetween('billings.due_date', [$startRange, $endRange]);
                 })
-                    // Kasus PL (Paylater)
-                    ->orWhere(function ($q) use ($today) {
-                        $q->where('billings.status', 'PL')
-                            ->whereMonth('billings.paylater_until', $today->month)
-                            ->whereYear('billings.paylater_until', $today->year)
-                            ->whereDay('billings.paylater_until', '<=', 15);
+                    // Kasus PL (Paylater) jatuh tempo antara tanggal 1 - 15 bulan ini
+                    ->orWhere(function ($subQ) use ($startRange, $endRange) {
+                        $subQ->where('billings.status', 'PL')
+                            ->whereBetween('billings.paylater_until', [$startRange, $endRange]);
                     });
             })
 
-            // 🔥 GROUP BY DIKUNCI PER CUSTOMER & PAKET
-            // Menghapus 'billings.id' dari group by agar data PL & BL milik customer yang sama melebur jadi 1 baris
+            // GROUP BY DIKUNCI PER CUSTOMER & PAKET
             ->groupBy([
                 'customers.id',
                 'customers.name',
@@ -83,19 +84,20 @@ class BillingReminderCollector
                 'p.name'
             ]);
 
-        // 💡 Di-limit maksimal 10 data per eksekusi untuk menghindari throttling/pembatasan billing dari Meta
-        $data = $query->limit(10)->get();
+        // 💡 Diperbaiki: ->limit(10) dihapus total agar mengambil seluruh data tertunggak
+        $data = $query->get();
 
         // --- logging status ---
         LogHelper::logInfo(
             null,
             [
-                'date'   => $today->toDateString(),
-                'slugs'  => $slugs,
-                'count'  => $data->count(),
+                'date'         => $todayStr,
+                'slugs'        => $slugs,
+                'count'        => $data->count(),
+                'execution_ms' => $timer->lap()
             ],
             120,
-            '[BillingReminderCollector] Result collected successfully with throttle limit'
+            '[BillingReminderCollector] Result collected successfully without limit and fully optimized query execution'
         );
 
         return $data;

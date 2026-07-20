@@ -21,7 +21,7 @@ class ActiveCustomerCollector
     {
         $testMode = config('messaging.reminder_allow_test', false);
 
-        // Gabungkan semua slug (termasuk messageType) ke dalam satu array untuk keperluan logging
+        // Gabungkan semua slug untuk filter anti-double send
         $allSlugs = array_merge([$messageType], $slugs);
 
         $query = Customer::query()
@@ -41,39 +41,37 @@ class ActiveCustomerCollector
             })
             ->leftJoin('packages as p', 'cs.package_id', '=', 'p.id')
 
-            // --- FILTER ANTI-DOUBLE (MESSAGE EVENTS) ---
-            // Menggunakan array $allSlugs secara dinamis di dalam query
-            ->leftJoin('message_events as me', function ($join) use ($messageType, $slugs) {
-                $join->on('customers.id', '=', 'me.customer_id')
-                    ->whereIn('me.status', ['success', 'failed', 'pending'])
-                    ->where(function ($q) use ($messageType, $slugs) {
-                        // Cek apakah customer sudah pernah menerima slug utama
-                        $q->where('me.message_type', '=', $messageType);
-
-                        // Jika ada tambahan template slugs lain, masukkan ke dalam orWhereIn
-                        if (!empty($slugs)) {
-                            $q->orWhereIn('me.message_type', $slugs);
-                        }
-                    });
+            // 👉 OPTIMASI 1: Ganti leftJoin message_events menjadi WHERE NOT EXISTS global
+            // Kunci performa: Database langsung skip customer jika pernah menerima salah satu slug ini (sepanjang waktu)
+            ->whereNotExists(function ($q) use ($allSlugs) {
+                $q->select(DB::raw(1))
+                    ->from('message_events as me')
+                    ->whereColumn('me.customer_id', 'customers.id')
+                    ->whereIn('me.message_type', $allSlugs)
+                    ->whereIn('me.status', ['success', 'failed', 'pending']);
             })
 
-            // --- JOIN DAN FILTER BILLING STATUS ---
-            // Menggunakan join biasa (Inner Join) karena status wajib berstatus BL atau PL
-            ->join('billings as b', 'customers.id', '=', 'b.customer_id')
+            // 👉 OPTIMASI 2: Ganti Inner Join billings menjadi WHERE EXISTS
+            // Ini jauh lebih cepat karena mencegah penggelembungan memori row sebelum dilakukan groupBy
+            ->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('billings as b')
+                    ->whereColumn('b.customer_id', 'customers.id')
+                    ->whereIn('b.status', ['BL', 'PL']);
+            })
 
-            // --- CONDITIONS / WHERE CLAUSES ---
-            ->whereNull('me.id')
+            // --- STANDAR KONDISI BISNIS ---
             ->where('customers.user_id', '!=', 1)
-            ->whereIn('b.status', ['BL', 'PL']);
+            ->whereNotNull('customers.contact')
+            ->where('customers.is_opt_out', 0)
+            ->groupBy([
+                'customers.id',
+                'customers.name',
+                'customers.contact',
+                'customers.user_id'
+            ]);
 
-        $query->groupBy([
-            'customers.id',
-            'customers.name',
-            'customers.contact',
-            'customers.user_id'
-        ]);
-
-        // Mengambil semua data tanpa limitasi kuota penarikan data
+        // Mengambil semua data secara instan
         $data = $query->get();
 
         // ===============================================================
@@ -86,15 +84,15 @@ class ActiveCustomerCollector
         }
 
         LogHelper::logInfo(
-            'ActiveCustomerCollector', // Mengisi channel name log agar tidak null
+            'ActiveCustomerCollector',
             [
                 'date'      => $today->toDateString(),
                 'count'     => $data->count(),
                 'test_mode' => $testMode ? 'ON' : 'OFF',
-                'slugs'     => $allSlugs // Log semua slug yang dilewati secara dinamis
+                'slugs'     => $allSlugs
             ],
             120,
-            '[ActiveCustomerCollector] Dynamic customer data collected successfully'
+            '[ActiveCustomerCollector] Dynamic active customer data collected with optimized existential constraints'
         );
 
         return $data;

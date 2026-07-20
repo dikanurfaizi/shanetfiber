@@ -11,21 +11,22 @@ use Carbon\Carbon;
 class OverdueBillingCollector
 {
     /**
-     * Mengumpulkan data billing overdue berdasarkan 3 tipe template anti-duplikasi (Maksimal 10 data).
+     * Mengumpulkan data billing overdue berdasarkan 3 tipe template anti-duplikasi (Tanpa Limit).
      */
     public function collect(Carbon $today, string $slug1, string $slug2, string $slug3): Collection
     {
         $slugs = [$slug1, $slug2, $slug3];
+        $todayStr = $today->toDateString();
 
         $query = Billing::query()
             ->select([
                 'customers.id as customer_id',
                 'customers.name as customer_name',
                 'customers.contact as customer_contact',
-                'customers.user_id as user_id', // 💡 Diperlukan oleh AdminBankCollector
+                'customers.user_id as user_id',
                 'p.name as package_name',
 
-                // 💡 Menggabungkan nominal jika customer memiliki lebih dari 1 tagihan tertunggak
+                // Menggabungkan nominal jika customer memiliki lebih dari 1 tagihan tertunggak
                 DB::raw('SUM(billings.total_amount) as total'),
 
                 DB::raw('MAX(billings.due_date) as due_date'),
@@ -42,31 +43,32 @@ class OverdueBillingCollector
             })
             ->leftJoin('packages as p', 'cs.package_id', '=', 'p.id')
 
-            // --- filter anti-double send hari ini ---
-            ->leftJoin('message_events as me', function ($join) use ($today, $slugs) {
-                $join->on('billings.customer_id', '=', 'me.customer_id')
-                    ->whereIn('me.message_type', $slugs) // 💡 Mendukung pencocokan multi-template
-                    ->whereDate('me.created_at', $today)
+            // 👉 SOLUSI UTAMA: Mengunci anti-duplikasi menggunakan WHERE NOT EXISTS
+            // Menjamin data yang sudah sukses, failed, atau pending hari ini dengan tipe slug tersebut tidak akan pernah lolos query.
+            ->whereNotExists(function ($q) use ($slugs, $todayStr) {
+                $q->select(DB::raw(1))
+                    ->from('message_events as me')
+                    ->whereColumn('me.customer_id', 'billings.customer_id')
+                    ->whereIn('me.message_type', $slugs)
+                    ->whereDate('me.created_at', $todayStr)
                     ->whereIn('me.status', ['success', 'failed', 'pending']);
             })
 
-            ->whereNull('me.id')
-
-            // --- rule bisnis overdue (sesuai kondisi logikamu) ---
-            ->where(function ($q) use ($today) {
-                // BL
-                $q->where(function ($q) use ($today) {
-                    $q->where('billings.status', 'BL')
-                        ->whereDate('billings.due_date', '<', $today); // 💡 Koreksi: Overdue harusnya '<' bukan '>='
+            // --- rule bisnis overdue ---
+            ->where(function ($q) use ($todayStr) {
+                // Status BL (Billing)
+                $q->where(function ($subQ) use ($todayStr) {
+                    $subQ->where('billings.status', 'BL')
+                        ->whereDate('billings.due_date', '<', $todayStr);
                 })
-                    // PL
-                    ->orWhere(function ($q) use ($today) {
-                        $q->where('billings.status', 'PL')
-                            ->whereDate('billings.paylater_until', '<', $today);
+                    // Status PL (Paylater)
+                    ->orWhere(function ($subQ) use ($todayStr) {
+                        $subQ->where('billings.status', 'PL')
+                            ->whereDate('billings.paylater_until', '<', $todayStr);
                     });
             })
 
-            // 🔥 Leburkan data billing ID agar me-return tepat 1 baris per customer
+            // Leburkan data billing ID agar me-return tepat 1 baris per customer
             ->groupBy([
                 'customers.id',
                 'customers.name',
@@ -75,19 +77,19 @@ class OverdueBillingCollector
                 'p.name'
             ]);
 
-        // 💡 Di-limit maksimal 10 data per eksekusi untuk menghindari throttling/pembatasan billing dari Meta
-        $data = $query->limit(10)->get();
+        // 💡 Diperbaiki: ->limit(10) telah dihapus total agar mengambil seluruh data
+        $data = $query->get();
 
         // --- logging status ---
         LogHelper::logInfo(
             null,
             [
-                'date'   => $today->toDateString(),
+                'date'   => $todayStr,
                 'slugs'  => $slugs,
                 'count'  => $data->count(),
             ],
             120,
-            '[OverdueBillingCollector] Result collected successfully with throttle limit'
+            '[OverdueBillingCollector] All matching overdue results collected successfully without throttling'
         );
 
         return $data;
