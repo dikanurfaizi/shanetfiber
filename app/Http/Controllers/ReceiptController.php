@@ -145,7 +145,7 @@ class ReceiptController extends Controller
         $query->orderBy('payment_time', 'desc');
 
         // === 🔢 Hitung total dan ambil data ===
-        $totalPrice = $query->sum('package_price');
+        $totalPrice = $query->sum('price_after_discount');
         $receipts = $query->paginate($paginate);
 
         $periods = Receipt::select('periode')
