@@ -280,18 +280,20 @@ class BillingController extends Controller
             return redirect()->back()->with('error', __('payment.mikrotik.not_found'));
         }
 
-        try {
-            $client = MikrotikService::getMikrotik($mikrotik, $traceId);
-        } catch (\Throwable $e) {
-            LogHelper::logError('BillingController::payment', [
-                'billing_id' => $billing->id,
-                'router_id' => $mikrotik->id,
-                'host' => $mikrotik->host,
-                'exception' => get_class($e),
-                'message' => $e->getMessage()
-            ], 500, 'Mikrotik API connection failed during payment authorization.', $traceId, $timer->lap());
+        if (config('services.shanetfiber.allow_mikrotik_actions')) {
+            try {
+                $client = MikrotikService::getMikrotik($mikrotik, $traceId);
+            } catch (\Throwable $e) {
+                LogHelper::logError('BillingController::payment', [
+                    'billing_id' => $billing->id,
+                    'router_id' => $mikrotik->id,
+                    'host' => $mikrotik->host,
+                    'exception' => get_class($e),
+                    'message' => $e->getMessage()
+                ], 500, 'Mikrotik API connection failed during payment authorization.', $traceId, $timer->lap());
 
-            return redirect()->back()->with('error', __('payment.mikrotik.connection_failed'));
+                return redirect()->back()->with('error', __('payment.mikrotik.connection_failed'));
+            }
         }
 
         // === 3. NOT ACTIVE PERIOD FLOW ===
@@ -320,7 +322,10 @@ class BillingController extends Controller
                 'updated_by' => $userId
             ], 200, 'Billing processed as no usage (Not Active Period).', $traceId, $timer->lap());
 
-            return redirect()->back()->with('success', __('payment.success.no_usage', ['name' => $billing->customer_name]));
+            return redirect()->back()->with('success', __('payment.success.no_usage', [
+                'name' => $billing->customer->name,
+                'periode' => $billing->billingSubscription?->billingPeriode?->name
+            ]));
         }
 
         // === 4. MAIN PAYMENT FLOW ===

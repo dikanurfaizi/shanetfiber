@@ -8,7 +8,7 @@ return [
         'query_failed'      => "Failed to verify the active status of customer ':username' on the router.",
     ],
     'success' => [
-        'no_usage'  => "Status billing for :name successfully changed to 'No Usage' for this period.",
+        'no_usage'  => "The billing status for :name was successfully changed to No Usage for :periode",
         'processed' => 'Payment for :name processed successfully.',
     ],
     'errors' => [

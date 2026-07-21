@@ -8,7 +8,7 @@ return [
         'query_failed'      => "Gagal memverifikasi status aktif pelanggan ':username' pada router.",
     ],
     'success' => [
-        'no_usage'  => "Status billing untuk :name berhasil diubah menjadi 'No Usage' pada periode ini.",
+        'no_usage'  => "Status penagihan untuk :name berhasil diubah menjadi Tidak Ada Penggunaan untuk :periode",
         'processed' => 'Pembayaran untuk :name berhasil diproses.',
     ],
     'errors' => [
