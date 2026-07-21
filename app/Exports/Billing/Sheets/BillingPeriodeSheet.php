@@ -88,6 +88,7 @@ class BillingPeriodeSheet implements
             'Tax (IDR)',
             'Grand Total (IDR)',
             'Status',
+            'Payment Method',
             'Payment Time',
             'Teller Name',
             'Admin Name',
@@ -149,6 +150,7 @@ class BillingPeriodeSheet implements
             (float) ($billing->total_amount ?? 0),
 
             $statusMap[$billing->status] ?? $billing->status,
+            strtoupper($billing->billingPayment?->receipt?->bank_name ?? $billing->billingPayment?->receipt?->payment_methode ?? ''),
             $billing->billingPayment?->payment_time
                 ? Carbon::parse($billing->billingPayment->payment_time)->format('m/d/Y')
                 : '-',
@@ -181,7 +183,7 @@ class BillingPeriodeSheet implements
     {
         $sheet->freezePane('A2');
 
-        $sheet->getStyle('A1:R1')->applyFromArray([
+        $sheet->getStyle('A1:S1')->applyFromArray([
             'font' => ['bold' => true],
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_CENTER,
