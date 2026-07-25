@@ -440,7 +440,33 @@ class CustomerActivationService
                 return ['error' => $error];
             }
 
-            $profile = Package::where('id', $customer->activeSubscription->package_id)->value('profile');
+            // Ambil subscription berdasarkan logic fallback
+            $subscription = $customer->currentSubscription();
+
+            if (!$subscription) {
+                $error = 'No subscription found for customer ID: ' . $customer->id;
+                LogHelper::logError(null, ['customer_id' => $customer->id], 400, $error, $traceId, $timer->lap());
+
+                return ['error' => $error];
+            }
+
+            // --- Logic Penentuan Profile ---
+            if ($subscription->status === 'active') {
+                // Jika aktif, pakai profile paket bawaannya
+                $profile = $subscription->package?->profile;
+            } else {
+                // Jika tidak aktif (paused, terminated, dll), pakai profile dari Package bernamakan 'Expire'
+                $profile = Package::where('name', 'Expire')->value('profile');
+
+                // Opsional: Validasi jika paket 'Expire' tidak ditemukan di DB
+                if (!$profile) {
+                    $error = "Package 'Expire' not found or has no profile setting.";
+                    LogHelper::logError(null, ['customer_id' => $customer->id], 400, $error, $traceId, $timer->lap());
+
+                    return ['error' => $error];
+                }
+            }
+
             $commentPayment = $this->getCommentPayment($mikrotikId);
 
             return match ($customer->internet_service) {
@@ -621,5 +647,121 @@ class CustomerActivationService
         ], $context);
 
         LogHelper::logError(null, $payload, 500, $message, $traceId, $timer?->lap());
+    }
+
+    /**
+     * Memproses billing sebagai 'Not Active Period' (No Usage):
+     * 1. Update DB (Billing: VD, BillingSubscription: expired, CustomerSubscription: paused)
+     * 2. Update secret/profile di Mikrotik menjadi 'Expire'
+     */
+    public function processNotActivePeriod(Billing $billing, string $traceId): array
+    {
+        $timer = new ExecutionTimer();
+        $userId = auth()->id();
+
+        try {
+            // 1. Eksekusi perubahan Database dalam DB Transaction
+            DB::transaction(function () use ($billing, $userId, $traceId, $timer) {
+                $billing->update([
+                    'updated_by' => $userId,
+                    'status'     => 'VD',
+                    'updated_at' => now(),
+                ]);
+
+                $billing->billingSubscription?->update([
+                    'updated_by' => $userId,
+                    'status'     => 'expired',
+                ]);
+
+                $billing->billingSubscription?->customerSubscription?->update([
+                    'status'        => 'paused',
+                    'terminated_at' => now(),
+                ]);
+
+                LogHelper::logInfo(null, [
+                    'billing_id' => $billing->id,
+                    'status'     => 'VD',
+                    'updated_by' => $userId,
+                ], 200, 'Billing processed as no usage (Not Active Period).', $traceId, $timer->lap());
+            });
+
+            // 2. Side Effect Mikrotik (di luar DB Transaction)
+            if (config('services.shanetfiber.allow_mikrotik_actions') && $billing->customer) {
+                $this->updateSecretToExpire($billing->customer, $traceId);
+            }
+
+            return [
+                'success' => true,
+                'message' => 'Successfully processed not active period',
+            ];
+        } catch (\Throwable $e) {
+            $this->logException($e, 'Failed to process not active period billing', [
+                'billing_id' => $billing->id,
+            ], $traceId, $timer);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Update secret customer di Mikrotik menjadi Profile Expire.
+     */
+    public function updateSecretToExpire(Customer $customer, string $traceId): array
+    {
+        $timer = new ExecutionTimer();
+        $mikrotikId = $customer->mikrotik_id;
+
+        try {
+            // 1. Ambil Router Mikrotik
+            $router = Mikrotik::find($mikrotikId);
+
+            if (!$router || $router->disabled === 'true') {
+                $error = 'Server ' . ($router->name ?? $mikrotikId) . ' is disabled or not found, please enable first.';
+                LogHelper::logError(null, ['server' => $router->name ?? null], 400, $error, $traceId, $timer->lap());
+
+                return ['error' => $error];
+            }
+
+            // 2. Ambil profile dari Package 'Expire'
+            $expireProfile = Package::where('name', 'Expire')->value('profile');
+
+            if (!$expireProfile) {
+                $error = "Package 'Expire' not found or has no profile setting.";
+                LogHelper::logError(null, ['customer_id' => $customer->id], 400, $error, $traceId, $timer->lap());
+
+                return ['error' => $error];
+            }
+
+            $commentPayment = $this->getCommentPayment($mikrotikId);
+
+            // 3. Eksekusi update/export secret berdasarkan tipe layanan internet
+            $result = match ($customer->internet_service) {
+                'ppp'       => $this->exportPppSecret($customer, $router, $expireProfile, $commentPayment, $traceId),
+                'ip_static' => $this->exportIpStaticSecret($customer, $router, $expireProfile, $commentPayment, $traceId),
+                default     => ['error' => "Unsupported internet service type: {$customer->internet_service}"],
+            };
+
+            if (isset($result['error'])) {
+                LogHelper::logError(null, [
+                    'customer_id' => $customer->id,
+                    'server'      => $router->name,
+                    'service'     => $customer->internet_service,
+                ], 400, $result['error'], $traceId, $timer->lap());
+
+                return ['error' => $result['error']];
+            }
+
+            LogHelper::logInfo(null, [
+                'customer_id' => $customer->id,
+                'server'      => $router->name,
+                'profile'     => $expireProfile,
+            ], 200, 'Customer secret updated to Expire successfully', $traceId, $timer->lap());
+
+            return ['success' => 'Successfully updated customer secret to Expire profile'];
+        } catch (\Throwable $e) {
+            $this->logException($e, 'Failed to update customer secret to Expire', ['customer_id' => $customer->id], $traceId, $timer);
+
+            return ['error' => 'Failed to update customer secret to Expire: ' . $e->getMessage()];
+        }
     }
 }

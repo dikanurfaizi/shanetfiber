@@ -23,6 +23,7 @@ use App\Services\Billings\BillingService;
 use App\Services\Billings\PayLaterService;
 use App\Services\Billings\PaymentCancellationService;
 use App\Services\Billings\PaymentService;
+use App\Services\Customers\CustomerActivationService;
 use App\Services\Messaging\Collectors\AdminBankCollector;
 use App\Services\Routerboard\MikrotikService;
 use App\Services\Routerboard\Ppp\SecretService;
@@ -42,6 +43,7 @@ class BillingController extends Controller
     private BillingQueryService $billingQueryService;
     private BillingReportService $billingReportService;
     private PayLaterService $payLaterService;
+    private CustomerActivationService $customerActivationService;
 
     public function __construct(
         BillingService $billingService,
@@ -49,7 +51,8 @@ class BillingController extends Controller
         PaymentCancellationService $paymentCancellationService,
         BillingQueryService $billingQueryService,
         BillingReportService $billingReportService,
-        PayLaterService $payLaterService
+        PayLaterService $payLaterService,
+        CustomerActivationService $customerActivationService
     ) {
         $this->billingService = $billingService;
         $this->paymentService = $paymentService;
@@ -57,6 +60,7 @@ class BillingController extends Controller
         $this->billingQueryService = $billingQueryService;
         $this->billingReportService = $billingReportService;
         $this->payLaterService = $payLaterService;
+        $this->customerActivationService = $customerActivationService;
 
         $this->middleware('permission:billing-list|billing-create|billing-edit|billing-delete', ['only' => ['index', 'show']]);
         $this->middleware('permission:billing-create', ['only' => ['create', 'store', 'create_one', 'store_one']]);
@@ -298,33 +302,12 @@ class BillingController extends Controller
 
         // === 3. NOT ACTIVE PERIOD FLOW ===
         if ($paymentMethod === 'not-active-periode') {
-            $userId = auth()->user()->id;
-
-            $billing->update([
-                'updated_by' => $userId,
-                'status' => 'VD',
-                'updated_at' => now()
-            ]);
-
-            $billing->billingSubscription?->update([
-                'updated_by' => $userId,
-                'status' => 'expired'
-            ]);
-
-            $billing->billingSubscription?->customerSubscription?->update([
-                'status' => 'paused',
-                'terminated_at' => now(),
-            ]);
-
-            LogHelper::logInfo('BillingController::payment', [
-                'billing_id' => $billing->id,
-                'status' => 'VD',
-                'updated_by' => $userId
-            ], 200, 'Billing processed as no usage (Not Active Period).', $traceId, $timer->lap());
+            // Panggil service untuk handle DB & Mikrotik sekaligus
+            $this->customerActivationService->processNotActivePeriod($billing, $traceId);
 
             return redirect()->back()->with('success', __('payment.success.no_usage', [
-                'name' => $billing->customer->name,
-                'periode' => $billing->billingSubscription?->billingPeriode?->name
+                'name'    => $billing->customer->name,
+                'periode' => $billing->billingSubscription?->billingPeriode?->name,
             ]));
         }
 

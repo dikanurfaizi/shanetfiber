@@ -6,6 +6,7 @@ use App\Helpers\ExecutionTimer;
 use App\Models\Customers\Customer;
 use App\Models\AutoIsolir;
 use App\Models\Mikrotik;
+use App\Models\Packages\Package;
 use App\Services\Routerboard\Ppp\SecretService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -77,20 +78,46 @@ class MigrateCustomerToRouter implements ShouldQueue
             AutoIsolir::where('mikrotik_id', $target->id)->first()
         )->comment_unpayment ?? 'import_from_customer_management';
 
+        $expireProfile = Package::where('name', 'Expire')->value('profile');
+
         foreach ($customers as $customer) {
             $service = optional($customer->pppType)->name;
-            $profile = $customer->active_package->profile ?? null;
             $comment = $autoIsolirComment;
+
+            // --- Logic Penentuan Profile Baru ---
+            $subscription = $customer->currentSubscription();
+
+            if ($subscription && $subscription->status === 'active') {
+                $profile = $subscription->package?->profile;
+            } else {
+                $profile = $expireProfile;
+            }
+
+            // Jika profile masih null (misal paket Expire juga belum di-setup)
+            if (!$profile) {
+                LogHelper::logError(
+                    null,
+                    [
+                        'customer_id' => $customer->id,
+                        'username'    => $customer->username,
+                    ],
+                    400,
+                    'Failed to determine profile for customer during migration (Profile/Expire not found)',
+                    $this->traceId,
+                    $timer->lap()
+                );
+                continue; // Skip customer ini atau atur error handling yang sesuai
+            }
 
             LogHelper::logInfo(
                 null,
                 [
                     'source_router' => $source->name,
                     'target_router' => $target->name,
-                    'username' => $customer->username,
-                    'service' => $service,
-                    'profile' => $profile,
-                    'comment' => $comment,
+                    'username'      => $customer->username,
+                    'service'       => $service,
+                    'profile'       => $profile,
+                    'comment'       => $comment,
                 ],
                 200,
                 'Migrating customer from source to target router',

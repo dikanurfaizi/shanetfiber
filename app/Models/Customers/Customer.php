@@ -257,4 +257,29 @@ class Customer extends Authenticatable
         // Sesuaikan namespace 'App\Models\Messaging\MessageEvent' jika berbeda di project Anda
         return $this->hasMany(MessageEvent::class, 'customer_id');
     }
+
+    public function latestSubscription()
+    {
+        return $this->hasOne(CustomerSubscription::class, 'customer_id')->latestOfMany('created_at');
+    }
+
+    public function currentSubscription()
+    {
+        // 1. Ambil semua subscription bertipe 'active'
+        $activeSubscriptions = $this->customerSubscriptions()
+            ->where('status', 'active')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // 2. Jika ada yang aktif (baik 1 row maupun > 1 row)
+        // method ->first() otomatis mengambil yang paling baru karena sudah di-orderBy created_at desc
+        if ($activeSubscriptions->isNotEmpty()) {
+            return $activeSubscriptions->first();
+        }
+
+        // 3. Fallback: Jika tidak ada yang aktif sama sekali, ambil yang paling baru tanpa memandang status
+        return $this->customerSubscriptions()
+            ->orderBy('created_at', 'desc')
+            ->first();
+    }
 }
