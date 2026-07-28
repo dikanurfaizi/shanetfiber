@@ -207,16 +207,19 @@ class HomeController extends Controller
             ->join('billing_subscription_periodes as bsp', 'b.billing_subscription_id', '=', 'bsp.id')
             ->join('billing_periodes as bp', 'bp.id', '=', 'bsp.billing_periode_id')
             ->whereBetween('bp.created_at', [
-                DB::raw("STR_TO_DATE(CONCAT(YEAR(CURDATE()), '-01-01'), '%Y-%m-%d')"), // Januari tahun ini
-                now() // hari ini
+                DB::raw("STR_TO_DATE(CONCAT(YEAR(CURDATE()), '-01-01'), '%Y-%m-%d')"),
+                now()
             ])
             ->select(
                 'bsp.billing_periode_id',
                 'bp.name as month_name',
                 DB::raw('COUNT(DISTINCT b.customer_id) as total_customers'),
-                DB::raw("SUM(CASE WHEN b.status IN ('LS', 'BL', 'PL') THEN b.total_amount ELSE 0 END) as total_nominal"),
+
+                // 🔹 Pemisahan Nominal per Status
                 DB::raw("SUM(CASE WHEN b.status = 'LS' THEN b.total_amount ELSE 0 END) as total_paid"),
-                DB::raw("SUM(CASE WHEN b.status IN ('BL', 'PL', 'NP') THEN b.total_amount ELSE 0 END) as total_unpaid")
+                DB::raw("SUM(CASE WHEN b.status = 'PL' THEN b.total_amount ELSE 0 END) as total_paylater"),
+                DB::raw("SUM(CASE WHEN b.status = 'BL' THEN b.total_amount ELSE 0 END) as total_unpaid"),
+                DB::raw("SUM(CASE WHEN b.status = 'VD' THEN b.total_amount ELSE 0 END) as total_void")
             )
             ->groupBy('bsp.billing_periode_id', 'bp.name')
             ->orderBy('bsp.billing_periode_id')
@@ -253,9 +256,10 @@ class HomeController extends Controller
                 'u.id as admin_id',           // 🔹 Tambahkan ID admin
                 'u.name as admin_name',       // 🔹 Tambahkan nama admin
                 DB::raw('COUNT(DISTINCT b.customer_id) as total_customers'),
-                DB::raw("SUM(CASE WHEN b.status IN ('LS', 'BL', 'PL') THEN b.total_amount ELSE 0 END) as total_nominal"),
                 DB::raw("SUM(CASE WHEN b.status = 'LS' THEN b.total_amount ELSE 0 END) as total_paid"),
-                DB::raw("SUM(CASE WHEN b.status IN ('BL', 'PL', 'NP') THEN b.total_amount ELSE 0 END) as total_unpaid"),
+                DB::raw("SUM(CASE WHEN b.status = 'PL' THEN b.total_amount ELSE 0 END) as total_paylater"),
+                DB::raw("SUM(CASE WHEN b.status = 'BL' THEN b.total_amount ELSE 0 END) as total_unpaid"),
+                DB::raw("SUM(CASE WHEN b.status = 'VD' THEN b.total_amount ELSE 0 END) as total_void")
             )
             ->groupBy('bsp.billing_periode_id', 'bp.name', 'u.id', 'u.name')
             ->orderBy('bsp.billing_periode_id')
@@ -271,16 +275,17 @@ class HomeController extends Controller
                 'bsp.billing_periode_id',
                 'bsp.billing_periode',
                 DB::raw('COUNT(DISTINCT b.customer_id) as total_customers'),
-                DB::raw("SUM(CASE WHEN b.status = 'LS' THEN 1 ELSE 0 END) as total_paid"),
-                DB::raw("SUM(CASE WHEN b.status = 'PL' THEN 1 ELSE 0 END) as total_paylater"),
-                DB::raw("SUM(CASE WHEN b.status IN ('BL', 'NP') THEN 1 ELSE 0 END) as total_unpaid")
+                DB::raw("SUM(CASE WHEN b.status = 'LS' THEN b.total_amount ELSE 0 END) as total_paid"),
+                DB::raw("SUM(CASE WHEN b.status = 'PL' THEN b.total_amount ELSE 0 END) as total_paylater"),
+                DB::raw("SUM(CASE WHEN b.status = 'BL' THEN b.total_amount ELSE 0 END) as total_unpaid"),
+                DB::raw("SUM(CASE WHEN b.status = 'VD' THEN b.total_amount ELSE 0 END) as total_void")
             )
             ->groupBy('bsp.billing_periode_id', 'bsp.billing_periode')
             ->get()
             ->toArray();
     }
 
-    private function getLastBillingData($traceId)
+    private function getLastBillingData(string $traceId)
     {
         $timer = new ExecutionTimer();
 
@@ -565,7 +570,7 @@ class HomeController extends Controller
                 'totalBilling' => $billings->sum('total_amount'),
                 'totalPaid' => $billings->where('status', 'LS')->sum('total_amount'),
                 'totalPaylater' => $billings->where('status', 'PL')->sum('total_amount'),
-                'totalUnpaid' => $billings->whereIn('status', ['BL', 'NP'])->sum('total_amount'),
+                'totalUnpaid' => $billings->whereIn('status', ['BL', 'VD'])->sum('total_amount'),
             ];
         } catch (\Exception $e) {
             LogHelper::logError(null, [

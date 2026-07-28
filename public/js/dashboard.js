@@ -32,7 +32,7 @@ async function fetchMonthlySummary() {
 
         let series = [];
 
-        // === INVESTOR VIEW (Paid & Unpaid saja) ===
+        // === INVESTOR VIEW (Mendukung Paid, Pay Later, Unpaid, & Void per Admin) ===
         if (isInvestor) {
             const grouped = billingSummary.reduce((acc, item) => {
                 const admin = item.admin_name || "Unknown";
@@ -40,7 +40,9 @@ async function fetchMonthlySummary() {
                 acc[admin].push({
                     month: item.month_name,
                     totalPaid: item.total_paid || 0,
+                    totalPayLater: item.total_paylater || 0,
                     totalUnpaid: item.total_unpaid || 0,
+                    totalVoid: item.total_void || 0,
                 });
                 return acc;
             }, {});
@@ -52,7 +54,16 @@ async function fetchMonthlySummary() {
                         const found = grouped[admin].find((x) => x.month === m);
                         return found ? found.totalPaid : 0;
                     }),
-                    color: "#28a745", // ✅ Hijau
+                    color: "#10B981", // 🟢 Hijau Emerald (Paid/LS)
+                };
+
+                const payLaterSeries = {
+                    name: `${admin} - Pay Later`,
+                    data: months.map((m) => {
+                        const found = grouped[admin].find((x) => x.month === m);
+                        return found ? found.totalPayLater : 0;
+                    }),
+                    color: "#F59E0B", // 🟡 Amber/Orange (Pay Later/PL)
                 };
 
                 const unpaidSeries = {
@@ -61,31 +72,64 @@ async function fetchMonthlySummary() {
                         const found = grouped[admin].find((x) => x.month === m);
                         return found ? found.totalUnpaid : 0;
                     }),
-                    color: "#dc3545", // ✅ Merah
+                    color: "#EF4444", // 🔴 Merah (Unpaid/BL)
                 };
 
-                series.push(paidSeries, unpaidSeries);
+                const voidSeries = {
+                    name: `${admin} - Void`,
+                    data: months.map((m) => {
+                        const found = grouped[admin].find((x) => x.month === m);
+                        return found ? found.totalVoid : 0;
+                    }),
+                    color: "#9CA3AF", // ⚪ Abu-abu Slate (Void/VD)
+                };
+
+                series.push(
+                    paidSeries,
+                    payLaterSeries,
+                    unpaidSeries,
+                    voidSeries,
+                );
             });
         }
-        // === ADMIN / SUPERADMIN VIEW ===
+        // === ADMIN / SUPERADMIN VIEW (Nominal Rp) ===
         else if (
             permissions.includes("view-billings-chart-nominal-total") ||
             permissions.includes("view-billings-chart-nominal-related")
         ) {
             const totalPaid = billingSummary.map((i) => i.total_paid || 0);
+            const totalPayLater = billingSummary.map(
+                (i) => i.total_paylater || 0,
+            );
             const totalUnpaid = billingSummary.map((i) => i.total_unpaid || 0);
+            const totalVoid = billingSummary.map((i) => i.total_void || 0);
 
             series = [
-                { name: "Paid (Rp)", data: totalPaid, color: "#28a745" },
-                { name: "Unpaid (Rp)", data: totalUnpaid, color: "#dc3545" },
+                { name: "Paid (Rp)", data: totalPaid, color: "#10B981" },
+                {
+                    name: "Pay Later (Rp)",
+                    data: totalPayLater,
+                    color: "#F59E0B",
+                },
+                { name: "Unpaid (Rp)", data: totalUnpaid, color: "#EF4444" },
+                { name: "Void (Rp)", data: totalVoid, color: "#9CA3AF" },
             ];
-        } else if (permissions.includes("view-billings-chart-customer-count")) {
+        }
+        // === CASHIER VIEW (Jumlah Customer / Person) ===
+        else if (permissions.includes("view-billings-chart-customer-count")) {
             const totalPaid = billingSummary.map((i) => i.total_paid || 0);
+            const totalPayLater = billingSummary.map(
+                (i) => i.total_paylater || 0,
+            );
             const totalUnpaid = billingSummary.map((i) => i.total_unpaid || 0);
+            const totalVoid = billingSummary.map((i) => i.total_void || 0);
 
+            // Label disesuaikan tanpa "(Rp)" karena ini menghitung jumlah pelanggan
             series = [
-                { name: "Paid", data: totalPaid, color: "#28a745" },
-                { name: "Unpaid", data: totalUnpaid, color: "#dc3545" },
+                { name: "Paid", data: totalPaid, color: "#10B981" },
+                { name: "Pay Later", data: totalPayLater, color: "#F59E0B" },
+                { name: "Unpaid", data: totalUnpaid, color: "#EF4444" },
+                { name: "Void", data: totalVoid, color: "#9CA3AF" },
             ];
         }
 
@@ -137,16 +181,28 @@ async function fetchMonthlySummary() {
             },
             tooltip: {
                 y: {
-                    formatter: (value) =>
-                        permissions.some((p) =>
+                    formatter: (value, { seriesIndex, w }) => {
+                        const seriesName =
+                            w.globals.seriesNames[seriesIndex] || "";
+                        const isNominal = permissions.some((p) =>
                             [
                                 "view-billings-chart-nominal-total",
                                 "view-billings-chart-nominal-related",
                                 "investor-billing-chart",
                             ].includes(p),
-                        )
+                        );
+
+                        const formattedVal = isNominal
                             ? "Rp " + value.toLocaleString()
-                            : `${Math.round(value)} customers`,
+                            : `${Math.round(value)} customers`;
+
+                        // 🔹 Tambahkan catatan khusus jika statusnya Void
+                        if (seriesName.includes("Void")) {
+                            return `${formattedVal} (Dibatalkan / Paket Expire karena tidak bayar)`;
+                        }
+
+                        return formattedVal;
+                    },
                 },
             },
             dataLabels: { enabled: false },
@@ -540,6 +596,11 @@ function initializePackageViewToggle() {
 
                 if (!window.packageChart) {
                     renderPackageChart();
+                } else {
+                    // 🔹 PENTING: Force resize/re-render setelah container terlihat dari display:none
+                    setTimeout(() => {
+                        window.packageChart.windowResize();
+                    }, 100);
                 }
             } else {
                 document.getElementById("packageTableView").style.display =
@@ -552,9 +613,32 @@ function initializePackageViewToggle() {
 }
 
 function renderPackageChart() {
-    const packageData = window.packageSummary;
-    const categories = packageData.map((p) => p.paket_name);
-    const seriesData = packageData.map((p) => p.total_customers);
+    // 🔹 1. Ambil data dari data-summary HTML (yang tadi berhasil) atau fallback ke window
+    const chartViewEl = document.getElementById("packageChartView");
+    const packageData =
+        chartViewEl && chartViewEl.dataset.summary
+            ? JSON.parse(chartViewEl.dataset.summary)
+            : window.packageSummary || [];
+
+    if (!packageData || !packageData.length) {
+        console.warn("Package summary data is empty or undefined.");
+        return;
+    }
+
+    const categories = packageData.map(
+        (p) => p.package_name || p.paket_name || "Unknown",
+    );
+    const seriesData = packageData.map((p) => parseInt(p.total_customers || 0));
+
+    // 🔹 2. Hitung tinggi chart secara dinamis agar antar bar tidak dempet (45px x jumlah paket)
+    const calculatedHeight = Math.max(350, packageData.length * 45 + 80);
+
+    // 🔹 3. Bikin container-nya bisa di-scroll jika datanya sangat banyak
+    if (chartViewEl) {
+        chartViewEl.style.height = "auto";
+        chartViewEl.style.maxHeight = "550px";
+        chartViewEl.style.overflowY = "auto";
+    }
 
     const options = {
         series: [
@@ -565,7 +649,7 @@ function renderPackageChart() {
         ],
         chart: {
             type: "bar",
-            height: "100%",
+            height: calculatedHeight, // Tinggi dinamis
             toolbar: {
                 show: true,
                 tools: {
@@ -579,24 +663,28 @@ function renderPackageChart() {
                 },
             },
         },
-        colors: ["#4e73df"],
+        colors: ["#36b9cc"],
         plotOptions: {
             bar: {
                 borderRadius: 4,
                 horizontal: true,
-                distributed: false,
-                barHeight: "80%",
+                barHeight: "65%", // Ketebalan bar lebih proporsional
+                dataLabels: {
+                    position: "top", // Posisi label teks di ujung kanan bar
+                },
             },
         },
         dataLabels: {
             enabled: true,
-            formatter: function (val) {
-                return val;
-            },
+            textAnchor: "start",
             style: {
                 fontSize: "12px",
-                colors: ["#fff"],
+                colors: ["#333"], // Warna teks gelap agar terbaca jelas
             },
+            formatter: function (val) {
+                return val > 0 ? val + " customers" : "";
+            },
+            offsetX: 10, // Beri jarak label dari ujung bar
         },
         xaxis: {
             categories: categories,
@@ -604,11 +692,11 @@ function renderPackageChart() {
                 text: "Number of Customers",
                 style: {
                     fontSize: "12px",
+                    fontWeight: 600,
                 },
             },
             labels: {
                 trim: true,
-                hideOverlappingLabels: true,
             },
         },
         yaxis: {
@@ -625,27 +713,25 @@ function renderPackageChart() {
                 },
             },
         },
-        responsive: [
-            {
-                breakpoint: 600,
-                options: {
-                    chart: {
-                        height: 400,
-                    },
-                    plotOptions: {
-                        bar: {
-                            horizontal: false,
-                        },
-                    },
-                },
+        grid: {
+            padding: {
+                right: 80, // Memberi ruang ekstra di kanan agar teks label tidak terpotong
             },
-        ],
+        },
     };
 
-    window.packageChart = new ApexCharts(
-        document.querySelector("#popularPackagesChart"),
-        options,
-    );
+    const chartEl = document.querySelector("#popularPackagesChart");
+    if (!chartEl) {
+        console.error("Target element #popularPackagesChart not found!");
+        return;
+    }
+
+    // Reset chart lama sebelum render chart baru
+    if (window.packageChart) {
+        window.packageChart.destroy();
+    }
+
+    window.packageChart = new ApexCharts(chartEl, options);
     window.packageChart.render();
 }
 

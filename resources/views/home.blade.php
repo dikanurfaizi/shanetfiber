@@ -538,7 +538,8 @@
                             </div>
 
                             <!-- Chart View (Hidden by Default) -->
-                            <div id="packageChartView" style="display: none; height: 400px; padding: 15px;">
+                            <div id="packageChartView" data-summary='@json($packageSummary)'
+                                style="display: none; height: 400px; padding: 15px;">
                                 <div id="popularPackagesChart" style="height: 100%;"></div>
                             </div>
                         @endif
