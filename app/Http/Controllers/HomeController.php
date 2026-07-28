@@ -421,7 +421,7 @@ class HomeController extends Controller
         // Base query menggunakan customer_subscription
         $query = Customer::query()
             ->select(
-                'packages.id',
+                'packages.id as package_id',
                 'packages.name as package_name',
                 DB::raw('COUNT(customers.id) as total_customers')
             )

@@ -36,7 +36,11 @@ class CustomerListingService
                 })
                 ->when($filters['status'] ?? null, fn($query, $status) => $statusFilter->applyStatusFilter($query, $status, $traceId))
                 ->when($filters['server_search'] ?? null, fn($query, $server) => $query->where('mikrotik_id', $server))
-                ->when($filters['search_package'] ?? null, fn($query, $package) => $query->where('package_id', $package))
+                ->when($filters['search_package'] ?? null, function ($query, $packageId) {
+                    $query->whereHas('activeSubscription', function ($q) use ($packageId) {
+                        $q->where('package_id', $packageId);
+                    });
+                })
                 ->orderBy('name');
 
             $result = $query->paginate($perPage);

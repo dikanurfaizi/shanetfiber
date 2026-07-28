@@ -520,8 +520,11 @@
                                                     </div>
                                                 </td>
                                                 <td class="text-right pe-4">
-                                                    <span class="fw-bold">{{ $package->total_customers }}</span>
-                                                    <small class="text-muted ml-1">customers</small>
+                                                    <a href="{{ route('customers.index', ['search_package' => $package->package_id]) }}"
+                                                        class="text-decoration-none">
+                                                        <span class="fw-bold">{{ $package->total_customers }}</span>
+                                                        <small class="text-muted ml-1">customers</small>
+                                                    </a>
                                                 </td>
                                             </tr>
                                         @endforeach
