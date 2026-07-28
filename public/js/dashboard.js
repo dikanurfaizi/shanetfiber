@@ -25,18 +25,65 @@ async function fetchMonthlySummary() {
             return;
         }
 
+        // 🔹 Map singkat bulan (Jan, Feb, Mar, dll)
+        const shortMonthNames = {
+            1: "Jan",
+            2: "Feb",
+            3: "Mar",
+            4: "Apr",
+            5: "Mei",
+            6: "Jun",
+            7: "Jul",
+            8: "Agu",
+            9: "Sep",
+            10: "Okt",
+            11: "Nov",
+            12: "Des",
+            january: "Jan",
+            february: "Feb",
+            march: "Mar",
+            april: "Apr",
+            may: "May",
+            june: "Jun",
+            july: "Jul",
+            august: "Aug",
+            september: "Sep",
+            october: "Oct",
+            november: "Nov",
+            december: "Dec",
+            januari: "Jan",
+            februari: "Feb",
+            maret: "Mar",
+            mei: "Mei",
+            agustus: "Agu",
+            oktober: "Okt",
+            desember: "Des",
+        };
+
+        // 🔹 Format label X-Axis menjadi singkat (misal: "Jan 2026")
         const months = [
-            ...new Set(billingSummary.map((item) => item.month_name || "")),
+            ...new Set(
+                billingSummary.map((item) => {
+                    const rawMonth = String(item.month || "")
+                        .trim()
+                        .toLowerCase();
+                    const shortMonth =
+                        shortMonthNames[rawMonth] || item.month || "";
+                    return item.year
+                        ? `${shortMonth} ${item.year}`
+                        : shortMonth;
+                }),
+            ),
         ];
+
         const isInvestor = permissions.includes("investor-billing-chart");
 
-        // Palet Warna Modern & Professional
         const colors = {
-            target: "#2563EB", // Royal Blue (Target / Total)
-            paid: "#10B981", // Emerald Green (Paid / LS)
-            payLater: "#F59E0B", // Warm Amber (Pay Later / PL)
-            unpaid: "#EF4444", // Crimson Red (Unpaid / BL)
-            void: "#6B7280", // Slate Grey (Void / VD)
+            target: "#2563EB",
+            paid: "#10B981",
+            payLater: "#F59E0B",
+            unpaid: "#EF4444",
+            void: "#6B7280",
         };
 
         let series = [];
@@ -46,8 +93,18 @@ async function fetchMonthlySummary() {
             const grouped = billingSummary.reduce((acc, item) => {
                 const admin = item.admin_name || "Unknown";
                 if (!acc[admin]) acc[admin] = [];
+
+                const rawMonth = String(item.month || "")
+                    .trim()
+                    .toLowerCase();
+                const shortMonth =
+                    shortMonthNames[rawMonth] || item.month || "";
+                const monthKey = item.year
+                    ? `${shortMonth} ${item.year}`
+                    : shortMonth;
+
                 acc[admin].push({
-                    month: item.month_name,
+                    monthKey: monthKey,
                     totalNominal: parseFloat(item.total_nominal) || 0,
                     totalPaid: parseFloat(item.total_paid) || 0,
                     totalPayLater: parseFloat(item.total_paylater) || 0,
@@ -59,25 +116,23 @@ async function fetchMonthlySummary() {
 
             Object.keys(grouped).forEach((admin) => {
                 series.push(
-                    // BAR KIRI: Total / Target
                     {
                         name: `${admin} - Target Total`,
                         group: `${admin}_target`,
                         data: months.map((m) => {
                             const found = grouped[admin].find(
-                                (x) => x.month === m,
+                                (x) => x.monthKey === m,
                             );
                             return found ? found.totalNominal : 0;
                         }),
                         color: colors.target,
                     },
-                    // BAR KANAN: Stacked Breakdown Status
                     {
                         name: `${admin} - Paid`,
                         group: `${admin}_actual`,
                         data: months.map((m) => {
                             const found = grouped[admin].find(
-                                (x) => x.month === m,
+                                (x) => x.monthKey === m,
                             );
                             return found ? found.totalPaid : 0;
                         }),
@@ -88,7 +143,7 @@ async function fetchMonthlySummary() {
                         group: `${admin}_actual`,
                         data: months.map((m) => {
                             const found = grouped[admin].find(
-                                (x) => x.month === m,
+                                (x) => x.monthKey === m,
                             );
                             return found ? found.totalPayLater : 0;
                         }),
@@ -99,7 +154,7 @@ async function fetchMonthlySummary() {
                         group: `${admin}_actual`,
                         data: months.map((m) => {
                             const found = grouped[admin].find(
-                                (x) => x.month === m,
+                                (x) => x.monthKey === m,
                             );
                             return found ? found.totalUnpaid : 0;
                         }),
@@ -110,7 +165,7 @@ async function fetchMonthlySummary() {
                         group: `${admin}_actual`,
                         data: months.map((m) => {
                             const found = grouped[admin].find(
-                                (x) => x.month === m,
+                                (x) => x.monthKey === m,
                             );
                             return found ? found.totalVoid : 0;
                         }),
@@ -141,15 +196,12 @@ async function fetchMonthlySummary() {
             );
 
             series = [
-                // 🔹 BAR KIRI: Target Nominal
                 {
                     name: "Total Target (Rp)",
                     group: "target",
                     data: totalNominal,
                     color: colors.target,
                 },
-
-                // 🔹 BAR KANAN: Breakdown Realisasi Status
                 {
                     name: "Paid (Rp)",
                     group: "actual",
@@ -195,15 +247,12 @@ async function fetchMonthlySummary() {
             );
 
             series = [
-                // 🔹 BAR KIRI: Total Customers
                 {
                     name: "Total Customers",
                     group: "target",
                     data: totalCustomers,
                     color: colors.target,
                 },
-
-                // 🔹 BAR KANAN: Breakdown Status
                 {
                     name: "Paid",
                     group: "actual",
@@ -231,7 +280,6 @@ async function fetchMonthlySummary() {
             ];
         }
 
-        // Kalkulasi Y-Axis Maksimal
         const maxValue = Math.max(
             ...billingSummary.map((x) =>
                 Math.max(
@@ -246,13 +294,13 @@ async function fetchMonthlySummary() {
             chart: {
                 type: "bar",
                 height: 420,
-                stacked: true, // Wajib true agar group 'actual' menumpuk
+                stacked: true,
                 toolbar: { show: false },
             },
             plotOptions: {
                 bar: {
                     horizontal: false,
-                    columnWidth: "55%", // Lebar bar ganda yang seimbang
+                    columnWidth: "55%",
                     borderRadius: 3,
                 },
             },
@@ -269,7 +317,7 @@ async function fetchMonthlySummary() {
             },
             series,
             xaxis: {
-                categories: months,
+                categories: months, // 🔹 Sudah berisi format "Jan 2026", "Feb 2026", dst.
                 labels: { rotate: -45 },
             },
             yaxis: {
@@ -314,8 +362,6 @@ async function fetchMonthlySummary() {
                 },
             },
             dataLabels: { enabled: false },
-
-            // 🔹 LEGEND MENYAMPING (HORIZONTAL)
             legend: {
                 position: "top",
                 horizontalAlign: "center",
@@ -324,23 +370,11 @@ async function fetchMonthlySummary() {
                 showForSingleSeries: false,
                 showForNullSeries: true,
                 showForZeroSeries: true,
-                // 🔹 DUA BARIS DI BAWAH INI KUNCI UTAMA MEMAKSA SEMUA ITEM DIPALINGKAN SECARA HORIZONTAL:
-                horizontalAlign: "center",
                 floating: false,
-                markers: {
-                    radius: 12,
-                },
-                itemMargin: {
-                    horizontal: 10, // Jarak antar teks ke samping
-                    vertical: 5,
-                },
-                // 🔹 Mematikan pengelompokan vertikal otomatis ApexCharts pada Grouped Charts
-                onItemClick: {
-                    toggleDataSeries: true,
-                },
-                onItemHover: {
-                    highlightDataSeries: true,
-                },
+                markers: { radius: 12 },
+                itemMargin: { horizontal: 10, vertical: 5 },
+                onItemClick: { toggleDataSeries: true },
+                onItemHover: { highlightDataSeries: true },
             },
         };
 
@@ -501,15 +535,199 @@ async function fetchCustomerRegistrationChurnData() {
     }
 }
 
+// function renderCustomerRegistrationChurnChart(data) {
+//     try {
+//         const {
+//             months,
+//             registrationData,
+//             churnData,
+//             isSuperAdmin,
+//             isInvestor,
+//         } = data;
+
+//         if (!months || !registrationData) {
+//             console.error("Invalid chart data:", { months, registrationData });
+//             return;
+//         }
+
+//         const series = [];
+//         const colors = [];
+
+//         if (isSuperAdmin || isInvestor) {
+//             Object.keys(registrationData).forEach((adminId, index) => {
+//                 const adminName =
+//                     registrationData[adminId]?.adminName || `Admin ${adminId}`;
+//                 const color = getColorForAdmin(index);
+
+//                 series.push({
+//                     name: `${adminName} (Signup)`,
+//                     data: registrationData[adminId]?.counts || [],
+//                     type: "line",
+//                 });
+
+//                 series.push({
+//                     name: `${adminName} (Unsubscribe)`,
+//                     data:
+//                         churnData[adminId]?.counts ||
+//                         Array(months.length).fill(0),
+//                     type: "line",
+//                 });
+
+//                 colors.push(color, color);
+//             });
+//         } else {
+//             const adminId = Object.keys(registrationData)[0];
+//             if (adminId) {
+//                 series.push({
+//                     name: "Signup",
+//                     data: registrationData[adminId]?.counts || [],
+//                     type: "line",
+//                 });
+//                 series.push({
+//                     name: "Unsubscribe",
+//                     data:
+//                         churnData[adminId]?.counts ||
+//                         Array(months.length).fill(0),
+//                     type: "line",
+//                 });
+//                 colors.push("#4e73df", "#e74a3b");
+//             }
+//         }
+
+//         const options = {
+//             series: series,
+//             chart: {
+//                 type: "line",
+//                 height: "100%",
+//                 toolbar: {
+//                     show: true,
+//                 },
+//                 animations: {
+//                     enabled: false,
+//                 },
+//                 zoom: {
+//                     enabled: true,
+//                 },
+//             },
+//             colors: colors,
+//             stroke: {
+//                 width: 3,
+//                 curve: "smooth",
+//             },
+//             dataLabels: {
+//                 enabled: false,
+//             },
+//             title: {
+//                 text: "Monthly Customer Signup vs Unsubscribe Trend",
+//                 align: "center",
+//                 style: {
+//                     fontSize: "16px",
+//                 },
+//             },
+//             xaxis: {
+//                 categories: months.map((m) => m || ""),
+//                 labels: {
+//                     rotate: -45,
+//                     formatter: function (value) {
+//                         try {
+//                             if (!value) return "";
+//                             const strValue = String(value).trim();
+//                             if (window.innerWidth < 768) {
+//                                 const monthPart = strValue.split(" ")[0];
+//                                 return monthPart
+//                                     ? monthPart.substring(0, 3)
+//                                     : "";
+//                             }
+//                             return strValue;
+//                         } catch (e) {
+//                             console.warn("Error formatting label:", e);
+//                             return "";
+//                         }
+//                     },
+//                 },
+//             },
+//             yaxis: {
+//                 title: {
+//                     text: "Number of Customers",
+//                 },
+//                 min: 0,
+//                 forceNiceScale: true,
+//                 labels: {
+//                     formatter: (val) => Math.floor(val),
+//                 },
+//             },
+//             legend: {
+//                 position: "bottom",
+//                 horizontalAlign: "center",
+//                 fontSize: "12px",
+//                 itemMargin: {
+//                     horizontal: 10,
+//                 },
+//                 markers: {
+//                     radius: 5,
+//                 },
+//             },
+//             grid: {
+//                 borderColor: "#f1f1f1",
+//                 padding: {
+//                     top: 20,
+//                     bottom: 40,
+//                 },
+//             },
+//             tooltip: {
+//                 y: {
+//                     formatter: (val) => `${val} customer`,
+//                 },
+//             },
+//             responsive: [
+//                 {
+//                     breakpoint: 600,
+//                     options: {
+//                         chart: {
+//                             height: 300,
+//                         },
+//                         xaxis: {
+//                             labels: {
+//                                 rotate: -45,
+//                                 style: {
+//                                     fontSize: "8px",
+//                                 },
+//                             },
+//                         },
+//                         legend: {
+//                             fontSize: "10px",
+//                             itemMargin: {
+//                                 horizontal: 5,
+//                             },
+//                         },
+//                     },
+//                 },
+//             ],
+//         };
+
+//         const chartEl = document.getElementById(
+//             "customerRegistrationChurnChart",
+//         );
+//         if (!chartEl) {
+//             console.error("Chart container not found!");
+//             return;
+//         }
+
+//         if (window.customerChart) {
+//             window.customerChart.destroy();
+//         }
+
+//         chartEl.innerHTML = "";
+//         window.customerChart = new ApexCharts(chartEl, options);
+//         window.customerChart.render();
+//     } catch (error) {
+//         console.error("Failed to render chart:", error);
+//     }
+// }
+
 function renderCustomerRegistrationChurnChart(data) {
     try {
-        const {
-            months,
-            registrationData,
-            churnData,
-            isSuperAdmin,
-            isInvestor,
-        } = data;
+        const { months, registrationData, isSuperAdmin, isInvestor } = data;
 
         if (!months || !registrationData) {
             console.error("Invalid chart data:", { months, registrationData });
@@ -531,32 +749,17 @@ function renderCustomerRegistrationChurnChart(data) {
                     type: "line",
                 });
 
-                series.push({
-                    name: `${adminName} (Unsubscribe)`,
-                    data:
-                        churnData[adminId]?.counts ||
-                        Array(months.length).fill(0),
-                    type: "line",
-                });
-
-                colors.push(color, color);
+                colors.push(color);
             });
         } else {
             const adminId = Object.keys(registrationData)[0];
             if (adminId) {
                 series.push({
-                    name: "Signup",
+                    name: "New Signup",
                     data: registrationData[adminId]?.counts || [],
                     type: "line",
                 });
-                series.push({
-                    name: "Unsubscribe",
-                    data:
-                        churnData[adminId]?.counts ||
-                        Array(months.length).fill(0),
-                    type: "line",
-                });
-                colors.push("#4e73df", "#e74a3b");
+                colors.push("#10B981"); // Warna hijau emerald untuk pendaftaran baru
             }
         }
 
@@ -564,57 +767,33 @@ function renderCustomerRegistrationChurnChart(data) {
             series: series,
             chart: {
                 type: "line",
-                height: "100%",
-                toolbar: {
-                    show: true,
-                },
-                animations: {
-                    enabled: false,
-                },
-                zoom: {
-                    enabled: true,
-                },
+                height: 350,
+                toolbar: { show: true },
+                animations: { enabled: true },
             },
             colors: colors,
             stroke: {
                 width: 3,
                 curve: "smooth",
             },
-            dataLabels: {
-                enabled: false,
-            },
+            dataLabels: { enabled: false },
             title: {
-                text: "Monthly Customer Signup vs Unsubscribe Trend",
+                text: "Monthly Customer Signup Trend",
                 align: "center",
                 style: {
                     fontSize: "16px",
+                    fontWeight: "bold",
                 },
             },
             xaxis: {
                 categories: months.map((m) => m || ""),
                 labels: {
                     rotate: -45,
-                    formatter: function (value) {
-                        try {
-                            if (!value) return "";
-                            const strValue = String(value).trim();
-                            if (window.innerWidth < 768) {
-                                const monthPart = strValue.split(" ")[0];
-                                return monthPart
-                                    ? monthPart.substring(0, 3)
-                                    : "";
-                            }
-                            return strValue;
-                        } catch (e) {
-                            console.warn("Error formatting label:", e);
-                            return "";
-                        }
-                    },
                 },
             },
             yaxis: {
                 title: {
-                    text: "Number of Customers",
+                    text: "New Registrations",
                 },
                 min: 0,
                 forceNiceScale: true,
@@ -625,59 +804,18 @@ function renderCustomerRegistrationChurnChart(data) {
             legend: {
                 position: "bottom",
                 horizontalAlign: "center",
-                fontSize: "12px",
-                itemMargin: {
-                    horizontal: 10,
-                },
-                markers: {
-                    radius: 5,
-                },
-            },
-            grid: {
-                borderColor: "#f1f1f1",
-                padding: {
-                    top: 20,
-                    bottom: 40,
-                },
             },
             tooltip: {
                 y: {
-                    formatter: (val) => `${val} customer`,
+                    formatter: (val) => `${val} customers`,
                 },
             },
-            responsive: [
-                {
-                    breakpoint: 600,
-                    options: {
-                        chart: {
-                            height: 300,
-                        },
-                        xaxis: {
-                            labels: {
-                                rotate: -45,
-                                style: {
-                                    fontSize: "8px",
-                                },
-                            },
-                        },
-                        legend: {
-                            fontSize: "10px",
-                            itemMargin: {
-                                horizontal: 5,
-                            },
-                        },
-                    },
-                },
-            ],
         };
 
         const chartEl = document.getElementById(
             "customerRegistrationChurnChart",
         );
-        if (!chartEl) {
-            console.error("Chart container not found!");
-            return;
-        }
+        if (!chartEl) return;
 
         if (window.customerChart) {
             window.customerChart.destroy();

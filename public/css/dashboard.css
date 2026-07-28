@@ -114,3 +114,64 @@
     word-break: break-word;
     line-height: 1.2;
 }
+
+/* Custom Soft Color Utilities */
+.bg-primary-soft {
+    background-color: #eef2ff !important;
+    color: #4f46e5 !important;
+}
+.bg-success-soft {
+    background-color: #ecfdf5 !important;
+    color: #10b981 !important;
+}
+.bg-warning-soft {
+    background-color: #fffbeb !important;
+    color: #f59e0b !important;
+}
+.bg-danger-soft {
+    background-color: #fef2f2 !important;
+    color: #ef4444 !important;
+}
+.bg-info-soft {
+    background-color: #f0f9ff !important;
+    color: #0ea5e9 !important;
+}
+
+/* Modern Card & Interactivity */
+.card-modern {
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+.card-modern:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 10px 25px -5px rgba(0, 0, 0, 0.05),
+        0 8px 10px -6px rgba(0, 0, 0, 0.01) !important;
+}
+
+/* Rounded Avatar Icon Container */
+.icon-shape {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+}
+
+/* Custom Soft Progress Bar */
+.progress-soft {
+    background-color: #f3f4f6;
+    border-radius: 9999px;
+    overflow: hidden;
+}
+.progress-soft .progress-bar {
+    border-radius: 9999px;
+}
+
+/* Clean Header Styling */
+.card-header-clean {
+    background-color: transparent;
+    border-bottom: 1px solid #f3f4f6;
+}

@@ -145,7 +145,7 @@ class HomeController extends Controller
             'packageSummary',
             'months',
             'registrationData',
-            'churnData',
+            // 'churnData',
             'isSuperAdmin',
         ), $summaryTotals, $customerSummary));
     }
@@ -213,6 +213,8 @@ class HomeController extends Controller
             ->select(
                 'bsp.billing_periode_id',
                 'bp.name as month_name',
+                'bp.month as month',
+                'bp.year as year',
                 DB::raw('COUNT(DISTINCT b.customer_id) as total_customers'),
 
                 // 🔹 Pemisahan Nominal per Status
@@ -222,7 +224,8 @@ class HomeController extends Controller
                 DB::raw("SUM(CASE WHEN b.status = 'VD' THEN b.total_amount ELSE 0 END) as total_void"),
                 DB::raw("SUM(b.total_amount) as total_nominal")
             )
-            ->groupBy('bsp.billing_periode_id', 'bp.name')
+            // 🔹 DIBERSIHKAN: 'bp.month' dan 'bp.year' WAJIB masuk ke dalam groupBy
+            ->groupBy('bsp.billing_periode_id', 'bp.name', 'bp.month', 'bp.year')
             ->orderBy('bsp.billing_periode_id')
             ->get()
             ->toArray();
@@ -245,7 +248,7 @@ class HomeController extends Controller
             ->join('billing_subscription_periodes as bsp', 'b.billing_subscription_id', '=', 'bsp.id')
             ->join('billing_periodes as bp', 'bp.id', '=', 'bsp.billing_periode_id')
             ->join('customers as c', 'c.id', '=', 'b.customer_id')
-            ->join('users as u', 'u.id', '=', 'c.user_id') // 🔹 Tambahkan join ke users
+            ->join('users as u', 'u.id', '=', 'c.user_id')
             ->whereIn('c.user_id', $visibleUserIds)
             ->whereBetween('bp.created_at', [
                 DB::raw("STR_TO_DATE(CONCAT(YEAR(CURDATE()), '-01-01'), '%Y-%m-%d')"),
@@ -254,8 +257,10 @@ class HomeController extends Controller
             ->select(
                 'bsp.billing_periode_id',
                 'bp.name as month_name',
-                'u.id as admin_id',           // 🔹 Tambahkan ID admin
-                'u.name as admin_name',       // 🔹 Tambahkan nama admin
+                'bp.month as month',
+                'bp.year as year',
+                'u.id as admin_id',
+                'u.name as admin_name',
                 DB::raw('COUNT(DISTINCT b.customer_id) as total_customers'),
                 DB::raw("SUM(CASE WHEN b.status = 'LS' THEN b.total_amount ELSE 0 END) as total_paid"),
                 DB::raw("SUM(CASE WHEN b.status = 'PL' THEN b.total_amount ELSE 0 END) as total_paylater"),
@@ -263,7 +268,8 @@ class HomeController extends Controller
                 DB::raw("SUM(CASE WHEN b.status = 'VD' THEN b.total_amount ELSE 0 END) as total_void"),
                 DB::raw("SUM(b.total_amount) as total_nominal")
             )
-            ->groupBy('bsp.billing_periode_id', 'bp.name', 'u.id', 'u.name')
+            // 🔹 DIBERSIHKAN: Masukkan 'bp.month' & 'bp.year' ke groupBy
+            ->groupBy('bsp.billing_periode_id', 'bp.name', 'bp.month', 'bp.year', 'u.id', 'u.name')
             ->orderBy('bsp.billing_periode_id')
             ->get()
             ->toArray();
@@ -273,9 +279,16 @@ class HomeController extends Controller
     {
         return DB::table('billings as b')
             ->join('billing_subscription_periodes as bsp', 'b.billing_subscription_id', '=', 'bsp.id')
+            ->join('billing_periodes as bp', 'bp.id', '=', 'bsp.billing_periode_id') // 🔹 Tambahkan join ke bp
+            ->whereBetween('bp.created_at', [
+                DB::raw("STR_TO_DATE(CONCAT(YEAR(CURDATE()), '-01-01'), '%Y-%m-%d')"),
+                now()
+            ])
             ->select(
                 'bsp.billing_periode_id',
-                'bsp.billing_periode',
+                'bp.name as month_name',
+                'bp.month as month',                   // 🔹 Tambahkan month
+                'bp.year as year',                     // 🔹 Tambahkan year
                 DB::raw('COUNT(DISTINCT b.customer_id) as total_customers'),
                 DB::raw("SUM(CASE WHEN b.status = 'LS' THEN b.total_amount ELSE 0 END) as total_paid"),
                 DB::raw("SUM(CASE WHEN b.status = 'PL' THEN b.total_amount ELSE 0 END) as total_paylater"),
@@ -283,7 +296,9 @@ class HomeController extends Controller
                 DB::raw("SUM(CASE WHEN b.status = 'VD' THEN b.total_amount ELSE 0 END) as total_void"),
                 DB::raw("SUM(b.total_amount) as total_nominal")
             )
-            ->groupBy('bsp.billing_periode_id', 'bsp.billing_periode')
+            // 🔹 DIBERSIHKAN: Masukkan kolom select ke groupBy
+            ->groupBy('bsp.billing_periode_id', 'bp.name', 'bp.month', 'bp.year')
+            ->orderBy('bsp.billing_periode_id')
             ->get()
             ->toArray();
     }
@@ -459,19 +474,111 @@ class HomeController extends Controller
         return $query->get();
     }
 
+    // private function calculateCustomerRegistrationChurnData($request, $traceId): array
+    // {
+    //     $timer = new ExecutionTimer();
+    //     $auth = $this->getUserAuthData();
+    //     $user = $auth['user'];
+    //     $userId = $auth['userId'];
+    //     $userName = $auth['userName'];
+
+    //     $isSuperAdmin = $user->can('view-customer-registration-chart');
+    //     $isInvestor = $user->can('investor-customer-registration');
+    //     $months = collect();
+    //     $registrationData = [];
+    //     $churnData = [];
+
+    //     $startDate = now()->subMonths(11)->startOfMonth();
+    //     $endDate = now()->endOfMonth();
+
+    //     // Bangun list bulan
+    //     $current = $startDate->copy();
+    //     while ($current <= $endDate) {
+    //         $months->push($current->format('M Y'));
+    //         $current->addMonth();
+    //     }
+
+    //     // 🔹 CASE 1: Super Admin => semua admin
+    //     if ($isSuperAdmin) {
+    //         $admins = User::where('disabled', 'false')->get();
+    //     }
+    //     // 🔹 CASE 2: Investor => admin yang berelasi dengan investor
+    //     elseif ($isInvestor) {
+    //         $linkedAdminIds = DB::table('investor_admins')
+    //             ->where('investor_id', $userId)
+    //             ->pluck('admin_id')
+    //             ->toArray();
+
+    //         // Kalau investor juga ingin melihat data dirinya sendiri (opsional)
+    //         $admins = User::whereIn('id', array_merge([$userId], $linkedAdminIds))
+    //             ->where('disabled', 'false')
+    //             ->get();
+
+    //         LogHelper::logInfo(null, [
+    //             'investor_id' => $userId,
+    //             'linked_admin_ids' => $linkedAdminIds,
+    //             'total_admins' => $admins->count(),
+    //         ], 200, 'Investor related admins for registration/churn data', $traceId, $timer->lap());
+    //     }
+    //     // 🔹 CASE 3: Admin biasa => hanya dirinya sendiri
+    //     else {
+    //         $admins = User::where('id', $userId)
+    //             ->where('disabled', 'false')
+    //             ->get();
+    //     }
+
+    //     // 🔹 Loop setiap admin untuk hitung data bulanan
+    //     foreach ($admins as $admin) {
+    //         $adminId = $admin->id;
+    //         $registrationData[$adminId] = [
+    //             'adminName' => $admin->name,
+    //             'counts' => []
+    //         ];
+    //         $churnData[$adminId] = ['counts' => []];
+
+    //         $current = $startDate->copy();
+    //         while ($current <= $endDate) {
+    //             $monthStart = $current->copy()->startOfMonth();
+    //             $monthEnd = $current->copy()->endOfMonth();
+
+    //             $registrationCount = Customer::where('user_id', $adminId)
+    //                 ->whereBetween('created_at', [$monthStart, $monthEnd])
+    //                 ->count();
+
+    //             $churnCount = Customer::where('user_id', $adminId)
+    //                 ->where(function ($q) {
+    //                     $q->where('disabled', true)
+    //                         ->orWhereNotNull('deleted_at');
+    //                 })
+    //                 ->whereBetween('deleted_at', [$monthStart, $monthEnd])
+    //                 ->count();
+
+    //             $registrationData[$adminId]['counts'][] = $registrationCount;
+    //             $churnData[$adminId]['counts'][] = $churnCount;
+    //             $current->addMonth();
+    //         }
+    //     }
+
+    //     return [
+    //         'months' => $months,
+    //         'registrationData' => $registrationData,
+    //         'churnData' => $churnData,
+    //         'isSuperAdmin' => $isSuperAdmin,
+    //         'isInvestor' => $isInvestor,
+    //     ];
+    // }
+
     private function calculateCustomerRegistrationChurnData($request, $traceId): array
     {
         $timer = new ExecutionTimer();
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
         $userId = $auth['userId'];
-        $userName = $auth['userName'];
 
         $isSuperAdmin = $user->can('view-customer-registration-chart');
         $isInvestor = $user->can('investor-customer-registration');
         $months = collect();
         $registrationData = [];
-        $churnData = [];
 
         $startDate = now()->subMonths(11)->startOfMonth();
         $endDate = now()->endOfMonth();
@@ -494,16 +601,9 @@ class HomeController extends Controller
                 ->pluck('admin_id')
                 ->toArray();
 
-            // Kalau investor juga ingin melihat data dirinya sendiri (opsional)
             $admins = User::whereIn('id', array_merge([$userId], $linkedAdminIds))
                 ->where('disabled', 'false')
                 ->get();
-
-            LogHelper::logInfo(null, [
-                'investor_id' => $userId,
-                'linked_admin_ids' => $linkedAdminIds,
-                'total_admins' => $admins->count(),
-            ], 200, 'Investor related admins for registration/churn data', $traceId, $timer->lap());
         }
         // 🔹 CASE 3: Admin biasa => hanya dirinya sendiri
         else {
@@ -512,14 +612,13 @@ class HomeController extends Controller
                 ->get();
         }
 
-        // 🔹 Loop setiap admin untuk hitung data bulanan
+        // 🔹 Loop setiap admin untuk hitung data pendaftaran bulanan
         foreach ($admins as $admin) {
             $adminId = $admin->id;
             $registrationData[$adminId] = [
                 'adminName' => $admin->name,
                 'counts' => []
             ];
-            $churnData[$adminId] = ['counts' => []];
 
             $current = $startDate->copy();
             while ($current <= $endDate) {
@@ -530,16 +629,7 @@ class HomeController extends Controller
                     ->whereBetween('created_at', [$monthStart, $monthEnd])
                     ->count();
 
-                $churnCount = Customer::where('user_id', $adminId)
-                    ->where(function ($q) {
-                        $q->where('disabled', true)
-                            ->orWhereNotNull('deleted_at');
-                    })
-                    ->whereBetween('deleted_at', [$monthStart, $monthEnd])
-                    ->count();
-
                 $registrationData[$adminId]['counts'][] = $registrationCount;
-                $churnData[$adminId]['counts'][] = $churnCount;
                 $current->addMonth();
             }
         }
@@ -547,7 +637,6 @@ class HomeController extends Controller
         return [
             'months' => $months,
             'registrationData' => $registrationData,
-            'churnData' => $churnData,
             'isSuperAdmin' => $isSuperAdmin,
             'isInvestor' => $isInvestor,
         ];
