@@ -219,7 +219,8 @@ class HomeController extends Controller
                 DB::raw("SUM(CASE WHEN b.status = 'LS' THEN b.total_amount ELSE 0 END) as total_paid"),
                 DB::raw("SUM(CASE WHEN b.status = 'PL' THEN b.total_amount ELSE 0 END) as total_paylater"),
                 DB::raw("SUM(CASE WHEN b.status = 'BL' THEN b.total_amount ELSE 0 END) as total_unpaid"),
-                DB::raw("SUM(CASE WHEN b.status = 'VD' THEN b.total_amount ELSE 0 END) as total_void")
+                DB::raw("SUM(CASE WHEN b.status = 'VD' THEN b.total_amount ELSE 0 END) as total_void"),
+                DB::raw("SUM(b.total_amount) as total_nominal")
             )
             ->groupBy('bsp.billing_periode_id', 'bp.name')
             ->orderBy('bsp.billing_periode_id')
@@ -259,7 +260,8 @@ class HomeController extends Controller
                 DB::raw("SUM(CASE WHEN b.status = 'LS' THEN b.total_amount ELSE 0 END) as total_paid"),
                 DB::raw("SUM(CASE WHEN b.status = 'PL' THEN b.total_amount ELSE 0 END) as total_paylater"),
                 DB::raw("SUM(CASE WHEN b.status = 'BL' THEN b.total_amount ELSE 0 END) as total_unpaid"),
-                DB::raw("SUM(CASE WHEN b.status = 'VD' THEN b.total_amount ELSE 0 END) as total_void")
+                DB::raw("SUM(CASE WHEN b.status = 'VD' THEN b.total_amount ELSE 0 END) as total_void"),
+                DB::raw("SUM(b.total_amount) as total_nominal")
             )
             ->groupBy('bsp.billing_periode_id', 'bp.name', 'u.id', 'u.name')
             ->orderBy('bsp.billing_periode_id')
@@ -278,7 +280,8 @@ class HomeController extends Controller
                 DB::raw("SUM(CASE WHEN b.status = 'LS' THEN b.total_amount ELSE 0 END) as total_paid"),
                 DB::raw("SUM(CASE WHEN b.status = 'PL' THEN b.total_amount ELSE 0 END) as total_paylater"),
                 DB::raw("SUM(CASE WHEN b.status = 'BL' THEN b.total_amount ELSE 0 END) as total_unpaid"),
-                DB::raw("SUM(CASE WHEN b.status = 'VD' THEN b.total_amount ELSE 0 END) as total_void")
+                DB::raw("SUM(CASE WHEN b.status = 'VD' THEN b.total_amount ELSE 0 END) as total_void"),
+                DB::raw("SUM(b.total_amount) as total_nominal")
             )
             ->groupBy('bsp.billing_periode_id', 'bsp.billing_periode')
             ->get()

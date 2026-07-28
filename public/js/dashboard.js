@@ -30,65 +30,92 @@ async function fetchMonthlySummary() {
         ];
         const isInvestor = permissions.includes("investor-billing-chart");
 
+        // Palet Warna Modern & Professional
+        const colors = {
+            target: "#2563EB", // Royal Blue (Target / Total)
+            paid: "#10B981", // Emerald Green (Paid / LS)
+            payLater: "#F59E0B", // Warm Amber (Pay Later / PL)
+            unpaid: "#EF4444", // Crimson Red (Unpaid / BL)
+            void: "#6B7280", // Slate Grey (Void / VD)
+        };
+
         let series = [];
 
-        // === INVESTOR VIEW (Mendukung Paid, Pay Later, Unpaid, & Void per Admin) ===
+        // === INVESTOR VIEW (Per Admin) ===
         if (isInvestor) {
             const grouped = billingSummary.reduce((acc, item) => {
                 const admin = item.admin_name || "Unknown";
                 if (!acc[admin]) acc[admin] = [];
                 acc[admin].push({
                     month: item.month_name,
-                    totalPaid: item.total_paid || 0,
-                    totalPayLater: item.total_paylater || 0,
-                    totalUnpaid: item.total_unpaid || 0,
-                    totalVoid: item.total_void || 0,
+                    totalNominal: parseFloat(item.total_nominal) || 0,
+                    totalPaid: parseFloat(item.total_paid) || 0,
+                    totalPayLater: parseFloat(item.total_paylater) || 0,
+                    totalUnpaid: parseFloat(item.total_unpaid) || 0,
+                    totalVoid: parseFloat(item.total_void) || 0,
                 });
                 return acc;
             }, {});
 
             Object.keys(grouped).forEach((admin) => {
-                const paidSeries = {
-                    name: `${admin} - Paid`,
-                    data: months.map((m) => {
-                        const found = grouped[admin].find((x) => x.month === m);
-                        return found ? found.totalPaid : 0;
-                    }),
-                    color: "#10B981", // 🟢 Hijau Emerald (Paid/LS)
-                };
-
-                const payLaterSeries = {
-                    name: `${admin} - Pay Later`,
-                    data: months.map((m) => {
-                        const found = grouped[admin].find((x) => x.month === m);
-                        return found ? found.totalPayLater : 0;
-                    }),
-                    color: "#F59E0B", // 🟡 Amber/Orange (Pay Later/PL)
-                };
-
-                const unpaidSeries = {
-                    name: `${admin} - Unpaid`,
-                    data: months.map((m) => {
-                        const found = grouped[admin].find((x) => x.month === m);
-                        return found ? found.totalUnpaid : 0;
-                    }),
-                    color: "#EF4444", // 🔴 Merah (Unpaid/BL)
-                };
-
-                const voidSeries = {
-                    name: `${admin} - Void`,
-                    data: months.map((m) => {
-                        const found = grouped[admin].find((x) => x.month === m);
-                        return found ? found.totalVoid : 0;
-                    }),
-                    color: "#9CA3AF", // ⚪ Abu-abu Slate (Void/VD)
-                };
-
                 series.push(
-                    paidSeries,
-                    payLaterSeries,
-                    unpaidSeries,
-                    voidSeries,
+                    // BAR KIRI: Total / Target
+                    {
+                        name: `${admin} - Target Total`,
+                        group: `${admin}_target`,
+                        data: months.map((m) => {
+                            const found = grouped[admin].find(
+                                (x) => x.month === m,
+                            );
+                            return found ? found.totalNominal : 0;
+                        }),
+                        color: colors.target,
+                    },
+                    // BAR KANAN: Stacked Breakdown Status
+                    {
+                        name: `${admin} - Paid`,
+                        group: `${admin}_actual`,
+                        data: months.map((m) => {
+                            const found = grouped[admin].find(
+                                (x) => x.month === m,
+                            );
+                            return found ? found.totalPaid : 0;
+                        }),
+                        color: colors.paid,
+                    },
+                    {
+                        name: `${admin} - Pay Later`,
+                        group: `${admin}_actual`,
+                        data: months.map((m) => {
+                            const found = grouped[admin].find(
+                                (x) => x.month === m,
+                            );
+                            return found ? found.totalPayLater : 0;
+                        }),
+                        color: colors.payLater,
+                    },
+                    {
+                        name: `${admin} - Unpaid`,
+                        group: `${admin}_actual`,
+                        data: months.map((m) => {
+                            const found = grouped[admin].find(
+                                (x) => x.month === m,
+                            );
+                            return found ? found.totalUnpaid : 0;
+                        }),
+                        color: colors.unpaid,
+                    },
+                    {
+                        name: `${admin} - Void`,
+                        group: `${admin}_actual`,
+                        data: months.map((m) => {
+                            const found = grouped[admin].find(
+                                (x) => x.month === m,
+                            );
+                            return found ? found.totalVoid : 0;
+                        }),
+                        color: colors.void,
+                    },
                 );
             });
         }
@@ -97,65 +124,147 @@ async function fetchMonthlySummary() {
             permissions.includes("view-billings-chart-nominal-total") ||
             permissions.includes("view-billings-chart-nominal-related")
         ) {
-            const totalPaid = billingSummary.map((i) => i.total_paid || 0);
-            const totalPayLater = billingSummary.map(
-                (i) => i.total_paylater || 0,
+            const totalNominal = billingSummary.map(
+                (i) => parseFloat(i.total_nominal) || 0,
             );
-            const totalUnpaid = billingSummary.map((i) => i.total_unpaid || 0);
-            const totalVoid = billingSummary.map((i) => i.total_void || 0);
+            const totalPaid = billingSummary.map(
+                (i) => parseFloat(i.total_paid) || 0,
+            );
+            const totalPayLater = billingSummary.map(
+                (i) => parseFloat(i.total_paylater) || 0,
+            );
+            const totalUnpaid = billingSummary.map(
+                (i) => parseFloat(i.total_unpaid) || 0,
+            );
+            const totalVoid = billingSummary.map(
+                (i) => parseFloat(i.total_void) || 0,
+            );
 
             series = [
-                { name: "Paid (Rp)", data: totalPaid, color: "#10B981" },
+                // 🔹 BAR KIRI: Target Nominal
+                {
+                    name: "Total Target (Rp)",
+                    group: "target",
+                    data: totalNominal,
+                    color: colors.target,
+                },
+
+                // 🔹 BAR KANAN: Breakdown Realisasi Status
+                {
+                    name: "Paid (Rp)",
+                    group: "actual",
+                    data: totalPaid,
+                    color: colors.paid,
+                },
                 {
                     name: "Pay Later (Rp)",
+                    group: "actual",
                     data: totalPayLater,
-                    color: "#F59E0B",
+                    color: colors.payLater,
                 },
-                { name: "Unpaid (Rp)", data: totalUnpaid, color: "#EF4444" },
-                { name: "Void (Rp)", data: totalVoid, color: "#9CA3AF" },
+                {
+                    name: "Unpaid (Rp)",
+                    group: "actual",
+                    data: totalUnpaid,
+                    color: colors.unpaid,
+                },
+                {
+                    name: "Void (Rp)",
+                    group: "actual",
+                    data: totalVoid,
+                    color: colors.void,
+                },
             ];
         }
-        // === CASHIER VIEW (Jumlah Customer / Person) ===
+        // === CASHIER VIEW (Jumlah Pelanggan) ===
         else if (permissions.includes("view-billings-chart-customer-count")) {
-            const totalPaid = billingSummary.map((i) => i.total_paid || 0);
-            const totalPayLater = billingSummary.map(
-                (i) => i.total_paylater || 0,
+            const totalCustomers = billingSummary.map(
+                (i) => parseInt(i.total_customers) || 0,
             );
-            const totalUnpaid = billingSummary.map((i) => i.total_unpaid || 0);
-            const totalVoid = billingSummary.map((i) => i.total_void || 0);
+            const totalPaid = billingSummary.map(
+                (i) => parseInt(i.total_paid) || 0,
+            );
+            const totalPayLater = billingSummary.map(
+                (i) => parseInt(i.total_paylater) || 0,
+            );
+            const totalUnpaid = billingSummary.map(
+                (i) => parseInt(i.total_unpaid) || 0,
+            );
+            const totalVoid = billingSummary.map(
+                (i) => parseInt(i.total_void) || 0,
+            );
 
-            // Label disesuaikan tanpa "(Rp)" karena ini menghitung jumlah pelanggan
             series = [
-                { name: "Paid", data: totalPaid, color: "#10B981" },
-                { name: "Pay Later", data: totalPayLater, color: "#F59E0B" },
-                { name: "Unpaid", data: totalUnpaid, color: "#EF4444" },
-                { name: "Void", data: totalVoid, color: "#9CA3AF" },
+                // 🔹 BAR KIRI: Total Customers
+                {
+                    name: "Total Customers",
+                    group: "target",
+                    data: totalCustomers,
+                    color: colors.target,
+                },
+
+                // 🔹 BAR KANAN: Breakdown Status
+                {
+                    name: "Paid",
+                    group: "actual",
+                    data: totalPaid,
+                    color: colors.paid,
+                },
+                {
+                    name: "Pay Later",
+                    group: "actual",
+                    data: totalPayLater,
+                    color: colors.payLater,
+                },
+                {
+                    name: "Unpaid",
+                    group: "actual",
+                    data: totalUnpaid,
+                    color: colors.unpaid,
+                },
+                {
+                    name: "Void",
+                    group: "actual",
+                    data: totalVoid,
+                    color: colors.void,
+                },
             ];
         }
 
+        // Kalkulasi Y-Axis Maksimal
         const maxValue = Math.max(
             ...billingSummary.map((x) =>
-                Math.max(x.total_paid || 0, x.total_unpaid || 0),
+                Math.max(
+                    parseFloat(x.total_nominal) || 0,
+                    parseFloat(x.total_customers) || 0,
+                ),
             ),
         );
-        const yAxisMax = maxValue * 1.25;
+        const yAxisMax = maxValue > 0 ? maxValue * 1.2 : 100;
 
         const options = {
             chart: {
                 type: "bar",
-                height: 400,
-                stacked: true,
+                height: 420,
+                stacked: true, // Wajib true agar group 'actual' menumpuk
                 toolbar: { show: false },
+            },
+            plotOptions: {
+                bar: {
+                    horizontal: false,
+                    columnWidth: "55%", // Lebar bar ganda yang seimbang
+                    borderRadius: 3,
+                },
             },
             title: {
                 text: isInvestor
                     ? "Monthly Billing Summary (Investor View)"
-                    : "Monthly Customer Summary",
+                    : "Monthly Customer & Billing Summary",
                 align: "center",
                 style: {
                     fontSize: "18px",
                     fontWeight: "bold",
-                    color: "#333",
+                    color: "#1F2937",
                 },
             },
             series,
@@ -175,7 +284,7 @@ async function fetchMonthlySummary() {
                                 "investor-billing-chart",
                             ].includes(p),
                         )
-                            ? "Rp " + value.toLocaleString()
+                            ? "Rp " + Math.round(value).toLocaleString()
                             : `${Math.round(value)} customers`,
                 },
             },
@@ -196,7 +305,6 @@ async function fetchMonthlySummary() {
                             ? "Rp " + value.toLocaleString()
                             : `${Math.round(value)} customers`;
 
-                        // 🔹 Tambahkan catatan khusus jika statusnya Void
                         if (seriesName.includes("Void")) {
                             return `${formattedVal} (Dibatalkan / Paket Expire karena tidak bayar)`;
                         }
@@ -206,17 +314,44 @@ async function fetchMonthlySummary() {
                 },
             },
             dataLabels: { enabled: false },
+
+            // 🔹 LEGEND MENYAMPING (HORIZONTAL)
             legend: {
                 position: "top",
                 horizontalAlign: "center",
+                fontSize: "13px",
+                fontWeight: 500,
+                showForSingleSeries: false,
+                showForNullSeries: true,
+                showForZeroSeries: true,
+                // 🔹 DUA BARIS DI BAWAH INI KUNCI UTAMA MEMAKSA SEMUA ITEM DIPALINGKAN SECARA HORIZONTAL:
+                horizontalAlign: "center",
+                floating: false,
+                markers: {
+                    radius: 12,
+                },
+                itemMargin: {
+                    horizontal: 10, // Jarak antar teks ke samping
+                    vertical: 5,
+                },
+                // 🔹 Mematikan pengelompokan vertikal otomatis ApexCharts pada Grouped Charts
+                onItemClick: {
+                    toggleDataSeries: true,
+                },
+                onItemHover: {
+                    highlightDataSeries: true,
+                },
             },
         };
 
+        const targetEl = document.querySelector("#chartWrapper1");
+        if (!targetEl) {
+            console.error("Target #chartWrapper1 not found!");
+            return;
+        }
+
         if (chart) chart.destroy();
-        chart = new ApexCharts(
-            document.querySelector("#chartWrapper1"),
-            options,
-        );
+        chart = new ApexCharts(targetEl, options);
         chart.render();
     } catch (error) {
         console.error("Error fetching data: ", error);
