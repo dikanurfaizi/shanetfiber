@@ -27,7 +27,8 @@ class CustomerSubscription extends Model
         'price_final',
         'discount_type_final',
         'discount_value_final',
-        'terminated_at'
+        'terminated_at',
+        'is_prorated',
     ];
 
     protected $casts = [
@@ -35,7 +36,8 @@ class CustomerSubscription extends Model
         'end_date' => 'date',
         'price_final' => 'decimal:2',
         'discount_value_final' => 'decimal:2',
-        'terminated_at' => 'date'
+        'terminated_at' => 'date',
+        'is_prorated' => 'boolean',
     ];
 
     protected $appends = ['computed_status'];
@@ -119,5 +121,41 @@ class CustomerSubscription extends Model
         // hanya dianggap expired kalau status active & lewat
         return $this->status === 'active'
             && Carbon::parse($this->end_date)->isPast();
+    }
+
+    /**
+     * Helper untuk mengecek apakah subscription saat ini bernilai prorate
+     */
+    public function isProrated(): bool
+    {
+        return (bool) $this->is_prorated;
+    }
+
+    /**
+     * Menghitung harga normal paket berdasarkan diskon durasi.
+     */
+    public function calculateNormalPrice(): array
+    {
+        $basePrice = (float) ($this->package?->price ?? 0);
+        $discountType = $this->packageDuration?->discount_type ?? 'none';
+        $discountValue = (float) ($this->packageDuration?->discount_value ?? 0);
+
+        $finalPrice = $basePrice;
+
+        if ($discountType === 'percent' && $discountValue > 0) {
+            $finalPrice = max(0, $basePrice - ($basePrice * ($discountValue / 100)));
+        } elseif ($discountType === 'amount' && $discountValue > 0) {
+            $finalPrice = max(0, $basePrice - $discountValue);
+        } else {
+            $discountType = 'none';
+            $discountValue = 0.00;
+        }
+
+        return [
+            'base_price'     => $basePrice,
+            'final_price'    => $finalPrice,
+            'discount_type'  => $discountType,
+            'discount_value' => $discountValue,
+        ];
     }
 }

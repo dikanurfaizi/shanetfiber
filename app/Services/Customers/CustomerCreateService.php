@@ -5,13 +5,12 @@ namespace App\Services\Customers;
 use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
 use App\Helpers\FormatReceiver;
-use App\Helpers\ProrateCalculator;
+use App\Helpers\SubscriptionPricingCalculator;
 use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerSubscription;
 use App\Models\Customers\CustomerAddon;
 use App\Models\Billings\BillingPeriode;
 use App\Models\Billings\BillingSubscriptionPeriode;
-use App\Models\Membership\Membership;
 use App\Models\Membership\CustomerMembership;
 use App\Models\Packages\PackageDuration;
 use App\Models\Websystem;
@@ -84,53 +83,36 @@ class CustomerCreateService
             }
 
             /** ----------------------------------------------------
-             * 5. Fetch Duration + Package (Eager Loaded)
+             * 5. Fetch Duration + Package
              * ---------------------------------------------------- */
             $packageDuration = PackageDuration::with(['duration', 'package'])
                 ->findOrFail($data['package_duration_id']);
 
-            $package  = $packageDuration->package;
-            $duration = $packageDuration->duration;
-
             /** ----------------------------------------------------
-             * 6. Calculate Pricing (💡 Menggunakan Helper Terpusat)
+             * 6. Calculate Pricing (💡 Panggilan Satu Pintu via Helper)
              * ---------------------------------------------------- */
-            $months = $duration->duration_months;
-            $discountNominalStep3 = $data['discount_nominal'] ?? 0;
-
-            $discountType  = 'none';
-            $discountValue = 0;
-
-            if ($discountNominalStep3 > 0) {
-                $discountType  = 'amount';
-                $discountValue = $discountNominalStep3;
-            }
-
-            // 💡 PANGKAS TOTAL KODE REDUNDAN: Serahkan kalkulasi ke Helper ProrateCalculator
-            $calculation = ProrateCalculator::calculate(
-                packagePrice: $package->price,
-                discountNominal: $discountNominalStep3,
-                isProrate: $data['is_prorate'] ?? 0,
-                durationMonths: $months
+            $pricing = SubscriptionPricingCalculator::calculateSubscriptionPrice(
+                packageDuration: $packageDuration,
+                isProrateInput: $data['is_prorate'] ?? 0
             );
-
-            $priceFinal = $calculation['price_before_discount'];
 
             /** ----------------------------------------------------
              * 7. Create Customer Subscription
              * ---------------------------------------------------- */
+            $months = $packageDuration->duration->duration_months ?? 1;
             $subscriptionEndDate = now()->addMonths($months)->day(15);
 
             $subscription = CustomerSubscription::create([
                 'customer_id'          => $customer->id,
-                'package_id'           => $package->id,
+                'package_id'           => $packageDuration->package_id,
                 'package_duration_id'  => $packageDuration->id,
                 'status'               => 'active',
                 'start_date'           => now(),
                 'end_date'             => $subscriptionEndDate,
-                'price_final'          => $priceFinal,         // Hasil dari helper dijamin sinkron!
-                'discount_type_final'  => $discountType,
-                'discount_value_final' => $discountValue,
+                'price_final'          => $pricing['subscription_price'],      // Harga bersih (Paket - Diskon Durasi + Prorate)
+                'discount_type_final'  => $pricing['duration_discount_type'],  // Diskon durasi paket saja
+                'discount_value_final' => $pricing['duration_discount_value'],
+                'is_prorated'          => $pricing['is_prorated'],
             ]);
 
             /** ----------------------------------------------------
@@ -171,7 +153,7 @@ class CustomerCreateService
             }
 
             /** ----------------------------------------------------
-             * 11. Create Initial Billing & Logging
+             * 11. Create Initial Billing
              * ---------------------------------------------------- */
             $this->billingCreateService->createBilling(
                 $websystem,

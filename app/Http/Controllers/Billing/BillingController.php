@@ -137,12 +137,14 @@ class BillingController extends Controller
         $periodeNow = Carbon::now()->format('F Y');
 
         if ($periodeNow == $billingPeriodeName) {
-            $billingPeriodes = CarbonPeriod::create(now()->addmonth(), '1 month', now()->addMonths(12));
+            $billingPeriodes = CarbonPeriod::create(now()->addMonth(), '1 month', now()->addMonths(12));
         } else {
             $billingPeriodes = CarbonPeriod::create(now(), '1 month', now()->addMonths(11));
         }
 
-        $data = BillingPeriode::paginate(12);
+        // 💡 Urutkan dari yang paling baru diciptakan (created_at descending)
+        $data = BillingPeriode::orderByDesc('created_at')->paginate(12);
+
         $websystem = Websystem::first();
         $billingAutoGenerate = $websystem?->billing_auto_generate ?? false;
         $billingAutoDay = $websystem?->billing_auto_day;

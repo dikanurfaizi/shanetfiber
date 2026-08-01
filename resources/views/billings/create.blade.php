@@ -89,6 +89,13 @@
                         </tr>
                     @endforeach
                 </table>
+
+                {{-- 💡 TAMBAHKAN PAGINATIONS LINK DI SINI --}}
+                @if (method_exists($data, 'links'))
+                    <div class="d-flex justify-content-end mt-3">
+                        {!! $data->links() !!}
+                    </div>
+                @endif
             </div>
         </div>
     </div>

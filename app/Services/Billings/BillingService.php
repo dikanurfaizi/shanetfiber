@@ -2,7 +2,8 @@
 
 namespace App\Services\Billings;
 
-use App\Helpers\ExecutionTimer;
+use App\Helpers\LogHelper;
+use App\Helpers\SubscriptionPricingCalculator;
 use App\Models\Customers\CustomerSubscription;
 use App\Models\Mikrotik;
 use App\Models\Billings\Billing;
@@ -10,88 +11,73 @@ use App\Models\Billings\BillingPeriode;
 use App\Models\Billings\BillingSubscriptionPeriode;
 use App\Models\Websystem;
 use App\Models\AutoIsolir;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
-use App\Helpers\LogHelper;
 use App\Models\Customers\Customer;
-use App\Models\Customers\CustomerAddon;
-use App\Services\Billings\BillingCreateService;
-use App\Services\Billings\BillingUpdateCommentService;
-use DomainException;
+use Carbon\Carbon;
+use Throwable;
 
 class BillingService
 {
-    private BillingCreateService $billingCreateService;
-    private BillingUpdateCommentService $billingUpdateCommentService;
-    private BillingExtensionService $billingExtensionService;
-
     public function __construct(
-        BillingCreateService $billingCreateService,
-        BillingUpdateCommentService $billingUpdateCommentService,
-        BillingExtensionService $billingExtensionService
-    ) {
-        $this->billingCreateService = $billingCreateService;
-        $this->billingUpdateCommentService = $billingUpdateCommentService;
-        $this->billingExtensionService = $billingExtensionService;
-    }
+        private readonly BillingCreateService $billingCreateService,
+        private readonly BillingUpdateCommentService $billingUpdateCommentService,
+        private readonly BillingExtensionService $billingExtensionService
+    ) {}
 
-    public function createBillingPeriode(string $periode): BillingPeriode
+    public function createBillingPeriode(?string $periode = null, ?string $traceId = null): BillingPeriode
     {
-        return DB::transaction(function () use ($periode) {
+        $periodeName = $periode ?: now()->format('F Y');
+        $actionName  = 'Create Billing Periode';
 
-            $periodeDate = Carbon::createFromFormat('F Y', $periode);
+        LogHelper::logInfo($actionName, ['periode' => $periodeName], 200, 'Memulai proses pembuatan periode billing', $traceId);
 
-            // 1. Close hanya periode yang aktif
-            BillingPeriode::where('status', 'active')
-                ->update(['status' => 'closed']);
+        try {
+            return DB::transaction(function () use ($periodeName, $traceId, $actionName) {
+                $periodeDate = Carbon::createFromFormat('F Y', $periodeName);
 
-            // 2. Ambil atau buat periode
-            $billingPeriode = BillingPeriode::firstOrNew(
-                ['name' => $periode]
-            );
+                $affectedRows = BillingPeriode::where('status', 'active')
+                    ->update(['status' => 'closed']);
 
-            // 3. Pastikan data konsisten
-            $billingPeriode->fill([
-                'month'      => $periodeDate->format('F'),
-                'year'       => $periodeDate->format('Y'),
-                'start_date' => $periodeDate->copy()->startOfMonth()->startOfDay(),
-                'end_date'   => $periodeDate->copy()->endOfMonth()->endOfDay(),
-                'status'     => 'active',
-            ]);
+                LogHelper::logInfo($actionName, ['closed_periodes_count' => $affectedRows], 200, 'Menutup periode billing aktif sebelumnya', $traceId);
 
-            $billingPeriode->save();
+                $billingPeriode = BillingPeriode::firstOrNew(['name' => $periodeName]);
 
-            return $billingPeriode;
-        });
+                $billingPeriode->fill([
+                    'month'      => $periodeDate->format('F'),
+                    'year'       => $periodeDate->format('Y'),
+                    'start_date' => $periodeDate->copy()->startOfMonth()->startOfDay(),
+                    'end_date'   => $periodeDate->copy()->endOfMonth()->endOfDay(),
+                    'status'     => 'active',
+                ]);
+
+                $billingPeriode->save();
+
+                LogHelper::logInfo($actionName, $billingPeriode->toArray(), 201, 'Berhasil membuat/memperbarui periode billing aktif', $traceId);
+
+                return $billingPeriode;
+            });
+        } catch (Throwable $e) {
+            LogHelper::logError($e, ['periode' => $periodeName], 500, 'Gagal membuat periode billing', $traceId);
+            throw $e;
+        }
     }
 
-    public function generateBillingsForPeriod(
-        BillingPeriode $billingPeriode,
-        string $traceId
-    ): int {
-        $timer = new ExecutionTimer();
-
+    public function generateBillingsForPeriod(BillingPeriode $billingPeriode, string $traceId): int
+    {
         $context = [
             'billing_periode_id'   => $billingPeriode->id,
             'billing_periode_name' => $billingPeriode->name,
             'action'               => 'generate_billings_for_period',
         ];
 
-        LogHelper::logInfo(null, $context, 200, 'BILLING.START', $traceId, 0);
+        LogHelper::logInfo(null, $context, 200, 'BILLING.START', $traceId);
 
         try {
             $routers   = Mikrotik::where('disabled', 'false')->get();
             $websystem = Websystem::where('slug', 'websystem')->first();
 
             if ($routers->isEmpty()) {
-                LogHelper::logInfo(
-                    null,
-                    $context,
-                    200,
-                    'BILLING.NO_ACTIVE_ROUTERS',
-                    $traceId,
-                    $timer->lap()
-                );
+                LogHelper::logInfo(null, $context, 200, 'BILLING.NO_ACTIVE_ROUTERS', $traceId);
                 return 0;
             }
 
@@ -102,30 +88,17 @@ class BillingService
             ];
 
             foreach ($routers as $router) {
-
                 $customers = Customer::where('mikrotik_id', $router->id)
                     ->where('disabled', 'false')
                     ->where('activation', 'true')
                     ->get();
 
                 foreach ($customers as $customer) {
+                    DB::transaction(function () use ($customer, $router, $billingPeriode, $websystem, $traceId, &$stats) {
 
-                    DB::transaction(function () use (
-                        $customer,
-                        $router,
-                        $billingPeriode,
-                        $websystem,
-                        $traceId,
-                        &$stats
-                    ) {
-                        $txTimer = new ExecutionTimer();
+                        $customer = Customer::where('id', $customer->id)->lockForUpdate()->first();
 
-                        // Lock customer
-                        $customer = Customer::where('id', $customer->id)
-                            ->lockForUpdate()
-                            ->first();
-
-                        // Latest subscription
+                        /** @var CustomerSubscription|null $sub */
                         $sub = CustomerSubscription::where('customer_id', $customer->id)
                             ->orderByDesc('created_at')
                             ->lockForUpdate()
@@ -136,11 +109,8 @@ class BillingService
                             return;
                         }
 
-                        // 🔄 Auto-reactivate subscription jika customer masih aktif
                         if ($sub->shouldBeReactivated($customer)) {
-
                             $oldStatus = $sub->status;
-
                             $sub->update([
                                 'status'        => 'active',
                                 'terminated_at' => null,
@@ -149,39 +119,26 @@ class BillingService
                             LogHelper::logInfo(
                                 null,
                                 [
-                                    'customer_id'        => $customer->id,
-                                    'subscription_id'    => $sub->id,
-                                    'old_status'         => $oldStatus,
-                                    'new_status'         => 'active',
-                                    'reason'             => 'CUSTOMER_STILL_ACTIVE',
+                                    'customer_id'     => $customer->id,
+                                    'subscription_id' => $sub->id,
+                                    'old_status'      => $oldStatus,
+                                    'new_status'      => 'active',
                                 ],
                                 200,
                                 'SUBSCRIPTION.REACTIVATED',
-                                $traceId,
-                                $txTimer->lap()
+                                $traceId
                             );
                         }
 
                         if (!$sub->eligibleForBilling($customer)) {
                             $stats['skip_not_eligible']++;
-
-                            LogHelper::logInfo(
-                                null,
-                                [
-                                    'router_id'       => $router->id,
-                                    'customer_id'     => $customer->id,
-                                    'subscription_id' => $sub->id,
-                                    'reason'          => 'NOT_ELIGIBLE',
-                                ],
-                                200,
-                                'BILLING.SKIP.CUSTOMER_NOT_ACTIVE',
-                                $traceId,
-                                $txTimer->lap()
-                            );
                             return;
                         }
 
-                        // Active BSP (idempotency guard)
+                        // 💡 1. Normalisasi prorate menggunakan helper terpusat
+                        $this->normalizeProratedSubscription($sub, $traceId);
+
+                        // Idempotency Check
                         $oldBsp = BillingSubscriptionPeriode::where('customer_subscription_id', $sub->id)
                             ->where('status', 'active')
                             ->orderByDesc('billing_periode_id')
@@ -189,36 +146,11 @@ class BillingService
                             ->first();
 
                         if ($oldBsp?->billing_periode_id === $billingPeriode->id) {
-                            LogHelper::logInfo(
-                                null,
-                                [
-                                    'router_id'          => $router->id,
-                                    'customer_id'        => $customer->id,
-                                    'subscription_id'    => $sub->id,
-                                    'billing_periode_id' => $billingPeriode->id,
-                                ],
-                                200,
-                                'BILLING.SKIP.BSP_ALREADY_EXISTS',
-                                $traceId,
-                                $txTimer->lap()
-                            );
                             return;
                         }
 
                         if ($oldBsp) {
                             $oldBsp->update(['status' => 'expired']);
-
-                            LogHelper::logInfo(
-                                null,
-                                [
-                                    'customer_subscription_id' => $sub->id,
-                                    'expired_bsp_id'           => $oldBsp->id,
-                                ],
-                                200,
-                                'BILLING.BSP.EXPIRED',
-                                $traceId,
-                                $txTimer->lap()
-                            );
                         }
 
                         $newBsp = BillingSubscriptionPeriode::create([
@@ -228,20 +160,10 @@ class BillingService
                         ]);
 
                         if (Billing::where('billing_subscription_id', $newBsp->id)->exists()) {
-                            LogHelper::logWarning(
-                                null,
-                                [
-                                    'customer_id' => $customer->id,
-                                    'bsp_id'      => $newBsp->id,
-                                ],
-                                409,
-                                'BILLING.SKIP.BILLING_ALREADY_EXISTS',
-                                $traceId,
-                                $txTimer->lap()
-                            );
                             return;
                         }
 
+                        // Kirim $sub yang nilainya sudah pasti normal
                         $this->billingCreateService->createBilling(
                             $websystem,
                             $customer,
@@ -251,87 +173,83 @@ class BillingService
                             $traceId
                         );
 
-                        LogHelper::logInfo(
-                            null,
-                            [
-                                'router_id'          => $router->id,
-                                'customer_id'        => $customer->id,
-                                'subscription_id'    => $sub->id,
-                                'billing_periode_id' => $billingPeriode->id,
-                            ],
-                            201,
-                            'BILLING.CREATE.SUCCESS',
-                            $traceId,
-                            $txTimer->lap()
-                        );
-
                         $stats['created']++;
 
-                        // Extend only after billing success
-                        $this->billingExtensionService
-                            ->extendSubscription($sub, $billingPeriode);
+                        // 💡 2. Perpanjang end_date paket berlangganan & addons untuk periode berjalan
+                        $this->billingExtensionService->extendSubscription($sub, $billingPeriode);
+                        $this->billingExtensionService->extendCustomerAddons($customer, $billingPeriode);
 
-                        $this->billingExtensionService
-                            ->extendCustomerAddons($customer, $billingPeriode);
-
-                        // Dispatch AFTER COMMIT
                         $autoIsolir = AutoIsolir::where('mikrotik_id', $router->id)->first();
 
                         if ($autoIsolir) {
                             $priceFinal = $sub->price_final;
 
-                            DB::afterCommit(function () use (
-                                $customer,
-                                $router,
-                                $autoIsolir,
-                                $priceFinal,
-                                $traceId
-                            ) {
-                                $this->billingUpdateCommentService
-                                    ->dispatchBillingJobForCustomer(
-                                        $customer,
-                                        $router,
-                                        $autoIsolir,
-                                        $priceFinal,
-                                        $traceId
-                                    );
+                            DB::afterCommit(function () use ($customer, $router, $autoIsolir, $priceFinal, $traceId) {
+                                $this->billingUpdateCommentService->dispatchBillingJobForCustomer(
+                                    $customer,
+                                    $router,
+                                    $autoIsolir,
+                                    $priceFinal,
+                                    $traceId
+                                );
                             });
                         }
                     });
                 }
             }
 
+            LogHelper::logInfo(null, ['billing_periode_id' => $billingPeriode->id, 'summary' => $stats], 200, 'BILLING.FINISH', $traceId);
+
+            return $stats['created'];
+        } catch (Throwable $e) {
+            LogHelper::logError(null, array_merge($context, ['exception' => get_class($e), 'error' => $e->getMessage()]), 500, 'BILLING.FAILED', $traceId);
+            throw $e;
+        }
+    }
+
+    /**
+     * 💡 Mereset harga prorate ke harga paket normal bulanan (setelah diskon durasi)
+     */
+    private function normalizeProratedSubscription(CustomerSubscription $sub, ?string $traceId = null): void
+    {
+        if (!$sub->is_prorated) {
+            return;
+        }
+
+        $oldPrice = $sub->price_final;
+
+        // Eager load packageDuration untuk kalkulasi ulang
+        $sub->loadMissing(['packageDuration.package', 'packageDuration.duration']);
+
+        if ($sub->packageDuration) {
+            // Hitung harga normal tanpa prorate (isProrateInput = false)
+            $pricing = SubscriptionPricingCalculator::calculateSubscriptionPrice(
+                packageDuration: $sub->packageDuration,
+                isProrateInput: false
+            );
+
+            $sub->update([
+                'price_final'          => $pricing['subscription_price'],
+                'discount_type_final'  => $pricing['duration_discount_type'],
+                'discount_value_final' => $pricing['duration_discount_value'],
+                'is_prorated'          => false,
+            ]);
+
+            $sub->refresh();
+
             LogHelper::logInfo(
                 null,
                 [
-                    'billing_periode_id' => $billingPeriode->id,
-                    'summary' => $stats,
+                    'subscription_id' => $sub->id,
+                    'customer_id'     => $sub->customer_id,
+                    'old_price'       => $oldPrice,
+                    'new_normal_price' => $pricing['subscription_price'],
+                    'is_prorated'     => false,
                 ],
                 200,
-                'BILLING.FINISH',
-                $traceId,
-                $timer->lap()
+                'SUBSCRIPTION.PRORATE_RESET_TO_NORMAL',
+                $traceId
             );
-
-            // 🔑 RETURN SELARAS DENGAN SUMMARY
-            return $stats['created'];
-        } catch (\Throwable $e) {
-            LogHelper::logError(
-                null,
-                array_merge($context, [
-                    'exception' => get_class($e),
-                    'error' => [
-                        'code'    => $e->getCode(),
-                        'message' => $e->getMessage(),
-                    ],
-                ]),
-                500,
-                'BILLING.FAILED',
-                $traceId,
-                $timer->lap()
-            );
-
-            throw $e;
         }
     }
 }

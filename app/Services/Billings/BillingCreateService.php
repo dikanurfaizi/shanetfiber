@@ -9,14 +9,12 @@ use App\Models\Billings\BillingSubscriptionPeriode;
 use App\Models\Billings\BillingPeriode;
 use App\Models\Billings\Billing;
 use App\Models\Billings\BillingItem;
-use App\Models\Membership\CustomerMembership;
 use App\Models\Websystem;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use App\Helpers\LogHelper;
 use App\Helpers\BillingDateResolver;
-use App\Helpers\ExecutionTimer;
+use App\Helpers\SubscriptionPricingCalculator;
 use App\Models\Billings\BillingPayment;
 use App\Models\User;
 use App\Services\Receipts\CreateReceiptService;
@@ -35,26 +33,23 @@ class BillingCreateService
         BillingSubscriptionPeriode $billingSubscription,
         BillingPeriode $billingPeriode,
         CustomerSubscription $customerSubscription,
-        string $traceId
+        string $traceId,
     ): array {
-        $timer = new ExecutionTimer();
         LogHelper::logInfo(
             null,
             [],
             201,
             'Create Billing Started',
-            $traceId,
-            $timer->lap()
+            $traceId
         );
 
-        $billing =  DB::transaction(function () use (
+        $billing = DB::transaction(function () use (
             $websystem,
             $customer,
             $billingSubscription,
             $billingPeriode,
             $customerSubscription,
-            $traceId,
-            &$timer
+            $traceId
         ) {
             /** ----------------------------------------
              * 1. Resolve Issue Date & Due Date
@@ -63,16 +58,13 @@ class BillingCreateService
             $dueDate   = app(BillingDateResolver::class)
                 ->resolveDueDate($billingPeriode, $issueDate);
 
-
             /** ----------------------------------------------------
              * 2. Prepare Year-Month
              * ---------------------------------------------------- */
-            $yearMonth = Carbon::parse($billingPeriode->name)->format('Ym');
-
+            $yearMonth = $billingPeriode->year;
 
             /** ----------------------------------------------------
-             * 3. Generate Invoice Sequence (per customer, per month)
-             *    SAFE WITH LOCKING → to prevent race condition
+             * 3. Generate Invoice Sequence
              * ---------------------------------------------------- */
             $seq = Billing::where('customer_id', $customer->id)
                 ->whereHas('billingSubscription', function ($q) use ($billingPeriode) {
@@ -81,139 +73,74 @@ class BillingCreateService
                 ->lockForUpdate()
                 ->count() + 1;
 
-            $seqFormatted = str_pad($seq, 4, '0', STR_PAD_LEFT);
-
+            $seqFormatted  = str_pad($seq, 4, '0', STR_PAD_LEFT);
             $billingNumber = "INV-{$yearMonth}-{$customer->id}-{$seqFormatted}";
-
-            $userId = auth()->id() ?? User::orderBy('id', 'asc')->value('id');
+            $userId        = auth()->id() ?? User::orderBy('id', 'asc')->value('id');
 
             /** ----------------------------------------------------
              * 4. Create Billing Header
              * ---------------------------------------------------- */
             $billing = Billing::create([
-                'slug' => Str::slug($customer->id . '-' . Str::random(4)),
-                'billing_number' => $billingNumber,
-                'customer_id' => $customer->id,
+                'slug'                    => Str::slug($customer->id . '-' . Str::random(4)),
+                'billing_number'          => $billingNumber,
+                'customer_id'             => $customer->id,
                 'billing_subscription_id' => $billingSubscription->id,
-                'base_price' => $customerSubscription->package->price,
-                'subtotal' => 0,
-                'tax_amount' => 0,
-                'total_amount' => 0,
-                'status' => 'BL',
-                'created_by' => $userId,
-                'updated_by' => $userId,
-                'due_date' => $dueDate,
+                'base_price'              => $customerSubscription->package->price,
+                'subtotal'                => 0,
+                'tax_amount'              => 0,
+                'total_amount'            => 0,
+                'status'                  => 'BL',
+                'created_by'              => $userId,
+                'updated_by'              => $userId,
+                'due_date'                => $dueDate,
             ]);
 
+            $items = [];
 
             /** ----------------------------------------------------
              * 5. Add Billing Items: PACKAGE
              * ---------------------------------------------------- */
-            $item = [
-                'billing_id' => $billing->id,
-                'item_type' => 'package',
+            $items[] = [
+                'billing_id'  => $billing->id,
+                'item_type'   => 'package',
                 'source_type' => 'package',
-                'source_id' => $customerSubscription->package_id,
-                'item_name' => $customerSubscription->package->name,
-                'qty' => 1,
-                'price'    => $customerSubscription->price_final,
-                'subtotal' => 1 * $customerSubscription->price_final,
-                'created_at' => now(),
-                'updated_at' => now()
+                'source_id'   => $customerSubscription->package_id,
+                'item_name'   => $customerSubscription->package->name,
+                'qty'         => 1,
+                'price'       => $customerSubscription->price_final,
+                'subtotal'    => $customerSubscription->price_final,
+                'created_at'  => now(),
+                'updated_at'  => now(),
             ];
 
-            $items[] = $item;
-
-
             /** ----------------------------------------------------
-             * 6. Add Discount Item (if exists)
+             * 6. Add Billing Items: MEMBERSHIP DISCOUNT (💡 Satu Pintu via Helper)
              * ---------------------------------------------------- */
-            // if ($customerSubscription->discount_type_final !== 'none') {
+            $membershipDiscount = SubscriptionPricingCalculator::resolveMembershipDiscount(
+                customerId: $customer->id,
+                basePriceForDiscount: (float) $customerSubscription->price_final,
+                periodStart: $billingPeriode->startDate(),
+                periodEnd: $billingPeriode->endDate()
+            );
 
-            //     $discountLabel = $customerSubscription->discount_type_final === 'percent'
-            //         ? "{$customerSubscription->discount_value_final}% Discount"
-            //         : "Discount";
-
-            //     $discountAmount = $customerSubscription->discount_type_final === 'percent'
-            //         ? ($customerSubscription->discount_value_final / 100) * $customerSubscription->price_final
-            //         : $customerSubscription->discount_value_final;
-
-            //     $discountAmount = -abs($discountAmount);
-
-            //     $item = [
-            //         'billing_id' => $billing->id,
-            //         'item_type' => 'discount',
-            //         'source_type' => 'package_duration',
-            //         'source_id' => $customerSubscription->package_duration_id,
-            //         'item_name' => $discountLabel,
-            //         'qty' => 1,
-            //         'price' => $discountAmount,
-            //         'subtotal' => $discountAmount,
-            //         'created_at' => now(),
-            //         'updated_at' => now()
-            //     ];
-
-            //     $items[] = $item;
-            // }
-
-            /** ----------------------------------------
-             * 7. Billing Items – MEMBERSHIP DISCOUNT
-             * ---------------------------------------- */
-            $periodStart = $billingPeriode->startDate();
-            $periodEnd   = $billingPeriode->endDate();
-
-            // Ambil semua membership aktif yang bersinggungan dengan periode billing
-            $memberships = CustomerMembership::with('membership')
-                ->where('customer_id', $customer->id)
-                ->where('is_active', 1)
-                ->where('start_date', '<=', $periodEnd)
-                ->where(function ($q) use ($periodStart) {
-                    $q->whereNull('end_date')
-                        ->orWhere('end_date', '>=', $periodStart);
-                })
-                ->get(); // Menggunakan get() untuk iterasi
-
-            foreach ($memberships as $membership) {
-                // 1. Cek Validitas: Jika end_date sudah lampau (sebelum atau sama dengan periodEnd billing)
-                // atau logika khusus Anda: jika end_date < periodStart, maka sudah tidak berlaku untuk periode ini.
-                if ($membership->end_date && $membership->end_date < $periodEnd) {
-                    // Set ke non-aktif jika sudah melewati batas periode billing ini
-                    $membership->update(['is_active' => false]);
-                }
-
-                // 2. Kalkulasi Diskon (Hanya jika masih active setelah pengecekan di atas)
-                if ($membership->is_active && $membership->membership) {
-                    $base = $customerSubscription->price_final;
-
-                    $discount = match ($membership->membership->discount_type) {
-                        'percent' => ($membership->membership->discount_value / 100) * $base,
-                        'amount'  => $membership->membership->discount_value,
-                        default   => 0,
-                    };
-
-                    if ($discount > 0) {
-                        $items[] = [
-                            'billing_id'  => $billing->id,
-                            'item_type'   => 'discount',
-                            'source_type' => 'membership',
-                            'source_id'   => $membership->membership->id,
-                            'item_name'   => $membership->membership->name,
-                            'qty'         => 1,
-                            'price'       => -abs($discount),
-                            'subtotal'    => -abs($discount),
-                            'created_at'  => now(),
-                            'updated_at'  => now(),
-                        ];
-
-                        // Jika satu customer hanya boleh dapat 1 diskon membership (terbesar/terbaru), 
-                        // tambahkan break; setelah item dimasukkan.
-                        break;
-                    }
-                }
+            if ($membershipDiscount) {
+                $discountVal = -abs($membershipDiscount['discount_amount']);
+                $items[] = [
+                    'billing_id'  => $billing->id,
+                    'item_type'   => 'discount',
+                    'source_type' => 'membership',
+                    'source_id'   => $membershipDiscount['membership_id'],
+                    'item_name'   => $membershipDiscount['item_name'],
+                    'qty'         => 1,
+                    'price'       => $discountVal,
+                    'subtotal'    => $discountVal,
+                    'created_at'  => now(),
+                    'updated_at'  => now(),
+                ];
             }
 
             /** ----------------------------------------------------
-             * 8. Add Addons (customer_addons)
+             * 7. Add Addons (customer_addons)
              * ---------------------------------------------------- */
             $addons = CustomerAddon::with('addon')
                 ->where('customer_id', $customer->id)
@@ -221,51 +148,40 @@ class BillingCreateService
                 ->get();
 
             foreach ($addons as $addon) {
-                $item = [
-                    'billing_id' => $billing->id,
-                    'item_type' => 'addon',
+                $items[] = [
+                    'billing_id'  => $billing->id,
+                    'item_type'   => 'addon',
                     'source_type' => 'addon',
-                    'source_id' => $addon->addon_id,
-                    'item_name' => $addon->addon->name,
-                    'qty' => $addon->qty,
-                    'price' => $addon->unit_price,
-                    'subtotal' => $addon->qty * $addon->unit_price,
-                    'created_at' => now(),
-                    'updated_at' => now()
+                    'source_id'   => $addon->addon_id,
+                    'item_name'   => $addon->addon->name,
+                    'qty'         => $addon->qty,
+                    'price'       => $addon->unit_price,
+                    'subtotal'    => $addon->qty * $addon->unit_price,
+                    'created_at'  => now(),
+                    'updated_at'  => now()
                 ];
-
-                $items[] = $item;
             }
 
             BillingItem::insert($items);
 
-
             /** ----------------------------------------------------
-             * 9. Recalculate Totals (Fixed for FREE package)
+             * 8. Recalculate Totals
              * ---------------------------------------------------- */
-
-            // 1. Subtotal hanya dari item yang ditagihkan
             $chargeableSubtotal = collect($items)
                 ->whereIn('item_type', ['package', 'addon'])
                 ->sum('subtotal');
 
-            // 2. Discount (biasanya negatif)
             $discountAmount = collect($items)
                 ->where('item_type', 'discount')
                 ->sum('subtotal');
 
-            // 3. Pajak hanya dari chargeable subtotal
-            $tax = $this->calculateTax($websystem, $chargeableSubtotal);
-
-            // 4. Total akhir
+            $tax   = $this->calculateTax($websystem, $chargeableSubtotal);
             $total = max(0, $chargeableSubtotal + $discountAmount + $tax);
 
-            // 5. Default status
             $status = 'BL';
 
-            // 6. Auto paid jika benar-benar gratis
             if ($total <= 0) {
-                $status = 'LS';
+                $status        = 'LS';
                 $paymentMethod = 'cash';
 
                 $billingPayment = BillingPayment::create([
@@ -286,43 +202,41 @@ class BillingCreateService
                 );
             }
 
-            // 7. Update billing
             $billing->update([
-                'subtotal'         => $chargeableSubtotal,
-                'tax_amount'       => $tax,
-                'discount_amount'  => $discountAmount,
-                'total_amount'     => $total,
-                'status'           => $status,
+                'subtotal'        => $chargeableSubtotal,
+                'tax_amount'      => $tax,
+                'discount_amount' => $discountAmount,
+                'total_amount'    => $total,
+                'status'          => $status,
             ]);
 
             /** ----------------------------------------------------
-             * 10. Logging
+             * 9. Logging
              * ---------------------------------------------------- */
             LogHelper::logInfo(
                 null,
                 [
-                    'billing_id' => $billing->id,
+                    'billing_id'     => $billing->id,
                     'billing_number' => $billing->billing_number,
-                    'customer_id' => $customer->id,
-                    'amount' => $total
+                    'customer_id'    => $customer->id,
+                    'amount'         => $total
                 ],
                 201,
                 'Billing created successfully',
-                $traceId,
-                $timer->lap()
+                $traceId
             );
 
             return $billing;
         });
 
         return [
-            'success'        => true,
-            'billing_id'     => $billing->id,
-            'billing'        => $billing,
+            'success'    => true,
+            'billing_id' => $billing->id,
+            'billing'    => $billing,
         ];
     }
 
-    public function calculateTax($websystem, float $subtotal): float
+    public function calculateTax(Websystem $websystem, float $subtotal): float
     {
         if (!$websystem || !$websystem->enable_tax) {
             return 0;

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Helpers\FormatReceiver;
-use App\Helpers\ProrateCalculator;
+use App\Helpers\SubscriptionPricingCalculator;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\Mikrotik;
 use App\Models\PppType;
 use App\Models\Packages\Package;
+use App\Models\Packages\PackageDuration;
 use App\Models\Packages\Addon;
 use App\Models\Membership\Membership;
 use App\Models\Billings\BillingPeriode;
@@ -81,25 +82,24 @@ class CustomerWizardController extends Controller
 
             [
                 'user_id.required' => 'Admin harus dipilih.',
-                'user_id.exists' => 'Admin yang dipilih tidak ditemukan.',
+                'user_id.exists'   => 'Admin yang dipilih tidak ditemukan.',
 
                 'name.required' => 'Nama customer wajib diisi.',
-                'name.min' => 'Nama customer minimal 3 karakter.',
+                'name.min'      => 'Nama customer minimal 3 karakter.',
 
                 'email.required' => 'Email wajib diisi.',
-                'email.email' => 'Format email tidak valid.',
+                'email.email'    => 'Format email tidak valid.',
 
                 'contact.required' => 'Nomor WhatsApp wajib diisi.',
-                'contact.regex' => 'Nomor harus menggunakan format Indonesia yang valid.',
-                'contact.unique' => 'Nomor WhatsApp sudah terdaftar.',
+                'contact.regex'    => 'Nomor harus menggunakan format Indonesia yang valid.',
+                'contact.unique'   => 'Nomor WhatsApp sudah terdaftar.',
 
-                'password.min' => 'Password minimal 8 karakter.',
+                'password.min'       => 'Password minimal 8 karakter.',
                 'password.confirmed' => 'Konfirmasi password tidak sama.',
             ]
         );
 
         $user = User::select('name')->find($validated['user_id']);
-
         $validated['user_name'] = $user->name;
 
         session(['wizard.step1' => $validated]);
@@ -109,7 +109,7 @@ class CustomerWizardController extends Controller
 
     public function step2()
     {
-        $mikrotiks = Mikrotik::pluck('name', 'id');
+        $mikrotiks   = Mikrotik::pluck('name', 'id');
         $pppservices = PppType::pluck('name', 'id');
 
         return view('wizard.customer_step2', compact('mikrotiks', 'pppservices'));
@@ -118,18 +118,16 @@ class CustomerWizardController extends Controller
     public function step2Post(Request $request)
     {
         $validated = $request->validate([
-            'mikrotik_id'        => 'required|exists:mikrotiks,id',
-            'internet_service'   => 'required|in:ppp,ip_static',
-            'ppp_type_id'        => 'required_if:internet_service,ppp|nullable|exists:ppp_types,id',
-            'interface'          => 'required_if:internet_service,ip_static|nullable|string',
-            'ip_static'          => 'required_if:internet_service,ip_static|nullable|ip',
-            'mac_address'        => 'required_if:internet_service,ip_static|nullable|string',
+            'mikrotik_id'      => 'required|exists:mikrotiks,id',
+            'internet_service' => 'required|in:ppp,ip_static',
+            'ppp_type_id'      => 'required_if:internet_service,ppp|nullable|exists:ppp_types,id',
+            'interface'        => 'required_if:internet_service,ip_static|nullable|string',
+            'ip_static'        => 'required_if:internet_service,ip_static|nullable|ip',
+            'mac_address'      => 'required_if:internet_service,ip_static|nullable|string',
         ]);
 
-        // Tambahkan mikrotik_name
         $validated['mikrotik_name'] = Mikrotik::find($validated['mikrotik_id'])->name;
 
-        // Jika PPP, tambahkan ppp_type_name
         if ($validated['internet_service'] === 'ppp') {
             $validated['ppp_type_name'] = PppType::find($validated['ppp_type_id'])->name ?? null;
         }
@@ -146,13 +144,12 @@ class CustomerWizardController extends Controller
             return redirect()->route('wizard.step2');
         }
 
-        // 💡 PERBAIKAN: Ambil paket tanpa mapWithKeys dulu agar data 'price' murni tidak hilang saat di Blade loop
         $packages = Package::where('disabled', 'false')
             ->select('id', 'name', 'price')
             ->get();
 
         $members = Membership::where('is_active', true)->get();
-        $last = BillingPeriode::orderByDesc('id')->first();
+        $last    = BillingPeriode::orderByDesc('id')->first();
 
         if (!$last) {
             return collect();
@@ -183,26 +180,27 @@ class CustomerWizardController extends Controller
             'is_prorate'           => 'required|in:0,1',
         ]);
 
-        $package = Package::find($validated['package_id']);
+        $package = Package::findOrFail($validated['package_id']);
         $validated['package_name'] = $package->name;
-        $packagePrice = $package->price;
 
-        $duration = $package->packageDurations()->find($validated['package_duration_id']);
-        $validated['duration_label'] = $duration?->duration?->name_en ?? '-';
-        $months = $duration?->duration?->duration_months ?? 1;
+        /** @var PackageDuration $packageDuration */
+        $packageDuration = PackageDuration::with(['duration', 'package'])
+            ->findOrFail($validated['package_duration_id']);
+
+        $validated['duration_label'] = $packageDuration->duration?->name_en ?? '-';
 
         // ========== MEMBERSHIP DISCOUNT HANDLING ==========
         $discountNominal = 0;
         $discountPercent = 0;
-        if ($validated['member_id']) {
+        if (!empty($validated['member_id'])) {
             $member = Membership::find($validated['member_id']);
             $validated['member_label'] = $member->name;
             if ($member->discount_type === 'percent') {
                 $discountPercent = $member->discount_value ?? 0;
-                $discountNominal = max(($discountPercent / 100) * $packagePrice, 0);
+                $discountNominal = max(($discountPercent / 100) * $package->price, 0);
             } else {
                 $discountNominal = max($member->discount_value ?? 0, 0);
-                $discountPercent = ($packagePrice > 0) ? round(($discountNominal / $packagePrice) * 100, 2) : 0;
+                $discountPercent = ($package->price > 0) ? round(($discountNominal / $package->price) * 100, 2) : 0;
             }
         } else {
             $validated['member_label'] = 'Non Member';
@@ -218,19 +216,23 @@ class CustomerWizardController extends Controller
             ]);
         }
 
-        // ========== 💡 PANGGIL HELPER BARU ==========
-        $calculation = ProrateCalculator::calculate($packagePrice, $discountNominal, $validated['is_prorate'], $months);
+        // ========== 💡 INTEGRASI SUBSCRIPTION PRICING CALCULATOR ==========
+        $pricing = SubscriptionPricingCalculator::calculateSubscriptionPrice(
+            packageDuration: $packageDuration,
+            isProrateInput: $validated['is_prorate'],
+            discountNominal: $discountNominal
+        );
 
-        // Satukan hasil hitungan helper ke dalam array session wizard
         $validated = array_merge($validated, [
-            'package_price'          => $packagePrice,
-            'price_before_discount'  => $calculation['price_before_discount'], // 💡 Nilai prorate dasar/mentah sebelum diskon
-            'final_bill_price'       => $calculation['price_final'],           // 💡 Nilai bersih setelah dikurangi diskon
-            'calculation_type_label' => $calculation['calculation_type_label'],
-            'active_days'            => $calculation['active_days'],
-            'total_days'             => $calculation['total_days'],
-            'current_day'            => $calculation['current_day'],
-            'current_month'          => $calculation['current_month'],
+            'package_price'          => $package->price,
+            'price_before_discount'  => $pricing['subscription_price'],
+            'final_bill_price'       => $pricing['total_amount_to_pay'],
+            'calculation_type_label' => $pricing['calculation_type_label'],
+            'active_days'            => $pricing['active_days'],
+            'total_days'             => $pricing['total_days'],
+            'current_day'            => $pricing['current_day'],
+            'current_month'          => $pricing['current_month'],
+            'is_prorated'            => $pricing['is_prorated'],
         ]);
 
         session(['wizard.step3' => $validated]);
@@ -251,7 +253,6 @@ class CustomerWizardController extends Controller
 
     public function step4Post(Request $request)
     {
-        // Buang addons yang kosong
         $raw = $request->addons ?? [];
 
         $filtered = collect($raw)
@@ -259,18 +260,16 @@ class CustomerWizardController extends Controller
                 fn($item) =>
                 !empty($item['id']) && !empty($item['qty'])
             )
-            ->values() // reset index biar rapi 0,1,2
+            ->values()
             ->toArray();
 
-        // Replace addons yang akan divalidate
         $request->merge(['addons' => $filtered]);
 
-        // Lanjut validasi
         $validated = $request->validate([
-            'addons'              => 'nullable|array',
-            'addons.*.id'         => 'required|exists:addons,id',
-            'addons.*.qty'        => 'required|integer|min:1',
-            'addons.*.unit_price' => 'required|numeric|min:0',
+            'addons'               => 'nullable|array',
+            'addons.*.id'          => 'required|exists:addons,id',
+            'addons.*.qty'         => 'required|integer|min:1',
+            'addons.*.unit_price'  => 'required|numeric|min:0',
         ]);
 
         session(['wizard.step4' => $validated['addons'] ?? []]);
@@ -284,12 +283,11 @@ class CustomerWizardController extends Controller
             return redirect()->route('wizard.step1');
         }
 
-        $step1 = session('wizard.step1');
-        $step2 = session('wizard.step2');
-        $step3 = session('wizard.step3');
+        $step1  = session('wizard.step1');
+        $step2  = session('wizard.step2');
+        $step3  = session('wizard.step3');
         $addons = session('wizard.step4') ?? [];
 
-        // Untuk menampilkan nama addon, ambil id-ids
         $addonItems = [];
         if (!empty($addons)) {
             $addonItems = Addon::whereIn('id', collect($addons)->pluck('id'))->get();
@@ -323,13 +321,12 @@ class CustomerWizardController extends Controller
             ['addons' => session('wizard.step4', [])]
         );
 
-        // Pastikan baris ini ikut divalidasi ringan di dalam function process() Controller Anda:
         $validator = Validator::make($payload, [
             'name'       => 'required|string|min:3',
             'email'      => 'required|email',
             'contact'    => 'required|regex:/^62[0-9]{8,14}$/',
             'user_id'    => 'required|exists:users,id',
-            'is_prorate' => 'required|boolean', // 💡 Diubah menjadi boolean agar lebih fleksibel dan aman
+            'is_prorate' => 'required|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -355,35 +352,22 @@ class CustomerWizardController extends Controller
      */
     public function calculateProrate(Request $request): JsonResponse
     {
-        // Validasi input minimal dari AJAX
-        $packagePrice   = (float) $request->input('package_price', 0);
-        $discountAmount = (float) $request->input('discount_amount', 0);
-        $isProrate      = $request->input('is_prorate');
-        $durationMonths = (int) $request->input('duration_months', 1);
+        $packageDurationId = $request->input('package_duration_id');
+        $discountAmount    = (float) $request->input('discount_amount', 0);
+        $isProrate         = $request->input('is_prorate');
 
-        // Panggil Helper tunggal Back-End (DRY Principle)
-        $calculation = ProrateCalculator::calculate(
-            $packagePrice,
-            $discountAmount,
-            $isProrate,
-            $durationMonths
+        $packageDuration = PackageDuration::with(['duration', 'package'])->find($packageDurationId);
+
+        if (!$packageDuration) {
+            return response()->json(['success' => false, 'message' => 'Package duration not found'], 404);
+        }
+
+        $pricing = SubscriptionPricingCalculator::calculateSubscriptionPrice(
+            packageDuration: $packageDuration,
+            isProrateInput: $isProrate,
+            discountNominal: $discountAmount
         );
 
-        // Di dalam CustomerWizardController::calculateProrate Anda:
-        $exactProratePriceRaw = ($packagePrice * $durationMonths) * ($calculation['active_days'] / $calculation['total_days']);
-
-        return response()->json([
-            'success'                 => true,
-            'package_price_raw'       => $packagePrice * $durationMonths, // Harga katalog asli
-            'exact_prorate_raw'       => $exactProratePriceRaw,           // 12/31 x 1.500.000 (Belum dibulatkan)
-            'price_before_discount'   => $calculation['price_before_discount'], // Hasil pembulatan kelipatan 500 (581.000)
-            'discount_amount'         => $discountAmount,                 // Potongan diskon (100.000)
-            'price_final'             => $calculation['price_final'],     // Hasil bersih akhir (481.000)
-            'calculation_type_label'  => $calculation['calculation_type_label'],
-            'active_days'             => $calculation['active_days'],
-            'total_days'              => $calculation['total_days'],
-            'current_day'             => $calculation['current_day'],
-            'current_month'           => $calculation['current_month'],
-        ]);
+        return response()->json(array_merge(['success' => true], $pricing));
     }
 }

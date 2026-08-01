@@ -4,19 +4,23 @@ namespace App\Helpers;
 
 class ExecutionTimer
 {
-    private float $last;
+    private float $startTime;
 
     public function __construct()
     {
-        $this->last = microtime(true);
+        $this->startTime = microtime(true);
     }
 
-    public function lap(): float
+    public static function start(): self
     {
-        $now = microtime(true);
-        $exec = round($now - $this->last, 3);
-        $this->last = $now;
+        return new self();
+    }
 
-        return $exec;
+    /**
+     * Mengembalikan durasi waktu sejak timer dibuat (dalam milidetik/ms)
+     */
+    public function lap(): int
+    {
+        return (int) round((microtime(true) - $this->startTime) * 1000);
     }
 }

@@ -12,21 +12,19 @@ class BillingDateResolver
         $issueDate = $issueDate ?? now();
 
         /**
-         * Convert month name + year → Carbon date
-         * contoh: "December 2025"
+         * 💡 PERBAIKAN: Gunakan Carbon::parse() untuk mengonversi gabungan nama bulan dan tahun.
+         * Contoh: "1 August 2026" -> Aman di-parse oleh Carbon!
          */
-        $billingMonthDate = Carbon::parse(
-            $periode->month . ' ' . $periode->year
-        );
+        $billingMonthDate = Carbon::parse("1 {$periode->month} {$periode->year}");
 
-        // default due date = tanggal 15 di bulan billing
-        $dueDate = $billingMonthDate->copy()->day(15);
+        // Default due date = Tanggal 15 pukul 23:59:59 pada bulan & tahun billing tersebut
+        $dueDate = $billingMonthDate->copy()->day(15)->endOfDay();
 
-        // kalau billing dibuat SETELAH tanggal 15 → jatuh tempo bulan depan
+        // Jika billing dibuat SETELAH tanggal 15 23:59:59 -> jatuh tempo geser ke tanggal 15 bulan depan
         if ($issueDate->gt($dueDate)) {
-            $dueDate = $dueDate->addMonth()->day(15);
+            $dueDate = $dueDate->addMonth()->day(15)->endOfDay();
         }
 
-        return $dueDate->startOfDay();
+        return $dueDate;
     }
 }
