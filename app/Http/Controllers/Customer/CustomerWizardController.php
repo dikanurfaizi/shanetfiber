@@ -109,7 +109,7 @@ class CustomerWizardController extends Controller
 
     public function step2()
     {
-        $mikrotiks   = Mikrotik::pluck('name', 'id');
+        $mikrotiks = Mikrotik::where('disabled', 'false')->pluck('name', 'id');
         $pppservices = PppType::pluck('name', 'id');
 
         return view('wizard.customer_step2', compact('mikrotiks', 'pppservices'));
