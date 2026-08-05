@@ -3,29 +3,30 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ExecutionTimer;
-use Exception;
-use Illuminate\Http\Request;
-use App\Models\Customers\Customer;
-use App\Models\Mikrotik;
-use App\Models\Billings\Billing;
-use App\Models\Billings\BillingPeriode;
-use App\Models\Websystem;
-use App\Models\User;
-use App\Models\InvestorAdmin;
-use App\Services\Dashboard\DashboardService;
-use App\Services\Auth\CustomerAuthService;
-use Illuminate\Support\Facades\Log;
 use App\Helpers\LogHelper;
 use App\Helpers\UserAuth;
+use App\Models\Billings\Billing;
+use App\Models\Billings\BillingPeriode;
+use App\Models\Customers\Customer;
+use App\Models\InvestorAdmin;
+use App\Models\Mikrotik;
+use App\Models\User;
+use App\Models\Websystem;
+use App\Services\Auth\CustomerAuthService;
+use App\Services\Dashboard\DashboardService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Cache;
 
 class HomeController extends Controller
 {
     private DashboardService $dashboardService;
+
     protected $newVersion;
+
     protected $version;
+
     protected $authService;
 
     public function __construct(DashboardService $dashboardService, CustomerAuthService $authService)
@@ -49,6 +50,7 @@ class HomeController extends Controller
     public function home()
     {
         $data = $this->authService->getLoginData();
+
         return view('customers.auth.homepage', $data);
     }
 
@@ -63,7 +65,7 @@ class HomeController extends Controller
     public function __invoke(Request $request)
     {
         $traceId = (string) Str::uuid();
-        $timer = new ExecutionTimer();
+        $timer = new ExecutionTimer;
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
         $userId = $auth['userId'];
@@ -73,18 +75,16 @@ class HomeController extends Controller
             LogHelper::logWarning(null, [
                 'trace_id' => $traceId,
                 'current_version' => $this->version,
-                'required_version' => $this->newVersion
+                'required_version' => $this->newVersion,
             ], 400, 'Version mismatch', $traceId, $timer->lap());
+
             return redirect()->route('settings.update.index')
                 ->with('error', 'Please update first!');
         }
 
         // ====== Investor Override Logic ======
         if ($user->can('investor-customer-list')) {
-            // Ambil semua admin_id yang berelasi dengan investor
             $linkedAdminIds = InvestorAdmin::where('investor_id', $userId)->pluck('admin_id')->toArray();
-
-            // Jika mau investor juga melihat datanya sendiri:
             $userIds = array_merge([$userId], $linkedAdminIds);
         } else {
             $userIds = [$userId];
@@ -99,8 +99,8 @@ class HomeController extends Controller
         $mikrotiks = $baseQuery->orderBy('name')->get();
 
         // ====== Hitungan ======
-        $totalRouters   = $mikrotiks->count();
-        $routerEnabled  = $mikrotiks->where('disabled', 'false')->count();
+        $totalRouters = $mikrotiks->count();
+        $routerEnabled = $mikrotiks->where('disabled', 'false')->count();
         $routerDisabled = $totalRouters - $routerEnabled;
 
         // Get customer summary
@@ -124,16 +124,64 @@ class HomeController extends Controller
             } elseif ($user->can('view-billings-widget-total')) {
                 $adminBillingSummary = $this->getOwnerBillingSummary($lastBillingPeriode->id);
             }
-        } elseif (!$lastBillingPeriode) {
+        } elseif (! $lastBillingPeriode) {
             LogHelper::logWarning(null, ['user_id' => $user->id], 404, 'No last billing period found for admin summary', $traceId, $timer->lap());
         }
 
         $movementData = $this->calculateCustomerRegistrationChurnData($request, $traceId);
-
         extract($movementData);
 
-        $isMobile = (new \Jenssegers\Agent\Agent())->isMobile();
+        $isMobile = (new \Jenssegers\Agent\Agent)->isMobile();
 
+        // Pastikan $isSuperAdmin terdefinisi dengan aman
+        $isSuperAdmin = $isSuperAdmin ?? $user->can('view-customers-widget-total');
+
+       // 1. Ambil 12 ID periode billing terbaru (1 Tahun Terakhir) dari DB
+        $recentPeriodeIds = BillingPeriode::orderBy('id', 'desc')
+            ->limit(12)
+            ->pluck('id')
+            ->toArray();
+
+        // 2. Selalu select admin_name agar nama admin pemilik customer selalu tersedia di Blade
+        $selectColumns = [
+            'customers.id',
+            'customers.slug',
+            'customers.name',
+            'customers.contact',
+            'customers.user_id',
+            'admins.name as admin_name',
+        ];
+
+        $query = Customer::query()
+            ->join('billings', 'customers.id', '=', 'billings.customer_id')
+            ->join('billing_subscription_periodes', 'billing_subscription_periodes.id', '=', 'billings.billing_subscription_id')
+            ->join('billing_periodes', 'billing_subscription_periodes.billing_periode_id', '=', 'billing_periodes.id')
+            ->leftJoin('users as admins', 'customers.user_id', '=', 'admins.id')
+            ->where('customers.disabled', 'false')  // Pelanggan aktif
+            ->where('customers.activation', 'true')
+            ->where('billings.status', 'VD')       // Status belum bayar (VD)
+            ->whereIn('billing_periodes.id', $recentPeriodeIds); // Filter 12 periode (1 tahun) terakhir
+
+        // Filter scope data berdasarkan role user yang login
+        if (! $isSuperAdmin) {
+            $query->where('customers.user_id', auth()->id());
+        }
+
+        $unpaid3MonthsCustomers = $query->select($selectColumns)
+            ->selectRaw('COUNT(DISTINCT billings.id) as unpaid_months_count')
+            ->selectRaw("GROUP_CONCAT(DISTINCT billing_periodes.name ORDER BY billing_periodes.id DESC SEPARATOR ', ') as unpaid_periods")
+            ->groupBy([
+                'customers.id',
+                'customers.slug',
+                'customers.name',
+                'customers.contact',
+                'customers.user_id',
+                'admins.name',
+            ])
+            // Urutkan dari jumlah bulan tunggakan terbanyak dalam 1 tahun terakhir
+            ->orderByDesc('unpaid_months_count')
+            ->get();
+            
         return view('home', array_merge(compact(
             'mikrotiks',
             'totalRouters',
@@ -145,8 +193,8 @@ class HomeController extends Controller
             'packageSummary',
             'months',
             'registrationData',
-            // 'churnData',
             'isSuperAdmin',
+            'unpaid3MonthsCustomers'
         ), $summaryTotals, $customerSummary));
     }
 
@@ -208,7 +256,7 @@ class HomeController extends Controller
             ->join('billing_periodes as bp', 'bp.id', '=', 'bsp.billing_periode_id')
             ->whereBetween('bp.created_at', [
                 DB::raw("STR_TO_DATE(CONCAT(YEAR(CURDATE()), '-01-01'), '%Y-%m-%d')"),
-                now()
+                now(),
             ])
             ->select(
                 'bsp.billing_periode_id',
@@ -222,7 +270,7 @@ class HomeController extends Controller
                 DB::raw("SUM(CASE WHEN b.status = 'PL' THEN b.total_amount ELSE 0 END) as total_paylater"),
                 DB::raw("SUM(CASE WHEN b.status = 'BL' THEN b.total_amount ELSE 0 END) as total_unpaid"),
                 DB::raw("SUM(CASE WHEN b.status = 'VD' THEN b.total_amount ELSE 0 END) as total_void"),
-                DB::raw("SUM(b.total_amount) as total_nominal")
+                DB::raw('SUM(b.total_amount) as total_nominal')
             )
             // 🔹 DIBERSIHKAN: 'bp.month' dan 'bp.year' WAJIB masuk ke dalam groupBy
             ->groupBy('bsp.billing_periode_id', 'bp.name', 'bp.month', 'bp.year')
@@ -252,7 +300,7 @@ class HomeController extends Controller
             ->whereIn('c.user_id', $visibleUserIds)
             ->whereBetween('bp.created_at', [
                 DB::raw("STR_TO_DATE(CONCAT(YEAR(CURDATE()), '-01-01'), '%Y-%m-%d')"),
-                now()
+                now(),
             ])
             ->select(
                 'bsp.billing_periode_id',
@@ -266,7 +314,7 @@ class HomeController extends Controller
                 DB::raw("SUM(CASE WHEN b.status = 'PL' THEN b.total_amount ELSE 0 END) as total_paylater"),
                 DB::raw("SUM(CASE WHEN b.status = 'BL' THEN b.total_amount ELSE 0 END) as total_unpaid"),
                 DB::raw("SUM(CASE WHEN b.status = 'VD' THEN b.total_amount ELSE 0 END) as total_void"),
-                DB::raw("SUM(b.total_amount) as total_nominal")
+                DB::raw('SUM(b.total_amount) as total_nominal')
             )
             // 🔹 DIBERSIHKAN: Masukkan 'bp.month' & 'bp.year' ke groupBy
             ->groupBy('bsp.billing_periode_id', 'bp.name', 'bp.month', 'bp.year', 'u.id', 'u.name')
@@ -282,7 +330,7 @@ class HomeController extends Controller
             ->join('billing_periodes as bp', 'bp.id', '=', 'bsp.billing_periode_id') // 🔹 Tambahkan join ke bp
             ->whereBetween('bp.created_at', [
                 DB::raw("STR_TO_DATE(CONCAT(YEAR(CURDATE()), '-01-01'), '%Y-%m-%d')"),
-                now()
+                now(),
             ])
             ->select(
                 'bsp.billing_periode_id',
@@ -294,7 +342,7 @@ class HomeController extends Controller
                 DB::raw("SUM(CASE WHEN b.status = 'PL' THEN b.total_amount ELSE 0 END) as total_paylater"),
                 DB::raw("SUM(CASE WHEN b.status = 'BL' THEN b.total_amount ELSE 0 END) as total_unpaid"),
                 DB::raw("SUM(CASE WHEN b.status = 'VD' THEN b.total_amount ELSE 0 END) as total_void"),
-                DB::raw("SUM(b.total_amount) as total_nominal")
+                DB::raw('SUM(b.total_amount) as total_nominal')
             )
             // 🔹 DIBERSIHKAN: Masukkan kolom select ke groupBy
             ->groupBy('bsp.billing_periode_id', 'bp.name', 'bp.month', 'bp.year')
@@ -305,7 +353,7 @@ class HomeController extends Controller
 
     private function getLastBillingData(string $traceId)
     {
-        $timer = new ExecutionTimer();
+        $timer = new ExecutionTimer;
 
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
@@ -313,11 +361,11 @@ class HomeController extends Controller
 
         $billingPeriode = BillingPeriode::orderBy('created_at', 'desc')->first();
 
-        if (!$billingPeriode) {
+        if (! $billingPeriode) {
             LogHelper::logInfo(null, [
                 'billingPeriode' => $billingPeriode,
                 'lastBillings' => collect(),
-            ], 200, "Details getLastBillingData (no billing period found)", $traceId, $timer->lap());
+            ], 200, 'Details getLastBillingData (no billing period found)', $traceId, $timer->lap());
 
             return [null, collect()];
         }
@@ -352,7 +400,7 @@ class HomeController extends Controller
         LogHelper::logInfo(null, [
             'billingPeriode' => $billingPeriode,
             'userId' => $userId,
-        ], 200, "Details getLastBillingData", $traceId, $timer->lap());
+        ], 200, 'Details getLastBillingData', $traceId, $timer->lap());
 
         return [$billingPeriode, $lastBillings];
     }
@@ -412,7 +460,7 @@ class HomeController extends Controller
                     ->whereNull('customers.deleted_at');
 
                 // Filter user scope jika tidak punya izin total view
-                if (!($user->can('view-billings-widget-total') || $user->can('view-billings-widget-customer-count'))) {
+                if (! ($user->can('view-billings-widget-total') || $user->can('view-billings-widget-customer-count'))) {
                     $join->whereIn('customers.user_id', $visibleUserIds);
                 }
             })
@@ -570,7 +618,7 @@ class HomeController extends Controller
 
     private function calculateCustomerRegistrationChurnData($request, $traceId): array
     {
-        $timer = new ExecutionTimer();
+        $timer = new ExecutionTimer;
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
         $userId = $auth['userId'];
@@ -617,7 +665,7 @@ class HomeController extends Controller
             $adminId = $admin->id;
             $registrationData[$adminId] = [
                 'adminName' => $admin->name,
-                'counts' => []
+                'counts' => [],
             ];
 
             $current = $startDate->copy();
@@ -644,12 +692,12 @@ class HomeController extends Controller
 
     private function calculateBillingSummary($billings, $traceId)
     {
-        $timer = new ExecutionTimer();
+        $timer = new ExecutionTimer;
         $auth = $this->getUserAuthData();
         $user = $auth['user'];
 
         try {
-            if ($user->can('view-billings-widget-customer-count') || !$billings) {
+            if ($user->can('view-billings-widget-customer-count') || ! $billings) {
                 return [
                     'totalBilling' => null,
                     'totalPaid' => null,
@@ -669,6 +717,7 @@ class HomeController extends Controller
                 'billings' => $billings instanceof \Illuminate\Support\Collection ? $billings->toArray() : [],
                 'error_message' => $e->getMessage(),
             ], 500, 'Error calculating billing totals', $traceId, $timer->lap());
+
             return [
                 'totalBilling' => 0,
                 'totalPaid' => 0,
@@ -688,10 +737,10 @@ class HomeController extends Controller
 
         // Menentukan billing summary berdasarkan permission
         $billingSummary = match (true) {
-            $user->can('view-billings-chart-nominal-total')   => $this->getMonthlyBillingSummaryTotal($billingPeriode->id),
+            $user->can('view-billings-chart-nominal-total') => $this->getMonthlyBillingSummaryTotal($billingPeriode->id),
             $user->can('view-billings-chart-nominal-related') => $this->getMonthlyBillingSummaryRelated($userId, false),
-            $user->can('view-billings-chart-customer-count')  => $this->getMonthlyCustomerCountForCashier(),
-            $user->can('investor-billing-chart')              => $this->getMonthlyBillingSummaryRelated($userId, true),
+            $user->can('view-billings-chart-customer-count') => $this->getMonthlyCustomerCountForCashier(),
+            $user->can('investor-billing-chart') => $this->getMonthlyBillingSummaryRelated($userId, true),
             default => collect(),
         };
 
@@ -718,7 +767,7 @@ class HomeController extends Controller
 
     public function getCustomerRegistrationChurnData(Request $request)
     {
-        $timer = new ExecutionTimer();
+        $timer = new ExecutionTimer;
         $traceId = (string) Str::uuid();
         try {
             return response()->json($this->calculateCustomerRegistrationChurnData($request, $traceId));
@@ -727,8 +776,9 @@ class HomeController extends Controller
                 'error_message' => $e->getMessage(),
                 'stack_trace' => $e->getTraceAsString(),
                 'line' => $e->getLine(),
-                'file' => $e->getFile()
+                'file' => $e->getFile(),
             ], 500, 'ERROR getCustomerRegistrationChurnData');
+
             return response()->json(['error' => 'Failed to fetch data'], $traceId);
         }
     }
@@ -746,7 +796,7 @@ class HomeController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Dashboard refresh triggered, please wait a moment.'
+            'message' => 'Dashboard refresh triggered, please wait a moment.',
         ]);
     }
 
