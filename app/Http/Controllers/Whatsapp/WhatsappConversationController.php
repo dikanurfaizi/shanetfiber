@@ -24,17 +24,18 @@ class WhatsappConversationController extends Controller
         // 1. Ambil data user yang sedang login saat ini
         $currentUser = auth()->user();
 
-        // 2. Karena menggunakan Spatie, kita bisa langsung cek nama rolenya secara spesifik
+        // 2. Cek role user
         $isKasir = $currentUser->hasRole('Kasir');
+        $isSuperAdmin = $currentUser->hasRole('Super Admin');
 
         $query = WhatsappConversation::with([
             'customer',
             'messages.media'
         ]);
 
-        // 3. JIKA BUKAN KASIR (Artinya dia Admin atau Super Admin)
-        // Maka hanya boleh melihat percakapan dari customer yang miliknya sendiri (berdasarkan user_id)
-        if (!$isKasir) {
+        // 3. JIKA BUKAN KASIR DAN BUKAN SUPER ADMIN (Artinya dia Admin biasa)
+        // Filter agar hanya dapat melihat percakapan dari customer miliknya sendiri
+        if (!$isKasir && !$isSuperAdmin) {
             $query->whereHas('customer', function ($q) use ($currentUser) {
                 $q->where('user_id', $currentUser->id);
             });
