@@ -33,9 +33,10 @@ class TopBar extends Component
 
         // Cek apakah user saat ini MEMILIKI role Kasir
         $isKasir = $user->hasRole('Kasir');
+        $isSuperAdmin = $user->hasRole('Super Admin');
 
-        // Jika BUKAN Kasir (Admin / Super Admin), filter hanya chat milik customernya saja
-        if (!$isKasir) {
+        // Jika BUKAN Kasir dan BUKAN Super Admin (Artinya dia Admin biasa), filter hanya chat milik customernya saja
+        if (!$isKasir && !$isSuperAdmin) {
             $unreadChatQuery->whereHas('customer', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             });
