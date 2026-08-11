@@ -20,11 +20,13 @@ class BillingReminderCollector
         $slugs = [$slug1, $slug2, $slug3];
         $todayStr = $today->toDateString();
 
-        // 💡 SOLUSI DATA UNSTABLE: 
-        // Batas Awal  : 01-Bulan-Ini 00:00:00 (Inclusive >=)
-        // Batas Akhir : 16-Bulan-Ini 00:00:00 (Exclusive <)
-        $startRange = $today->copy()->startOfMonth()->startOfDay()->toDateTimeString(); // e.g. '2026-08-01 00:00:00'
-        $endRange   = $today->copy()->day(16)->startOfDay()->toDateTimeString();         // e.g. '2026-08-16 00:00:00'
+        // 1. RENTANG FILTER TAGIHAN (01 s/d 16 jam 00:00:00)
+        $billingStart = $today->copy()->startOfMonth()->startOfDay()->toDateTimeString(); // '2026-08-01 00:00:00'
+        $billingEnd   = $today->copy()->day(16)->startOfDay()->toDateTimeString();         // '2026-08-16 00:00:00'
+
+        // 2. RENTANG ANTI-DUPLIKASI PESAN (HARI INI SAJA)
+        $todayStart   = $today->copy()->startOfDay()->toDateTimeString();                 // '2026-08-11 00:00:00'
+        $todayEnd     = $today->copy()->endOfDay()->toDateTimeString();                   // '2026-08-11 23:59:59'
 
         $query = Billing::query()
             ->select([
@@ -52,29 +54,29 @@ class BillingReminderCollector
             })
             ->leftJoin('packages as p', 'cs.package_id', '=', 'p.id')
 
-            // WHERE NOT EXISTS anti-duplikasi
-            ->whereNotExists(function ($q) use ($slugs, $todayStr) {
+            // 👉 WHERE NOT EXISTS ANTI-DUPLIKASI: Menggunakan rentang HARI INI
+            ->whereNotExists(function ($q) use ($slugs, $todayStart, $todayEnd) {
                 $q->select(DB::raw(1))
                     ->from('message_events as me')
                     ->whereColumn('me.customer_id', 'billings.customer_id')
                     ->whereIn('me.message_type', $slugs)
-                    ->whereDate('me.created_at', $todayStr)
+                    ->whereBetween('me.created_at', [$todayStart, $todayEnd]) // 💡 Hanya cek log pengiriman HARI INI
                     ->whereIn('me.status', ['success', 'failed', 'pending']);
             })
 
-            // 💡 FILTER RENTANG TANGGAL DENGAN HALO/HALF-OPEN INTERVAL
-            ->where(function ($q) use ($startRange, $endRange) {
+            // 💡 FILTER RENTANG TAGIHAN JATUH TEMPO (01 s/d 16)
+            ->where(function ($q) use ($billingStart, $billingEnd) {
                 // Kasus BL (Belum Lunas)
-                $q->where(function ($subQ) use ($startRange, $endRange) {
+                $q->where(function ($subQ) use ($billingStart, $billingEnd) {
                     $subQ->where('billings.status', 'BL')
-                        ->where('billings.due_date', '>=', $startRange)
-                        ->where('billings.due_date', '<', $endRange);
+                        ->where('billings.due_date', '>=', $billingStart)
+                        ->where('billings.due_date', '<', $billingEnd);
                 })
                     // Kasus PL (Paylater)
-                    ->orWhere(function ($subQ) use ($startRange, $endRange) {
+                    ->orWhere(function ($subQ) use ($billingStart, $billingEnd) {
                         $subQ->where('billings.status', 'PL')
-                            ->where('billings.paylater_until', '>=', $startRange)
-                            ->where('billings.paylater_until', '<', $endRange);
+                            ->where('billings.paylater_until', '>=', $billingStart)
+                            ->where('billings.paylater_until', '<', $billingEnd);
                     });
             })
 
@@ -92,15 +94,17 @@ class BillingReminderCollector
         LogHelper::logInfo(
             null,
             [
-                'date'         => $todayStr,
-                'slugs'        => $slugs,
-                'start_range'  => $startRange,
-                'end_range'    => $endRange,
-                'count'        => $data->count(),
-                'execution_ms' => $timer->lap()
+                'date'          => $todayStr,
+                'slugs'         => $slugs,
+                'billing_start' => $billingStart,
+                'billing_end'   => $billingEnd,
+                'today_start'   => $todayStart,
+                'today_end'     => $todayEnd,
+                'count'         => $data->count(),
+                'execution_ms'  => $timer->lap()
             ],
             120,
-            '[BillingReminderCollector] Result collected successfully with half-open interval strategy'
+            '[BillingReminderCollector] Result collected successfully'
         );
 
         return $data;
