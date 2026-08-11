@@ -20,9 +20,9 @@ class BillingReminderCollector
         $slugs = [$slug1, $slug2, $slug3];
         $todayStr = $today->toDateString();
 
-        // Mengoptimalkan filter tanggal (<= 15) menjadi format range ISO Y-m-d agar index database terpakai
-        $startRange = $today->copy()->startOfMonth()->toDateString(); // Tanggal 1 bulan ini
-        $endRange   = $today->copy()->day(15)->toDateString();       // Tanggal 15 bulan ini
+        // Menggunakan startOfDay() dan endOfDay() agar mencakup jam 00:00:00 s/d 23:59:59
+        $startRange = $today->copy()->startOfMonth()->startOfDay()->toDateTimeString(); // Contoh: '2026-08-01 00:00:00'
+        $endRange   = $today->copy()->day(15)->endOfDay()->toDateTimeString();          // Contoh: '2026-08-15 23:59:59'      // Tanggal 15 bulan ini
 
         $query = Billing::query()
             ->select([
