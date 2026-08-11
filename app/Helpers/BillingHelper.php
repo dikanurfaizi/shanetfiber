@@ -89,10 +89,10 @@ class BillingHelper
             // 2. Detail Waktu & Informasi Bank di luar badge utama
             if ($paymentMethod === 'cash') {
                 // Jika cash, tampilkan tanggal di bawah badge dengan warna muted
-                $html .= '<div class="small text-muted mt-1">' . __('billing.label.on') . ' ' . e($paymentTime) . '</div>';
+                $html .= '<div class="small text-muted mt-1">' . ' ' . e($paymentTime) . '</div>';
             } else {
                 // Jika selain cash (termasuk transfer), turunkan tanggal
-                $html .= '<div class="small text-muted mt-1">' . __('billing.label.on') . ' ' . e($paymentTime) . '</div>';
+                $html .= '<div class="small text-muted mt-1">' . ' ' . e($paymentTime) . '</div>';
 
                 // Jika metodenya transfer, tambahkan detail informasi rekening bank dengan warna brand
                 if ($paymentMethod === 'transfer') {
