@@ -27,6 +27,20 @@ class SendMessages extends Command
 
         if (!$feature || !$feature->is_active) {
             $this->warn('⏩ Mid-month broadcast skipped (feature disabled or not found).');
+
+            // Log jika fitur tidak aktif atau tidak ditemukan
+            LogHelper::logInfo(
+                'BroadcastMidMonth',
+                [
+                    'trace_id'      => $traceId,
+                    'feature_found' => (bool) $feature,
+                    'is_active'     => $feature->is_active ?? false,
+                ],
+                200,
+                'Mid-month broadcast skipped (feature disabled or not found)',
+                $traceId
+            );
+
             return Command::SUCCESS;
         }
 
@@ -35,21 +49,29 @@ class SendMessages extends Command
         // ===============================================================
         $schedule  = $feature->schedule;
         $timezone  = data_get($schedule, 'timezone', 'Asia/Jakarta');
-        $days      = data_get($schedule, 'days') ?: [15, 16, 17, 18, 19, 20];
+        
+        // Get days & paksa konversi ke integer
+        $rawDays   = data_get($schedule, 'days', []);
+        $days      = !empty($rawDays) 
+                     ? array_map('intval', (array) $rawDays) 
+                     : [15, 16, 17, 18, 19, 20];
+        
         $timeStart = data_get($schedule, 'time_window.start', '08:00');
         $timeEnd   = data_get($schedule, 'time_window.end', '20:00');
-
-        if (empty($days)) {
-            $this->warn('⛔ No scheduled days configured.');
-            return Command::SUCCESS;
-        }
-
+        
         $now = Carbon::now($timezone);
 
+        // ===============================================================
+        // OUTPUT TERMINAL & APPLICATION LOG (DB DATA DETAILS)
+        // ===============================================================
         $this->info('📨 Mid-Month Reminder Job');
-        $this->line("• Time     : {$now->toDateTimeString()} ({$timezone})");
-        $this->line("• Trace ID : {$traceId}");
-        $this->line("• TestMode : " . ($testMode ? 'ON' : 'OFF'));
+        $this->line("• Time         : {$now->toDateTimeString()} ({$timezone})");
+        $this->line("• Trace ID     : {$traceId}");
+        $this->line("• TestMode     : " . ($testMode ? 'ON' : 'OFF'));
+        $this->line("• Feature ID   : {$feature->id}");
+        $this->line("• Days (Raw DB): " . json_encode($rawDays));
+        $this->line("• Days (Parsed): " . json_encode($days));
+        $this->line("• Time Window  : {$timeStart} - {$timeEnd}");
 
         LogHelper::logInfo(
             'BroadcastMidMonth',
@@ -58,33 +80,48 @@ class SendMessages extends Command
                 'feature_id' => $feature->id,
                 'timestamp'  => $now->toDateTimeString(),
                 'test_mode'  => $testMode,
+                // --- LOG DETAIL DATA DARI DATABASE ---
+                'db_data'    => [
+                    'alias'         => $feature->alias,
+                    'is_active'     => $feature->is_active,
+                    'is_scheduled'  => $feature->is_scheduled ?? null,
+                    'timezone'      => $timezone,
+                    'days_raw'      => $rawDays,
+                    'days_parsed'   => $days,
+                    'time_window'   => "{$timeStart} - {$timeEnd}",
+                    'full_schedule' => $schedule,
+                ],
             ],
             200,
             'Mid-month broadcast scheduler started',
             $traceId
         );
 
+        if (empty($days)) {
+            $this->warn('⛔ No scheduled days configured.');
+            return Command::SUCCESS;
+        }
+
         try {
             // ===============================================================
-            // DATE & TIME VALIDATION (BEST PRACTICE)
+            // DATE & TIME VALIDATION
             // ===============================================================
             $lastDay = $now->copy()->endOfMonth()->day;
-            $effectiveDays = array_map(fn($d) => min($d, $lastDay), $days);
-
+            $effectiveDays = array_map(fn($d) => min((int)$d, $lastDay), $days);
+        
             if (!$testMode) {
                 // 1. Validasi Hari/Tanggal
                 if (!in_array($now->day, $effectiveDays, true)) {
-                    $this->warn('⏩ Skipped: today not in scheduled days.');
+                    $this->warn("⏩ Skipped: today ({$now->day}) not in scheduled days.");
                     return Command::SUCCESS;
                 }
-
-                // 2. Validasi Jendela Waktu (Menggunakan Carbon antara start dan end)
-                // Contoh: Apakah jam sekarang berada di antara 08:00:00 dan 21:00:00?
+        
+                // 2. Validasi Jendela Waktu
                 $isInsideWindow = $now->between(
                     $now->copy()->setTimeFromTimeString($timeStart),
                     $now->copy()->setTimeFromTimeString($timeEnd)
                 );
-
+        
                 if (!$isInsideWindow) {
                     $this->warn("⏩ Skipped: outside time window ({$timeStart} - {$timeEnd}).");
                     return Command::SUCCESS;
@@ -105,8 +142,8 @@ class SendMessages extends Command
                 [
                     'trace_id' => $traceId,
                     'range' => [
-                        'days' => $effectiveDays,
-                        'time_window' => "{$timeStart}-{$timeEnd}",
+                        'days_effective' => $effectiveDays,
+                        'time_window'    => "{$timeStart}-{$timeEnd}",
                     ],
                     'execution_time' => $duration,
                 ],
@@ -123,11 +160,11 @@ class SendMessages extends Command
             LogHelper::logError(
                 'BroadcastMidMonth',
                 [
-                    'trace_id' => $traceId,
+                    'trace_id'  => $traceId,
                     'exception' => get_class($e),
-                    'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
+                    'message'   => $e->getMessage(),
+                    'file'      => $e->getFile(),
+                    'line'      => $e->getLine(),
                 ],
                 500,
                 'Mid-month broadcast scheduler failed',

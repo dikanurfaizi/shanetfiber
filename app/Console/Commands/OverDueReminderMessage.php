@@ -42,17 +42,17 @@ class OverDueReminderMessage extends Command
         // ===============================================================
         $schedule  = $feature->schedule;
         $timezone  = data_get($schedule, 'timezone', 'Asia/Jakarta');
-        $days      = data_get($schedule, 'days', []);
+        $rawDays   = data_get($schedule, 'days', []);
         $timeStart = data_get($schedule, 'time_window.start', '08:00');
         $timeEnd   = data_get($schedule, 'time_window.end', '21:00');
 
-        if (empty($days)) {
+        if (empty($rawDays)) {
             $this->warn('⛔ No scheduled days configured.');
             return Command::SUCCESS;
         }
 
-        // 💡 SOLUSI HARI TUNGGAL / ARRAY: Paksa variabel $days agar selalu berupa struktur array
-        $daysArray = is_array($days) ? $days : [$days];
+        // Memastikan variabel selalu berupa array
+        $daysArray = is_array($rawDays) ? $rawDays : [$rawDays];
 
         $now = Carbon::now($timezone);
 
@@ -67,7 +67,6 @@ class OverDueReminderMessage extends Command
         $this->line("• Trace ID : {$traceId}");
         $this->line("• TestMode : " . ($testMode ? 'ON' : 'OFF'));
 
-        // 💡 DIKEDEPANKAN DAN DITAMBAHKAN LOG DAYS:
         LogHelper::logInfo(
             'BroadcastOverdue',
             [
@@ -75,8 +74,8 @@ class OverDueReminderMessage extends Command
                 'feature_id'     => $feature->id,
                 'timestamp'      => $now->toDateTimeString(),
                 'test_mode'      => $testMode,
-                'days_raw'       => $days,          // Log nilai asli dari database JSON
-                'days_effective' => $effectiveDays,  // Log nilai array hasil konversi siap pakai
+                'days_raw'       => $rawDays,
+                'days_effective' => $effectiveDays,
                 'time_window'    => "{$timeStart}-{$timeEnd}"
             ],
             200,
@@ -90,15 +89,20 @@ class OverDueReminderMessage extends Command
             // DATE & TIME VALIDATION
             // ===============================================================
             if (!$testMode) {
-                // Sekarang in_array 100% aman karena $effectiveDays dijamin selalu array beranggotakan integer
+                // 1. Validasi Hari/Tanggal
                 if (!in_array($now->day, $effectiveDays, true)) {
-                    $this->warn('⏩ Skipped: today not in scheduled days.');
+                    $this->warn("⏩ Skipped: today ({$now->day}) not in scheduled days.");
                     return Command::SUCCESS;
                 }
 
-                $currentTime = $now->format('H:i');
-                if ($currentTime < $timeStart || $currentTime > $timeEnd) {
-                    $this->warn('⏩ Skipped: outside time window.');
+                // 2. Validasi Jendela Waktu (Menggunakan Carbon untuk menghindari bug format string jam)
+                $isInsideWindow = $now->between(
+                    $now->copy()->setTimeFromTimeString($timeStart),
+                    $now->copy()->setTimeFromTimeString($timeEnd)
+                );
+
+                if (!$isInsideWindow) {
+                    $this->warn("⏩ Skipped: outside time window ({$timeStart} - {$timeEnd}).");
                     return Command::SUCCESS;
                 }
             }
@@ -108,24 +112,29 @@ class OverDueReminderMessage extends Command
             // ===============================================================
             event(new OverdueBroadcastTriggered($traceId));
 
-            $this->info("✅ Overdue broadcast dispatched ({$timer->lap()}s)");
+            // Simpan durasi ke variabel agar konsisten di konsol dan log
+            $duration = $timer->lap();
+
+            $this->info("✅ Overdue broadcast dispatched ({$duration}s)");
 
             LogHelper::logInfo(
                 'BroadcastOverdue',
                 [
                     'range' => [
-                        'days' => $effectiveDays,
+                        'days'        => $effectiveDays,
                         'time_window' => "{$timeStart}-{$timeEnd}",
                     ]
                 ],
                 200,
                 'Overdue broadcast dispatched',
                 $traceId,
-                $timer->lap()
+                $duration
             );
 
             return Command::SUCCESS;
         } catch (\Throwable $e) {
+
+            $duration = $timer->lap();
 
             $this->error('❌ Overdue broadcast job failed.');
 
@@ -133,14 +142,14 @@ class OverDueReminderMessage extends Command
                 'BroadcastOverdue',
                 [
                     'exception' => get_class($e),
-                    'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
+                    'message'   => $e->getMessage(),
+                    'file'      => $e->getFile(),
+                    'line'      => $e->getLine(),
                 ],
                 500,
                 'Overdue broadcast scheduler failed',
                 $traceId,
-                $timer->lap()
+                $duration
             );
 
             return Command::FAILURE;
