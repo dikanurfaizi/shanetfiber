@@ -20,9 +20,11 @@ class BillingReminderCollector
         $slugs = [$slug1, $slug2, $slug3];
         $todayStr = $today->toDateString();
 
-        // Menggunakan startOfDay() dan endOfDay() agar mencakup jam 00:00:00 s/d 23:59:59
-        $startRange = $today->copy()->startOfMonth()->startOfDay()->toDateTimeString(); // Contoh: '2026-08-01 00:00:00'
-        $endRange   = $today->copy()->day(15)->endOfDay()->toDateTimeString();          // Contoh: '2026-08-15 23:59:59'      // Tanggal 15 bulan ini
+        // 💡 SOLUSI DATA UNSTABLE: 
+        // Batas Awal  : 01-Bulan-Ini 00:00:00 (Inclusive >=)
+        // Batas Akhir : 16-Bulan-Ini 00:00:00 (Exclusive <)
+        $startRange = $today->copy()->startOfMonth()->startOfDay()->toDateTimeString(); // e.g. '2026-08-01 00:00:00'
+        $endRange   = $today->copy()->day(16)->startOfDay()->toDateTimeString();         // e.g. '2026-08-16 00:00:00'
 
         $query = Billing::query()
             ->select([
@@ -32,10 +34,10 @@ class BillingReminderCollector
                 'customers.user_id as user_id',
                 'p.name as package_name',
 
-                // Menggunakan SUM agar jika ada double tagihan (PL & BL), totalnya otomatis digabung
+                // SUM total tagihan
                 DB::raw('SUM(billings.total_amount) as total'),
 
-                // Menggunakan MAX untuk mengambil tanggal terjauh/terakhir jika ada dua tagihan
+                // MAX tanggal jatuh tempo
                 DB::raw('MAX(billings.due_date) as due_date'),
                 DB::raw('MAX(billings.paylater_until) as paylater_until'),
                 DB::raw('MAX(COALESCE(billings.paylater_until, billings.due_date)) as final_due_date'),
@@ -43,15 +45,14 @@ class BillingReminderCollector
             ->join('customers', 'billings.customer_id', '=', 'customers.id')
             ->leftJoin('users', 'customers.user_id', '=', 'users.id')
 
-            // Kunci status subscription hanya yang ACTIVE
+            // Status subscription ACTIVE
             ->leftJoin('customer_subscriptions as cs', function ($join) {
                 $join->on('customers.id', '=', 'cs.customer_id')
                     ->where('cs.status', '=', 'active');
             })
             ->leftJoin('packages as p', 'cs.package_id', '=', 'p.id')
 
-            // 👉 SOLUSI TOTAL ANTI-DUPLIKASI: Menggunakan WHERE NOT EXISTS
-            // Menjamin data yang sudah sukses, failed, atau pending hari ini dengan tipe slug tersebut tidak akan lolos query.
+            // WHERE NOT EXISTS anti-duplikasi
             ->whereNotExists(function ($q) use ($slugs, $todayStr) {
                 $q->select(DB::raw(1))
                     ->from('message_events as me')
@@ -61,21 +62,23 @@ class BillingReminderCollector
                     ->whereIn('me.status', ['success', 'failed', 'pending']);
             })
 
-            // --- OPTIMASI QUERY: Menggunakan WhereBetween menggantikan whereMonth/whereDay agar INDEX pada table Billing tetap aktif ---
+            // 💡 FILTER RENTANG TANGGAL DENGAN HALO/HALF-OPEN INTERVAL
             ->where(function ($q) use ($startRange, $endRange) {
-                // Kasus BL (Belum Lunas) jatuh tempo antara tanggal 1 - 15 bulan ini
+                // Kasus BL (Belum Lunas)
                 $q->where(function ($subQ) use ($startRange, $endRange) {
                     $subQ->where('billings.status', 'BL')
-                        ->whereBetween('billings.due_date', [$startRange, $endRange]);
+                        ->where('billings.due_date', '>=', $startRange)
+                        ->where('billings.due_date', '<', $endRange);
                 })
-                    // Kasus PL (Paylater) jatuh tempo antara tanggal 1 - 15 bulan ini
+                    // Kasus PL (Paylater)
                     ->orWhere(function ($subQ) use ($startRange, $endRange) {
                         $subQ->where('billings.status', 'PL')
-                            ->whereBetween('billings.paylater_until', [$startRange, $endRange]);
+                            ->where('billings.paylater_until', '>=', $startRange)
+                            ->where('billings.paylater_until', '<', $endRange);
                     });
             })
 
-            // GROUP BY DIKUNCI PER CUSTOMER & PAKET
+            // GROUP BY PER CUSTOMER & PAKET
             ->groupBy([
                 'customers.id',
                 'customers.name',
@@ -84,20 +87,20 @@ class BillingReminderCollector
                 'p.name'
             ]);
 
-        // 💡 Diperbaiki: ->limit(10) dihapus total agar mengambil seluruh data tertunggak
         $data = $query->get();
 
-        // --- logging status ---
         LogHelper::logInfo(
             null,
             [
                 'date'         => $todayStr,
                 'slugs'        => $slugs,
+                'start_range'  => $startRange,
+                'end_range'    => $endRange,
                 'count'        => $data->count(),
                 'execution_ms' => $timer->lap()
             ],
             120,
-            '[BillingReminderCollector] Result collected successfully without limit and fully optimized query execution'
+            '[BillingReminderCollector] Result collected successfully with half-open interval strategy'
         );
 
         return $data;
