@@ -136,6 +136,10 @@
     background-color: #f0f9ff !important;
     color: #0ea5e9 !important;
 }
+.bg-secondary-soft {
+    background-color: #f3f4f6 !important;
+    color: #6b7280 !important;
+}
 
 /* Modern Card & Interactivity */
 .card-modern {

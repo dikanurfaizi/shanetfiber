@@ -159,7 +159,7 @@ class HomeController extends Controller
             ->leftJoin('users as admins', 'customers.user_id', '=', 'admins.id')
             ->where('customers.disabled', 'false')  // Pelanggan aktif
             ->where('customers.activation', 'true')
-            ->where('billings.status', 'VD')       // Status belum bayar (VD)
+            ->where('billings.status', 'BL')       // Status tunggakan aktif belum bayar (BL)
             ->whereIn('billing_periodes.id', $recentPeriodeIds); // Filter 12 periode (1 tahun) terakhir
 
         // Filter scope data berdasarkan role user yang login
@@ -237,10 +237,12 @@ class HomeController extends Controller
             DB::raw('COALESCE(SUM(b.total_amount), 0) as total_billing'),
             DB::raw('COALESCE(SUM(CASE WHEN b.status = "LS" THEN b.total_amount ELSE 0 END), 0) as total_paid'),
             DB::raw('COALESCE(SUM(CASE WHEN b.status = "PL" THEN b.total_amount ELSE 0 END), 0) as total_paylater'),
-            DB::raw('COALESCE(SUM(CASE WHEN b.status IN ("BL", "NP") THEN b.total_amount ELSE 0 END), 0) as total_unpaid'),
+            DB::raw('COALESCE(SUM(CASE WHEN b.status = "BL" THEN b.total_amount ELSE 0 END), 0) as total_unpaid'),
+            DB::raw('COALESCE(SUM(CASE WHEN b.status = "VD" THEN b.total_amount ELSE 0 END), 0) as total_void'),
             DB::raw('COUNT(DISTINCT CASE WHEN b.status = "LS" THEN b.customer_id END) as total_paid_customers'),
             DB::raw('COUNT(DISTINCT CASE WHEN b.status = "PL" THEN b.customer_id END) as total_paylater_customers'),
-            DB::raw('COUNT(DISTINCT CASE WHEN b.status IN ("BL", "NP") THEN b.customer_id END) as total_unpaid_customers')
+            DB::raw('COUNT(DISTINCT CASE WHEN b.status = "BL" THEN b.customer_id END) as total_unpaid_customers'),
+            DB::raw('COUNT(DISTINCT CASE WHEN b.status = "VD" THEN b.customer_id END) as total_void_customers')
         )
             ->groupBy('u.id', 'u.name', 'b.billing_periode_id', 'bp.name')
             ->havingRaw('COUNT(DISTINCT b.customer_id) > 0')
@@ -703,6 +705,7 @@ class HomeController extends Controller
                     'totalPaid' => null,
                     'totalPaylater' => null,
                     'totalUnpaid' => null,
+                    'totalVoid' => null,
                 ];
             }
 
@@ -710,7 +713,8 @@ class HomeController extends Controller
                 'totalBilling' => $billings->sum('total_amount'),
                 'totalPaid' => $billings->where('status', 'LS')->sum('total_amount'),
                 'totalPaylater' => $billings->where('status', 'PL')->sum('total_amount'),
-                'totalUnpaid' => $billings->whereIn('status', ['BL', 'VD'])->sum('total_amount'),
+                'totalUnpaid' => $billings->where('status', 'BL')->sum('total_amount'),
+                'totalVoid' => $billings->where('status', 'VD')->sum('total_amount'),
             ];
         } catch (\Exception $e) {
             LogHelper::logError(null, [
@@ -723,6 +727,7 @@ class HomeController extends Controller
                 'totalPaid' => 0,
                 'totalPaylater' => 0,
                 'totalUnpaid' => 0,
+                'totalVoid' => 0,
             ];
         }
     }

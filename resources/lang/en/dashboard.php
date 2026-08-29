@@ -32,6 +32,7 @@ return [
         'paid' => 'Paid',
         'pay_later' => 'Pay Later',
         'unpaid' => 'Unpaid',
+        'void' => 'Void',
         'customers_unit' => 'customers',
         'users_unit' => 'users',
         'details_per_admin' => 'Details Per Admin',

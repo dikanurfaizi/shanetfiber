@@ -58,7 +58,7 @@ class BillingHelper
 
     public static function getBillingPaymentSection($billing, $bank)
     {
-        // Jika status NP
+        // Jika status VD
         if ($billing->status === 'VD') {
             return '<span class="badge bg-primary text-white">
     <i class="fas fa-times-circle"></i> ' .

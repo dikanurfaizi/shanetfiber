@@ -177,7 +177,7 @@
                         <div class="card-body p-4">
                             <div class="row">
                                 <!-- Total Billings -->
-                                <div class="col-md-6 col-lg-3 mb-3 mb-lg-0">
+                                <div class="col-12 col-sm-6 col-lg mb-3 mb-lg-0">
                                     <div class="p-3 rounded-3 bg-primary-soft h-100 d-flex flex-column justify-content-between">
                                         <div>
                                             <span class="text-uppercase font-weight-bold small text-primary opacity-75">
@@ -201,7 +201,7 @@
                                 </div>
 
                                 <!-- Paid -->
-                                <div class="col-md-6 col-lg-3 mb-3 mb-lg-0">
+                                <div class="col-12 col-sm-6 col-lg mb-3 mb-lg-0">
                                     <div class="p-3 rounded-3 bg-success-soft h-100 d-flex flex-column justify-content-between">
                                         <div>
                                             <span class="text-uppercase font-weight-bold small text-success opacity-75">
@@ -209,7 +209,7 @@
                                             </span>
                                             <div class="d-flex justify-content-between align-items-baseline mt-2">
                                                 <h3 class="font-weight-bold mb-0 text-success">
-                                                    <a href="{{ route('billings.index', ['search_status=LS', 'search_month=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}"
+                                                    <a href="{{ route('billings.index', ['search_status' => 'LS', 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}"
                                                         class="text-decoration-none text-success">
                                                         {{ $lastBillings->where('status', 'LS')->count() }}
                                                     </a>
@@ -226,7 +226,7 @@
                                 </div>
 
                                 <!-- Pay Later -->
-                                <div class="col-md-6 col-lg-3 mb-3 mb-lg-0">
+                                <div class="col-12 col-sm-6 col-lg mb-3 mb-lg-0">
                                     <div class="p-3 rounded-3 bg-warning-soft h-100 d-flex flex-column justify-content-between">
                                         <div>
                                             <span class="text-uppercase font-weight-bold small text-warning opacity-75">
@@ -234,7 +234,7 @@
                                             </span>
                                             <div class="d-flex justify-content-between align-items-baseline mt-2">
                                                 <h3 class="font-weight-bold mb-0 text-warning">
-                                                    <a href="{{ route('billings.index', ['search_status=PL', 'search_month=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}"
+                                                    <a href="{{ route('billings.index', ['search_status' => 'PL', 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}"
                                                         class="text-decoration-none text-warning">
                                                         {{ $lastBillings->where('status', 'PL')->count() }}
                                                     </a>
@@ -251,7 +251,7 @@
                                 </div>
 
                                 <!-- Unpaid -->
-                                <div class="col-md-6 col-lg-3">
+                                <div class="col-12 col-sm-6 col-lg mb-3 mb-lg-0">
                                     <div class="p-3 rounded-3 bg-danger-soft h-100 d-flex flex-column justify-content-between">
                                         <div>
                                             <span class="text-uppercase font-weight-bold small text-danger opacity-75">
@@ -259,7 +259,7 @@
                                             </span>
                                             <div class="d-flex justify-content-between align-items-baseline mt-2">
                                                 <h3 class="font-weight-bold mb-0 text-danger">
-                                                    <a href="{{ route('billings.index', ['search_status=BL', 'search_month=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}"
+                                                    <a href="{{ route('billings.index', ['search_status' => 'BL', 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}"
                                                         class="text-decoration-none text-danger">
                                                         {{ $lastBillings->where('status', 'BL')->count() }}
                                                     </a>
@@ -270,6 +270,31 @@
                                         @if ($totalUnpaid !== null)
                                             <div class="mt-3 font-weight-bold text-danger border-top border-danger border-opacity-10 pt-2">
                                                 @moneyIDR($totalUnpaid)
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <!-- Void / Hangus -->
+                                <div class="col-12 col-sm-6 col-lg">
+                                    <div class="p-3 rounded-3 bg-secondary-soft h-100 d-flex flex-column justify-content-between">
+                                        <div>
+                                            <span class="text-uppercase font-weight-bold small text-secondary opacity-75">
+                                                {{ __('dashboard.cards.void') }}
+                                            </span>
+                                            <div class="d-flex justify-content-between align-items-baseline mt-2">
+                                                <h3 class="font-weight-bold mb-0 text-secondary">
+                                                    <a href="{{ route('billings.index', ['search_status' => 'VD', 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}"
+                                                        class="text-decoration-none text-secondary">
+                                                        {{ $lastBillings->where('status', 'VD')->count() }}
+                                                    </a>
+                                                </h3>
+                                                <small class="font-weight-bold text-secondary opacity-75">{{ __('dashboard.cards.customers_unit') }}</small>
+                                            </div>
+                                        </div>
+                                        @if ($totalVoid !== null)
+                                            <div class="mt-3 font-weight-bold text-secondary border-top border-secondary border-opacity-10 pt-2">
+                                                @moneyIDR($totalVoid)
                                             </div>
                                         @endif
                                     </div>
@@ -327,7 +352,7 @@
                                                                 </div>
                                                             </div>
 
-                                                            <div class="d-flex justify-content-between align-items-center">
+                                                            <div class="d-flex justify-content-between align-items-center mb-2">
                                                                 <span class="text-danger font-weight-bold">{{ __('dashboard.cards.unpaid') }}:</span>
                                                                 <div class="text-right">
                                                                     <a href="{{ route('billings.index', ['admin_name' => $adminData->admin_name, 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'), 'search_status' => 'BL']) }}"
@@ -335,6 +360,17 @@
                                                                         {{ number_format($adminData->total_unpaid_customers, 0, ',', '.') }}
                                                                     </a>
                                                                     <div class="text-muted small">Rp {{ number_format($adminData->total_unpaid, 0, ',', '.') }}</div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="d-flex justify-content-between align-items-center">
+                                                                <span class="text-secondary font-weight-bold">{{ __('dashboard.cards.void') }}:</span>
+                                                                <div class="text-right">
+                                                                    <a href="{{ route('billings.index', ['admin_name' => $adminData->admin_name, 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'), 'search_status' => 'VD']) }}"
+                                                                        class="text-secondary font-weight-bold text-decoration-none">
+                                                                        {{ number_format($adminData->total_void_customers, 0, ',', '.') }}
+                                                                    </a>
+                                                                    <div class="text-muted small">Rp {{ number_format($adminData->total_void, 0, ',', '.') }}</div>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -543,7 +579,7 @@
                                                     <a href="{{ route('billings.index', array_filter([
                                                         'customer' => $customer->slug ?? null,
                                                         'search_name' => $customer->name,
-                                                        'search_status' => 'VD',
+                                                        'search_status' => 'BL',
                                                         'admin_name' => $customer->admin_name,
                                                     ])) }}" class="font-weight-bold text-dark text-decoration-none">
                                                         {{ $customer->name }}

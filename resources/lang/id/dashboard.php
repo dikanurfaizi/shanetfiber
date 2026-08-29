@@ -32,6 +32,7 @@ return [
         'paid' => 'Lunas',
         'pay_later' => 'Bayar Nanti',
         'unpaid' => 'Belum Bayar',
+        'void' => 'Tidak di Bayar',
         'customers_unit' => 'pelanggan',
         'users_unit' => 'pengguna',
         'details_per_admin' => 'Rincian Per Admin',
