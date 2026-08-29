@@ -21,35 +21,68 @@ class OverdueBroadcastHandler implements ContractsTemplateHandler
         $template = $command->templateName;
         $bodyValues = [];
 
-        // ===============================================================
-        // MAPPING BODY VALUES BERDASARKAN STRUKTUR TEMPLATE (🔒 LOCK)
-        // ===============================================================
+        // Base prefix variables: {{1}} = Package Name, {{2}} = Total, {{3}} = Late Days, {{4}} = Note
+        $prefixValues = [$command->packageName, $command->total, $command->lateDays, $command->note];
 
-        // Kasus 1: 2 Bank, 1 Dana/E-wallet (14 Variabel)
-        if ($template === 'pembayaran_terlambat_1') {
-            $bodyValues = array_merge(
-                [$command->packageName, $command->total, $command->lateDays, $command->note],
-                $this->getTwoBanksAndOneWallet($command->bankPayload), // 💡 Panggil helper dari trait
-                [$command->contactWhatsapp]
-            );
-        }
+        switch ($template) {
+            case 'terlambat_3rek_1ewallet':
+                $bodyValues = array_merge(
+                    $prefixValues,
+                    $this->getThreeBanksAndOneWallet($command->bankPayload),
+                    [$command->contactWhatsapp]
+                );
+                break;
 
-        // Kasus 2: 1 Bank, 1 Dana/E-wallet (11 Variabel)
-        elseif ($template === 'pembayaran_terlambat_v3') {
-            $bodyValues = array_merge(
-                [$command->packageName, $command->total, $command->lateDays, $command->note],
-                $this->getOneBankAndOneWallet($command->bankPayload), // 💡 Panggil helper dari trait
-                [$command->contactWhatsapp]
-            );
-        }
+            case 'terlambat_3rek':
+                $bodyValues = array_merge(
+                    $prefixValues,
+                    $this->getThreeBanksOnly($command->bankPayload),
+                    [$command->contactWhatsapp]
+                );
+                break;
 
-        // Kasus 3: Hanya 2 Bank (11 Variabel)
-        else {
-            $bodyValues = array_merge(
-                [$command->packageName, $command->total, $command->lateDays, $command->note],
-                $this->getTwoBanksOnly($command->bankPayload), // 💡 Panggil helper dari trait
-                [$command->contactWhatsapp]
-            );
+            case 'terlambat_2rek_1ewallet':
+                $bodyValues = array_merge(
+                    $prefixValues,
+                    $this->getTwoBanksAndOneWallet($command->bankPayload),
+                    [$command->contactWhatsapp]
+                );
+                break;
+
+            case 'terlambat_2rek':
+                $bodyValues = array_merge(
+                    $prefixValues,
+                    $this->getTwoBanksOnly($command->bankPayload),
+                    [$command->contactWhatsapp]
+                );
+                break;
+
+            case 'terlambat_1rek_1ewallet':
+                $bodyValues = array_merge(
+                    $prefixValues,
+                    $this->getOneBankAndOneWallet($command->bankPayload),
+                    [$command->contactWhatsapp]
+                );
+                break;
+
+            case 'terlambat_1rek':
+                $bodyValues = array_merge(
+                    $prefixValues,
+                    $this->getOneBankOnly($command->bankPayload),
+                    [$command->contactWhatsapp]
+                );
+                break;
+
+            case 'terlambat_1ewallet':
+                $bodyValues = array_merge(
+                    $prefixValues,
+                    $this->getOneWalletOnly($command->bankPayload),
+                    [$command->contactWhatsapp]
+                );
+                break;
+
+            default:
+                throw new InvalidArgumentException("Template framework [{$template}] is not registered in OverdueBroadcastHandler.");
         }
 
         return new TemplateContext(

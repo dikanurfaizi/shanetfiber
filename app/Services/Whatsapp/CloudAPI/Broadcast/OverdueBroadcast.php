@@ -17,6 +17,16 @@ class OverdueBroadcast
 {
     use MapsBroadcastBankPayload, ResolvesAdminContact;
 
+    private const BILLING_TEMPLATES = [
+        '3_banks_1_ewallet' => 'terlambat_3rek_1ewallet',
+        '3_banks_only'      => 'terlambat_3rek',
+        '2_banks_1_ewallet' => 'terlambat_2rek_1ewallet',
+        '2_banks_only'      => 'terlambat_2rek',
+        '1_bank_1_ewallet'  => 'terlambat_1rek_1ewallet',
+        '1_bank_only'       => 'terlambat_1rek',
+        '1_ewallet_only'    => 'terlambat_1ewallet',
+    ];
+
     public function __construct(
         private OverdueBillingCollector $collector,
         private AdminBankCollector $bankCollector
@@ -27,18 +37,13 @@ class OverdueBroadcast
         $timer = new ExecutionTimer();
         LogHelper::logInfo(null, [], 100, '[OverdueBroadcast] Start', $traceId, $timer->lap());
 
-        $templateName1 = 'pembayaran_terlambat_1';    // 2 Bank + 1 E-Wallet
-        $templateName2 = 'pembayaran_terlambat_v3';  // 1 Bank + 1 E-Wallet
-        $templateName3 = 'pembayaran_terlambat_v2';  // Hanya 2 Bank
-
-        // Ambil data dari collector dengan 3 parameter template slug
-        $billings = $this->collector->collect(now(), $templateName1, $templateName2, $templateName3);
+        $overdueBillings = $this->collector->collect(now(), ...array_values(self::BILLING_TEMPLATES));
 
         LogHelper::logInfo(null, [
-            'count' => $billings->count()
+            'count' => $overdueBillings->count()
         ], 110, '[OverdueBroadcast] Billing collected', $traceId, $timer->lap());
 
-        if ($billings->isEmpty()) {
+        if ($overdueBillings->isEmpty()) {
             LogHelper::logInfo(null, [], 111, '[OverdueBroadcast] No billing to process', $traceId, $timer->lap());
             return;
         }
@@ -80,11 +85,7 @@ class OverdueBroadcast
             $ewallets   = $adminBanks->where('type', 'ewallet')->values();
 
             // Selesaikan pemetaan template & isi bank_payload lewat Trait secara dinamis
-            $bankResolution = $this->resolveBankTemplateAndPayload($banks, $ewallets, [
-                $templateName1,
-                $templateName2,
-                $templateName3
-            ]);
+            $bankResolution = $this->resolveBankTemplateAndPayload($banks, $ewallets, self::BILLING_TEMPLATES);
 
             $resolvedTemplate = $bankResolution['template'];
             $bankPayload      = $bankResolution['payload'];

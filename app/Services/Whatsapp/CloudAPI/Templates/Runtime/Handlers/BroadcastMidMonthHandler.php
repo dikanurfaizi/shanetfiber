@@ -21,38 +21,70 @@ class BroadcastMidMonthHandler implements ContractsTemplateHandler
         $template = $command->templateName;
         $bodyValues = [];
 
-        // ===============================================================
-        // MAPPING BODY VALUES BERDASARKAN STRUKTUR TEMPLATE (🔒 LOCK)
-        // ===============================================================
+        // Base prefix variables: {{1}} = Account Data, {{2}} = Total, {{3}} = Due Date
+        $prefixValues = [$command->accountData, $command->total, $command->dueDate];
 
-        // Kasus 1: 2 Bank, 1 Dana/E-wallet (13 Variabel)
-        if ($template === 'pengingat_pembayaran_v3') {
-            $bodyValues = array_merge(
-                [$command->accountData, $command->total, $command->dueDate],
-                $this->getTwoBanksAndOneWallet($command->bankPayload), // 💡 Panggil helper dari trait
-                [$command->contactWhatsapp]
-            );
+        switch ($template) {
+            case 'pengingat_3rek_1ewallet':
+                $bodyValues = array_merge(
+                    $prefixValues,
+                    $this->getThreeBanksAndOneWallet($command->bankPayload),
+                    [$command->contactWhatsapp]
+                );
+                break;
+
+            case 'pengingat_3rek':
+                $bodyValues = array_merge(
+                    $prefixValues,
+                    $this->getThreeBanksOnly($command->bankPayload),
+                    [$command->contactWhatsapp]
+                );
+                break;
+
+            case 'pengingat_2rek_1ewallet':
+                $bodyValues = array_merge(
+                    $prefixValues,
+                    $this->getTwoBanksAndOneWallet($command->bankPayload),
+                    [$command->contactWhatsapp]
+                );
+                break;
+
+            case 'pengingat_2rek':
+                $bodyValues = array_merge(
+                    $prefixValues,
+                    $this->getTwoBanksOnly($command->bankPayload),
+                    [$command->contactWhatsapp]
+                );
+                break;
+
+            case 'pengingat_1rek_1ewallet':
+                $bodyValues = array_merge(
+                    $prefixValues,
+                    $this->getOneBankAndOneWallet($command->bankPayload),
+                    [$command->contactWhatsapp]
+                );
+                break;
+
+            case 'pengingat_1rek':
+                $bodyValues = array_merge(
+                    $prefixValues,
+                    $this->getOneBankOnly($command->bankPayload),
+                    [$command->contactWhatsapp]
+                );
+                break;
+
+            case 'pengingat_1ewallet':
+                $bodyValues = array_merge(
+                    $prefixValues,
+                    $this->getOneWalletOnly($command->bankPayload),
+                    [$command->contactWhatsapp]
+                );
+                break;
+
+            default:
+                throw new InvalidArgumentException("Template framework [{$template}] is not registered in BroadcastMidMonthHandler.");
         }
 
-        // Kasus 2: 1 Bank, 1 Dana/E-wallet (10 Variabel)
-        elseif ($template === 'broadcast_tengah_bulan_1_bank_1_ewallet') {
-            $bodyValues = array_merge(
-                [$command->accountData, $command->total, $command->dueDate],
-                $this->getOneBankAndOneWallet($command->bankPayload), // 💡 Panggil helper dari trait
-                [$command->contactWhatsapp]
-            );
-        }
-
-        // Kasus 3: Hanya 2 Bank (10 Variabel)
-        else {
-            $bodyValues = array_merge(
-                [$command->accountData, $command->total, $command->dueDate],
-                $this->getTwoBanksOnly($command->bankPayload), // 💡 Panggil helper dari trait
-                [$command->contactWhatsapp]
-            );
-        }
-
-        // Return ke TemplateContext bawaan framework CloudAPI
         return new TemplateContext(
             recipient: $command->recipient,
             templateName: $template,

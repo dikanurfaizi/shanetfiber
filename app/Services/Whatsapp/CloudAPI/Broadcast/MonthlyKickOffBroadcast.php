@@ -22,6 +22,16 @@ class MonthlyKickOffBroadcast
     // 💡 Gunakan kedua trait secara bersamaan
     use MapsBroadcastBankPayload, ResolvesAdminContact;
 
+    private const BILLING_TEMPLATES = [
+        '3_banks_1_ewallet' => 'info_billing_3rek_1ewallet',
+        '3_banks_only'      => 'info_billing_3rek',
+        '2_banks_1_ewallet' => 'info_billing_2rek_1ewallet',
+        '2_banks_only'      => 'info_billing_2rek',
+        '1_bank_1_ewallet'  => 'info_billing_1rek_1ewallet',
+        '1_bank_only'       => 'info_billing_1rek',
+        '1_ewallet_only'    => 'info_billing_1ewallet',
+    ];
+
     public function __construct(
         private ActiveCustomerCollector $collector,
         private AdminBankCollector $bankCollector
@@ -32,13 +42,7 @@ class MonthlyKickOffBroadcast
         $timer = new ExecutionTimer();
         LogHelper::logInfo(null, [], 100, '[MonthlyKickOffBroadcast] Start process', $traceId, $timer->lap());
 
-        $templateName1 = 'info_billing_2rek_1ewallet';
-        $templateName2 = 'info_billing_1rek_1ewallet';
-        $templateName3 = 'info_billing_2rek';
-        $templateName4 = 'info_billing_1rek';
-        $templateName5 = 'info_billing_1ewallet';
-
-        $customers = $this->collector->collect(now(), $messageType, $templateName1, $templateName2, $templateName3, $templateName4, $templateName5);
+        $customers = $this->collector->collect(now(), $messageType, ...self::BILLING_TEMPLATES);
         if ($customers->isEmpty()) return;
 
         $overrideNumber = config('messaging.phone_number_override', null);
@@ -82,14 +86,8 @@ class MonthlyKickOffBroadcast
             $banks      = $adminBanks->where('type', 'bank')->values();
             $ewallets   = $adminBanks->where('type', 'ewallet')->values();
 
-            // Panggil Trait Bank Payload (Mendukung 5 Template Dinamis)
-            $bankResolution = $this->resolveBankTemplateAndPayload($banks, $ewallets, [
-                $templateName1,
-                $templateName2,
-                $templateName3,
-                $templateName4,
-                $templateName5
-            ]);
+            // Panggil Trait Bank Payload (Mendukung 7 Template Dinamis)
+            $bankResolution = $this->resolveBankTemplateAndPayload($banks, $ewallets, self::BILLING_TEMPLATES);
 
             $resolvedTemplate = $bankResolution['template'];
             $bankPayload      = $bankResolution['payload'];

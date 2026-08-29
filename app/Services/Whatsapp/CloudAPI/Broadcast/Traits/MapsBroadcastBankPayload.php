@@ -8,113 +8,91 @@ use App\Helpers\LogHelper;
 trait MapsBroadcastBankPayload
 {
     /**
-     * Resolving template dan memetakan bank payload berdasarkan jumlah bank & e-walletsecara dinamis (mendukung 3 s.d 5 opsi template).
+     * Resolving template dan memetakan bank payload berdasarkan key associative.
      */
     protected function resolveBankTemplateAndPayload(
         Collection $banks,
         Collection $ewallets,
         array $templates
     ): array {
-        // Ambil baris data secara aman
         $b1 = $banks->get(0);
         $b2 = $banks->get(1);
+        $b3 = $banks->get(2);
         $w1 = $ewallets->get(0);
 
         $banksCount    = $banks->count();
         $ewalletsCount = $ewallets->count();
 
-        // --- Tambahkan logging awal untuk debug jumlah data mentah ---
         LogHelper::logInfo(
             null,
             [
                 'raw_banks_count'    => $banksCount,
                 'raw_ewallets_count' => $ewalletsCount,
-                'passed_templates'   => count($templates),
                 'resolved_bank_1'    => $b1 ? $b1->bank : 'null',
                 'resolved_bank_2'    => $b2 ? $b2->bank : 'null',
+                'resolved_bank_3'    => $b3 ? $b3->bank : 'null',
                 'resolved_wallet'    => $w1 ? $w1->bank : 'null'
             ],
             100,
             '[MapsBroadcastBankPayload] Resolving bank criteria dynamically'
         );
 
-        // =========================================================================
-        // KONDISI 1: JIKA TEMPLATE JELAS DI-PASSING HINGGA 5 OPSI (Service Baru)
-        // =========================================================================
-        if (count($templates) >= 5) {
-            [$temp2Rek1Wall, $temp1Rek1Wall, $temp2Rek, $temp1Rek, $temp1Wall] = $templates;
-
-            // Kasus 1.1: Memiliki 2 Bank dan Minimal 1 E-Wallet
-            if ($banksCount >= 2 && $ewalletsCount >= 1) {
-                return $this->buildPayloadResponse($temp2Rek1Wall, '2_banks_1_ewallet', [
-                    'bank1' => $b1,
-                    'bank2' => $b2,
-                    'wallet' => $w1
-                ]);
-            }
-
-            // Kasus 1.2: Memiliki 1 Bank dan Minimal 1 E-Wallet
-            if ($banksCount == 1 && $ewalletsCount >= 1) {
-                return $this->buildPayloadResponse($temp1Rek1Wall, '1_bank_1_ewallet', [
-                    'bank1' => $b1,
-                    'wallet' => $w1
-                ]);
-            }
-
-            // Kasus 1.3: Hanya memiliki 2 Bank (E-Wallet kosong tetapi bank melimpah)
-            if ($banksCount >= 2 && $ewalletsCount == 0) {
-                return $this->buildPayloadResponse($temp2Rek, '2_banks_only', [
-                    'bank1' => $b1,
-                    'bank2' => $b2
-                ]);
-            }
-
-            // Kasus 1.4: Hanya memiliki 1 Bank saja
-            if ($banksCount == 1 && $ewalletsCount == 0) {
-                return $this->buildPayloadResponse($temp1Rek, '1_bank_only', [
-                    'bank1' => $b1
-                ]);
-            }
-
-            // Kasus 1.5: Hanya memiliki E-Wallet saja
-            if ($banksCount == 0 && $ewalletsCount >= 1) {
-                return $this->buildPayloadResponse($temp1Wall, '1_ewallet_only', [
-                    'wallet' => $w1
-                ]);
-            }
+        // 1. Evaluasi 3 Bank + 1 E-Wallet
+        if ($banksCount >= 3 && $ewalletsCount >= 1 && isset($templates['3_banks_1_ewallet'])) {
+            return $this->buildPayloadResponse($templates['3_banks_1_ewallet'], '3_banks_1_ewallet', [
+                'bank1' => $b1, 'bank2' => $b2, 'bank3' => $b3, 'wallet' => $w1
+            ]);
         }
 
-        // =========================================================================
-        // KONDISI 2: FALLBACK BACKWARD COMPATIBILITY (Service Lama / Hanya 3 Template)
-        // =========================================================================
-        [$templateName1, $templateName2, $templateName3] = $templates;
+        // 2. Evaluasi 3 Bank Only
+        if ($banksCount >= 3 && $ewalletsCount == 0 && isset($templates['3_banks_only'])) {
+            return $this->buildPayloadResponse($templates['3_banks_only'], '3_banks_only', [
+                'bank1' => $b1, 'bank2' => $b2, 'bank3' => $b3
+            ]);
+        }
 
-        if ($banksCount >= 2 && $ewalletsCount >= 1) {
-            return $this->buildPayloadResponse($templateName1, 'legacy_2_banks_1_ewallet', [
-                'bank1' => $b1,
-                'bank2' => $b2,
+        // 3. Evaluasi 2 Bank + 1 E-Wallet
+        if ($banksCount == 2 && $ewalletsCount >= 1 && isset($templates['2_banks_1_ewallet'])) {
+            return $this->buildPayloadResponse($templates['2_banks_1_ewallet'], '2_banks_1_ewallet', [
+                'bank1' => $b1, 'bank2' => $b2, 'wallet' => $w1
+            ]);
+        }
+
+        // 4. Evaluasi 2 Bank Only
+        if ($banksCount == 2 && $ewalletsCount == 0 && isset($templates['2_banks_only'])) {
+            return $this->buildPayloadResponse($templates['2_banks_only'], '2_banks_only', [
+                'bank1' => $b1, 'bank2' => $b2
+            ]);
+        }
+
+        // 5. Evaluasi 1 Bank + 1 E-Wallet
+        if ($banksCount == 1 && $ewalletsCount >= 1 && isset($templates['1_bank_1_ewallet'])) {
+            return $this->buildPayloadResponse($templates['1_bank_1_ewallet'], '1_bank_1_ewallet', [
+                'bank1' => $b1, 'wallet' => $w1
+            ]);
+        }
+
+        // 6. Evaluasi 1 Bank Only
+        if ($banksCount == 1 && $ewalletsCount == 0 && isset($templates['1_bank_only'])) {
+            return $this->buildPayloadResponse($templates['1_bank_only'], '1_bank_only', [
+                'bank1' => $b1
+            ]);
+        }
+
+        // 7. Evaluasi 1 E-Wallet Only
+        if ($banksCount == 0 && $ewalletsCount >= 1 && isset($templates['1_ewallet_only'])) {
+            return $this->buildPayloadResponse($templates['1_ewallet_only'], '1_ewallet_only', [
                 'wallet' => $w1
             ]);
         }
 
-        if ($banksCount == 1 && $ewalletsCount >= 1) {
-            return $this->buildPayloadResponse($templateName2, 'legacy_1_bank_1_ewallet', [
-                'bank1' => $b1,
-                'wallet' => $w1
-            ]);
-        }
-
-        // Fallback Kasus Terakhir service lama: Paksa mapping ke 2 bank (b2 duplikat b1 jika kosong)
-        $fallbackB2 = $b2 ?? $b1;
-        return $this->buildPayloadResponse($templateName3, 'legacy_fallback_2_banks', [
-            'bank1' => $b1,
-            'bank2' => $fallbackB2
+        // Fallback Default jika tidak ada yang cocok
+        $defaultTemplate = current($templates) ?: 'info_billing_default';
+        return $this->buildPayloadResponse($defaultTemplate, 'fallback_default', [
+            'bank1' => $b1, 'bank2' => $b2
         ]);
     }
 
-    /**
-     * Helper internal untuk standardisasi log dan penyusunan struktur return payload.
-     */
     private function buildPayloadResponse(string $templateName, string $caseName, array $data): array
     {
         LogHelper::logInfo(null, ['selected_template' => $templateName, 'case' => $caseName], 100, '[MapsBroadcastBankPayload] Match Dynamic Case');
@@ -131,6 +109,12 @@ trait MapsBroadcastBankPayload
             $payload['bank2_name'] = $data['bank2']?->bank ?? '-';
             $payload['bank2_no']   = $data['bank2']?->account_number ?? '-';
             $payload['bank2_an']   = $data['bank2']?->name ?? '-';
+        }
+
+        if (array_key_exists('bank3', $data)) {
+            $payload['bank3_name'] = $data['bank3']?->bank ?? '-';
+            $payload['bank3_no']   = $data['bank3']?->account_number ?? '-';
+            $payload['bank3_an']   = $data['bank3']?->name ?? '-';
         }
 
         if (array_key_exists('wallet', $data)) {

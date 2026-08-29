@@ -41,8 +41,6 @@ class ActiveCustomerCollector
             })
             ->leftJoin('packages as p', 'cs.package_id', '=', 'p.id')
 
-            // 👉 OPTIMASI 1: Ganti leftJoin message_events menjadi WHERE NOT EXISTS global
-            // Kunci performa: Database langsung skip customer jika pernah menerima salah satu slug ini (sepanjang waktu)
             ->whereNotExists(function ($q) use ($allSlugs) {
                 $q->select(DB::raw(1))
                     ->from('message_events as me')
@@ -51,8 +49,6 @@ class ActiveCustomerCollector
                     ->whereIn('me.status', ['success', 'failed', 'pending']);
             })
 
-            // 👉 OPTIMASI 2: Ganti Inner Join billings menjadi WHERE EXISTS
-            // Ini jauh lebih cepat karena mencegah penggelembungan memori row sebelum dilakukan groupBy
             ->whereExists(function ($q) {
                 $q->select(DB::raw(1))
                     ->from('billings as b')

@@ -10,12 +10,8 @@ use Carbon\Carbon;
 
 class OverdueBillingCollector
 {
-    /**
-     * Mengumpulkan data billing overdue berdasarkan 3 tipe template anti-duplikasi (Tanpa Limit).
-     */
-    public function collect(Carbon $today, string $slug1, string $slug2, string $slug3): Collection
+    public function collect(Carbon $today, string ...$slugs): Collection
     {
-        $slugs = [$slug1, $slug2, $slug3];
         $todayStr = $today->toDateString();
 
         $query = Billing::query()
@@ -25,10 +21,7 @@ class OverdueBillingCollector
                 'customers.contact as customer_contact',
                 'customers.user_id as user_id',
                 'p.name as package_name',
-
-                // Menggabungkan nominal jika customer memiliki lebih dari 1 tagihan tertunggak
                 DB::raw('SUM(billings.total_amount) as total'),
-
                 DB::raw('MAX(billings.due_date) as due_date'),
                 DB::raw('MAX(billings.paylater_until) as paylater_until'),
                 DB::raw('MAX(COALESCE(billings.paylater_until, billings.due_date)) as final_due_date'),

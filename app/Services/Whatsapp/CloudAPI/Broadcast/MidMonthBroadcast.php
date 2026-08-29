@@ -20,6 +20,16 @@ class MidMonthBroadcast
 {
     use MapsBroadcastBankPayload, ResolvesAdminContact;
 
+    private const BILLING_TEMPLATES = [
+        '3_banks_1_ewallet' => 'pengingat_3rek_1ewallet',
+        '3_banks_only'      => 'pengingat_3rek',
+        '2_banks_1_ewallet' => 'pengingat_2rek_1ewallet',
+        '2_banks_only'      => 'pengingat_2rek',
+        '1_bank_1_ewallet'  => 'pengingat_1rek_1ewallet',
+        '1_bank_only'       => 'pengingat_1rek',
+        '1_ewallet_only'    => 'pengingat_1ewallet',
+    ];
+
     public function __construct(
         private BillingReminderCollector $collector,
         private TemplateMessageService $templateMessageService,
@@ -31,17 +41,13 @@ class MidMonthBroadcast
         $timer = new ExecutionTimer();
         LogHelper::logInfo(null, [], 100, '[MidMonthBroadcast] Start', $traceId, $timer->lap());
 
-        $templateName1 = 'pengingat_pembayaran_v3';    // 2 Bank + 1 E-Wallet
-        $templateName2 = 'pengingat_pembayaran_v2_2';  // 1 Bank + 1 E-Wallet
-        $templateName3 = 'pengingat_pembayaran_v2_1';  // Hanya 2 Bank
-
-        $billings = $this->collector->collect(now(), $templateName1, $templateName2, $templateName3);
+        $reminders = $this->collector->collect(now(), ...array_values(self::BILLING_TEMPLATES));
 
         LogHelper::logInfo(null, [
-            'count' => $billings->count()
+            'count' => $reminders->count()
         ], 110, '[MidMonthBroadcast] Billing collected', $traceId, $timer->lap());
 
-        if ($billings->isEmpty()) {
+        if ($reminders->isEmpty()) {
             LogHelper::logInfo(null, [], 111, '[MidMonthBroadcast] No billing to process', $traceId, $timer->lap());
             return;
         }
@@ -82,18 +88,14 @@ class MidMonthBroadcast
         // ===============================================================
         // PROCESS ENGINE LOOP
         // ===============================================================
-        foreach ($billings as $idx => $data) {
+        foreach ($reminders as $idx => $data) {
 
             $adminBanks = $this->bankCollector->getBanksByUserId($data->user_id ?? 0);
             $banks      = $adminBanks->where('type', 'bank')->values();
             $ewallets   = $adminBanks->where('type', 'ewallet')->values();
 
             // Panggil Trait untuk dapati Template & Payload Bank secara otomatis
-            $bankResolution = $this->resolveBankTemplateAndPayload($banks, $ewallets, [
-                $templateName1,
-                $templateName2,
-                $templateName3
-            ]);
+            $bankResolution = $this->resolveBankTemplateAndPayload($banks, $ewallets, self::BILLING_TEMPLATES);
 
             $resolvedTemplate = $bankResolution['template'];
             $bankPayload      = $bankResolution['payload'];

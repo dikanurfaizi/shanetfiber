@@ -12,21 +12,23 @@ use Carbon\Carbon;
 class BillingReminderCollector
 {
     /**
-     * Mengumpulkan data billing berdasarkan 3 slug template anti-duplikasi hari ini (Tanpa Limit).
+     * Mengumpulkan data billing berdasarkan slug template anti-duplikasi hari ini (Dinamis / Tanpa Limit).
+     * 
+     * @param Carbon $today Tanggal eksekusi
+     * @param string ...$slugs Berapapun jumlah template slug yang ingin dicek
      */
-    public function collect(Carbon $today, string $slug1, string $slug2, string $slug3): Collection
+    public function collect(Carbon $today, string ...$slugs): Collection
     {
-        $timer = new ExecutionTimer();
-        $slugs = [$slug1, $slug2, $slug3];
+        $timer    = new ExecutionTimer();
         $todayStr = $today->toDateString();
 
         // 1. RENTANG FILTER TAGIHAN (01 s/d 16 jam 00:00:00)
-        $billingStart = $today->copy()->startOfMonth()->startOfDay()->toDateTimeString(); // '2026-08-01 00:00:00'
-        $billingEnd   = $today->copy()->day(16)->startOfDay()->toDateTimeString();         // '2026-08-16 00:00:00'
+        $billingStart = $today->copy()->startOfMonth()->startOfDay()->toDateTimeString(); 
+        $billingEnd   = $today->copy()->day(16)->startOfDay()->toDateTimeString();        
 
         // 2. RENTANG ANTI-DUPLIKASI PESAN (HARI INI SAJA)
-        $todayStart   = $today->copy()->startOfDay()->toDateTimeString();                 // '2026-08-11 00:00:00'
-        $todayEnd     = $today->copy()->endOfDay()->toDateTimeString();                   // '2026-08-11 23:59:59'
+        $todayStart   = $today->copy()->startOfDay()->toDateTimeString();                 
+        $todayEnd     = $today->copy()->endOfDay()->toDateTimeString();                   
 
         $query = Billing::query()
             ->select([
@@ -36,10 +38,7 @@ class BillingReminderCollector
                 'customers.user_id as user_id',
                 'p.name as package_name',
 
-                // SUM total tagihan
                 DB::raw('SUM(billings.total_amount) as total'),
-
-                // MAX tanggal jatuh tempo
                 DB::raw('MAX(billings.due_date) as due_date'),
                 DB::raw('MAX(billings.paylater_until) as paylater_until'),
                 DB::raw('MAX(COALESCE(billings.paylater_until, billings.due_date)) as final_due_date'),
@@ -54,30 +53,28 @@ class BillingReminderCollector
             })
             ->leftJoin('packages as p', 'cs.package_id', '=', 'p.id')
 
-            // 👉 WHERE NOT EXISTS ANTI-DUPLIKASI: Menggunakan rentang HARI INI
+            // ANTI-DUPLIKASI: Menggunakan array $slugs dinamis
             ->whereNotExists(function ($q) use ($slugs, $todayStart, $todayEnd) {
                 $q->select(DB::raw(1))
                     ->from('message_events as me')
                     ->whereColumn('me.customer_id', 'billings.customer_id')
                     ->whereIn('me.message_type', $slugs)
-                    ->whereBetween('me.created_at', [$todayStart, $todayEnd]) // 💡 Hanya cek log pengiriman HARI INI
+                    ->whereBetween('me.created_at', [$todayStart, $todayEnd])
                     ->whereIn('me.status', ['success', 'failed', 'pending']);
             })
 
-            // 💡 FILTER RENTANG TAGIHAN JATUH TEMPO (01 s/d 16)
+            // FILTER RENTANG TAGIHAN JATUH TEMPO (01 s/d 16)
             ->where(function ($q) use ($billingStart, $billingEnd) {
-                // Kasus BL (Belum Lunas)
                 $q->where(function ($subQ) use ($billingStart, $billingEnd) {
                     $subQ->where('billings.status', 'BL')
                         ->where('billings.due_date', '>=', $billingStart)
                         ->where('billings.due_date', '<', $billingEnd);
                 })
-                    // Kasus PL (Paylater)
-                    ->orWhere(function ($subQ) use ($billingStart, $billingEnd) {
-                        $subQ->where('billings.status', 'PL')
-                            ->where('billings.paylater_until', '>=', $billingStart)
-                            ->where('billings.paylater_until', '<', $billingEnd);
-                    });
+                ->orWhere(function ($subQ) use ($billingStart, $billingEnd) {
+                    $subQ->where('billings.status', 'PL')
+                        ->where('billings.paylater_until', '>=', $billingStart)
+                        ->where('billings.paylater_until', '<', $billingEnd);
+                });
             })
 
             // GROUP BY PER CUSTOMER & PAKET

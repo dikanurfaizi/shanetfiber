@@ -61,12 +61,13 @@ class LogHelper
     public static function logDebug(
         mixed $uri,
         mixed $body,
+        ?int $statusCode,
         ?string $description,
         ?string $traceId = null,
         ?int $resTime = null
     ): void {
         if (config('app.debug')) {
-            Log::debug(self::formatLog('DEBUG', $uri, $body, 200, $description, $traceId, $resTime));
+            Log::debug(self::formatLog('DEBUG', $uri, $body, $statusCode, $description, $traceId, $resTime));
         }
     }
 
