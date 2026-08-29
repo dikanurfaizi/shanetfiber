@@ -860,48 +860,51 @@ class SecretService
                 throw new \RuntimeException("Failed to connect to Mikrotik: {$mikrotik->host}");
             }
 
-            $query = (new Query('/ppp/profile/print'))->where('name', $profileName);
-            $result = $client->query($query)->read();
+           // Terapkan trim pada profil name untuk mencegah whitespace tersembunyi
+           $cleanProfileName = trim($profileName);
+            
+           // Ambil `.id` dan `name` saja agar tidak membebankan response dengan script on-up yang panjang
+           $query = (new Query('/ppp/profile/print'))
+               ->equal('.proplist', '.id,name')
+               ->where('name', $cleanProfileName);
+            
+           $result = $client->query($query)->read();
+            
+           if (empty($result)) {
+               throw new \RuntimeException("PPP profile '{$cleanProfileName}' not found on Mikrotik '{$mikrotik->host}'.");
+           }
+        
+           LogHelper::logInfo(
+               null,
+               [
+                   'name'    => $mikrotik->name ?? 'N/A',
+                   'host'    => $mikrotik->host ?? 'N/A',
+                   'profile' => $cleanProfileName,
+                   'result'  => $result
+               ],
+               200,
+               "Return Result getPppProfileByName",
+               $traceId
+           );
+        
+           return $result;
+       } catch (\Exception $e) {
+           LogHelper::logError(
+               null,
+               [
+                   'name'    => $mikrotik->name ?? 'N/A',
+                   'host'    => $mikrotik->host ?? 'N/A',
+                   'profile' => $profileName,
+                   'error'   => $e->getMessage()
+               ],
+               500,
+               "Failed to fetch PPP profile by name",
+               $traceId
+           );
 
-            if (empty($result)) {
-                throw new \RuntimeException("PPP profile '{$profileName}' not found on Mikrotik '{$mikrotik->host}'.");
-            }
-
-            LogHelper::logInfo(
-                null,
-                [
-                    'name' => $mikrotik->name ?? 'N/A',
-                    'host' => $mikrotik->host ?? 'N/A',
-                    'profile' => $profileName,
-                    'result' => $result
-                ],
-                200,
-                "Return Result getPppProfileByName",
-                $traceId
-            );
-
-
-            return $result;
-        } catch (\Exception $e) {
-            LogHelper::logError(
-                null,
-                [
-                    'name' => $mikrotik->name ?? 'N/A',
-                    'host' => $mikrotik->host ?? 'N/A',
-                    'profile' => $profileName,
-                    'error' => $e->getMessage()
-                ],
-                500,
-                "Failed to fetch PPP profile by name",
-                $traceId
-            );
-
-            return [
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ];
+            throw $e;
         }
-    }
+    }  
 
     public function updateRateLimitProfileSecret($mikrotik, $rateLimit, $profileName, string $traceId)
     {
@@ -909,32 +912,39 @@ class SecretService
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             $host = $mikrotik->host ?? 'Unknown Host';
             $name = $mikrotik->name ?? 'Unknown Name';
+
             if (!$client) {
                 throw new Exception('Failed to connect to Mikrotik.');
             }
 
             $targetProfile = $this->getPppProfileByName($mikrotik, $profileName, $traceId);
 
-            if (!is_array($targetProfile) || empty($targetProfile)) {
+            // 1. Validasi struktur array response dari getPppProfileByName
+            if (!is_array($targetProfile) || empty($targetProfile) || isset($targetProfile['status'])) {
                 LogHelper::logWarning(
                     null,
                     [
-                        'host' => $mikrotik->host ?? 'Unknown Host',
+                        'host' => $host,
                         'profile_name' => $profileName
                     ],
                     404,
                     "PPP Profile not found during rate limit update",
                     $traceId
                 );
-                throw new Exception("Profile '{$profileName}' not found in Mikrotik '{$name}' with host '{$host}'");
+
+                $errorMessage = $targetProfile['message'] ?? "Profile '{$profileName}' not found in Mikrotik '{$name}' with host '{$host}'";
+                throw new Exception($errorMessage);
             }
 
-            $profile = $targetProfile[0] ?? null;
+            // 2. Ambil elemen pertama secara aman setelah array dipastikan valid
+            $profile = reset($targetProfile);
 
-            if (!$profile || !isset($profile['.id'])) {
-                throw new Exception("No valid profile found or missing '.id'");
+            // 3. Pastikan elemen berupa array dan memiliki key '.id'
+            if (!is_array($profile) || !isset($profile['.id'])) {
+                throw new Exception("Profile '{$profileName}' found, but missing '.id' property on Mikrotik '{$name}'");
             }
 
+            // 4. Eksekusi query update menggunakan '.id' profil
             $updateQuery = (new Query('/ppp/profile/set'))
                 ->equal('.id', $profile['.id'])
                 ->equal('rate-limit', $rateLimit);

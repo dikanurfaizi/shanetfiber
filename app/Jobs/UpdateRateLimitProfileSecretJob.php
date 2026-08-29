@@ -15,6 +15,7 @@ use App\Helpers\LogHelper;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Telegrams\DispatchMessageService;
 use Illuminate\Support\Str;
+use Exception;
 use Throwable;
 
 class UpdateRateLimitProfileSecretJob implements ShouldQueue
@@ -40,8 +41,32 @@ class UpdateRateLimitProfileSecretJob implements ShouldQueue
     {
         $router = Mikrotik::find($this->routerId);
 
+        // 1. Log Sebelum Proses Dimulai
+        LogHelper::logInfo(null, [
+            'profile'    => $this->profileName,
+            'rate_limit' => $this->rateLimit,
+            'router_id'  => $this->routerId,
+            'router'     => $router->name ?? '[not found]',
+            'user_id'    => $this->userId,
+            'attempt'    => $this->attempts(),
+        ], 200, 'Starting Update rate limit PPP profile job', $this->traceId);
+
         try {
+            // Validasi jika router tidak ditemukan di DB
+            if (!$router) {
+                throw new Exception("Router dengan ID {$this->routerId} tidak ditemukan di database.");
+            }
+
             $secretService->updateRateLimitProfileSecret($router, $this->rateLimit, $this->profileName, $this->traceId);
+
+            // 2. Log Setelah Proses Berhasil Selesai
+            LogHelper::logInfo(null, [
+                'profile'    => $this->profileName,
+                'rate_limit' => $this->rateLimit,
+                'router'     => $router->name,
+                'attempt'    => $this->attempts(),
+            ], 200, 'Successfully updated rate limit PPP profile', $this->traceId);
+
         } catch (Throwable $e) {
             LogHelper::logWarning(null, [
                 'profile'       => $this->profileName,
