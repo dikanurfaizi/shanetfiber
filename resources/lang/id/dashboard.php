@@ -53,7 +53,7 @@ return [
         'total_customers' => 'Total Pelanggan',
     ],
     'unpaid' => [
-        'title' => 'Tunggakan Pelanggan (12 Bulan Terakhir)',
+        'title' => 'Tunggakan Pelanggan (:count Bulan Terakhir)',
         'badge' => 'Pelanggan',
         'empty' => 'Tidak ada pelanggan yang menunggak',
         'customer_name' => 'Nama Pelanggan',

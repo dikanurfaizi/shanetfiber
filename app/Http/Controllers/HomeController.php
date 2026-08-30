@@ -136,9 +136,11 @@ class HomeController extends Controller
         // Pastikan $isSuperAdmin terdefinisi dengan aman
         $isSuperAdmin = $isSuperAdmin ?? $user->can('view-customers-widget-total');
 
-       // 1. Ambil 12 ID periode billing terbaru (1 Tahun Terakhir) dari DB
+        $limitMonths = 3;
+
+        // 1. Ambil 3 ID periode billing terbaru (3 Bulan Terakhir) dari DB
         $recentPeriodeIds = BillingPeriode::orderBy('id', 'desc')
-            ->limit(12)
+            ->limit($limitMonths)
             ->pluck('id')
             ->toArray();
 
@@ -159,11 +161,11 @@ class HomeController extends Controller
             ->leftJoin('users as admins', 'customers.user_id', '=', 'admins.id')
             ->where('customers.disabled', 'false')  // Pelanggan aktif
             ->where('customers.activation', 'true')
-            ->where('billings.status', 'BL')       // Status tunggakan aktif belum bayar (BL)
-            ->whereIn('billing_periodes.id', $recentPeriodeIds); // Filter 12 periode (1 tahun) terakhir
+            ->where('billings.status', 'VD')       // Status tidak dibayar sama sekali (VD)
+            ->whereIn('billing_periodes.id', $recentPeriodeIds); // Filter 3 periode (3 bulan) terakhir
 
         // Filter scope data berdasarkan role user yang login
-        if (! $isSuperAdmin) {
+        if (!$isSuperAdmin) {
             $query->where('customers.user_id', auth()->id());
         }
 
@@ -194,7 +196,8 @@ class HomeController extends Controller
             'months',
             'registrationData',
             'isSuperAdmin',
-            'unpaid3MonthsCustomers'
+            'unpaid3MonthsCustomers',
+            'limitMonths',
         ), $summaryTotals, $customerSummary));
     }
 

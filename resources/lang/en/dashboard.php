@@ -53,7 +53,7 @@ return [
         'total_customers' => 'Total Customers',
     ],
     'unpaid' => [
-        'title' => 'Unpaid Customers (Last 12 Months)',
+        'title' => 'Unpaid Customers (Last :count Months)',
         'badge' => 'Customers',
         'empty' => 'No unpaid customers found',
         'customer_name' => 'Customer Name',

@@ -548,7 +548,9 @@
                 <div class="card border-0 shadow-sm rounded-3 h-100">
                     <div class="card-header card-header-clean py-3 d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center">
-                            <h5 class="mb-0 font-weight-bold text-dark mr-2">{{ __('dashboard.unpaid.title') }}</h5>
+                            <h5 class="mb-0 font-weight-bold text-dark mr-2">
+                                {{ __('dashboard.unpaid.title', ['count' => $limitMonths]) }}
+                            </h5>
                             <span class="badge bg-danger-soft text-danger rounded-pill">
                                 {{ count($unpaid3MonthsCustomers ?? []) }} {{ __('dashboard.unpaid.badge') }}
                             </span>
