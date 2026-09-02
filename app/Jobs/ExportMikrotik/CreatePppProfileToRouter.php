@@ -33,11 +33,15 @@ class CreatePppProfileToRouter implements ShouldQueue
     public function handle(SecretService $secretService): void
     {
         $timer = new ExecutionTimer();
+
+        $router  = $this->router;
+        $profile = $this->profile;
+
         LogHelper::logInfo(
             null,
             [
-                'routerId' => $this->router->id,
-                'profileId' => $this->profile->id,
+                'routerId' => $router->id,
+                'profileId' => $profile->id,
                 'traceId' => $this->traceId
             ],
             200,
@@ -46,66 +50,43 @@ class CreatePppProfileToRouter implements ShouldQueue
             $timer->lap()
         );
 
-        $routerId  = $this->router->id;
-        $profileId = $this->profile->id;
-        $router = Mikrotik::find($routerId);
-        $profile = PppProfile::find($profileId);
-
         /** ------------------------------------------------------------
-         * 1)  Cek apakah profile sudah ada di Mikrotik
-         *     ➜ gunakan getPppProfileByName() — ringan
+         * 1) Cek apakah profile sudah ada di Mikrotik
          * ----------------------------------------------------------- */
+        $exists = false;
         try {
-            $exists = $secretService
-                ->getPppProfileByName($router, $profile->profile_name, $this->traceId);
+            $result = $secretService->getPppProfileByName($router, $profile->profile_name, $this->traceId);
 
-            LogHelper::logInfo(
-                null,
-                [
-                    'name' => $router->name,
-                    'host' => $router->host,
-                    'exists' => $exists
-                ],
-                200,
-                'Successfully get Ppp Profile By Name',
-                $this->traceId,
-                $timer->lap()
-            );
+            // Jika status = success ➜ berarti profile SUDAH ADA
+            if (is_array($result) && ($result['status'] ?? null) === 'success') {
+                $exists = true;
+            }
         } catch (\Throwable $e) {
-            LogHelper::logError(
-                null,
-                [
-                    'name' => $router->name,
-                    'host' => $router->host,
-                    'error' => $e->getMessage()
-                ],
-                500,
-                'Router Offline',
-                $this->traceId,
-                $timer->lap()
-            );
-            return;
+            $errorMessage = $e->getMessage();
+
+            // Jika error mengandung pesan 'not found', abaikan karena memang profil belum ada
+            if (str_contains(strtolower($errorMessage), 'not found')) {
+                $exists = false;
+            } else {
+                // Jika error koneksi asli (timeout, connection refused, dsb)
+                LogHelper::logError(
+                    null,
+                    [
+                        'name' => $router->name,
+                        'host' => $router->host,
+                        'error' => $errorMessage
+                    ],
+                    500,
+                    'Router Offline / Communication Error',
+                    $this->traceId,
+                    $timer->lap()
+                );
+                return;
+            }
         }
 
-        // Jika return adalah string "error"
-        if (is_string($exists) && trim(strtolower($exists)) === 'error') {
-            LogHelper::logError(
-                null,
-                [
-                    'name' => $router->name,
-                    'host' => $router->host,
-                    'error' => $exists
-                ],
-                500,
-                'Terjadi error saat komunikasi dengan Mikrotik',
-                $this->traceId,
-                $timer->lap()
-            );
-            return;
-        }
-
-        // Jika status = success ➜ berarti profile ADA
-        if (is_array($exists) && ($exists['status'] ?? null) === 'success') {
+        // Jika profil SUDAH ADA di Mikrotik, hentikan proses ekspor
+        if ($exists) {
             LogHelper::logWarning(
                 null,
                 [
@@ -135,7 +116,7 @@ class CreatePppProfileToRouter implements ShouldQueue
         );
 
         /** ------------------------------------------------------------
-         * 2)  Siapkan data & panggil createPppProfile
+         * 2) Siapkan data & panggil createPppProfile
          * ----------------------------------------------------------- */
         $data = [
             'name'              => $profile->profile_name,
@@ -156,53 +137,69 @@ class CreatePppProfileToRouter implements ShouldQueue
             'comment'           => $profile->comment,
         ];
 
-        $response = $secretService->createPppProfile($router, $data, $this->traceId);
+        try {
+            $response = $secretService->createPppProfile($router, $data, $this->traceId);
 
-        LogHelper::logInfo(
-            null,
-            [
-                'name' => $router->name,
-                'host' => $router->host,
-                'profile' => $data['name'],
-                'response' => $response
-            ],
-            200,
-            'PPP Profile export response',
-            $this->traceId,
-            $timer->lap()
-        );
+            LogHelper::logInfo(
+                null,
+                [
+                    'name' => $router->name,
+                    'host' => $router->host,
+                    'profile' => $data['name'],
+                    'response' => $response
+                ],
+                200,
+                'PPP Profile export response',
+                $this->traceId,
+                $timer->lap()
+            );
 
-        if (
-            isset($response['after']['message']) ||
-            !isset($response['after']['ret'])
-        ) {
+            if (
+                isset($response['after']['message']) ||
+                !isset($response['after']['ret'])
+            ) {
+                LogHelper::logError(
+                    null,
+                    [
+                        'name' => $router->name,
+                        'host' => $router->host,
+                        'profile' => $data['name'],
+                        'error'   => $response['after']['message'] ?? 'Unknown error'
+                    ],
+                    500,
+                    'Error exporting profile',
+                    $this->traceId,
+                    $timer->lap()
+                );
+                return;
+            }
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'name' => $router->name,
+                    'host' => $router->host,
+                    'profile_name' => $profile->profile_name
+                ],
+                200,
+                'Profile Exported Successfully',
+                $this->traceId,
+                $timer->lap()
+            );
+        } catch (\Throwable $e) {
             LogHelper::logError(
                 null,
                 [
                     'name' => $router->name,
                     'host' => $router->host,
                     'profile' => $data['name'],
-                    'error'   => $response['after']['message'] ?? 'Unknown error'
+                    'error'   => $e->getMessage()
                 ],
                 500,
-                'Error exporting profile',
+                'Failed to execute createPppProfile',
                 $this->traceId,
                 $timer->lap()
             );
-            return;
         }
-
-        LogHelper::logInfo(
-            null,
-            [
-                'name' => $router->name,
-                'host' => $router->host,
-                'profile_name' => $profile->profile_name
-            ],
-            200,
-            'Profile Exported Successfully',
-            $this->traceId,
-            $timer->lap()
-        );
     }
 }

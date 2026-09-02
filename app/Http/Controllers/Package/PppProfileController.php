@@ -659,11 +659,13 @@ class PppProfileController extends Controller
         }
     }
 
-    public function export_one($profileId)
+    public function export_one(int $profileId)
     {
         $traceId = (string) Str::uuid();
         $uri = request()->path();
         $logBase = 'ppp-profiles/export';
+
+        $profile = PppProfile::findOrFail($profileId);
 
         $mikrotik = Mikrotik::where('disabled', 'false')->get();
 
@@ -674,18 +676,18 @@ class PppProfileController extends Controller
 
         try {
             foreach ($mikrotik as $device) {
-                CreatePppProfileToRouter::dispatch($device->id, $profileId, $traceId)->onQueue('default');
+                CreatePppProfileToRouter::dispatch($device, $profile, $traceId)->onQueue('default');
                 LogHelper::logInfo($uri, [], 200, 'Export job dispatched', $traceId);
             }
 
             return redirect()->route('ppp-profiles.index')
-                ->with('success', "Ekspor profil dengan id {$profileId} berhasil dimulai.");
+                ->with('success', "Ekspor profil {$profile->profile_name} berhasil dimulai.");
         } catch (Throwable $e) {
             LogHelper::logError(
                 $uri,
                 [
                     'error' => $e->getMessage(),
-                    'trace' => Str::limit($e->getTraceAsString(), 500)
+                    'trace' => substr($e->getTraceAsString(), 0, 500) . '...'
                 ],
                 500,
                 "$logBase exception",
@@ -693,7 +695,7 @@ class PppProfileController extends Controller
             );
 
             return redirect()->route('ppp-profiles.index')
-                ->with('error', "Gagal mengekspor profil dengan id {$profileId}: " . $e->getMessage());
+                ->with('error', "Gagal mengekspor profil: " . $e->getMessage());
         }
     }
 
