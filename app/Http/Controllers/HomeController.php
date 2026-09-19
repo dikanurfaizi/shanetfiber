@@ -183,7 +183,7 @@ class HomeController extends Controller
             // Urutkan dari jumlah bulan tunggakan terbanyak dalam 1 tahun terakhir
             ->orderByDesc('unpaid_months_count')
             ->get();
-            
+
         return view('home', array_merge(compact(
             'mikrotiks',
             'totalRouters',
@@ -203,27 +203,27 @@ class HomeController extends Controller
 
     private function getOwnerBillingSummary(int $billingPeriodeId, ?int $investorId = null)
     {
-        // Subquery: billing terbaru per customer untuk periode tertentu
-        $latestBillingsSub = DB::table('billings as b2')
+        // Subquery: Ambil seluruh billing pada periode tertentu tanpa membatasi max ID
+        $periodBillingsSub = DB::table('billings as b2')
             ->join('billing_subscription_periodes as bsp2', 'b2.billing_subscription_id', '=', 'bsp2.id')
             ->where('bsp2.billing_periode_id', $billingPeriodeId)
-            ->select('b2.*', 'bsp2.billing_periode_id')
-            ->whereRaw('b2.id = (
-            select max(b3.id)
-            from billings b3
-            where b3.customer_id = b2.customer_id
-        )');
+            ->select(
+                'b2.id',
+                'b2.customer_id',
+                'b2.total_amount',
+                'b2.status'
+            );
 
         // Base query user + customer + billing
+        // Catatan: c.deleted_at IS NULL dilepas agar data VOID dari customer soft-deleted tetap terhitung
         $users = DB::table('users as u')
-            ->leftJoin('customers as c', function ($join) {
-                $join->on('c.user_id', '=', 'u.id')
-                    ->whereNull('c.deleted_at');
-            })
-            ->leftJoinSub($latestBillingsSub, 'b', function ($join) {
+            ->join('customers as c', 'c.user_id', '=', 'u.id')
+            ->leftJoinSub($periodBillingsSub, 'b', function ($join) {
                 $join->on('b.customer_id', '=', 'c.id');
             })
-            ->leftJoin('billing_periodes as bp', 'bp.id', '=', 'b.billing_periode_id');
+            ->leftJoin('billing_periodes as bp', function ($join) use ($billingPeriodeId) {
+                $join->on('bp.id', '=', DB::raw($billingPeriodeId));
+            });
 
         // 🔹 Jika ada investor_id, batasi user yang terlihat
         if ($investorId) {
@@ -234,9 +234,9 @@ class HomeController extends Controller
         $users->select(
             'u.id as admin_id',
             'u.name as admin_name',
-            'b.billing_periode_id',
+            DB::raw("$billingPeriodeId as billing_periode_id"),
             'bp.name as periode_name',
-            DB::raw('COUNT(DISTINCT b.customer_id) as total_customers'),
+            DB::raw('COUNT(DISTINCT c.id) as total_customers'),
             DB::raw('COALESCE(SUM(b.total_amount), 0) as total_billing'),
             DB::raw('COALESCE(SUM(CASE WHEN b.status = "LS" THEN b.total_amount ELSE 0 END), 0) as total_paid'),
             DB::raw('COALESCE(SUM(CASE WHEN b.status = "PL" THEN b.total_amount ELSE 0 END), 0) as total_paylater'),
@@ -247,7 +247,7 @@ class HomeController extends Controller
             DB::raw('COUNT(DISTINCT CASE WHEN b.status = "BL" THEN b.customer_id END) as total_unpaid_customers'),
             DB::raw('COUNT(DISTINCT CASE WHEN b.status = "VD" THEN b.customer_id END) as total_void_customers')
         )
-            ->groupBy('u.id', 'u.name', 'b.billing_periode_id', 'bp.name')
+            ->groupBy('u.id', 'u.name', 'bp.name')
             ->havingRaw('COUNT(DISTINCT b.customer_id) > 0')
             ->orderByDesc('total_customers');
 
