@@ -22,57 +22,55 @@ class LogHelper
     public static function logInfo(
         mixed $uri,
         mixed $body,
-        ?int $statusCode,
-        ?string $description,
+        ?int $statusCode = null,
+        ?string $description = null,
         ?string $traceId = null,
         ?int $resTime = null
     ): void {
-        Log::info(self::formatLog('INFO', $uri, $body, $statusCode, $description, $traceId, $resTime));
+        Log::info(self::formatLog($uri, $body, $statusCode, $description, $traceId, $resTime));
     }
 
     public static function logWarning(
         mixed $uri,
         mixed $body,
-        ?int $statusCode,
-        ?string $description,
+        ?int $statusCode = null,
+        ?string $description = null,
         ?string $traceId = null,
         ?int $resTime = null
     ): void {
-        Log::warning(self::formatLog('WARNING', $uri, $body, $statusCode, $description, $traceId, $resTime));
+        Log::warning(self::formatLog($uri, $body, $statusCode, $description, $traceId, $resTime));
     }
 
     public static function logError(
         mixed $uri,
         mixed $body,
-        ?int $statusCode,
-        ?string $description,
+        ?int $statusCode = null,
+        ?string $description = null,
         ?string $traceId = null,
         ?int $resTime = null
     ): void {
-        // Khusus logError, jika $uri adalah Exception/Throwable, ekstrak pesannya
         if ($uri instanceof Throwable) {
             $description = ($description ? $description . ' | ' : '') . 'Exception: ' . $uri->getMessage();
             $uri = request()?->path() ?? 'null';
         }
 
-        Log::error(self::formatLog('ERROR', $uri, $body, $statusCode, $description, $traceId, $resTime));
+        Log::error(self::formatLog($uri, $body, $statusCode, $description, $traceId, $resTime));
     }
 
     public static function logDebug(
         mixed $uri,
         mixed $body,
-        ?int $statusCode,
-        ?string $description,
+        ?int $statusCode = null,
+        ?string $description = null,
         ?string $traceId = null,
         ?int $resTime = null
     ): void {
         if (config('app.debug')) {
-            Log::debug(self::formatLog('DEBUG', $uri, $body, $statusCode, $description, $traceId, $resTime));
+            Log::debug(self::formatLog($uri, $body, $statusCode, $description, $traceId, $resTime));
         }
     }
 
     private static function formatLog(
-        string $level,
         mixed $uri,
         mixed $body,
         ?int $statusCode,
@@ -80,22 +78,8 @@ class LogHelper
         ?string $traceId,
         ?int $resTime
     ): string {
-        $caller      = self::getCaller();
-        $traceId     = $traceId ?? (string) Str::uuid();
-        $statusCode  = $statusCode !== null ? (int) $statusCode : null;
-        $description = $description ?? 'null';
-
-        if ($resTime === null && defined('LARAVEL_START')) {
-            $resTime = (int) round((microtime(true) - LARAVEL_START) * 1000);
-        } else {
-            $resTime = $resTime ?? 0;
-        }
-
-        if (is_string($uri) && (str_starts_with($uri, 'http://') || str_starts_with($uri, 'https://'))) {
-            $logUrl = $uri;
-        } else {
-            $logUrl = request()?->fullUrl() ?? (is_string($uri) ? $uri : 'null');
-        }
+        $caller  = self::getCaller();
+        $traceId = Str::substr($traceId ?? (string) Str::uuid(), 0, 8); // Cukup 8 karakter agar tidak memenuhi layar
 
         if ($body instanceof \Illuminate\Http\Request) {
             $body = $body->all();
@@ -105,21 +89,18 @@ class LogHelper
             $body = self::maskSensitiveFields($body);
         }
 
-        $logPayload = [
-            'timestamp'     => now()->toIso8601String(),
-            'level'         => $level,
-            'trace_id'      => $traceId,
-            'method'        => request()?->method() ?? 'CLI',
-            'status_code'   => $statusCode,
-            'response_time' => $resTime,
-            'caller'        => $caller,
-            'client_ip'     => request()?->ip() ?? 'unknown',
-            'user'          => Auth::user()?->name ?? 'guest',
-            'url'           => $logUrl,
-            'action'        => is_string($uri) && !str_starts_with($uri, 'http') ? $uri : 'API_CALL',
-            'description'   => $description,
-            'payload'       => $body,
-        ];
+        // Susun JSON yang hanya berisi field bermakna
+        $logPayload = array_filter([
+            'trace_id' => $traceId,
+            'caller'   => $caller,
+            'desc'     => $description,
+            'status'   => $statusCode,
+            'ms'       => ($resTime && $resTime > 0) ? $resTime : null, // Hanya muncul jika ada durasi
+            'user'     => Auth::user()?->name ?? 'guest',
+            'ip'       => (request()?->ip() && request()->ip() !== '127.0.0.1') ? request()->ip() : null, // Sembunyikan 127.0.0.1
+            'url'      => (is_string($uri) && str_starts_with($uri, 'http') && !str_contains($uri, 'localhost')) ? $uri : null, // Sembunyikan localhost
+            'payload'  => !empty($body) ? $body : null,
+        ], fn($value) => $value !== null);
 
         return json_encode($logPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
@@ -130,13 +111,14 @@ class LogHelper
 
         foreach ($trace as $frame) {
             if (isset($frame['class']) && !str_contains($frame['class'], 'LogHelper')) {
-                $class    = $frame['class'];
-                $function = $frame['function'] ?? 'UnknownFunction';
+                // Ambil ClassName pendek (misal: MikrotikService) tanpa namespace panjang
+                $class    = class_basename($frame['class']);
+                $function = $frame['function'] ?? 'Unknown';
                 return "{$class}::{$function}";
             }
         }
 
-        return 'Unknown::UnknownFunction';
+        return 'Unknown';
     }
 
     private static function maskSensitiveFields(array $data): array

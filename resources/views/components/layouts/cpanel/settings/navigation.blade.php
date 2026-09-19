@@ -198,22 +198,11 @@
 @endcan
 @can('is-admin')
     <li class="nav-item @if (request()->routeIs('messageevents*')) active @endif">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseMessageEvents"
-            aria-expanded="true" aria-controls="collapseSetting" style="padding-top: inherit;">
+        <a class="nav-link" href="{{ route('messageevents.index') }}" aria-expanded="true"
+            aria-controls="collapseSetting" style="padding-top: inherit;">
             <i class="fas fa-bell"></i>
-            <span>{{ __('navigation.settings.message-events.nav-item') }}</span>
+            <span>{{ __('navigation.settings.message-events.index') }}</span>
         </a>
-        <div id="collapseMessageEvents" class="collapse collapse @if (request()->routeIs('messageevents*'))  @endif"
-            aria-labelledby="headingBilling" data-parent="#accordionSidebar">
-            <div class="bg-white py-2 collapse-inner rounded">
-
-                <a class="collapse-item @if (request()->routeIs('messageevents*')) active @endif"
-                    href="{{ route('messageevents.index') }}">
-                    <i class="fas fa-bell"></i>
-                    <span> {{ __('navigation.settings.message-events.index') }}</span>
-                </a>
-            </div>
-        </div>
     </li>
 @endcan
 @can('is-admin')
