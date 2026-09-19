@@ -79,30 +79,37 @@ class LogHelper
         ?int $resTime
     ): string {
         $caller  = self::getCaller();
-        $traceId = Str::substr($traceId ?? (string) Str::uuid(), 0, 8); // Cukup 8 karakter agar tidak memenuhi layar
+        $traceId = Str::substr($traceId ?? (string) Str::uuid(), 0, 8); // Short ID 8 karakter
+        $user    = Auth::user()?->name ?? 'guest';
 
+        // Tangani Request Body / Array
         if ($body instanceof \Illuminate\Http\Request) {
             $body = $body->all();
         }
-
         if (is_array($body)) {
             $body = self::maskSensitiveFields($body);
         }
 
-        // Susun JSON yang hanya berisi field bermakna
-        $logPayload = array_filter([
-            'trace_id' => $traceId,
-            'caller'   => $caller,
-            'desc'     => $description,
-            'status'   => $statusCode,
-            'ms'       => ($resTime && $resTime > 0) ? $resTime : null, // Hanya muncul jika ada durasi
-            'user'     => Auth::user()?->name ?? 'guest',
-            'ip'       => (request()?->ip() && request()->ip() !== '127.0.0.1') ? request()->ip() : null, // Sembunyikan 127.0.0.1
-            'url'      => (is_string($uri) && str_starts_with($uri, 'http') && !str_contains($uri, 'localhost')) ? $uri : null, // Sembunyikan localhost
-            'payload'  => !empty($body) ? $body : null,
-        ], fn($value) => $value !== null);
+        // Format Payload (hanya muncul jika ada isinya)
+        $payloadStr = !empty($body)
+            ? ' | payload: ' . json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            : '';
 
-        return json_encode($logPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        // Kumpulkan metadata ringkas (Status HTTP & Respons Time jika ada)
+        $meta = [];
+        if ($statusCode) {
+            $meta[] = "status:{$statusCode}";
+        }
+        if ($resTime && $resTime > 0) {
+            $meta[] = "{$resTime}ms";
+        }
+        $metaStr = !empty($meta) ? ' [' . implode(' ', $meta) . ']' : '';
+
+        // Format deskripsi
+        $descStr = $description ? " {$description}" : '';
+
+        // Tampilan log akhir yang bersih dan sejajar
+        return "[{$traceId}] [{$caller}]{$metaStr}{$descStr} | user: {$user}{$payloadStr}";
     }
 
     private static function getCaller(): string
@@ -111,8 +118,7 @@ class LogHelper
 
         foreach ($trace as $frame) {
             if (isset($frame['class']) && !str_contains($frame['class'], 'LogHelper')) {
-                // Ambil ClassName pendek (misal: MikrotikService) tanpa namespace panjang
-                $class    = class_basename($frame['class']);
+                $class    = class_basename($frame['class']); // Hanya nama class tanpa namespace panjang
                 $function = $frame['function'] ?? 'Unknown';
                 return "{$class}::{$function}";
             }
