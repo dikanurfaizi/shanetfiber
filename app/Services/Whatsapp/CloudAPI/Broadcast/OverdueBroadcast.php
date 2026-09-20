@@ -78,7 +78,7 @@ class OverdueBroadcast
         // ===============================================================
         // PROCESS ENGINE LOOP (Delay-Free Throttling)
         // ===============================================================
-        foreach ($billings as $idx => $data) {
+        foreach ($overdueBillings as $idx => $data) {
 
             $adminBanks = $this->bankCollector->getBanksByUserId($data->user_id ?? 0);
             $banks      = $adminBanks->where('type', 'bank')->values();
