@@ -11,6 +11,7 @@ use App\Models\Billings\Billing;
 use App\Models\Websystem;
 use App\Models\SubscriptionDuration;
 use App\Helpers\LogHelper;
+use App\Helpers\ExecutionTimer;
 use App\Models\Customers\CustomerSubscription;
 use App\Models\Receipt;
 use App\Services\Billings\BillingService;
@@ -46,6 +47,7 @@ class CreateCustomersBilling extends Command
     public function handle()
     {
         $traceId = Str::uuid()->toString();
+        $timer   = new ExecutionTimer();
 
         $period_name = 'August 2025';
 
@@ -58,7 +60,6 @@ class CreateCustomersBilling extends Command
 
         $websystem = Websystem::where('slug', 'websystem')->first();
 
-        $startTime = microtime(true);
         $context = [
             'period_id' => $period->id,
             'period_name' => $period->name,
@@ -85,13 +86,14 @@ class CreateCustomersBilling extends Command
                 $period,
                 $websystem,
                 $traceId,
-                $subscriptionDurations
+                $subscriptionDurations,
+                $timer
             );
 
             if ($createdCount > 0) {
                 LogHelper::logInfo(null, array_merge($context, [
                     'created_billings' => $createdCount
-                ]), 200, "Billings created", $traceId);
+                ]), 200, "Billings created", $traceId, $timer->lap());
             }
 
             $totalBillingCreated += $createdCount;
@@ -108,9 +110,9 @@ class CreateCustomersBilling extends Command
         BillingPeriode $billingPeriode,
         $websystem,
         string $traceId,
-        $subscriptionDurations
+        $subscriptionDurations,
+        ExecutionTimer $timer
     ): int {
-        $startTime = microtime(true);
         $totalBillingCreated = 0;
         try {
             foreach ($customers as $customer) {
@@ -121,7 +123,7 @@ class CreateCustomersBilling extends Command
                     LogHelper::logWarning(null, [
                         'customerSubs' => $customerSubs,
                         'billingSubs' => $billingSubs
-                    ], 404, 'Customer Subscription or Billing Subscription not found');
+                    ], 404, 'Customer Subscription or Billing Subscription not found', $traceId, $timer->lap());
                     continue;
                 }
 
@@ -162,51 +164,46 @@ class CreateCustomersBilling extends Command
                     'customer_id' => $customer->id,
                     'billing_subscription_periode_id' => $billingSubs->id,
                     'amount' => $totalAmount
-                ], 201, "Billing created for {$customer->name}.", $traceId);
+                ], 201, "Billing created for {$customer->name}.", $traceId, $timer->lap());
 
                 $totalBillingCreated++;
 
                 $activation = Carbon::parse($customer->activation_date);
-                $this->createReceiptAndUpdateBilling($customer, $traceId, $activation, $billing);
+                $this->createReceiptAndUpdateBilling($customer, $traceId, $activation, $billing, $timer);
             }
 
-            $executionTime = round(microtime(true) - $startTime, 3);
             LogHelper::logInfo(null, [
                 'total_created' => $totalBillingCreated,
-                'execution_time_sec' => $executionTime
-            ], 200, "Finished creating billings for customers.", $traceId);
+            ], 200, "Finished creating billings for customers.", $traceId, $timer->lap());
 
             return $totalBillingCreated;
         } catch (\Throwable $e) {
-            $executionTime = round(microtime(true) - $startTime, 3);
-
             LogHelper::logError(null, [
                 'error_code' => $e->getCode(),
                 'error_message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'execution_time_sec' => $executionTime
-            ], 500, "Error occurred while creating billings.", $traceId);
+            ], 500, "Error occurred while creating billings.", $traceId, $timer->lap());
 
             throw $e;
         }
     }
 
-    private function createReceiptAndUpdateBilling(Customer $customer, string $traceId, Carbon $activationDate, Billing $billing): void
+    private function createReceiptAndUpdateBilling(Customer $customer, string $traceId, Carbon $activationDate, Billing $billing, ExecutionTimer $timer): void
     {
         LogHelper::logInfo(null, [
             'customer_id' => $customer->id,
             'activation_date' => $activationDate
-        ], 200, 'Start createReceiptAndUpdateBilling', $traceId);
+        ], 200, 'Start createReceiptAndUpdateBilling', $traceId, $timer->lap());
 
         try {
             LogHelper::logInfo(null, [
                 'billing_id' => $billing->id
-            ], 200, 'Billing fetched successfully', $traceId);
+            ], 200, 'Billing fetched successfully', $traceId, $timer->lap());
 
-            $numberReceipt = $this->generateReceiptNumber($traceId);
+            $numberReceipt = $this->generateReceiptNumber($traceId, $timer);
             LogHelper::logInfo(null, [
                 'number_receipt' => $numberReceipt
-            ], 200, 'Generated receipt number', $traceId);
+            ], 200, 'Generated receipt number', $traceId, $timer->lap());
 
             $receipt = Receipt::create([
                 'slug' => str('inv-' . $customer->id . '-' . Str::random(4))->slug(),
@@ -227,7 +224,7 @@ class CreateCustomersBilling extends Command
             ]);
             LogHelper::logInfo(null, [
                 'receipt_id' => $receipt->id
-            ], 200, 'Receipt created successfully', $traceId);
+            ], 200, 'Receipt created successfully', $traceId, $timer->lap());
 
             $billing->update([
                 'payment_time' => $activationDate,
@@ -238,7 +235,7 @@ class CreateCustomersBilling extends Command
             LogHelper::logInfo(null, [
                 'billing_id' => $billing->id,
                 'receipt_id' => $receipt->id
-            ], 200, 'Billing updated successfully', $traceId);
+            ], 200, 'Billing updated successfully', $traceId, $timer->lap());
 
             $billing->billingSubscription->update([
                 'is_paid' => true,
@@ -247,13 +244,13 @@ class CreateCustomersBilling extends Command
             ]);
             LogHelper::logInfo(null, [
                 'billing_subscription_id' => $billing->billingSubscription->id
-            ], 200, 'Billing subscription updated successfully', $traceId);
+            ], 200, 'Billing subscription updated successfully', $traceId, $timer->lap());
 
             LogHelper::logInfo(null, [
                 'receipt_id' => $receipt->id,
                 'billing_id' => $billing->id,
                 'billing_subscription_id' => $billing->billingSubscription->id
-            ], 200, 'Finished createReceiptAndUpdateBilling', $traceId);
+            ], 200, 'Finished createReceiptAndUpdateBilling', $traceId, $timer->lap());
         } catch (\Throwable $e) {
             LogHelper::logError(null, [
                 'exception' => [
@@ -263,20 +260,19 @@ class CreateCustomersBilling extends Command
                     'line' => $e->getLine()
                 ],
                 'customer_id' => $customer->id
-            ], 500, 'Failed to create receipt and update billing', $traceId);
+            ], 500, 'Failed to create receipt and update billing', $traceId, $timer->lap());
             throw $e;
         }
     }
 
-    private function generateReceiptNumber(string $traceId): string
+    private function generateReceiptNumber(string $traceId, ExecutionTimer $timer): string
     {
         try {
             $lastReceipt = Receipt::latest('created_at')->value('number');
 
-            LogHelper::logInfo('GenerateReceiptNumber', [
-                'trace_id' => $traceId,
+            LogHelper::logInfo(null, [
                 'last_receipt_number' => $lastReceipt
-            ], 200, 'Generating new receipt number', $traceId);
+            ], 200, 'Generating new receipt number', $traceId, $timer->lap());
 
             if ($lastReceipt && str_starts_with($lastReceipt, 'KWT-')) {
                 $parts = explode('-', $lastReceipt);
@@ -288,19 +284,17 @@ class CreateCustomersBilling extends Command
             $newNumber = 'KWT-' . sprintf("%05d", $number) . '-' .
                 Carbon::now()->format('F') . '-' . Carbon::now()->format('Y');
 
-            LogHelper::logInfo('GenerateReceiptNumber', [
-                'trace_id' => $traceId,
+            LogHelper::logInfo(null, [
                 'generated_receipt_number' => $newNumber
-            ], 200, 'Receipt number generated successfully', $traceId);
+            ], 200, 'Receipt number generated successfully', $traceId, $timer->lap());
 
             return $newNumber;
         } catch (\Throwable $e) {
-            LogHelper::logError('GenerateReceiptNumber', [
-                'trace_id' => $traceId,
+            LogHelper::logError(null, [
                 'exception' => get_class($e),
                 'error_message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
-            ], 500, 'Failed to generate receipt number', $traceId);
+            ], 500, 'Failed to generate receipt number', $traceId, $timer->lap());
 
             // fallback kalau gagal
             return 'KWT-ERROR-' . Carbon::now()->timestamp;

@@ -11,6 +11,7 @@ use App\Models\Billings\BillingSubscriptionPeriode;
 use App\Models\Billings\Billing;
 use App\Models\Websystem;
 use App\Helpers\LogHelper;
+use App\Helpers\ExecutionTimer;
 use App\Services\Billings\BillingCreateService;
 use App\Services\Billings\BillingExtensionService;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +31,7 @@ class HealMissingBilling extends Command
     public function handle(): int
     {
         $traceId = (string) Str::uuid();
+        $timer = new ExecutionTimer();
         $periodeId = (int) $this->argument('billing_periode_id');
 
         $periode = BillingPeriode::find($periodeId);
@@ -60,6 +62,7 @@ class HealMissingBilling extends Command
                 $periode,
                 $websystem,
                 $traceId,
+                $timer,
                 &$stats
             ) {
                 foreach ($customers as $customer) {
@@ -69,6 +72,7 @@ class HealMissingBilling extends Command
                         $periode,
                         $websystem,
                         $traceId,
+                        $timer,
                         &$stats
                     ) {
                         // Lock customer
@@ -101,7 +105,8 @@ class HealMissingBilling extends Command
                                 ],
                                 200,
                                 'SUBSCRIPTION.REACTIVATED',
-                                $traceId
+                                $traceId,
+                                $timer->lap()
                             );
                         }
 
@@ -130,7 +135,8 @@ class HealMissingBilling extends Command
                                 ],
                                 200,
                                 'BILLING.BSP.EXPIRED',
-                                $traceId
+                                $traceId,
+                                $timer->lap()
                             );
                         }
 
@@ -177,7 +183,8 @@ class HealMissingBilling extends Command
                             ],
                             201,
                             'BILLING.HEAL.CREATED',
-                            $traceId
+                            $traceId,
+                            $timer->lap()
                         );
                     });
                 }
@@ -198,7 +205,8 @@ class HealMissingBilling extends Command
             ],
             200,
             'BILLING.HEAL.FINISH',
-            $traceId
+            $traceId,
+            $timer->lap()
         );
 
         return Command::SUCCESS;

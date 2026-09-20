@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Console\Commands;
 
+use App\Helpers\ExecutionTimer;
 use Illuminate\Console\Command;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Str;
@@ -13,10 +15,11 @@ class SchedulerHeartbeat extends Command
     public function handle(): void
     {
         $traceId = (string) Str::uuid();
-        LogHelper::logInfo('SchedulerHeartbeat', [
+        $timer = new ExecutionTimer();
+        LogHelper::logInfo(null, [
             'time' => now(),
             'hostname' => gethostname(),
             'sapi' => php_sapi_name(),
-        ], 200, 'Scheduler heartbeat log', $traceId);
+        ], 200, 'Scheduler heartbeat log', $traceId, $timer->lap());
     }
 }

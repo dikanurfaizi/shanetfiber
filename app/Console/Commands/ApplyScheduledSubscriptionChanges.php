@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Helpers\LogHelper;
+use App\Helpers\ExecutionTimer;
 use App\Models\Customers\CustomerSubscription;
 use App\Models\Customers\SubscriptionChange;
 use App\Services\Customers\Provisioning\ChangePackageService;
@@ -34,6 +35,7 @@ class ApplyScheduledSubscriptionChanges extends Command
     public function handle()
     {
         $traceId = 'cmd-' . now()->format('YmdHis') . '-' . bin2hex(random_bytes(4));
+        $timer   = new ExecutionTimer();
         $changes = SubscriptionChange::scheduled()
             ->effective()
             ->where('change_type', 'downgrade')
@@ -41,18 +43,18 @@ class ApplyScheduledSubscriptionChanges extends Command
             ->get();
 
         foreach ($changes as $change) {
-            $this->applyChangeSafely($change, $traceId);
+            $this->applyChangeSafely($change, $traceId, $timer);
         }
 
         return self::SUCCESS;
     }
 
-    private function applyChangeSafely(SubscriptionChange $change, string $traceId): void
+    private function applyChangeSafely(SubscriptionChange $change, string $traceId, ExecutionTimer $timer): void
     {
         DB::beginTransaction();
 
         try {
-            $this->applyChange($change, $traceId);
+            $this->applyChange($change, $traceId, $timer);
             DB::commit();
         } catch (Throwable $e) {
             DB::rollBack();
@@ -74,12 +76,13 @@ class ApplyScheduledSubscriptionChanges extends Command
                 ],
                 500,
                 'Failed to apply scheduled subscription change',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
         }
     }
 
-    private function applyChange(SubscriptionChange $change, string $traceId): void
+    private function applyChange(SubscriptionChange $change, string $traceId, ExecutionTimer $timer): void
     {
         $customer = $change->customer;
 
@@ -189,7 +192,8 @@ class ApplyScheduledSubscriptionChanges extends Command
             ],
             200,
             'Scheduled subscription downgrade applied',
-            $traceId
+            $traceId,
+            $timer->lap()
         );
     }
 }

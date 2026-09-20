@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 use Illuminate\Support\Carbon;
 use App\Helpers\LogHelper;
+use App\Helpers\ExecutionTimer;
 use App\Events\BroadcastMidMonthTriggered;
 use App\Models\Whatsapp\WhatsappFeature;
 
@@ -17,7 +18,7 @@ class SendMessages extends Command
     public function handle(): int
     {
         $traceId   = (string) Str::uuid();
-        $startedAt = microtime(true);
+        $timer = new ExecutionTimer();
         $testMode  = config('messaging.reminder_allow_test', false);
 
         // ===============================================================
@@ -36,7 +37,8 @@ class SendMessages extends Command
                 ],
                 200,
                 'Mid-month broadcast skipped (feature disabled or not found)',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
 
             return Command::SUCCESS;
@@ -82,7 +84,8 @@ class SendMessages extends Command
             ],
             200,
             'Mid-month broadcast scheduler started',
-            $traceId
+            $traceId,
+            $timer->lap()
         );
 
         if (empty($days)) {
@@ -121,34 +124,29 @@ class SendMessages extends Command
             // ===============================================================
             event(new BroadcastMidMonthTriggered($traceId));
 
-            $duration = round(microtime(true) - $startedAt, 3);
-
-            $this->info("✅ Mid-month broadcast dispatched ({$duration}s)");
+            $this->info("✅ Mid-month broadcast dispatched ({$timer->lap()}s)");
 
             LogHelper::logInfo(
-                'BroadcastMidMonth',
+                null,
                 [
                     'range' => [
                         'days'        => $effectiveDays,
                         'time_window' => "{$timeStart}-{$timeEnd}",
-                    ],
-                    'execution_time' => $duration,
+                    ]
                 ],
                 200,
                 'Mid-month broadcast dispatched',
                 $traceId,
-                $duration
+                $timer->lap()
             );
 
             return Command::SUCCESS;
         } catch (\Throwable $e) {
 
-            $duration = round(microtime(true) - $startedAt, 3);
-
             $this->error('❌ Mid-month broadcast job failed.');
 
             LogHelper::logError(
-                'BroadcastMidMonth',
+                null,
                 [
                     'exception' => get_class($e),
                     'message'   => $e->getMessage(),
@@ -158,7 +156,7 @@ class SendMessages extends Command
                 500,
                 'Mid-month broadcast scheduler failed',
                 $traceId,
-                $duration
+                $timer->lap()
             );
 
             return Command::FAILURE;

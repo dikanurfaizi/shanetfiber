@@ -68,9 +68,8 @@ class OverDueReminderMessage extends Command
         $this->line("• TestMode : " . ($testMode ? 'ON' : 'OFF'));
 
         LogHelper::logInfo(
-            'BroadcastOverdue',
+            null,
             [
-                'trace_id'       => $traceId,
                 'feature_id'     => $feature->id,
                 'timestamp'      => $now->toDateTimeString(),
                 'test_mode'      => $testMode,
@@ -112,13 +111,10 @@ class OverDueReminderMessage extends Command
             // ===============================================================
             event(new OverdueBroadcastTriggered($traceId));
 
-            // Simpan durasi ke variabel agar konsisten di konsol dan log
-            $duration = $timer->lap();
-
-            $this->info("✅ Overdue broadcast dispatched ({$duration}s)");
+            $this->info("✅ Overdue broadcast dispatched ({$timer->lap()}s)");
 
             LogHelper::logInfo(
-                'BroadcastOverdue',
+                null,
                 [
                     'range' => [
                         'days'        => $effectiveDays,
@@ -128,18 +124,16 @@ class OverDueReminderMessage extends Command
                 200,
                 'Overdue broadcast dispatched',
                 $traceId,
-                $duration
+                $timer->lap()
             );
 
             return Command::SUCCESS;
         } catch (\Throwable $e) {
 
-            $duration = $timer->lap();
-
             $this->error('❌ Overdue broadcast job failed.');
 
             LogHelper::logError(
-                'BroadcastOverdue',
+                null,
                 [
                     'exception' => get_class($e),
                     'message'   => $e->getMessage(),
@@ -149,7 +143,7 @@ class OverDueReminderMessage extends Command
                 500,
                 'Overdue broadcast scheduler failed',
                 $traceId,
-                $duration
+                $timer->lap()
             );
 
             return Command::FAILURE;

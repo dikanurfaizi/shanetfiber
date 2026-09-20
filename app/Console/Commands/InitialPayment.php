@@ -32,7 +32,7 @@ class InitialPayment extends Command
             $this->warn('⏩ Initial payment broadcast skipped (feature disabled / invalid).');
 
             LogHelper::logInfo(
-                'InitialPayment',
+                null,
                 [
                     'feature_exists' => (bool)$feature,
                     'is_active' => $feature?->is_active,
@@ -52,7 +52,7 @@ class InitialPayment extends Command
             $this->warn('⛔ Schedule config empty. Job skipped.');
 
             LogHelper::logInfo(
-                'InitialPayment',
+                null,
                 ['feature_id' => $feature->id],
                 200,
                 'Initial payment broadcast skipped: schedule configuration is empty.',
@@ -76,7 +76,7 @@ class InitialPayment extends Command
             $this->warn('⛔ No scheduled days configured.');
 
             LogHelper::logInfo(
-                'InitialPayment',
+                null,
                 ['feature_id' => $feature->id, 'schedule' => $schedule],
                 200,
                 'Initial payment broadcast skipped: no scheduled days found in config.',
@@ -95,7 +95,7 @@ class InitialPayment extends Command
         $this->line("• TestMode : " . ($testMode ? 'ON' : 'OFF'));
 
         LogHelper::logInfo(
-            'InitialPayment',
+            null,
             [
                 'feature_id' => $feature->id,
                 'timestamp' => $now->toDateTimeString(),
@@ -125,7 +125,7 @@ class InitialPayment extends Command
                     $this->warn('⏩ Skipped: today not in scheduled days.');
 
                     LogHelper::logInfo(
-                        'InitialPayment',
+                        null,
                         [
                             'current_day' => $now->day,
                             'effective_days' => $effectiveDays,
@@ -144,7 +144,7 @@ class InitialPayment extends Command
                     $this->warn('⏩ Skipped: outside time window.');
 
                     LogHelper::logInfo(
-                        'InitialPayment',
+                        null,
                         [
                             'current_time' => $currentTime,
                             'time_window' => ['start' => $timeStart, 'end' => $timeEnd],
@@ -167,7 +167,7 @@ class InitialPayment extends Command
 
             if (!$billing) {
                 LogHelper::logError(
-                    'InitialPayment', // Disamakan channel-nya agar tidak null
+                    null,
                     [
                         'period_name' => $periodName,
                     ],
@@ -190,25 +190,21 @@ class InitialPayment extends Command
                 $traceId
             ));
 
-            $duration = $timer->lap();
-
-            $this->info("✅ Broadcast dispatched ({$duration}s)");
+            $this->info("✅ Broadcast dispatched ({$timer->lap()}s)");
 
             LogHelper::logInfo(
-                'InitialPayment',
+                null,
                 [
-                    'trace_id' => $traceId,
                     'billing_id' => $billing->id,
                     'range' => [
                         'start' => $startDate->toDateTimeString(),
                         'end' => $endDate->toDateTimeString(),
                     ],
-                    'execution_time' => $duration,
                 ],
                 200,
                 'Initial payment broadcast dispatched successfully',
                 $traceId,
-                $duration
+                $timer->lap()
             );
 
             return Command::SUCCESS;
@@ -217,9 +213,8 @@ class InitialPayment extends Command
             $this->error('❌ Initial payment job failed.');
 
             LogHelper::logError(
-                'InitialPayment',
+                null,
                 [
-                    'trace_id' => $traceId,
                     'exception' => get_class($e),
                     'message' => $e->getMessage(),
                     'file' => $e->getFile(),

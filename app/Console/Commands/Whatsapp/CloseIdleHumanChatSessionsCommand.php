@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use App\Models\Whatsapp\WhatsappChatSession;
 use App\Jobs\Whatsapp\CloseIdleHumanChatSessionsJob; // 👈 Import Job-nya
 use App\Helpers\LogHelper;
+use App\Helpers\ExecutionTimer;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 
@@ -22,7 +23,7 @@ class CloseIdleHumanChatSessionsCommand extends Command
     public function handle(): int
     {
         $traceId = (string) Str::uuid();
-
+        $timer   = new ExecutionTimer();
         $timeoutMinutes = 15;
         $threshold = Carbon::now()->subMinutes($timeoutMinutes);
 
@@ -33,6 +34,10 @@ class CloseIdleHumanChatSessionsCommand extends Command
             ->toArray();
 
         if (empty($idleSessionIds)) {
+            LogHelper::logInfo(null, [
+                'total_sessions_found' => count($idleSessionIds),
+                'session_ids'          => $idleSessionIds
+            ], 200, '[Command] No idle sessions found. No job dispatched.', $traceId, $timer->lap());
             return Command::SUCCESS;
         }
 
@@ -41,7 +46,7 @@ class CloseIdleHumanChatSessionsCommand extends Command
         LogHelper::logInfo(null, [
             'total_sessions_found' => count($idleSessionIds),
             'session_ids'          => $idleSessionIds
-        ], 200, '[Command] Idle sessions found. Dispatched to CloseIdleHumanChatSessionsJob.', $traceId);
+        ], 200, '[Command] Idle sessions found. Dispatched to CloseIdleHumanChatSessionsJob.', $traceId, $timer->lap());
 
         return Command::SUCCESS;
     }

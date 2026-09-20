@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 use Illuminate\Support\Carbon;
 use App\Helpers\LogHelper;
+use App\Helpers\ExecutionTimer;
 use App\Events\PaymentChannelUpdateTriggered;
 use App\Models\Whatsapp\WhatsappFeature;
 
@@ -21,7 +22,7 @@ class SendPaymentChannelUpdate extends Command
     public function handle(): int
     {
         $traceId   = (string) Str::uuid();
-        $startedAt = microtime(true);
+        $timer     = new ExecutionTimer();
         $testMode  = config('messaging.reminder_allow_test', false);
 
         // Menggunakan timezone konstan default, atau dinamis jika dimuat dari database nanti
@@ -81,7 +82,7 @@ class SendPaymentChannelUpdate extends Command
             // 3. DISPATCH SYSTEM EVENT & LOGGING
             // ===============================================================
             LogHelper::logInfo(
-                'PaymentChannelUpdate',
+                null,
                 [
                     'trace_id'   => $traceId,
                     'feature_id' => $feature->id,
@@ -91,29 +92,27 @@ class SendPaymentChannelUpdate extends Command
                 200,
                 'Payment channel update scheduler validation passed. Dispatching event...',
                 $traceId,
-                round(microtime(true) - $startedAt, 4)
+                $timer->lap()
             );
 
             // Trigger event utama sistem untuk memicu pemrosesan antrean pesan
             event(new PaymentChannelUpdateTriggered($traceId));
 
-            $duration = round(microtime(true) - $startedAt, 3);
-            $this->info("✅ Success: Payment channel update broadcast dispatched safely ({$duration}s)");
+            $this->info("✅ Success: Payment channel update broadcast dispatched safely ({$timer->lap()}s)");
 
             LogHelper::logInfo(
-                'PaymentChannelUpdate',
+                null,
                 [
                     'trace_id' => $traceId,
                     'range' => [
                         'target_dates' => '2026-06-01 to 2026-06-15',
                         'time_window'  => "{$timeStart}-{$timeEnd}",
                     ],
-                    'execution_time' => $duration,
                 ],
                 200,
                 'Payment channel update broadcast dispatched successfully',
                 $traceId,
-                round(microtime(true) - $startedAt, 4)
+                $timer->lap()
             );
 
             return Command::SUCCESS;
@@ -121,7 +120,7 @@ class SendPaymentChannelUpdate extends Command
             $this->error('❌ Error: Payment channel update broadcast job encountered a critical failure.');
 
             LogHelper::logError(
-                'PaymentChannelUpdate',
+                null,
                 [
                     'trace_id'  => $traceId,
                     'exception' => get_class($e),
@@ -132,7 +131,7 @@ class SendPaymentChannelUpdate extends Command
                 500,
                 'Payment channel update scheduler failed execution',
                 $traceId,
-                round(microtime(true) - $startedAt, 4)
+                $timer->lap()
             );
 
             return Command::FAILURE;

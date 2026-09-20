@@ -5,6 +5,9 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
+use App\Helpers\LogHelper;
+use App\Helpers\ExecutionTimer;
 
 class DeleteOldMessageLogs extends Command
 {
@@ -16,29 +19,73 @@ class DeleteOldMessageLogs extends Command
     /**
      * The console command description.
      */
-    protected $description = 'Delete message_events records older than 14 days (keep only last 14 days)';
+    protected $description = 'Delete message_events records created before the 1st of the current month';
 
     /**
      * Execute the console command.
      */
-    public function handle(): void
+    public function handle(): int
     {
-        // subDays(15) artinya menyimpan data 15 hari terakhir. 
-        // Data hari ke-16 dan seterusnya ke belakang akan dihapus.
-        $thresholdDate = Carbon::now()->subDays(15);
+        $traceId = (string) Str::uuid();
+        $timer   = new ExecutionTimer();
 
-        $this->info("⏳ Memulai retensi data. Menghapus data sebelum: {$thresholdDate->toDateTimeString()}...");
+        // Mengambil awal bulan berjalan pukul 00:00:00 (misal: 1 September 2026 00:00:00)
+        $thresholdDate = Carbon::now()->startOfMonth();
 
-        $this->message_events_delete($thresholdDate);
-    }
+        $this->info("⏳ Memulai retensi data bulanan.");
+        $this->line("• Threshold : {$thresholdDate->toDateTimeString()}");
+        $this->line("• Trace ID  : {$traceId}");
 
-    private function message_events_delete($thresholdDate)
-    {
-        // Karena data Anda sedikit (hanya kisaran ribuan), direct delete di bawah ini sangat aman dan cepat.
-        $deleted = DB::table('message_events')
-            ->where('created_at', '<', $thresholdDate)
-            ->delete();
+        LogHelper::logInfo(
+            null,
+            [
+                'threshold_date' => $thresholdDate->toDateTimeString(),
+            ],
+            200,
+            'Starting monthly message_events cleanup process',
+            $traceId,
+            $timer->lap()
+        );
 
-        $this->info("✅ Sukses! Berhasil menghapus $deleted baris log pesan lama.");
+        try {
+            // Menghapus record yang dibuat sebelum tanggal 1 bulan ini pukul 00:00:00
+            $deleted = DB::table('message_events')
+                ->where('created_at', '<', $thresholdDate)
+                ->delete();
+
+            $this->info("✅ Sukses! Berhasil menghapus {$deleted} baris log pesan lama.");
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'deleted_rows'   => $deleted,
+                    'threshold_date' => $thresholdDate->toDateTimeString(),
+                ],
+                200,
+                'Monthly message_events cleanup completed successfully',
+                $traceId,
+                $timer->lap()
+            );
+
+            return Command::SUCCESS;
+        } catch (\Throwable $e) {
+            $this->error('❌ Cleanup message logs process failed.');
+
+            LogHelper::logError(
+                null,
+                [
+                    'threshold_date' => $thresholdDate->toDateTimeString(),
+                    'error_message'  => $e->getMessage(),
+                    'file'           => $e->getFile(),
+                    'line'           => $e->getLine(),
+                ],
+                500,
+                'Failed to cleanup old message_events logs',
+                $traceId,
+                $timer->lap()
+            );
+
+            return Command::FAILURE;
+        }
     }
 }

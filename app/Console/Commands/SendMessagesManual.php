@@ -2,11 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\Whatsapp\ProcessWhatsappMessageJob;
-use App\DataTransferObjects\WhatsappJobDto;
 use App\Helpers\LogHelper;
-use App\Enums\WhatsAppAction;
-use Illuminate\Support\Facades\DB;
+use App\Helpers\ExecutionTimer;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -33,31 +30,29 @@ class SendMessagesManual extends Command
     public function handle()
     {
         $traceId = (string) Str::uuid();
-        $startTime = microtime(true);
+        $timer = new ExecutionTimer();
         $currentDateTime = Carbon::now()->setTimezone('Asia/Jakarta');
         $formattedDate = $currentDateTime->format('Y-m-d H:i:s');
         $dayOfMonth = $currentDateTime->day;
 
         try {
             $today = Carbon::today();
-            $traceId = (string) Str::uuid();
             // Log successful dispatch
             $dispatchTime = Carbon::now()->format('Y-m-d H:i:s');
-            $executionTime = round(microtime(true) - $startTime, 2);
 
             LogHelper::logInfo(
-                'SendMessagesCommand',
+                null,
                 [
-                    'dispatch_time' => $dispatchTime,
-                    'execution_seconds' => $executionTime
+                    'dispatch_time' => $dispatchTime
                 ],
                 200,
                 "Successfully dispatched {$this->description}",
-                $traceId
+                $traceId,
+                $timer->lap()
             );
 
             $this->info("Successfully dispatched reminder job at {$dispatchTime}");
-            $this->info("Total execution time: {$executionTime} seconds");
+            $this->info("Total execution time: {$timer->lap()} seconds");
 
             return 0;
         } catch (\Exception $e) {
@@ -65,7 +60,7 @@ class SendMessagesManual extends Command
             $errorMessage = "Failed to dispatch reminder job: " . $e->getMessage();
 
             LogHelper::logError(
-                'SendMessagesCommand',
+                null,
                 [
                     'error_time' => $errorTime,
                     'exception' => get_class($e),
@@ -74,7 +69,8 @@ class SendMessagesManual extends Command
                 ],
                 500,
                 $errorMessage,
-                $traceId
+                $traceId,
+                $timer->lap()
             );
 
             $this->error($errorTime . " - " . $errorMessage);

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Helpers\ExecutionTimer;
 use App\Jobs\Billing\CreateInitialBillingJob;
 use App\Models\Websystem;
 use App\Models\Billings\BillingPeriode;
@@ -17,6 +18,7 @@ class CreateBillingCron extends Command
     public function handle(): int
     {
         $traceId   = (string) Str::uuid();
+        $timer = new ExecutionTimer();
         $startedAt = now('Asia/Jakarta');
 
         // ===== CONSOLE (human) =====
@@ -30,7 +32,8 @@ class CreateBillingCron extends Command
             ],
             200,
             'BILLING_CRON.START',
-            $traceId
+            $traceId,
+            $timer->lap()
         );
 
         try {
@@ -51,7 +54,8 @@ class CreateBillingCron extends Command
                     ],
                     202,
                     'BILLING_CRON.SKIP.PERIOD_EXISTS',
-                    $traceId
+                    $traceId,
+                    $timer->lap()
                 );
 
                 return Command::SUCCESS;
@@ -69,7 +73,8 @@ class CreateBillingCron extends Command
                     ],
                     202,
                     'BILLING_CRON.SKIP.AUTO_GENERATE_DISABLED',
-                    $traceId
+                    $traceId,
+                    $timer->lap()
                 );
 
                 return Command::SUCCESS;
@@ -89,7 +94,8 @@ class CreateBillingCron extends Command
                 ],
                 200,
                 'BILLING_CRON.JOB_DISPATCHED',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
 
             return Command::SUCCESS;
@@ -105,7 +111,8 @@ class CreateBillingCron extends Command
                 ],
                 500,
                 'BILLING_CRON.FAILED',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
 
             return Command::FAILURE;
