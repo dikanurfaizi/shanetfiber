@@ -71,7 +71,7 @@ class RotateLaravelLog extends Command
 
         // Buat ulang file laravel.log yang kosong dengan permission yang benar
         touch($logFile);
-        chmod($logFile, 0664);
+        chmod($logFile, 0775);
         @chown($logFile, $owner ?: 'www');
         @chgrp($logFile, $group ?: 'www');
 
