@@ -48,7 +48,7 @@
                         </div>
 
                         <!-- Additional Options -->
-                        <div class="row gx-3 gy-2 mt-3">
+                        {{-- <div class="row gx-3 gy-2 mt-3">
                             <div class="col-lg-3 col-md-6">
                                 <div class="form-check">
                                     <input class="form-check-input" value="true" type="checkbox" name="cetak_pdf"
@@ -58,7 +58,7 @@
                                     </label>
                                 </div>
                             </div>
-                        </div>
+                        </div> --}}
 
                         <!-- Search Button -->
                         <div class="row mt-3">
