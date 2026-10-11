@@ -36,7 +36,7 @@ class PaymentService
         string $traceId
     ): array {
         $timer = new ExecutionTimer();
-        LogHelper::logInfo('Payment', [
+        LogHelper::logInfo(null, [
             'billing_id'     => $billing->id,
             'customer_id'    => $billing->customer_id,
             'payment_method' => $paymentData['payment_method'] ?? null,
@@ -96,7 +96,7 @@ class PaymentService
 
             DB::commit();
 
-            LogHelper::logInfo('Payment', [
+            LogHelper::logInfo(null, [
                 'billing_id' => $billing->id,
                 'receipt_id' => $receiptResult['receipt']->id,
             ], 200, 'payment.db.commit', $traceId, $timer->lap());
@@ -106,7 +106,7 @@ class PaymentService
                 $this->paymentProcessingService
                     ->processPaymentActions($billing, $traceId);
 
-                LogHelper::logInfo('Payment', [
+                LogHelper::logInfo(null, [
                     'billing_id' => $billing->id,
                 ], 200, 'payment.external.processed', $traceId, $timer->lap());
             }
@@ -118,7 +118,7 @@ class PaymentService
         } catch (Throwable $e) {
             DB::rollBack();
 
-            LogHelper::logError('Payment', [
+            LogHelper::logError(null, [
                 'billing_id' => $billing->id,
                 'exception'  => class_basename($e),
                 'message'    => $e->getMessage(),

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Collectors;
+namespace App\Services\WhatsApp\CloudAPI\Collectors;
 
 use App\Models\Billings\Billing;
 use Illuminate\Support\Collection;

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Templates\Runtime;
+namespace App\Services\WhatsApp\CloudAPI\Templates\Runtime;
 
-use App\Models\Whatsapp\WhatsappGatewayAccount;
+use App\Models\WhatsApp\WhatsAppGatewayAccount;
 
 class TemplateContext
 {
@@ -10,7 +10,7 @@ class TemplateContext
         public string $recipient,
         public string $templateName,
         public string $language,
-        public WhatsappGatewayAccount $account,
+        public WhatsAppGatewayAccount $account,
 
         // ===== domain-specific parameters =====
         public array $bodyValues = [],     // e.g. ["Rasna", "Jan 2026", ...]

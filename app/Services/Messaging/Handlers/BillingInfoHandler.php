@@ -2,19 +2,22 @@
 
 namespace App\Services\Messaging\Handlers;
 
+use App\Helpers\ExecutionTimer;
+use App\Helpers\LogHelper;
 use App\Models\Billings\Billing;
 use App\Models\Customers\Customer;
 use App\Services\Messaging\Contracts\MessageActionHandler;
 use App\Services\Messaging\MessageBuilder;
-use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
+use Throwable;
 
 class BillingInfoHandler extends BaseBroadcastAwareHandler implements MessageActionHandler
 {
     public function __construct(
         private Customer $customer,
         private MessageBuilder $builder,
-        private \Closure $getBankInfo,
+        private string $adminBankInfo,
         string $category
     ) {
         $this->setCategory($category);
@@ -33,44 +36,88 @@ class BillingInfoHandler extends BaseBroadcastAwareHandler implements MessageAct
 
     public function build(string $traceId): array
     {
-        $cust = $this->customer;
-        $cs   = $cust?->user?->contact ?? '-';
-        $adminId = $cust?->user?->id ?? null;
+        $timer = new ExecutionTimer();
+        $cust  = $this->customer;
 
-        // Parameter getBankInfo membutuhkan int $userId (dari $adminId)
-        $bankInfo = $adminId ? ($this->getBankInfo)($adminId) : 'Hubungi admin untuk info rekening';
+        LogHelper::logInfo(
+            null,
+            [
+                'handler'     => static::class,
+                'action'      => $this->action(),
+                'customer_id' => $cust->id,
+            ],
+            200,
+            '[BillingInfoHandler] Building payload message for billing info',
+            $traceId
+        );
 
-        // --- Case 1: Ada tagihan BL (Belum Bayar) atau PL (Paylater) ---
-        $activeBillings = $this->getActiveBillings($cust);
+        try {
+            $cs       = $cust->user?->contact ?? '-';
+            $bankInfo = !empty($this->adminBankInfo) ? $this->adminBankInfo : 'Hubungi admin untuk info rekening';
 
-        if ($activeBillings->isNotEmpty()) {
-            return $this->buildActiveBillPayload($cust, $cs, $activeBillings, $bankInfo);
+            // --- Case 1: Ada tagihan BL (Belum Bayar) atau PL (Paylater) ---
+            $activeBillings = $this->getActiveBillings($cust);
+
+            if ($activeBillings->isNotEmpty()) {
+                $payload = $this->buildActiveBillPayload($cust, $cs, $activeBillings, $bankInfo);
+            }
+            // --- Case 2: Deteksi Pelanggan Baru Pasang pada bulan berjalan ---
+            elseif ($this->isNewActivationThisMonth($cust) && $this->getBillingCount($cust) === 1) {
+                $payload = $this->buildNoBillPayload($cust, $cs);
+            }
+            // --- Case 3: Cek tagihan LUNAS (LS) terakhir ---
+            elseif ($lastPaid = $this->getLastPaidBilling($cust)) {
+                $payload = $this->buildPaidInfoPayload($lastPaid, $cust, $cs);
+            }
+            // --- Fallback Last Resort ---
+            else {
+                $payload = $this->buildNoBillPayload($cust, $cs);
+            }
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'handler'       => static::class,
+                    'customer_id'   => $cust->id,
+                    'template_slug' => $payload['template_slug'] ?? null,
+                ],
+                200,
+                '[BillingInfoHandler] Payload successfully built',
+                $traceId,
+                $timer->lap()
+            );
+
+            return $payload;
+        } catch (Throwable $e) {
+            $exceptionCode = $e->getCode();
+            $statusCode = (is_numeric($exceptionCode) && $exceptionCode >= 400 && $exceptionCode <= 599)
+                ? (int) $exceptionCode
+                : 500;
+
+            LogHelper::logError(
+                null,
+                [
+                    'handler'         => static::class,
+                    'customer_id'     => $cust->id,
+                    'error_message'   => $e->getMessage(),
+                    'exception_class' => get_class($e),
+                    'file'            => $e->getFile(),
+                    'line'            => $e->getLine(),
+                ],
+                $statusCode,
+                '[BillingInfoHandler] Unexpected error occurred while building payload',
+                $traceId,
+                $timer->lap()
+            );
+
+            throw $e;
         }
-
-        // --- 🌟 Case 3 (PILIHAN UTAMA KEDUA): Deteksi Ketat Pelanggan Baru Pasang ---
-        // Jika diaktivasi pada bulan berjalan INI dan total baris billing di DB baru ada 1 baris
-        if ($this->isNewActivationThisMonth($cust) && $this->getBillingCount($cust) === 1) {
-            return $this->buildNoBillPayload($cust, $cs);
-        }
-
-        // --- Case 2: Pelanggan lama yang sedang tidak ada tunggakan, cek tagihan LUNAS (LS) terakhir ---
-        $lastPaid = $this->getLastPaidBilling($cust);
-
-        if ($lastPaid) {
-            return $this->buildPaidInfoPayload($lastPaid, $cust, $cs);
-        }
-
-        // --- Fallback Last Resort: Jika data kosong total atau tidak memenuhi syarat di atas ---
-        return $this->buildNoBillPayload($cust, $cs);
     }
 
     /* ----------------------------------------------------------
-     |  Helper Tambahan Khusus untuk Case 3 (Presisi & Ringan)
+     |  Helpers & Data Fetchers
      * -------------------------------------------------------- */
 
-    /**
-     * Cek apakah activation_date customer berada di bulan dan tahun yang sama dengan sekarang
-     */
     private function isNewActivationThisMonth(Customer $cust): bool
     {
         if (!$cust->activation_date) {
@@ -78,29 +125,22 @@ class BillingInfoHandler extends BaseBroadcastAwareHandler implements MessageAct
         }
 
         $activation = Carbon::parse($cust->activation_date);
-        $now = Carbon::now();
+        $now        = Carbon::now();
 
         return $activation->isSameMonth($now) && $activation->isSameYear($now);
     }
 
-    /**
-     * Hitung total baris data yang ada di tabel billing untuk customer ini (apapun statusnya)
-     */
     private function getBillingCount(Customer $cust): int
     {
-        return $cust->billing()->count(); // Menggunakan kueri COUNT() murni, sangat cepat dan hemat RAM
+        return $cust->billing()->count();
     }
-
-    /* ----------------------------------------------------------
-     |  Helpers / Data Fetchers (Optimized with Eager Loading)
-     * -------------------------------------------------------- */
 
     private function getActiveBillings(Customer $cust): Collection
     {
         return $cust->billing()
-            ->with(['billingSubscription.billingPeriode', 'customer.activeSubscription.package']) // 👈 Mencegah N+1 Query
+            ->with(['billingSubscription.billingPeriode', 'customer.activeSubscription.package'])
             ->whereIn('status', ['BL', 'PL'])
-            ->orderBy('due_date', 'asc') // 👈 Urutkan dari yang paling mendesak (paling lama jatuh temponya)
+            ->orderBy('due_date', 'asc')
             ->get();
     }
 
@@ -116,7 +156,7 @@ class BillingInfoHandler extends BaseBroadcastAwareHandler implements MessageAct
     private function buildNoBillPayload(Customer $cust, string $cs): array
     {
         return [
-            'template_slug' => 'no_bill', // 👈 Mengarah ke template ramah baru
+            'template_slug' => 'no_bill',
             'to'            => $cust->contact,
             'replacements'  => [
                 '%name%'       => $cust->name,
@@ -125,10 +165,9 @@ class BillingInfoHandler extends BaseBroadcastAwareHandler implements MessageAct
         ];
     }
 
-    // ✅ PERBAIKAN: Mengubah type hint dari "Billing" menjadi "Collection" agar tidak crash
     private function buildActiveBillPayload(Customer $cust, string $cs, Collection $billings, string $bankInfo): array
     {
-        $list = $this->formatBillingList($billings);
+        $list  = $this->formatBillingList($billings);
         $total = $this->builder->currency($billings->sum('total_amount'));
 
         return [
@@ -158,8 +197,8 @@ class BillingInfoHandler extends BaseBroadcastAwareHandler implements MessageAct
                 "• Biaya Paket: {$harga}\n" .
                 "• Periode Layanan: {$periode}\n" .
                 "• Status Tagihan: *{$status}*\n" .
-                "• Batas Pembayaran: *{$deadline}*"; // 👈 Di-bold agar orang tua mudah membacanya
-        })->implode("\n\n---\n\n"); // Diberi separator pembatas antar lembar tagihan jika ada > 1 tagihan aktif
+                "• Batas Pembayaran: *{$deadline}*";
+        })->implode("\n\n---\n\n");
     }
 
     private function buildPaidInfoPayload(Billing $billing, Customer $cust, string $cs): array
@@ -179,7 +218,7 @@ class BillingInfoHandler extends BaseBroadcastAwareHandler implements MessageAct
             : 'Transfer Bank';
 
         return [
-            'template_slug' => 'info_lunas', // 👈 Mengarah ke template lunas yang sopan
+            'template_slug' => 'info_lunas',
             'to'            => $cust->contact,
             'replacements'  => [
                 '%name%'       => $cust->name,
@@ -214,7 +253,7 @@ class BillingInfoHandler extends BaseBroadcastAwareHandler implements MessageAct
         return 'Belum Terselesaikan';
     }
 
-    private function paymentDeadline($billing): string
+    private function paymentDeadline(Billing $billing): string
     {
         $date = $billing->status === 'PL'
             ? $billing->paylater_until

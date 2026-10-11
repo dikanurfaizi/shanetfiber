@@ -1,13 +1,15 @@
 <?php
 
-namespace App\Models\Whatsapp;
+namespace App\Models\WhatsApp;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class WhatsappWebhookMessage extends Model
+class WhatsAppWebhookMessage extends Model
 {
+    protected $table = 'whatsapp_webhook_messages';
+
     protected $fillable = [
         'conversation_id',
         'wa_message_id',
@@ -43,13 +45,13 @@ class WhatsappWebhookMessage extends Model
 
     public function conversation(): BelongsTo
     {
-        return $this->belongsTo(WhatsappConversation::class, 'conversation_id');
+        return $this->belongsTo(WhatsAppConversation::class, 'conversation_id');
     }
 
     public function statuses(): HasMany
     {
         return $this->hasMany(
-            WhatsappMessageStatus::class,
+            WhatsAppMessageStatus::class,
             'wa_message_id',
             'wa_message_id'
         );
@@ -81,7 +83,7 @@ class WhatsappWebhookMessage extends Model
     public function media()
     {
         return $this->hasMany(
-            WhatsappMessageMedia::class,
+            WhatsAppMessageMedia::class,
             'message_id',   // foreign key di tabel whatsapp_message_media
             'id'            // local key di tabel parent (biasanya id)
         )->where('download_status', 'downloaded');

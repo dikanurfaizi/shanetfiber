@@ -18,7 +18,7 @@ class BillingReportService
         try {
             $filterData = [
                 'bank' => Bank::orderBy('name')
-                    ->where('disabled', 'false')
+                    ->where('is_active', true)
                     ->pluck('name', 'id'),
                 'address' => Customer::whereNotNull('address')
                     ->pluck('address', 'address'),

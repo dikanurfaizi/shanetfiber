@@ -3,6 +3,7 @@
 namespace App\Services\Billings;
 
 use App\Enums\WhatsAppAction;
+use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
 use App\Http\Resources\Pppoe\SecretResource;
 use App\Jobs\AddPaymentAfterDueDateJob;
@@ -20,7 +21,6 @@ use Illuminate\Http\Request;
 class PayLaterService
 {
     private SecretService $secretService;
-
     private IpStaticService $ipStaticService;
 
     public function __construct(SecretService $secretService, IpStaticService $ipStaticService)
@@ -31,52 +31,35 @@ class PayLaterService
 
     public function processPayLater(Request $request, Billing $billing, string $traceId): array
     {
-        $start = microtime(true);
+        $timer = new ExecutionTimer();
 
         $context = [
             'billing_id' => $billing->id,
-            'customer_id' => $billing->customer->id,
+            'customer_id' => $billing->customer->id ?? null,
             'pay_later_input' => $request->pay_later,
         ];
 
-        LogHelper::logInfo('PayLater', $context, 100, 'START pay-later process', $traceId);
+        LogHelper::logInfo(null, $context, 100, 'START processPayLater', $traceId, $timer->lap());
 
         try {
             // === Step 1: Validate ===
-            LogHelper::logInfo('PayLater', array_merge($context, [
-                'step' => 'validation'
-            ]), 200, 'Step 1 — Validating input', $traceId);
-
             $request->validate([
                 'pay_later' => ['required', 'date', 'after_or_equal:' . now()->format('Y-m-d')],
             ]);
 
             // === Step 2: Update Billing ===
-            LogHelper::logInfo('PayLater', array_merge($context, [
-                'step' => 'update_billing',
-            ]), 200, 'Step 2 — Update billing pay_later', $traceId);
-
             $billing->update([
-                'paylater_until' => Carbon::parse($request->pay_later),
+                'paylater_until' => Carbon::parse($request->pay_later)->endOfDay(),
                 'status' => 'PL',
-                'updated_by' => auth()->id()
+                'updated_by' => auth()->id(),
             ]);
 
             // === Step 3: Mikrotik Actions (Optional) ===
             if (config('services.shanetfiber.allow_mikrotik_actions')) {
-                LogHelper::logInfo('PayLater', array_merge($context, [
-                    'step' => 'mikrotik_actions'
-                ]), 200, 'Step 3 — Processing Mikrotik actions', $traceId);
-
                 $this->processMikrotikActions($billing->customer, $request->pay_later, $traceId);
             }
 
-            // === FINISH ===
-            $execution = round(microtime(true) - $start, 3);
-
-            LogHelper::logInfo('PayLater', array_merge($context, [
-                'execution_seconds' => $execution,
-            ]), 200, 'Pay-later processed successfully', $traceId);
+            LogHelper::logInfo(null, $context, 200, 'Pay-later processed successfully', $traceId, $timer->lap());
 
             return [
                 'success' => true,
@@ -84,17 +67,13 @@ class PayLaterService
                 'trace_id' => $traceId,
             ];
         } catch (\Throwable $e) {
-
-            $execution = round(microtime(true) - $start, 3);
-
-            LogHelper::logError('PayLater', array_merge($context, [
-                'execution_seconds' => $execution,
+            LogHelper::logError(null, array_merge($context, [
                 'exception' => get_class($e),
                 'error_code' => $e->getCode(),
                 'error_message' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
-            ]), 500, 'ERROR processing pay-later', $traceId);
+            ]), 500, 'ERROR processing pay-later', $traceId, $timer->lap());
 
             return [
                 'success' => false,
@@ -106,9 +85,8 @@ class PayLaterService
 
     private function processMikrotikActions(Customer $customer, string $payLaterDate, string $traceId): void
     {
-        $startTime = microtime(true);
+        $timer = new ExecutionTimer();
 
-        // Siapkan context untuk semua log
         $context = [
             'customer_id' => $customer->id ?? null,
             'username' => $customer->username ?? null,
@@ -119,23 +97,23 @@ class PayLaterService
         ];
 
         try {
-            LogHelper::logInfo(null, $context, 200, 'Starting processMikrotikActions', $traceId);
-
             $router = Mikrotik::find($customer->mikrotik_id);
             $autoIsolir = AutoIsolir::where('mikrotik_id', $customer->mikrotik_id)->first();
 
             if (! $router || $router->disabled === 'true' || ! $autoIsolir || $autoIsolir->disabled === 'true') {
-                $executionTime = round(microtime(true) - $startTime, 3);
                 LogHelper::logWarning(null, array_merge($context, [
-                    'execution_seconds' => $executionTime,
                     'reason' => 'Router or AutoIsolir not found or disabled',
-                ]), 200, 'processMikrotikActions skipped', $traceId);
+                    'router_exists' => (bool) $router,
+                    'router_disabled' => $router->disabled ?? null,
+                    'autoisolir_exists' => (bool) $autoIsolir,
+                    'autoisolir_disabled' => $autoIsolir->disabled ?? null,
+                ]), 200, 'processMikrotikActions skipped', $traceId, $timer->lap());
 
                 return;
             }
 
-            $paylaterDate = Carbon::parse($payLaterDate);
-            $commentPayment = $this->getCommentPayment($autoIsolir, $paylaterDate);
+            $paylaterDateFormatted = Carbon::parse($payLaterDate);
+            $commentPayment = $this->getCommentPayment($autoIsolir, $paylaterDateFormatted);
 
             if ($customer->internet_service === 'ppp') {
                 $this->processPppPayment($router, $customer, $commentPayment, $traceId);
@@ -143,62 +121,65 @@ class PayLaterService
                 $this->processIpStaticPayment($router, $customer, $autoIsolir, $commentPayment, $traceId);
             }
 
-            $executionTime = round(microtime(true) - $startTime, 3);
             LogHelper::logInfo(null, array_merge($context, [
-                'execution_seconds' => $executionTime,
                 'comment_payment' => $commentPayment,
-            ]), 200, 'processMikrotikActions completed successfully', $traceId);
+            ]), 200, 'processMikrotikActions completed successfully', $traceId, $timer->lap());
         } catch (\Throwable $e) {
-            $executionTime = round(microtime(true) - $startTime, 3);
             LogHelper::logError(null, array_merge($context, [
-                'execution_seconds' => $executionTime,
                 'exception' => get_class($e),
                 'error_code' => $e->getCode(),
                 'error_message' => $e->getMessage(),
-            ]), 500, 'processMikrotikActions failed', $traceId);
+            ]), 500, 'processMikrotikActions failed', $traceId, $timer->lap());
 
             throw $e;
         }
     }
 
-    private function getCommentPayment(AutoIsolir $autoIsolir, string $payLaterDate): string
+    private function getCommentPayment(AutoIsolir $autoIsolir, Carbon $payLaterDate): string
     {
-        $formattedDate = Carbon::parse($payLaterDate)->format('M/d/Y');
+        $formattedDate = $payLaterDate->format('M/d/Y');
 
         return $autoIsolir->activation_date === 'false'
             ? $formattedDate . '/Paylater'
             : $autoIsolir->comment_unpayment . '_' . $formattedDate . '/Paylater';
     }
 
-    private function processPppPayment(Mikrotik $router, Customer $customer, string $commentPayment, $traceId): void
+    private function processPppPayment(Mikrotik $router, Customer $customer, string $commentPayment, string $traceId): void
     {
-        $startTime = microtime(true);
-        LogHelper::logInfo(null, [
+        $timer = new ExecutionTimer();
+
+        $context = [
             'router_id' => $router->id ?? null,
+            'router_name' => $router->name ?? null,
             'customer_id' => $customer->id ?? null,
+            'secret_id' => $customer->secret_id ?? null,
+            'username' => $customer->username ?? null,
+            'comment_payment' => $commentPayment,
             'action' => WhatsAppAction::PAYLATER->value,
-        ], 200, 'Starting PPP payment process', $traceId);
+        ];
 
         try {
             $userSecretId = $this->secretService->getSecretById($router, $customer->secret_id, $traceId);
 
             if ($userSecretId === 'error') {
-                throw new \Exception($customer->secret_id . '! Cannot find user "' . $customer->username . '" on server ' . $router->name . '.');
+                throw new \Exception("Secret ID {$customer->secret_id} not found for user '{$customer->username}' on router {$router->name}.");
             }
 
             $secretProfiles = SecretResource::collection($userSecretId)->value('profile');
             $subscription = $customer->activeSubscription;
-
             $customerProfile = $subscription?->package?->profile;
 
-            if (!$customerProfile) {
+            if (! $customerProfile) {
                 throw new \DomainException('Active subscription or package profile not found');
             }
+
+            $context['customer_profile'] = $customerProfile;
+            $context['secret_profile'] = $secretProfiles;
 
             if ($secretProfiles == $customerProfile) {
                 dispatch(new AddPaymentBeforeDueDateJob($router, $commentPayment, $customer->secret_id, $traceId))
                     ->onQueue('default');
-                $message = 'Successfully dispatched PPP payment (before due date)';
+                $message = 'Dispatched PPP payment (before due date)';
             } else {
                 dispatch(new AddPaymentAfterDueDateJob(
                     $router,
@@ -208,36 +189,17 @@ class PayLaterService
                     $customer->username,
                     $traceId
                 ))->onQueue('default');
-                $message = 'Successfully dispatched PPP payment (after due date)';
+                $message = 'Dispatched PPP payment (after due date)';
             }
 
-            $executionTime = round(microtime(true) - $startTime, 3);
-            $context = [
-                'router_name' => $router->name,
-                'secret_id' => $customer->secret_id,
-                'username' => $customer->username,
-                'customer_profile' => $customerProfile ?? null,
-                'comment_payment' => $commentPayment,
-                'execution_seconds' => $executionTime,
-                'action' => WhatsAppAction::PAYLATER->value,
-            ];
-            LogHelper::logInfo(null, $context, 200, $message, $traceId);
+            LogHelper::logInfo(null, $context, 200, $message, $traceId, $timer->lap());
         } catch (\Throwable $e) {
-            $executionTime = round(microtime(true) - $startTime, 3);
-            $context = [
-                'router_id' => $router->id ?? null,
-                'router_name' => $router->name ?? null,
-                'customer_id' => $customer->id ?? null,
-                'secret_id' => $customer->secret_id ?? null,
-                'username' => $customer->username ?? null,
-                'comment_payment' => $commentPayment,
-                'execution_seconds' => $executionTime,
+            LogHelper::logError(null, array_merge($context, [
                 'exception' => get_class($e),
                 'error_message' => $e->getMessage(),
-            ];
-            LogHelper::logError(null, $context, 500, 'Process PPP Payment Failed', $traceId);
+            ]), 500, 'Process PPP Payment Failed', $traceId, $timer->lap());
 
-            throw new \Exception('Server ' . $router->name . ' offline, please check your router. ' . $e->getMessage());
+            throw new \Exception('Server ' . $router->name . ' offline or error: ' . $e->getMessage());
         }
     }
 
@@ -246,16 +208,21 @@ class PayLaterService
         Customer $customer,
         AutoIsolir $autoIsolir,
         string $commentPayment,
-        $traceId
+        string $traceId
     ): void {
-        $startTime = microtime(true);
+        $timer = new ExecutionTimer();
 
-        // Log awal: context minimal, hanya info identitas & action
-        LogHelper::logInfo(null, [
+        $context = [
             'router_id' => $router->id ?? null,
+            'router_name' => $router->name ?? null,
             'customer_id' => $customer->id ?? null,
+            'username' => $customer->username ?? null,
+            'ip_static' => $customer->ip_static ?? null,
+            'simple_queue_id' => $customer->simpleque_id ?? null,
+            'address_list_isolir' => $autoIsolir->address_list_isolir ?? null,
+            'comment_payment' => $commentPayment,
             'action' => WhatsAppAction::PAYLATER->value,
-        ], 200, 'Starting IP Static payment process', $traceId);
+        ];
 
         try {
             $ipAddress = $customer->ip_static;
@@ -280,7 +247,7 @@ class PayLaterService
                     $traceId
                 ))->onQueue('default');
 
-                $message = 'Successfully dispatched IP static payment (after due date)';
+                $message = 'Dispatched IP static payment (after due date)';
             } else {
                 dispatch(new AddPaymentBeforeDueDateJob(
                     $router,
@@ -289,41 +256,15 @@ class PayLaterService
                     $traceId
                 ))->onQueue('default');
 
-                $message = 'Successfully dispatched IP static payment (before due date)';
+                $message = 'Dispatched IP static payment (before due date)';
             }
 
-            // Context lengkap dibangun di akhir proses
-            $executionTime = round(microtime(true) - $startTime, 3);
-            $context = [
-                'router_id' => $router->id ?? null,
-                'router_name' => $router->name ?? null,
-                'customer_id' => $customer->id ?? null,
-                'username' => $customer->username ?? null,
-                'ip_static' => $ipAddress ?? null,
-                'simple_queue_id' => $simplequeId ?? null,
-                'address_list_isolir' => $addressListIsolir ?? null,
-                'comment_payment' => $commentPayment,
-                'execution_seconds' => $executionTime,
-                'action' => WhatsAppAction::PAYLATER->value,
-            ];
-            LogHelper::logInfo(null, $context, 200, $message, $traceId);
+            LogHelper::logInfo(null, $context, 200, $message, $traceId, $timer->lap());
         } catch (\Throwable $e) {
-            // Context lengkap saat error
-            $executionTime = round(microtime(true) - $startTime, 3);
-            $context = [
-                'router_id' => $router->id ?? null,
-                'router_name' => $router->name ?? null,
-                'customer_id' => $customer->id ?? null,
-                'username' => $customer->username ?? null,
-                'ip_static' => $customer->ip_static ?? null,
-                'simple_queue_id' => $customer->simpleque_id ?? null,
-                'address_list_isolir' => $autoIsolir->address_list_isolir ?? null,
-                'comment_payment' => $commentPayment,
-                'execution_seconds' => $executionTime,
+            LogHelper::logError(null, array_merge($context, [
                 'exception' => get_class($e),
                 'error_message' => $e->getMessage(),
-            ];
-            LogHelper::logError(null, $context, 500, 'Process IP Static Payment Failed', $traceId);
+            ]), 500, 'Process IP Static Payment Failed', $traceId, $timer->lap());
 
             throw new \Exception('Cannot connect to Server ' . ($router->name ?? '') . '. ' . $e->getMessage());
         }

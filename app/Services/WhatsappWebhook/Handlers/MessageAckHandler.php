@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Services\WhatsappWebhook\Handlers;
+namespace App\Services\WhatsAppWebhook\Handlers;
 
 use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
-use App\Jobs\Whatsapp\ProcessMessageAckJob;
-use App\Services\WhatsappWebhook\DTO\WebhookPayload;
+use App\Jobs\WhatsApp\ProcessMessageAckJob;
+use App\Services\WhatsAppWebhook\DTO\WebhookPayload;
 
 class MessageAckHandler extends BaseHandler
 {

@@ -1,19 +1,19 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Broadcast;
+namespace App\Services\WhatsApp\CloudAPI\Broadcast;
 
 use App\Enums\WhatsAppAction;
 use App\Helpers\ExecutionTimer;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
-use App\Jobs\Whatsapp\CloudAPI\Broadcast\PaymentChannelUpdateJob;
-use App\Models\Whatsapp\WhatsappGateway;
-use App\Services\Whatsapp\CloudAPI\Collectors\ActiveCustomerCollector;
-use App\Services\Whatsapp\CloudAPI\Collectors\AdminBankCollector;
+use App\Jobs\WhatsApp\CloudAPI\Broadcast\PaymentChannelUpdateJob;
+use App\Models\WhatsApp\WhatsAppGateway;
+use App\Services\WhatsApp\CloudAPI\Collectors\ActiveCustomerCollector;
+use App\Services\Messaging\Collectors\AdminBankCollector;
 
 // 💡 Import kedua Trait Anda di sini
-use App\Services\Whatsapp\CloudAPI\Broadcast\Traits\MapsBroadcastBankPayload;
-use App\Services\Whatsapp\CloudAPI\Broadcast\Traits\ResolvesAdminContact;
+use App\Services\WhatsApp\CloudAPI\Broadcast\Traits\MapsBroadcastBankPayload;
+use App\Services\WhatsApp\CloudAPI\Broadcast\Traits\ResolvesAdminContact;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -43,7 +43,7 @@ class PaymentChannelUpdate
         // ===============================================================
         // RESOLVE GATEWAY & ACCOUNT
         // ===============================================================
-        $gateway = WhatsappGateway::where('type', 'cloud')
+        $gateway = WhatsAppGateway::where('type', 'cloud')
             ->where('is_active', true)
             ->with(['accounts' => fn($q) => $q->where('is_active', true)])
             ->first();
@@ -86,20 +86,20 @@ class PaymentChannelUpdate
             $targetContact = $overrideNumber ? (string) $overrideNumber : $data->customer_contact;
             $recipient     = $formatter->formatReceiver($targetContact, null, false);
 
-            PaymentChannelUpdateJob::dispatch(
-                account: $account,
-                templateName: $resolvedTemplate,
-                customerId: (string) $data->customer_id,
-                customerName: $data->customer_name,
-                contact: $recipient,
-                channelUpdateDate: $channelUpdateDate,
-                channel: $channel,
-                bankPayload: $bankPayload,
-                contactAdmin: $contactAdmin,
-                contactWhatsapp: $contactWhatsapp
-            )
-                ->delay($delay)
-                ->onQueue('notification');
+            // PaymentChannelUpdateJob::dispatch(
+            //     account: $account,
+            //     templateName: $resolvedTemplate,
+            //     customerId: (string) $data->customer_id,
+            //     customerName: $data->customer_name,
+            //     contact: $recipient,
+            //     channelUpdateDate: $channelUpdateDate,
+            //     channel: $channel,
+            //     bankPayload: $bankPayload,
+            //     contactAdmin: $contactAdmin,
+            //     contactWhatsapp: $contactWhatsapp
+            // )
+            //     ->delay($delay)
+            //     ->onQueue('notification');
 
             $delayInSeconds += 2;
             $delay = now()->addSeconds($delayInSeconds);

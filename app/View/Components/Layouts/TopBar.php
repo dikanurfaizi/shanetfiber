@@ -3,7 +3,7 @@
 namespace App\View\Components\Layouts;
 
 use App\Models\Billings\Billing;
-use App\Models\Whatsapp\WhatsappConversation;
+use App\Models\WhatsApp\WhatsAppConversation;
 use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
@@ -29,7 +29,7 @@ class TopBar extends Component
         $user = $auth['user'];
 
         // --- LOGIKA MENGHITUNG UNREAD CHAT BERDASARKAN ROLE ---
-        $unreadChatQuery = WhatsappConversation::where('has_unread', true);
+        $unreadChatQuery = WhatsAppConversation::where('has_unread', true);
 
         // Cek apakah user saat ini MEMILIKI role Kasir
         $isKasir = $user->hasRole('Kasir');

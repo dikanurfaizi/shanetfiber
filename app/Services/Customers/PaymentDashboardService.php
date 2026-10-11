@@ -2,26 +2,30 @@
 
 namespace App\Services\Customers;
 
-use App\Models\Billings\Billing;
-use App\Models\User;
-use App\Models\Websystem;
-use App\Models\Packages\PackageDuration;
-use App\Models\Whatsapp\WhatsappNumber;
-use Illuminate\Support\Carbon;
-use Jenssegers\Agent\Agent;
-use App\Helpers\LogHelper;
 use App\Helpers\FormatReceiver;
+use App\Helpers\LogHelper;
+use App\Models\Billings\Billing;
 use App\Models\Billings\BillingPayment;
 use App\Models\Customers\CustomerSubscription;
 use App\Models\Membership\CustomerMembership;
+use App\Models\Packages\PackageDuration;
+use App\Models\Websystem;
+use App\Models\WhatsApp\WhatsAppNumber;
+use App\Services\Messaging\Collectors\AdminBankCollector;
+use Illuminate\Support\Carbon;
+use Jenssegers\Agent\Agent;
 
 class PaymentDashboardService
 {
+    public function __construct(
+        private AdminBankCollector $bankCollector
+    ) {}
+
     public function getDashboardData($customer)
     {
         $traceId = uniqid('dashboard_', true);
-
         $customerId = $customer->id;
+        $adminUserId = (int) ($customer->user_id ?? 1);
 
         $billings = Billing::where('customer_id', $customerId)
             ->where('status', 'BL')
@@ -30,19 +34,14 @@ class PaymentDashboardService
         $lastPayment = BillingPayment::with('billing')
             ->whereHas(
                 'billing',
-                fn($q) =>
-                $q->where('customer_id', $customerId)->where('status', 'LS')
+                fn($q) => $q->where('customer_id', $customerId)->where('status', 'LS')
             )
             ->latest('payment_time')
             ->first();
 
-        // 1. Ambil data user penanggung jawab customer beserta banknya yang aktif
-        $user = User::with(['banks' => function ($query) {
-            $query->where('disabled', 'false'); // Memastikan hanya mengambil bank master yang aktif
-        }])->find($customer->user_id);
-
-        // 2. Ambil daftar banknya (Menghasilkan Collection objek Bank)
-        $banks = $user ? $user->banks : collect();
+        // 💡 1. MENGGUNAKAN ADMIN BANK COLLECTOR UNTUK KEDUA KEBUTUHAN (TEXT & COLLECTION)
+        $bankText = $this->bankCollector->getFormattedBankInfo($adminUserId, $traceId);
+        $banks    = $this->bankCollector->getBanksByUserId($adminUserId);
 
         $customerSubscription = CustomerSubscription::with('package')
             ->where('customer_id', $customerId)
@@ -54,32 +53,32 @@ class PaymentDashboardService
             ->where('is_active', true)
             ->first();
 
-        $basePrice = $customerSubscription?->package?->price ?? 0;
+        $basePrice   = $customerSubscription?->package?->price ?? 0;
         $packageName = $customerSubscription?->package?->name ?? 'No Active Package';
 
         /** =======================
-         * Diskon
+         * Diskon Member & Durasi
          * ======================= */
-        $memberName = 'No Active Member';
+        $memberName            = 'No Active Member';
         $discountMemberNominal = 0;
 
         if ($member = $customerMembership?->membership) {
-            $memberName = $member->name;
+            $memberName            = $member->name;
             $discountMemberNominal = $member->discount_type === 'percent'
                 ? $basePrice * ($member->discount_value / 100)
                 : $member->discount_value;
         }
 
-        $discountDuration = null;
+        $discountDuration        = null;
         $discountDurationNominal = 0;
-        $periodEn = $periodIn = null;
+        $periodEn = $periodIn    = null;
 
         if ($packageDuration = PackageDuration::where('package_id', $customerSubscription?->package_id)->first()) {
-            $periodEn = $packageDuration->duration->name_en;
-            $periodIn = $packageDuration->duration->name_id;
+            $periodEn = $packageDuration->duration->name_en ?? null;
+            $periodIn = $packageDuration->duration->name_id ?? null;
 
             if ($packageDuration->discount_type !== 'none') {
-                $discountDuration = $packageDuration->name_en;
+                $discountDuration        = $packageDuration->name_en;
                 $discountDurationNominal = $packageDuration->discount_type === 'percent'
                     ? $basePrice * ($packageDuration->discount_value / 100)
                     : $packageDuration->discount_value;
@@ -87,30 +86,25 @@ class PaymentDashboardService
         }
 
         $totalDiscount = $discountMemberNominal + $discountDurationNominal;
-
-        $lastBilling = $billings->last();
+        $lastBilling   = $billings->last();
 
         $dueDateText = $lastBilling?->due_date
             ? Carbon::parse($lastBilling->due_date)->translatedFormat('d F Y, H:i') . ' WIB'
             : Carbon::now()->startOfMonth()->addDays(14)->translatedFormat('d F Y, H:i') . ' WIB';
 
-        $formatter = new FormatReceiver();
+        /** @var FormatReceiver $formatter */
+        $formatter = app(FormatReceiver::class);
 
-        // Menarik data nomor whatsapp default yang terhubung ke gateway "gowa"
-        $whatsappNumberRecord = WhatsappNumber::where('is_enabled', true)
+        // Menarik data nomor WhatsApp default
+        $whatsappNumberRecord = WhatsAppNumber::where('is_enabled', true)
             ->where('is_default', true)
             ->whereHas('account', function ($query) {
                 $query->where('is_active', 1)
-                    ->whereHas('gateway', function ($q) {
-                        $q->where('slug', 'gowa');
-                    });
+                    ->whereHas('gateway', fn($q) => $q->where('slug', 'gowa'));
             })
             ->first();
 
-        // Ambil value kolom 'number'-nya, jika tidak ada pasang fallback nomor lama
-        $adminNumber = $whatsappNumberRecord ? $whatsappNumberRecord->number : $customer->user->contact;
-
-        // Masukkan ke dalam formatter Anda yang lama
+        $adminNumber     = $whatsappNumberRecord ? $whatsappNumberRecord->number : ($customer->user->contact ?? '');
         $contactAdmin    = $formatter->formatReceiver($adminNumber, 'broadcast', false);
         $contactWhatsapp = $formatter->formatReceiver($adminNumber, null, false);
 
@@ -126,29 +120,30 @@ class PaymentDashboardService
             : 'customers.pages.dashboard';
 
         /** =======================
-         * Compile log (FINAL)
+         * Compile log
          * ======================= */
         LogHelper::logInfo(
             null,
             [
-                'customer_id' => $customerId,
-                'billing_count' => $billings->count(),
-                'last_billing_id' => $lastBilling?->id,
-                'last_payment_time' => $lastPayment?->payment_time,
-                'base_price' => $basePrice,
-                'member_name' => $memberName,
-                'discount_member_nominal' => $discountMemberNominal,
-                'discount_duration' => $discountDuration,
+                'customer_id'               => $customerId,
+                'billing_count'             => $billings->count(),
+                'last_billing_id'           => $lastBilling?->id,
+                'last_payment_time'         => $lastPayment?->payment_time,
+                'bank_count'                => $banks->count(),
+                'base_price'                => $basePrice,
+                'member_name'               => $memberName,
+                'discount_member_nominal'   => $discountMemberNominal,
+                'discount_duration'         => $discountDuration,
                 'discount_duration_nominal' => $discountDurationNominal,
-                'total_discount' => $totalDiscount,
-                'price_after_tax' => $priceAfterTax,
-                'due_date_text' => $dueDateText,
-                'tax_enabled' => $websystem?->enable_tax,
-                'tax_rate' => $websystem?->tax_rate,
-                'view' => $view,
+                'total_discount'            => $totalDiscount,
+                'price_after_tax'           => $priceAfterTax,
+                'due_date_text'             => $dueDateText,
+                'tax_enabled'               => $websystem?->enable_tax,
+                'tax_rate'                  => $websystem?->tax_rate,
+                'view'                      => $view,
             ],
             200,
-            'Payment dashboard compiled',
+            '[PaymentDashboardService] Payment dashboard compiled successfully',
             $traceId
         );
 
@@ -161,6 +156,7 @@ class PaymentDashboardService
                 'websystem',
                 'lastPayment',
                 'banks',
+                'bankText',
                 'contactAdmin',
                 'memberName',
                 'lastBilling',

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands;
+namespace App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands;
 
-use App\Models\Whatsapp\WhatsappGatewayAccount;
+use App\Models\WhatsApp\WhatsAppGatewayAccount;
 
 class InfoPayLaterCommand
 {
@@ -13,6 +13,6 @@ class InfoPayLaterCommand
         public readonly string $period,
         public readonly string $tellerName,
         public readonly string $paylaterCode,
-        public readonly WhatsappGatewayAccount $account,
+        public readonly WhatsAppGatewayAccount $account,
     ) {}
 }

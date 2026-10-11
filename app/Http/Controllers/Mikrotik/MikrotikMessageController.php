@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Mikrotik;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Jobs\Whatsapp\SendWhatsappMessageJob;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Models\Customers\Customer;
@@ -58,13 +57,13 @@ class MikrotikMessageController extends Controller
 
         $messageType = 'mikrotik';
 
-        SendWhatsappMessageJob::dispatch(
-            $messageType,
-            $formattedReceiver,
-            $message,
-            $customerId,
-            $traceId
-        )->delay(now()->addSeconds(1));
+        // SendWhatsAppMessageJob::dispatch(
+        //     $messageType,
+        //     $formattedReceiver,
+        //     $message,
+        //     $customerId,
+        //     $traceId
+        // )->delay(now()->addSeconds(1));
 
         LogHelper::logInfo(null, [
             'to'      => $formattedReceiver,

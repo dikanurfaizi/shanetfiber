@@ -1,11 +1,13 @@
 <?php
 
-namespace App\Models\Whatsapp;
+namespace App\Models\WhatsApp;
 
 use Illuminate\Database\Eloquent\Model;
 
-class WhatsappTemplate extends Model
+class WhatsAppTemplate extends Model
 {
+    protected $table = 'whatsapp_templates';
+
     protected $fillable = [
         'meta_waba_id',
         'phone_number_id',

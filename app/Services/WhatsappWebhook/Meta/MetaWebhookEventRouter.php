@@ -1,16 +1,16 @@
 <?php
 
-namespace App\Services\WhatsappWebhook\Meta;
+namespace App\Services\WhatsAppWebhook\Meta;
 
 use App\Helpers\LogHelper;
-use App\Services\Whatsapp\Meta\HandleIncomingWhatsappWebhook;
-use App\Services\Whatsapp\Meta\HandleStatusUpdateWhatsappWebhook;
+use App\Services\WhatsApp\Meta\HandleIncomingWhatsAppWebhook;
+use App\Services\WhatsApp\Meta\HandleStatusUpdateWhatsAppWebhook;
 
 class MetaWebhookEventRouter
 {
     public function __construct(
-        private HandleIncomingWhatsappWebhook $incomingHandler,
-        private HandleStatusUpdateWhatsappWebhook $statusHandler
+        private HandleIncomingWhatsAppWebhook $incomingHandler,
+        private HandleStatusUpdateWhatsAppWebhook $statusHandler
     ) {}
 
     public function route(array $payload, string $traceId): void

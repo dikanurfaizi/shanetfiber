@@ -8,8 +8,8 @@ use App\Models\Customers\Customer;
 
 abstract class BaseBroadcastAwareHandler
 {
-    protected string $category;
-    protected ?string $rawContact = null; // angka asli, belum diformat
+    protected string $category = 'BROADCAST';
+    protected ?string $rawContact = null; // Nomor asli sebelum diformat
 
     public function setCategory(string $category): void
     {
@@ -22,47 +22,57 @@ abstract class BaseBroadcastAwareHandler
     }
 
     /**
-     * Jalankan semua validasi standar:
-     * - contact kosong
-     * - normalisasi nomor
-     * - ambil customer
-     * - fail-safe kategori BROADCAST + opt-out
+     * Jalankan validasi standar untuk pesan berbasis broadcast:
+     * 1. Validasi kontak tidak boleh kosong
+     * 2. Normalisasi nomor penerima
+     * 3. Ambil data Customer berdasarkan kontak
+     * 4. Fail-safe: Blokir pengiriman jika kategori BROADCAST & Customer Opt-Out
      */
     protected function validateBase(string $traceId): ?Customer
     {
-        // 1. Contact kosong
-        if (empty($this->rawContact)) {
-            LogHelper::logError(null, [
-                'rawContact' => $this->rawContact
-            ], 400, 'Contact kosong di BaseBroadcastAwareHandler', $traceId);
-
-            throw new \RuntimeException('Contact kosong');
-        }
-
-        // 2. Format nomor
-        $format = new FormatReceiver();
-        $contact1 = $format->formatReceiver($this->rawContact, null, false);
-        $contact2 = $format->formatReceiver($this->rawContact, 'display', false);
-
-        // 3. Cari customer
-        $customer = Customer::where('contact', $contact1)
-            ->orWhere('contact', $contact2)
-            ->first();
-
-        // 4. Fail-safe: jika kategori BROADCAST → cek opt-out
-        if ($this->category === 'BROADCAST' && ($customer->is_opt_out ?? 0) == 1) {
-            LogHelper::logWarning(
+        // 1. Validasi Contact Kosong
+        if (empty(trim((string) $this->rawContact))) {
+            LogHelper::logError(
                 null,
-                [
-                    'contact'      => $this->rawContact,
-                    'customer_id'  => $customer->id ?? null,
-                ],
-                403,
-                'Customer opted-out. Broadcast blocked.',
+                ['rawContact' => $this->rawContact],
+                400,
+                '[BaseBroadcastAwareHandler] Target contact number is empty',
                 $traceId
             );
 
-            throw new \RuntimeException('Customer opted-out');
+            throw new \RuntimeException('Target contact number cannot be empty.');
+        }
+
+        // 2. Normalisasi & Format Nomor HP
+        /** @var FormatReceiver $format */
+        $format   = app(FormatReceiver::class);
+        $contact1 = $format->formatReceiver($this->rawContact, null, false);
+        $contact2 = $format->formatReceiver($this->rawContact, 'display', false);
+
+        // 3. Cari Data Customer
+        $customer = Customer::query()
+            ->where('contact', $contact1)
+            ->orWhere('contact', $contact2)
+            ->first();
+
+        // 4. Fail-safe: Cek Status Opt-out jika kategori BROADCAST
+        if ($customer && strtoupper($this->category) === 'BROADCAST') {
+            // Menggunakan boolean strict check sesuai cast model Customer
+            if ((bool) $customer->is_opt_out === true) {
+                LogHelper::logWarning(
+                    null,
+                    [
+                        'raw_contact' => $this->rawContact,
+                        'customer_id' => $customer->id,
+                        'category'    => $this->category,
+                    ],
+                    403,
+                    '[BaseBroadcastAwareHandler] Customer opted-out. Broadcast blocked safely.',
+                    $traceId
+                );
+
+                throw new \RuntimeException("Broadcast blocked: Customer ID {$customer->id} has opted-out.");
+            }
         }
 
         return $customer;

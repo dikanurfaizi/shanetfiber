@@ -2,13 +2,11 @@
 
 namespace App\Http\Controllers\Customer;
 
-use App\Exports\CustomersExport;
 use App\Helpers\LogHelper;
 use App\Helpers\UserAuth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CustomerPppUpdateRequest;
 use App\Http\Requests\CustomerRouterUpdateRequest;
-use App\Http\Requests\CustomerStoreRequest;
 use App\Http\Requests\CustomerUpdateRequest;
 use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
@@ -30,7 +28,7 @@ use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use RouterOS\Exceptions\ClientException;
 use RouterOS\Exceptions\ConnectException;
-use App\Events\CustomerActivated;
+use App\Events\SingleNotification\CustomerActivated;
 use App\Exports\CustomerMasterExport;
 use App\Helpers\ExecutionTimer;
 use App\Models\Billings\Billing;

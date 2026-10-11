@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Models\Whatsapp;
+namespace App\Models\WhatsApp;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-class WhatsappFeature extends Model
+class WhatsAppFeature extends Model
 {
     protected $table = 'whatsapp_features';
 

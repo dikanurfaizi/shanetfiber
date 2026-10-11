@@ -3,13 +3,13 @@
 namespace App\Services\Messaging;
 
 use App\Helpers\LogHelper;
-use App\Models\Whatsapp\WhatsappMessage;
+use App\Models\WhatsApp\WhatsAppMessage;
 
 class TemplateEngine
 {
     public function renderBySlug(string $slug, array $replacements, ?string $traceId = null): string
     {
-        $raw = WhatsappMessage::query()
+        $raw = WhatsAppMessage::query()
             ->where('slug', $slug)
             ->where('disabled', false)
             ->where('default', true)

@@ -1,15 +1,14 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Messaging;
+namespace App\Services\WhatsApp\CloudAPI\Messaging;
 
 use App\Helpers\LogHelper;
 use App\Models\Messaging\MessageEvent;
-use App\Services\Whatsapp\CloudAPI\Payloads\MessagePayloadBuilder;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\TemplateHandlerRegistry;
-use App\Services\Whatsapp\CloudAPI\Transport\CloudApiClientProcess;
-use App\Services\Whatsapp\Meta\HandleOutgoingWhatsappMessage;
+use App\Services\WhatsApp\CloudAPI\Payloads\MessagePayloadBuilder;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\TemplateHandlerRegistry;
+use App\Services\WhatsApp\CloudAPI\Transport\CloudApiClientProcess;
+use App\Services\WhatsApp\Meta\HandleOutgoingWhatsAppMessage;
 use Illuminate\Support\Str;
-use ReflectionClass;
 
 class MessageDispatcher
 {
@@ -17,7 +16,7 @@ class MessageDispatcher
         private MessagePayloadBuilder $builder,
         private CloudApiClientProcess $client,
         private TemplateHandlerRegistry $registry,
-        private HandleOutgoingWhatsappMessage $outgoingWhatsappMessage
+        private HandleOutgoingWhatsAppMessage $outgoingWhatsappMessage
     ) {}
 
     public function dispatch(object $command, ?int $eventId = null): MessageResult
@@ -64,7 +63,9 @@ class MessageDispatcher
             // =========================
             $response = $this->client->send($context->account, $dto);
 
-            $status = ($response['status'] ?? 0) === 200 ? 'success' : 'failed';
+            // Cek sukses berdasarkan flag boolean 'success' dan HTTP status 200
+            $isSuccess = ($response['success'] ?? false) && ($response['status'] ?? 0) === 200;
+            $status = $isSuccess ? 'success' : 'failed';
             $messageId = data_get($response, 'body.messages.0.id');
 
             if ($status === 'success' && $messageId) {
@@ -81,7 +82,7 @@ class MessageDispatcher
                 'status'           => $status,
                 'stage'            => $status === 'success' ? 'SUCCESS' : 'FAILED',
                 'response_code'    => $response['status'] ?? null,
-                'response_message' => $response,
+                'response_message' => $response['message'] ?? null,
                 'response_payload' => $response,
                 'message_id'       => $messageId,
                 'sent_at'          => now(),

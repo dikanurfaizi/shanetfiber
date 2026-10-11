@@ -6,7 +6,6 @@
 
     <div class="row mt-3">
 
-        {{-- PROVIDER CARD (Dummy Loop Example) --}}
         @foreach ($gateways as $gw)
             <div class="col-md-6 mb-4">
                 <div class="card shadow-sm border-left-primary h-100">
@@ -16,20 +15,19 @@
                         <p class="text-muted mb-1">Type: {{ $gw->type }}</p>
 
                         <p class="mb-2">
-                            <strong>Accounts:</strong> {{ $gw->accounts->count() }}
+                            {{-- Menggunakan accounts_count dari withCount() agar tidak N+1 --}}
+                            <strong>Accounts:</strong> {{ $gw->accounts_count ?? $gw->accounts->count() }}
                         </p>
 
-                        <span
-                            class="badge @if ($gw->is_active == true) bg-success @else bg-secondary @endif text-white">
-                            @if ($gw->is_active == true)
-                                Active
-                            @else
-                                Inactive
-                            @endif
+                        {{-- Tag Badge yang disederhanakan --}}
+                        <span class="badge {{ $gw->is_active ? 'bg-success' : 'bg-secondary' }} text-white">
+                            {{ $gw->is_active ? 'Active' : 'Inactive' }}
                         </span>
 
                         <div class="mt-3">
-                            <a href="{{ route('whatsappgateway.show', $gw->slug) }}" class="btn btn-sm btn-primary">
+                            {{-- Parameter disesuaikan menggunakan array ber-key eksplisit --}}
+                            <a href="{{ route('whatsappgateway.show', ['whatsappgateway' => $gw->slug]) }}"
+                                class="btn btn-sm btn-primary">
                                 <i class="fa fa-cog"></i> Manage
                             </a>
                         </div>

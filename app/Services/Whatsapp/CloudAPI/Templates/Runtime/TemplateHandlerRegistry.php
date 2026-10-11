@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Templates\Runtime;
+namespace App\Services\WhatsApp\CloudAPI\Templates\Runtime;
 
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Contracts\TemplateHandler;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Contracts\TemplateHandler;
 use RuntimeException;
 
 class TemplateHandlerRegistry

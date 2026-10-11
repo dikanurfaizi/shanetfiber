@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Services\Whatsapp;
+namespace App\Services\WhatsApp;
 
 use App\Helpers\LogHelper;
-use App\Models\Whatsapp\WhatsappMessage;
+use App\Models\WhatsApp\WhatsAppMessage;
 
 class KeywordProcessor
 {
@@ -11,7 +11,7 @@ class KeywordProcessor
         private KeywordNormalizer $normalizer
     ) {}
 
-    public function resolveKeyword(string $text, $customer): ?WhatsappMessage
+    public function resolveKeyword(string $text, $customer): ?WhatsAppMessage
     {
         $normalized = strtolower(trim($this->normalizer->normalize($text)));
 
@@ -26,13 +26,13 @@ class KeywordProcessor
                 'scope' => $scope,
             ], 200, '[KEYWORD] Stop detected');
 
-            return WhatsappMessage::where('slug', 'stop')
+            return WhatsAppMessage::where('slug', 'stop')
                 ->whereIn('message_scope', $scope)
                 ->first();
         }
 
         // Exact match
-        $msg = WhatsappMessage::where('slug', $normalized)
+        $msg = WhatsAppMessage::where('slug', $normalized)
             ->whereIn('message_scope', $scope)
             ->first();
 
@@ -46,7 +46,7 @@ class KeywordProcessor
         }
 
         // Alias match
-        $alias = WhatsappMessage::whereJsonContains('keywords', $normalized)
+        $alias = WhatsAppMessage::whereJsonContains('keywords', $normalized)
             ->whereIn('message_scope', $scope)
             ->first();
 
@@ -65,7 +65,7 @@ class KeywordProcessor
             'scope' => $scope,
         ], 200, '[KEYWORD] Fallback to unknown');
 
-        return WhatsappMessage::where('slug', 'unknown_keyword')
+        return WhatsAppMessage::where('slug', 'unknown_keyword')
             ->where('message_scope', 'both')
             ->first();
     }

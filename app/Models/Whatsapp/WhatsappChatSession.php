@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Models\Whatsapp;
+namespace App\Models\WhatsApp;
 
 use Illuminate\Database\Eloquent\Model;
 
-class WhatsappChatSession extends Model
+class WhatsAppChatSession extends Model
 {
     protected $table = 'whatsapp_chat_sessions';
 

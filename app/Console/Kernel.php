@@ -2,13 +2,10 @@
 
 namespace App\Console;
 
+use App\Enums\WhatsAppAction;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 use Illuminate\Support\Str;
-use App\Console\Commands\BillingCheckAndUpdateProfile;
-use App\Console\Commands\SendMessages;
-use App\Console\Commands\FetchMikrotikInfoCommand;
-use App\Jobs\Whatsapp\CloseIdleHumanChatSessionsJob; // 👈 PENTING: Import class Job Anda di sini
 use App\Helpers\LogHelper;
 use App\Models\Websystem;
 
@@ -19,13 +16,7 @@ class Kernel extends ConsoleKernel
      *
      * @var array
      */
-    protected $commands = [
-        //       CreateBillingCron::class,
-        //       CloseIdleHumanChatSessionsJob::class, // Jika berbentuk Job, tidak wajib didaftarkan di property $commands ini, cukup di $schedule
-        BillingCheckAndUpdateProfile::class,
-        SendMessages::class,
-        FetchMikrotikInfoCommand::class
-    ];
+    protected $commands = [];
 
     /**
      * Define the application's command schedule.
@@ -95,26 +86,26 @@ class Kernel extends ConsoleKernel
         | Dijalankan harian hanya pada tanggal 1 pukul 08:00 (WIB).
         | Satu kali jalan langsung mengirimkan semua data.
         */
-        $schedule->command('initial-payment:messages-send')
+        $schedule->command('whatsApp:broadcast-send ' . WhatsAppAction::INITIAL_BROADCAST->value)
             ->dailyAt('08:00')
             ->timezone($defaultTimezone)
             ->when(fn() => now()->day === 1)
-            ->onFailure(fn() => LogHelper::logError(null, ['time' => now()], 500, '[Scheduler] initial-payment:messages-send failed'))
-            ->onSuccess(fn() => LogHelper::logInfo(null, ['time' => now()], 200, '[Scheduler] initial-payment:messages-send finished successfully'))
+            ->onFailure(fn() => LogHelper::logError(null, ['time' => now()], 500, '[Scheduler] whatsApp:broadcast-send initial failed'))
+            ->onSuccess(fn() => LogHelper::logInfo(null, ['time' => now()], 200, '[Scheduler] whatsApp:broadcast-send initial finished successfully'))
             ->withoutOverlapping(30)
             ->appendOutputTo(storage_path('logs/scheduler-initial-payment.log'));
 
         /*
         |--------------------------------------------------------------------------
-        | 4. REMINDER WHATSAPP MESSAGES
+        | 4. REMINDER WHATSAPP MESSAGES (MID-MONTH / DUE DATE)
         |--------------------------------------------------------------------------
         | Biarkan berjalan setiap 30 menit secara global. 
         | Validasi tanggal & jam diserahkan sepenuhnya ke DB via Command.
-        | */
-        $schedule->command('reminder:messages-send')
+        */
+        $schedule->command('whatsApp:broadcast-send ' . WhatsAppAction::DUE_DATE_BROADCAST->value)
             ->everyThirtyMinutes()
             ->timezone($defaultTimezone)
-            ->withoutOverlapping(10) // Cukup tempelkan lock 10-30 menit agar tidak tabrakan
+            ->withoutOverlapping(10)
             ->appendOutputTo(storage_path('logs/scheduler-reminder.log'));
 
         /*
@@ -122,13 +113,12 @@ class Kernel extends ConsoleKernel
         | 5. OVERDUE REMINDER WHATSAPP MESSAGES
         |--------------------------------------------------------------------------
         | Dijalankan setiap 15 menit sepanjang waktu.
-        |
         */
-        $schedule->command('reminder:overdue-messages-send')
+        $schedule->command('whatsApp:broadcast-send ' . WhatsAppAction::OVERDUE_BROADCAST->value)
             ->everyFifteenMinutes()
             ->timezone($defaultTimezone)
-            ->onFailure(fn() => LogHelper::logError(null, ['time' => now()], 500, '[Scheduler] reminder:overdue-messages-send failed'))
-            ->onSuccess(fn() => LogHelper::logInfo(null, ['time' => now()], 200, '[Scheduler] reminder:overdue-messages-send finished successfully'))
+            ->onFailure(fn() => LogHelper::logError(null, ['time' => now()], 500, '[Scheduler] whatsApp:broadcast-send overdue failed'))
+            ->onSuccess(fn() => LogHelper::logInfo(null, ['time' => now()], 200, '[Scheduler] whatsApp:broadcast-send overdue finished successfully'))
             ->withoutOverlapping(30)
             ->appendOutputTo(storage_path('logs/scheduler-reminder.log'));
 
@@ -227,13 +217,14 @@ class Kernel extends ConsoleKernel
         | Dijalankan setiap 5 jam dari tanggal 1 sampai 15 Juni 2026.
         | Output otomatis di-append ke custom log file.
         | */
-        $schedule->command('reminder:payment-channel-update-send')
+        $schedule->command('whatsApp:broadcast-send ' . WhatsAppAction::PAYMENT_CHANNEL_UPDATE->value)
+            ->dailyAt('08:00')
             ->cron('0 */5 * * *')
             ->when(function () {
                 return now()->between('2026-06-01 00:00:00', '2026-06-25 23:59:59');
             })
-            ->onFailure(fn() => LogHelper::logError(null, ['time' => now()], 500, '[Scheduler] reminder:payment-channel-update-send failed'))
-            ->onSuccess(fn() => LogHelper::logInfo(null, ['time' => now()], 200, '[Scheduler] reminder:payment-channel-update-send finished successfully'))
+            ->onFailure(fn() => LogHelper::logError(null, ['time' => now()], 500, '[Scheduler] reminder:payment-channel-update failed'))
+            ->onSuccess(fn() => LogHelper::logInfo(null, ['time' => now()], 200, '[Scheduler] reminder:payment-channel-update finished successfully'))
             ->withoutOverlapping(10)
             ->appendOutputTo(storage_path('logs/scheduler-payment-channel.log'));
 

@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Services\WhatsappWebhook;
+namespace App\Services\WhatsAppWebhook;
 
+use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -21,7 +22,7 @@ class WebhookValidator
         if (! $signature || ! str_starts_with($signature, 'sha256=')) {
             LogHelper::logWarning(null, [
                 'signature' => $signature ?? '(missing)',
-            ], 401, '[WebhookValidator] Signature missing or invalid format');
+            ], 401, '[WhatsAppWebhook] Signature missing or invalid format');
             return false;
         }
 
@@ -35,12 +36,13 @@ class WebhookValidator
 
     public function parseJson(string $payload, string $traceId): ?array
     {
+        $timer = new ExecutionTimer();
         $data = json_decode($payload, true);
 
         if (! is_array($data)) {
             LogHelper::logWarning(null, [
                 'invalid_payload_string' => Str::limit($payload, 500) // Catat string rusak maksimal 500 karakter
-            ], 400, '[Webhook] Invalid JSON payload', $traceId);
+            ], 400, '[WhatsAppWebhook] Invalid JSON payload', $traceId, $timer->lap());
             return null;
         }
 
@@ -49,7 +51,7 @@ class WebhookValidator
             'event'       => $data['event'] ?? $data['action'] ?? 'unknown',
             'timestamp'   => $data['timestamp'] ?? null,
             'raw_payload' => $data, // 👈 Baris ini akan membongkar semua isi pesan webhook di file log Anda
-        ], 200, '[Webhook] Received WhatsApp event', $traceId);
+        ], 200, '[WhatsAppWebhook] Received WhatsApp event', $traceId, $timer->lap());
 
         return $data;
     }

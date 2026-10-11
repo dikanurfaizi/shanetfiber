@@ -5,10 +5,8 @@ namespace App\Services\Messaging;
 use App\Models\Messaging\MessageEvent;
 use App\Helpers\LogHelper;
 use App\Helpers\FormatReceiver;
-use App\Helpers\DelayMessage;
-use App\Jobs\Whatsapp\SendWhatsappMessageJob;
+use App\Services\WhatsApp\WhatsAppMessageService;
 use Throwable;
-use Illuminate\Support\Carbon;
 
 class MessageDispatcher
 {
@@ -16,17 +14,15 @@ class MessageDispatcher
         private MessageActionRegistry $registry,
         private TemplateEngine $templates,
         private FormatReceiver $formatter,
-        private DelayMessage $delayMessage,
+        private WhatsAppMessageService $service
     ) {}
 
     public function dispatch(
         string $action,
         callable $handlerFactory,
-        ?string $queue = 'default',
         ?string $traceId = null,
         ?int $eventId = null,
-        string $deviceId,
-        int $delaySeconds = 0
+        string $deviceId = ''
     ): void {
 
         $startTime = microtime(true);
@@ -49,7 +45,7 @@ class MessageDispatcher
                 $traceId
             );
 
-            // OPTIMASI 1: Gabungkan pemformatan nomor telepon agar tidak memanggil method 2x secara redundant
+            // Pemformatan nomor telepon
             $phoneNumberFormat = $this->formatter->formatReceiver($built['to'], null, false);
             $whatsappFormat = $this->formatter->formatReceiver($phoneNumberFormat, null, true);
 
@@ -58,17 +54,14 @@ class MessageDispatcher
                 'message' => $message,
             ];
 
-            $queueName = $queue ?? 'notification';
-            $finalDelay = $this->delayMessage->calculation($action, $traceId, $delaySeconds, $queueName, $startTime);
-
-            // OPTIMASI 2: DRY (Don't Repeat Yourself) untuk data MessageEvent
+            // Data MessageEvent untuk audit log
             $eventData = [
                 'status'       => 'pending',
-                'stage'        => 'SENDING JOB',
+                'stage'        => 'SENDING MESSAGE',
                 'trace_id'     => $traceId,
                 'meta'         => $payload,
                 'device_id'    => $deviceId,
-                'scheduled_at' => $finalDelay,
+                'scheduled_at' => now(), // Mencatat timestamp saat dispatcher memproses
             ];
 
             if ($eventId) {
@@ -83,48 +76,41 @@ class MessageDispatcher
                 ]));
             }
 
-            // OPTIMASI 3: Ekstrak kesamaan data log untuk mengurangi boilerplate code
             $logContext = [
                 'event_id'  => $event->id,
                 'action'    => $action,
                 'channel'   => 'go_whatsapp',
                 'device_id' => $deviceId,
                 'receiver'  => $phoneNumberFormat,
-                'queue'     => $queueName,
             ];
 
-            // === LOG BEFORE DISPATCH ===
-            // FIX: Mengganti createFromTimestampPsr7 dengan createFromTimestamp standar yang menerima float/int
+            // LOG BEFORE SENDING
             LogHelper::logInfo(
                 null,
-                array_merge($logContext, [
-                    'delay_seconds' => $finalDelay
-                ]),
+                $logContext,
                 200,
-                '[MessageDispatcher] Dispatching',
+                '[MessageDispatcher] Executing WhatsApp API Service Send',
                 $traceId,
                 round(microtime(true) - $startTime, 4)
             );
 
-            // ✅ Memicu job penanganan pesan utama
-            SendWhatsappMessageJob::dispatch(
-                $action,
-                $whatsappFormat,
-                $message,
-                $built['customer_id'] ?? null,
-                $traceId,
-                $event->id,
-                $deviceId
-            )
-                ->onQueue($queueName)
-                ->delay($finalDelay);
+            // ✅ Langsung Eksekusi Service API WhatsApp tanpa Job lagi!
+            $this->service->send(
+                messageType: $action,
+                receiver: $whatsappFormat,
+                message: $message,
+                customerId: $built['customer_id'] ?? null,
+                traceId: $traceId,
+                messageEventId: $event->id,
+                deviceId: $deviceId,
+            );
 
             // ✅ SUCCESS LOG
             LogHelper::logInfo(
                 null,
                 $logContext,
                 200,
-                '[MessageDispatcher] Dispatched',
+                '[MessageDispatcher] Message Sent Successfully',
                 $traceId,
                 round(microtime(true) - $startTime, 4)
             );

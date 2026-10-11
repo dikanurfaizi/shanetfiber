@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\Traits;
+namespace App\Services\WhatsApp\CloudAPI\Templates\Runtime\Handlers\Traits;
 
 trait HasPaymentChannelPayload
 {

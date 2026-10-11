@@ -2,7 +2,7 @@
 
 namespace App\Helpers;
 
-class WhatsappGraph
+class WhatsAppGraph
 {
     /**
      * Buat base URL dinamis berdasarkan account.

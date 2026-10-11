@@ -1,16 +1,16 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Broadcast;
+namespace App\Services\WhatsApp\CloudAPI\Broadcast;
 
 use App\Helpers\ExecutionTimer;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
-use App\Jobs\Whatsapp\CloudAPI\Broadcast\OverdueReminderJob;
-use App\Models\Whatsapp\WhatsappGateway;
-use App\Services\Whatsapp\CloudAPI\Collectors\OverdueBillingCollector;
-use App\Services\Whatsapp\CloudAPI\Collectors\AdminBankCollector;
-use App\Services\Whatsapp\CloudAPI\Broadcast\Traits\MapsBroadcastBankPayload;
-use App\Services\Whatsapp\CloudAPI\Broadcast\Traits\ResolvesAdminContact;
+use App\Models\WhatsApp\WhatsAppGateway;
+use App\Services\WhatsApp\CloudAPI\Collectors\OverdueBillingCollector;
+use App\Services\Messaging\Collectors\AdminBankCollector;
+use App\Services\WhatsApp\CloudAPI\Broadcast\Traits\MapsBroadcastBankPayload;
+use App\Services\WhatsApp\CloudAPI\Broadcast\Traits\ResolvesAdminContact;
+use App\Services\WhatsApp\CloudAPI\Messages\TemplateMessageService;
 use Carbon\Carbon;
 
 class OverdueBroadcast
@@ -29,10 +29,12 @@ class OverdueBroadcast
 
     public function __construct(
         private OverdueBillingCollector $collector,
-        private AdminBankCollector $bankCollector
+        private AdminBankCollector $bankCollector,
+        private TemplateMessageService $templateMessageService,
+        private FormatReceiver $formatter
     ) {}
 
-    public function run(string $traceId)
+    public function run(string $traceId): void
     {
         $timer = new ExecutionTimer();
         LogHelper::logInfo(null, [], 100, '[OverdueBroadcast] Start', $traceId, $timer->lap());
@@ -49,9 +51,18 @@ class OverdueBroadcast
         }
 
         // ===============================================================
+        // 💡 LIMIT HANDLING UNTUK OVERRIDE MODE (MAKSIMAL 3 PESAN TESTING)
+        // ===============================================================
+        $sampleRecipient = $this->formatter->resolveRecipient(null);
+        if ($sampleRecipient['is_override']) {
+            $overdueBillings = $overdueBillings->take(3);
+            LogHelper::logInfo(null, ['override_detected' => true], 100, '[OverdueBroadcast] Throttling active. Reminders sliced to max 3 items for testing.', $traceId, $timer->lap());
+        }
+
+        // ===============================================================
         // RESOLVE GATEWAY & ACCOUNT
         // ===============================================================
-        $gateway = WhatsappGateway::where('type', 'cloud')
+        $gateway = WhatsAppGateway::where('type', 'cloud')
             ->where('is_active', true)
             ->with(['accounts' => function ($q) {
                 $q->where('is_active', true);
@@ -72,14 +83,10 @@ class OverdueBroadcast
         $contactAdmin    = $adminContact['contact_admin'];
         $contactWhatsapp = $adminContact['contact_whatsapp'];
 
-        $formatter = new FormatReceiver;
-        $overrideNumber    = config('messaging.phone_number_override', null);
-
         // ===============================================================
-        // PROCESS ENGINE LOOP (Delay-Free Throttling)
+        // PROCESS ENGINE LOOP (DIRECT EXECUTION TO META CLOUD API)
         // ===============================================================
         foreach ($overdueBillings as $idx => $data) {
-
             $adminBanks = $this->bankCollector->getBanksByUserId($data->user_id ?? 0);
             $banks      = $adminBanks->where('type', 'bank')->values();
             $ewallets   = $adminBanks->where('type', 'ewallet')->values();
@@ -90,37 +97,37 @@ class OverdueBroadcast
             $resolvedTemplate = $bankResolution['template'];
             $bankPayload      = $bankResolution['payload'];
 
-            $targetContact = $overrideNumber ? (string) $overrideNumber : $data->customer_contact;
-            $recipient     = $formatter->formatReceiver($targetContact, null, false);
-
             $lateDays = max(
                 Carbon::parse($data->final_due_date)->diffInDays(now(), false),
                 0
             );
 
-            LogHelper::logInfo(null, [
-                'index'         => $idx,
-                'customer_id'   => $data->customer_id,
-                'template'      => $resolvedTemplate,
-            ], 200, '[OverdueBroadcast] Dispatch job to queue instantly', $traceId, $timer->lap());
+            // Resolusi penerima & format via FormatReceiver (Otomatis handle override number)
+            $recipient = $this->formatter->resolveRecipient($data->customer_contact);
 
-            // 💡 Diperbaiki: Mengirim job langsung ke queue tanpa rantai ->delay()
-            OverdueReminderJob::dispatch(
-                contact: $recipient,
-                customerId: (string) $data->customer_id,
-                packageName: $data->package_name,
-                totalAmount: $this->currency($data->total),
-                lateDays: $lateDays,
-                note: 'penghentian layanan internet',
-                templateName: $resolvedTemplate,
-                account: $account,
-                bankPayload: $bankPayload,
-                contactAdmin: $contactAdmin,
-                contactWhatsapp: $contactWhatsapp
-            )->onQueue('notification');
+            $this->templateMessageService->sendOverdueBroadcast([
+                'recipient'        => $recipient['formatted'],
+                'customer_id'      => $data->customer_id,
+                'package_name'     => $data->package_name,
+                'total_amount'     => $this->currency($data->total),
+                'late_days'        => $lateDays,
+                'note'             => 'penghentian layanan internet',
+                'templateName'     => $resolvedTemplate,
+                'account'          => $account,
+                'bank_payload'     => $bankPayload,
+                'contact_admin'    => $contactAdmin,
+                'contact_whatsapp' => $contactWhatsapp,
+            ]);
         }
 
-        LogHelper::logInfo(null, [], 900, '[OverdueBroadcast] Finished dispatch loop safely without application side delays', $traceId, $timer->lap());
+        LogHelper::logInfo(
+            null,
+            ['total_sent' => $overdueBillings->count()],
+            200,
+            '[OverdueBroadcast] Direct execution to Meta Cloud API finished successfully',
+            $traceId,
+            $timer->lap()
+        );
     }
 
     private function currency(int|float|null $n): string

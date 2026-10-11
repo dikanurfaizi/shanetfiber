@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Templates\Runtime\Contracts;
+namespace App\Services\WhatsApp\CloudAPI\Templates\Runtime\Contracts;
 
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\TemplateContext;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\TemplateContext;
 
 interface TemplateHandler
 {

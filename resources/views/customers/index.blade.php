@@ -240,136 +240,150 @@
                             </td>
 
                             <td>
-                                @if ($customer->activation == 'false')
+                                @if (!$customer->activation)
+                                    {{-- Belum Aktivasi Awal --}}
                                     <span class="badge text-white bg-danger">
                                         <i class="fa fa-times text-warning me-2"></i>
                                         {{ __('customer.info.not-activation') }}
                                     </span>
                                 @else
-                                    @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
-                                        <span
-                                            class="badge text-white @if ($customer->disabled === 'false') bg-success @endif">
-                                            <i class="fas fa-lock-open"></i> {{ __('pppoe.secret.enabled') }}
+                                    @if ($customer->is_active)
+                                        {{-- Status: Aktif / Enabled --}}
+                                        <span class="badge text-white bg-success">
+                                            <i class="fas fa-lock-open me-1"></i>
+                                            {{ __('pppoe.secret.enabled') }}
                                         </span>
-                                    @endif
-                                    @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
-                                        <span
-                                            class="badge text-white @if ($customer->disabled === 'true') bg-danger @endif">
-                                            <i class="fas fa-lock"></i> {{ __('pppoe.secret.disabled') }}
-                                        </span>
-                                    @endif
-                            </td>
-                    @endif
-                    @canany(['secret-disable', 'customer-edit', 'secret-edit', 'customer-delete'])
-                        <td class="text-right"> <x-drop-down-action>
-
-                                @can('customer-edit')
-                                    <li>
-                                        <a class="dropdown-item py-2" href="{{ route('customers.edit', $customer->slug) }}">
-                                            <i class="far fa-edit mr-2 text-primary"></i> {{ __('customer.action.edit') }}
-                                        </a>
-                                    </li>
-                                @endcan
-
-                                @can('customer-edit')
-                                    @if ($customer->activation == 'false')
-                                        <li>
-                                            <form method="POST" class="d-inline"
-                                                action="{{ route('customers.activation', $customer->slug) }}">
-                                                @csrf @method('put')
-                                                <a class="dropdown-item py-2" href="#"
-                                                    onclick="event.preventDefault(); this.closest('form').submit();">
-                                                    <i class="fa fa-check mr-2 text-success"></i>
-                                                    {{ __('customer.action.activation') }}
-                                                </a>
-                                            </form>
-                                        </li>
                                     @else
-                                        @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
-                                            <li>
-                                                <form method="POST" class="d-inline"
-                                                    action="{{ route('customers.enable', $customer->slug) }}">
-                                                    @csrf @method('put')
-                                                    <a class="dropdown-item py-2" href="#"
-                                                        onclick="event.preventDefault(); this.closest('form').submit();">
-                                                        <i class="fa fa-check mr-2 text-success"></i>
-                                                        {{ __('pppoe.secret.enable') }}
-                                                    </a>
-                                                </form>
-                                            </li>
-                                            <li>
-                                                <form method="POST" class="d-inline"
-                                                    action="{{ route('customers.forceEnable', $customer->slug) }}">
-                                                    @csrf @method('put')
-                                                    <a class="dropdown-item py-2" href="#"
-                                                        onclick="event.preventDefault(); this.closest('form').submit();">
-                                                        <i class="fa fa-check mr-2 text-success"></i>
-                                                        {{ __('pppoe.secret.force-enable') }}
-                                                    </a>
-                                                </form>
-                                            </li>
-                                        @elseif ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
-                                            <li>
-                                                <form method="POST" class="d-inline"
-                                                    action="{{ route('customers.disable', $customer->slug) }}">
-                                                    @csrf @method('put')
-                                                    <a class="dropdown-item py-2" href="#"
-                                                        onclick="event.preventDefault(); this.closest('form').submit();">
-                                                        <i class="fa fa-times text-warning mr-2"></i>
-                                                        {{ __('pppoe.secret.disable') }}
-                                                    </a>
-                                                </form>
-                                            </li>
-                                            <li>
-                                                <form method="POST" class="d-inline"
-                                                    action="{{ route('customers.forceDisable', $customer->slug) }}">
-                                                    @csrf @method('put')
-                                                    <a class="dropdown-item py-2" href="#"
-                                                        onclick="event.preventDefault(); this.closest('form').submit();">
-                                                        <i class="fa fa-times text-warning mr-2"></i>
-                                                        {{ __('pppoe.secret.force-disable') }}
-                                                    </a>
-                                                </form>
-                                            </li>
-                                        @endif
+                                        {{-- Status: Non-Aktif / Disabled --}}
+                                        <span class="badge text-white bg-danger">
+                                            <i class="fas fa-lock me-1"></i>
+                                            {{ __('pppoe.secret.disabled') }}
+                                        </span>
                                     @endif
-                                @endcan
+                                @endif
+                            </td>
+                            @canany(['secret-disable', 'customer-edit', 'secret-edit', 'customer-delete'])
+                                <td class="text-right"> <x-drop-down-action>
 
-                                <li>
-                                    <a class="dropdown-item py-2"
-                                        href="{{ route('customers.resend-activation', $customer->slug) }}">
-                                        <i class="fas fa-paper-plane mr-2 text-info"></i>
-                                        {{ __('customer.action.resend-activation') }}
-                                    </a>
-                                </li>
+                                        @can('customer-edit')
+                                            <li>
+                                                <a class="dropdown-item py-2"
+                                                    href="{{ route('customers.edit', $customer->slug) }}">
+                                                    <i class="far fa-edit mr-2 text-primary"></i>
+                                                    {{ __('customer.action.edit') }}
+                                                </a>
+                                            </li>
+                                        @endcan
 
-                                @can('secret-edit')
-                                    <li>
-                                        <form method="POST" action="{{ route('customers.pppoe.export', $customer->slug) }}">
-                                            @csrf @method('PUT')
-                                            <a class="dropdown-item py-2" href="#"
-                                                onclick="event.preventDefault(); this.closest('form').submit();">
-                                                <i class="fas fa-file-export mr-2 text-secondary"></i>
-                                                {{ __('pppoe.secret.export') }}
+                                        @can('customer-edit')
+                                            {{-- 1. Tahap Pertama: Cek Aktivasi Awal Pelanggan --}}
+                                            @if (!$customer->activation)
+                                                <li>
+                                                    <form method="POST" class="d-inline"
+                                                        action="{{ route('customers.activation', $customer->slug) }}">
+                                                        @csrf
+                                                        @method('PUT')
+                                                        <a class="dropdown-item py-2" href="#"
+                                                            onclick="event.preventDefault(); this.closest('form').submit();">
+                                                            <i class="fa fa-check mr-2 text-success"></i>
+                                                            {{ __('customer.action.activation') }}
+                                                        </a>
+                                                    </form>
+                                                </li>
+                                            @else
+                                                {{-- 2. Tahap Kedua: Pelanggan Sudah Aktif, Cek Status Operasional (is_active) --}}
+                                                @if (!$customer->is_active)
+                                                    {{-- Status: Non-Aktif / Disabled --}}
+                                                    <li>
+                                                        <form method="POST" class="d-inline"
+                                                            action="{{ route('customers.enable', $customer->slug) }}">
+                                                            @csrf
+                                                            @method('PUT')
+                                                            <a class="dropdown-item py-2" href="#"
+                                                                onclick="event.preventDefault(); this.closest('form').submit();">
+                                                                <i class="fa fa-check mr-2 text-success"></i>
+                                                                {{ __('pppoe.secret.enable') }}
+                                                            </a>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        <form method="POST" class="d-inline"
+                                                            action="{{ route('customers.forceEnable', $customer->slug) }}">
+                                                            @csrf
+                                                            @method('PUT')
+                                                            <a class="dropdown-item py-2" href="#"
+                                                                onclick="event.preventDefault(); this.closest('form').submit();">
+                                                                <i class="fa fa-check mr-2 text-success"></i>
+                                                                {{ __('pppoe.secret.force-enable') }}
+                                                            </a>
+                                                        </form>
+                                                    </li>
+                                                @else
+                                                    {{-- Status: Aktif / Enabled --}}
+                                                    <li>
+                                                        <form method="POST" class="d-inline"
+                                                            action="{{ route('customers.disable', $customer->slug) }}">
+                                                            @csrf
+                                                            @method('PUT')
+                                                            <a class="dropdown-item py-2" href="#"
+                                                                onclick="event.preventDefault(); this.closest('form').submit();">
+                                                                <i class="fa fa-times text-warning mr-2"></i>
+                                                                {{ __('pppoe.secret.disable') }}
+                                                            </a>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        <form method="POST" class="d-inline"
+                                                            action="{{ route('customers.forceDisable', $customer->slug) }}">
+                                                            @csrf
+                                                            @method('PUT')
+                                                            <a class="dropdown-item py-2" href="#"
+                                                                onclick="event.preventDefault(); this.closest('form').submit();">
+                                                                <i class="fa fa-times text-warning mr-2"></i>
+                                                                {{ __('pppoe.secret.force-disable') }}
+                                                            </a>
+                                                        </form>
+                                                    </li>
+                                                @endif
+                                            @endif
+                                        @endcan
+                                        <li>
+                                            <a class="dropdown-item py-2"
+                                                href="{{ route('customers.resend-activation', $customer->slug) }}">
+                                                <i class="fas fa-paper-plane mr-2 text-info"></i>
+                                                {{ __('customer.action.resend-activation') }}
                                             </a>
-                                        </form>
-                                    </li>
-                                @endcan
+                                        </li>
 
-                                @can('customer-delete')
-                                    <div class="dropdown-divider"></div>
-                                    <li>
-                                        <a class="dropdown-item py-2"
-                                            href="{{ route('customers.delete', $customer->slug) }}">
-                                            <i class="fa fa-ban mr-2 text-danger"></i> {{ __('customer.action.suspend') }}
-                                        </a>
-                                    </li>
-                                @endcan
+                                        @can('secret-edit')
+                                            <li>
+                                                <form method="POST"
+                                                    action="{{ route('customers.pppoe.export', $customer->slug) }}">
+                                                    @csrf @method('PUT')
+                                                    <a class="dropdown-item py-2" href="#"
+                                                        onclick="event.preventDefault(); this.closest('form').submit();">
+                                                        <i class="fas fa-file-export mr-2 text-secondary"></i>
+                                                        {{ __('pppoe.secret.export') }}
+                                                    </a>
+                                                </form>
+                                            </li>
+                                        @endcan
 
-                            </x-drop-down-action>
-                        </td>
-                    @endcanany
-                    </tr>
+                                        @can('customer-delete')
+                                            <div class="dropdown-divider"></div>
+                                            <li>
+                                                <a class="dropdown-item py-2"
+                                                    href="{{ route('customers.delete', $customer->slug) }}">
+                                                    <i class="fa fa-ban mr-2 text-danger"></i>
+                                                    {{ __('customer.action.suspend') }}
+                                                </a>
+                                            </li>
+                                        @endcan
+
+                                    </x-drop-down-action>
+                                </td>
+                            @endcanany
+                        </tr>
                     @endforeach
                 </table>
             </div>

@@ -1,18 +1,18 @@
 <?php
 
-namespace App\Http\Controllers\Whatsapp;
+namespace App\Http\Controllers\WhatsApp;
 
 use App\Http\Controllers\Controller;
-use App\Models\Whatsapp\WhatsappFeature;
-use App\Models\Whatsapp\WhatsappGateway;
+use App\Models\WhatsApp\WhatsAppFeature;
+use App\Models\WhatsApp\WhatsAppGateway;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
-class WhatsappFeatureController extends Controller
+class WhatsAppFeatureController extends Controller
 {
     public function index(Request $request)
     {
-        $query = WhatsappFeature::query();
+        $query = WhatsAppFeature::query();
 
         if ($request->has('q') && trim($request->q) !== '') {
             $query->where('name', 'like', '%' . trim($request->q) . '%');
@@ -45,7 +45,7 @@ class WhatsappFeatureController extends Controller
             $validated['schedule'] = null;
         }
 
-        WhatsappFeature::create(array_merge($validated, [
+        WhatsAppFeature::create(array_merge($validated, [
             'slug' => Str::uuid(),
             'alias' => Str::lower(Str::slug($validated['name'], '_')),
             'created_by' => auth()->user()->name,
@@ -57,18 +57,18 @@ class WhatsappFeatureController extends Controller
             ->with('success', __('whatsapp.feature.message.created'));
     }
 
-    public function show(WhatsappFeature $whatsappfeature)
+    public function show(WhatsAppFeature $whatsappfeature)
     {
         // dd($whatsappfeature);
         return view('whatsapp.features.show', compact('whatsappfeature'));
     }
 
-    public function edit(WhatsappFeature $whatsappfeature)
+    public function edit(WhatsAppFeature $whatsappfeature)
     {
         return view('whatsapp.features.edit', compact('whatsappfeature'));
     }
 
-    public function update(Request $request, WhatsappFeature $whatsappfeature)
+    public function update(Request $request, WhatsAppFeature $whatsappfeature)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -103,12 +103,12 @@ class WhatsappFeatureController extends Controller
             ->with('success', __('whatsapp.feature.message.updated'));
     }
 
-    public function delete(WhatsappFeature $whatsappfeature)
+    public function delete(WhatsAppFeature $whatsappfeature)
     {
         return view('whatsapp.features.delete', compact('whatsappfeature'));
     }
 
-    public function destroy(WhatsappFeature $whatsappfeature)
+    public function destroy(WhatsAppFeature $whatsappfeature)
     {
         $whatsappfeature->delete();
 
@@ -117,19 +117,19 @@ class WhatsappFeatureController extends Controller
             ->with('success', __('whatsapp.feature.message.deleted'));
     }
 
-    public function activate(WhatsappFeature $whatsappfeature)
+    public function activate(WhatsAppFeature $whatsappfeature)
     {
         $whatsappfeature->update(['is_active' => true]);
         return redirect()->route('whatsappfeature.index')->with('success', 'WhatsApp Feature activated successfully.');
     }
 
-    public function deactivate(WhatsappFeature $whatsappfeature)
+    public function deactivate(WhatsAppFeature $whatsappfeature)
     {
         $whatsappfeature->update(['is_active' => false]);
         return redirect()->route('whatsappfeature.index')->with('success', 'WhatsApp Feature deactivated successfully.');
     }
 
-    public function schedule(WhatsappFeature $whatsappfeature, Request $request)
+    public function schedule(WhatsAppFeature $whatsappfeature, Request $request)
     {
         $validate = $request->validate([
             'schedule' => 'required|array',
@@ -139,13 +139,13 @@ class WhatsappFeatureController extends Controller
         return redirect()->route('whatsappfeature.index')->with('success', 'WhatsApp Feature schedule updated successfully.');
     }
 
-    public function unschedule(WhatsappFeature $whatsappfeature)
+    public function unschedule(WhatsAppFeature $whatsappfeature)
     {
         $whatsappfeature->update(['schedule' => null]);
         return redirect()->route('whatsappfeature.index')->with('success', 'WhatsApp Feature unscheduled successfully.');
     }
 
-    public function toggleSchedule(WhatsappFeature $whatsappfeature)
+    public function toggleSchedule(WhatsAppFeature $whatsappfeature)
     {
         $whatsappfeature->update(['is_scheduled' => !$whatsappfeature->is_scheduled]);
         return redirect()->route('whatsappfeature.index')->with('success', 'WhatsApp Feature schedule toggled successfully.');

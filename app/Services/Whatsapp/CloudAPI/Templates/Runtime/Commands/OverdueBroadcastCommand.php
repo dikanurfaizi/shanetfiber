@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands;
+namespace App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands;
 
-use App\Models\Whatsapp\WhatsappGatewayAccount;
+use App\Models\WhatsApp\WhatsAppGatewayAccount;
 
 class OverdueBroadcastCommand
 {
@@ -14,7 +14,7 @@ class OverdueBroadcastCommand
         public readonly string $lateDays,
         public readonly string $note,
         public readonly string $templateName,
-        public readonly WhatsappGatewayAccount $account,
+        public readonly WhatsAppGatewayAccount $account,
         public readonly array $bankPayload,
         public readonly string $contactAdmin,
         public readonly string $contactWhatsapp,

@@ -3,7 +3,7 @@
 namespace App\Services\Messaging\Handlers;
 
 use App\Services\Messaging\Contracts\MessageActionHandler;
-use App\Models\Whatsapp\WhatsappMessage;
+use App\Models\WhatsApp\WhatsAppMessage;
 use App\Models\Customers\Customer;
 use App\Helpers\LogHelper;
 use App\Helpers\FormatReceiver;
@@ -14,7 +14,7 @@ class WebhookReplyHandler implements MessageActionHandler
 
     public function __construct(
         private string $sender,
-        private WhatsappMessage $keyword,
+        private WhatsAppMessage $keyword,
         private ?int $customerId = null,
         string $category
     ) {}

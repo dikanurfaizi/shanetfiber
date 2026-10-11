@@ -14,7 +14,7 @@
         {{-- Provider Info --}}
         <div class="col-md-12 mb-4">
             <div class="card shadow-sm p-4">
-                {!! Form::open(['route' => ['whatsappgateway.edit', $gateway->slug], 'method' => 'GET']) !!}
+                {!! Form::open(['route' => ['whatsappgateway.edit', $gateway], 'method' => 'GET']) !!}
                 <h6 class="font-weight-bold mb-3 text-muted">Provider Information</h6>
 
                 <div class="row mb-3">

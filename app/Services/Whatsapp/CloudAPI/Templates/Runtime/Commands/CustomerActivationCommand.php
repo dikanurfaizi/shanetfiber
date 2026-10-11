@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands;
+namespace App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands;
 
-use App\Models\Whatsapp\WhatsappGatewayAccount;
+use App\Models\WhatsApp\WhatsAppGatewayAccount;
 
 class CustomerActivationCommand
 {
@@ -16,6 +16,6 @@ class CustomerActivationCommand
         public readonly string $adminName,
         public readonly string $adminContact,
         public readonly string $bank,
-        public readonly WhatsappGatewayAccount $account,
+        public readonly WhatsAppGatewayAccount $account,
     ) {}
 }

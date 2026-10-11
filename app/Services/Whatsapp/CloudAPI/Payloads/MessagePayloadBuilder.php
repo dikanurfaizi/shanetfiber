@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Payloads;
+namespace App\Services\WhatsApp\CloudAPI\Payloads;
 
-use App\Models\Whatsapp\Cloud\WhatsappCloudTemplate;
-use App\Services\Whatsapp\CloudAPI\Payloads\Components\ComponentFactory;
-use App\Services\Whatsapp\CloudAPI\Payloads\DTO\TemplateMessageDTO;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\TemplateContext;
+use App\Models\WhatsApp\Cloud\WhatsAppCloudTemplate;
+use App\Services\WhatsApp\CloudAPI\Payloads\Components\ComponentFactory;
+use App\Services\WhatsApp\CloudAPI\Payloads\DTO\TemplateMessageDTO;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\TemplateContext;
 use App\Helpers\LogHelper;
 use RuntimeException;
 use Throwable;
@@ -72,7 +72,7 @@ class MessagePayloadBuilder
             ]
         ], 200, '[WA-PAYLOAD] Start building Template payload');
 
-        $template = WhatsappCloudTemplate::where('name', $context->templateName)
+        $template = WhatsAppCloudTemplate::where('name', $context->templateName)
             ->where('language', $context->language)
             ->first();
 

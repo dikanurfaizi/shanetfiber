@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models\Whatsapp;
+namespace App\Models\WhatsApp;
 
 use App\Models\Customers\Customer;
 use App\Models\User;
@@ -9,8 +9,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
-class WhatsappConversation extends Model
+class WhatsAppConversation extends Model
 {
+    protected $table = 'whatsapp_conversations';
+
     protected $fillable = [
         'channel',
         'customer_number',
@@ -39,7 +41,7 @@ class WhatsappConversation extends Model
 
     public function messages(): HasMany
     {
-        return $this->hasMany(WhatsappWebhookMessage::class, 'conversation_id');
+        return $this->hasMany(WhatsAppWebhookMessage::class, 'conversation_id');
     }
 
     public function lockedBy(): BelongsTo

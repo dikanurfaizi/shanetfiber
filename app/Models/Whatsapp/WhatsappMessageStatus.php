@@ -1,12 +1,14 @@
 <?php
 
-namespace App\Models\Whatsapp;
+namespace App\Models\WhatsApp;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class WhatsappMessageStatus extends Model
+class WhatsAppMessageStatus extends Model
 {
+    protected $table = 'whatsapp_message_statuses';
+
     protected $fillable = [
         'wa_message_id',
         'status',
@@ -28,7 +30,7 @@ class WhatsappMessageStatus extends Model
     public function message(): BelongsTo
     {
         return $this->belongsTo(
-            WhatsappWebhookMessage::class,
+            WhatsAppWebhookMessage::class,
             'wa_message_id',
             'wa_message_id'
         );

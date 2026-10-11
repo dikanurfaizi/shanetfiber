@@ -1,18 +1,18 @@
 <?php
 
-namespace App\Http\Controllers\Whatsapp;
+namespace App\Http\Controllers\WhatsApp;
 
 use App\Helpers\ExecutionTimer;
 use App\Http\Controllers\Controller;
-use App\Services\WhatsappWebhook\WebhookValidator;
-use App\Services\WhatsappWebhook\WebhookEventRouter;
-use App\Services\WhatsappWebhook\Meta\MetaWebhookEventRouter;
+use App\Services\WhatsAppWebhook\WebhookValidator;
+use App\Services\WhatsAppWebhook\WebhookEventRouter;
+use App\Services\WhatsAppWebhook\Meta\MetaWebhookEventRouter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 use App\Helpers\LogHelper;
 
-class WhatsappWebhookController extends Controller
+class WhatsAppWebhookController extends Controller
 {
     /*
     |--------------------------------------------------------------------------

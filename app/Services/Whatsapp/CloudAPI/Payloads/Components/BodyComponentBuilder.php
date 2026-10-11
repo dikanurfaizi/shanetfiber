@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Payloads\Components;
+namespace App\Services\WhatsApp\CloudAPI\Payloads\Components;
 
 use RuntimeException;
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Collectors;
+namespace App\Services\WhatsApp\CloudAPI\Collectors;
 
 use App\Helpers\ExecutionTimer;
 use App\Models\Billings\Billing;
@@ -23,12 +23,12 @@ class BillingReminderCollector
         $todayStr = $today->toDateString();
 
         // 1. RENTANG FILTER TAGIHAN (01 s/d 16 jam 00:00:00)
-        $billingStart = $today->copy()->startOfMonth()->startOfDay()->toDateTimeString(); 
-        $billingEnd   = $today->copy()->day(16)->startOfDay()->toDateTimeString();        
+        $billingStart = $today->copy()->startOfMonth()->startOfDay()->toDateTimeString();
+        $billingEnd   = $today->copy()->day(16)->startOfDay()->toDateTimeString();
 
         // 2. RENTANG ANTI-DUPLIKASI PESAN (HARI INI SAJA)
-        $todayStart   = $today->copy()->startOfDay()->toDateTimeString();                 
-        $todayEnd     = $today->copy()->endOfDay()->toDateTimeString();                   
+        $todayStart   = $today->copy()->startOfDay()->toDateTimeString();
+        $todayEnd     = $today->copy()->endOfDay()->toDateTimeString();
 
         $query = Billing::query()
             ->select([
@@ -70,11 +70,11 @@ class BillingReminderCollector
                         ->where('billings.due_date', '>=', $billingStart)
                         ->where('billings.due_date', '<', $billingEnd);
                 })
-                ->orWhere(function ($subQ) use ($billingStart, $billingEnd) {
-                    $subQ->where('billings.status', 'PL')
-                        ->where('billings.paylater_until', '>=', $billingStart)
-                        ->where('billings.paylater_until', '<', $billingEnd);
-                });
+                    ->orWhere(function ($subQ) use ($billingStart, $billingEnd) {
+                        $subQ->where('billings.status', 'PL')
+                            ->where('billings.paylater_until', '>=', $billingStart)
+                            ->where('billings.paylater_until', '<', $billingEnd);
+                    });
             })
 
             // GROUP BY PER CUSTOMER & PAKET
@@ -101,7 +101,8 @@ class BillingReminderCollector
                 'execution_ms'  => $timer->lap()
             ],
             120,
-            '[BillingReminderCollector] Result collected successfully'
+            '[BillingReminderCollector] Result collected successfully',
+            $timer->lap()
         );
 
         return $data;

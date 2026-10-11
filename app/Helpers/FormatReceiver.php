@@ -7,6 +7,24 @@ use App\Helpers\LogHelper;
 class FormatReceiver
 {
     /**
+     * Resolusi nomor penerima (otomatis cek override config jika ada).
+     * Mengembalikan array berisikan nomor terformat dan status override.
+     */
+    public function resolveRecipient(?string $targetContact, $action = null, bool $whatsAppFormat = false): array
+    {
+        $overrideNumber = config('messaging.phone_number_override');
+        $isOverride     = !empty($overrideNumber);
+        $rawContact     = $isOverride ? $overrideNumber : $targetContact;
+
+        $formatted = $this->formatReceiver($rawContact, $action, $whatsAppFormat);
+
+        return [
+            'formatted'   => $formatted,
+            'is_override' => $isOverride,
+        ];
+    }
+
+    /**
      * Normalisasi nomor ke canonical format
      * hasil: 628xxxxxxxxx
      */
@@ -17,30 +35,19 @@ class FormatReceiver
         }
 
         try {
-            // hapus semua non-digit (termasuk spasi, strip, tanda plus, dll)
             $contact = preg_replace('/\D/', '', $contact);
 
             if (!$contact) {
                 return null;
             }
 
-            // 08xxxx -> 628xxxx
             if (str_starts_with($contact, '08')) {
                 $contact = '62' . substr($contact, 1);
-            }
-
-            // 8xxxx -> 628xxxx
-            elseif (str_starts_with($contact, '8')) {
+            } elseif (str_starts_with($contact, '8')) {
                 $contact = '62' . $contact;
-            }
-
-            // 6208xxxx -> 628xxxx
-            elseif (str_starts_with($contact, '620')) {
+            } elseif (str_starts_with($contact, '620')) {
                 $contact = '62' . ltrim(substr($contact, 2), '0');
-            }
-
-            // jika bukan 62 maka dianggap invalid
-            elseif (!str_starts_with($contact, '62')) {
+            } elseif (!str_starts_with($contact, '62')) {
                 return null;
             }
 
@@ -86,7 +93,7 @@ class FormatReceiver
      * Format WhatsApp gateway
      * hasil: 628123456789@s.whatsapp.net
      */
-    public function whatsapp(string $contact): string
+    public function whatsApp(string $contact): string
     {
         $contact = $this->normalize($contact);
 
@@ -135,11 +142,11 @@ class FormatReceiver
     /**
      * Wrapper agar kompatibel dengan helper lama
      */
-    public function formatReceiver($contact, $action = null, $whatsappFormat = false)
+    public function formatReceiver(string $contact, $action = null, $whatsAppFormat = false)
     {
         try {
-            if ($whatsappFormat) {
-                return $this->whatsapp($contact);
+            if ($whatsAppFormat) {
+                return $this->whatsApp($contact);
             }
 
             if ($action === 'broadcast') {
@@ -168,11 +175,10 @@ class FormatReceiver
     }
 
     /**
-     * 🌟 PERBAIKAN UTAMA: Normalisasi sender dari berbagai jenis payload data raw gateway
+     * Normalisasi sender dari berbagai jenis payload data raw gateway
      */
     public function normalizeSender(string $raw): string
     {
-        // 1. Ekstrak string jika mengandung data " in " (grup) atau JID pecahan ":"
         if (str_contains($raw, ' in ')) {
             $raw = explode(' in ', $raw)[0];
         }
@@ -181,15 +187,9 @@ class FormatReceiver
             $raw = explode(':', $raw)[0];
         }
 
-        // 2. Buang suffix WhatsApp domain jika ada
         $cleanNumber = str_replace('@s.whatsapp.net', '', $raw);
+        $canonical   = $this->normalize($cleanNumber);
 
-        // 3. 🌟 PROTEKSI TAMBAHAN: Jalankan fungsi normalize() bawaan
-        // Agar jika ada nomor berawalan '08xxx' atau '+62xxx' masuk ke method ini,
-        // dia langsung dipaksa menjadi berformat canonical internasional '628xxx'
-        $canonical = $this->normalize($cleanNumber);
-
-        // Jika karena suatu alasan formatnya rusak total, kembalikan string pembersihan awal
         return $canonical ?? $cleanNumber;
     }
 }

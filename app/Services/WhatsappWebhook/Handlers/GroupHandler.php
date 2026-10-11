@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Services\WhatsappWebhook\Handlers;
+namespace App\Services\WhatsAppWebhook\Handlers;
 
 use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
-use App\Jobs\Whatsapp\ProcessGroupEventJob;
-use App\Services\WhatsappWebhook\DTO\WebhookPayload;
+use App\Jobs\WhatsApp\ProcessGroupEventJob;
+use App\Services\WhatsAppWebhook\DTO\WebhookPayload;
 
 class GroupHandler extends BaseHandler
 {

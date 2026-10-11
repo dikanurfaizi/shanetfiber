@@ -94,18 +94,13 @@ class CustomerSubscription extends Model
 
     public function eligibleForBilling(Customer $customer): bool
     {
-        // intent utama dari customer
-        if ($customer->disabled !== 'false' || $customer->activation !== 'true') {
-            return false;
-        }
-
-        // status apapun selama customer aktif → lanjut
-        return true;
+        // Customer hanya eligible jikais_active TRUE DAN activation TRUE
+        return (bool) $customer->is_active && (bool) $customer->activation;
     }
 
     public function shouldBeReactivated(Customer $customer): bool
     {
-        if ($customer->disabled !== 'false' || $customer->activation !== 'true') {
+        if (!$this->eligibleForBilling($customer)) {
             return false;
         }
 

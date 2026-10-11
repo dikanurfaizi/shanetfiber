@@ -1,30 +1,43 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Single;
+namespace App\Services\WhatsApp\CloudAPI\Single;
 
 use App\Helpers\FormatReceiver;
-use App\Models\Whatsapp\WhatsappGatewayAccount;
-use App\Services\Whatsapp\CloudAPI\Messages\TemplateMessageService;
+use App\Models\WhatsApp\WhatsAppGatewayAccount;
+use App\Services\WhatsApp\CloudAPI\Messages\TemplateMessageService;
 
 class TestMessage
 {
     public function __construct(private TemplateMessageService $templateMessageService) {}
 
-    public function test(WhatsappGatewayAccount $account, string $contact)
+    public function test(WhatsAppGatewayAccount $account, string $contact)
     {
-        $formatter = new FormatReceiver;
+        try {
+            $formatter = new FormatReceiver;
 
-        $recipient = $formatter->formatReceiver(
-            $contact,
-            null,
-            false
-        );
+            $recipient = $formatter->formatReceiver(
+                $contact,
+                null,
+                false
+            );
 
-        $this->templateMessageService->sendTestMessage([
-            'recipient' => $recipient,
-            'account' => $account
-        ]);
+            // Eksekusi pengiriman dan tangkap MessageResult
+            $result = $this->templateMessageService->sendTestMessage([
+                'recipient' => $recipient,
+                'account'   => $account,
+            ]);
 
-        return back()->with('success', 'Pesan uji berhasil dikirim.');
+            $response = $result->getResponse(); // Ambil array response dari MessageResult
+
+            if (!($response['success'] ?? false)) {
+                $errorMessage = $response['message'] ?? 'Gagal mengirim pesan uji.';
+
+                return back()->with('error', "Gagal mengirim pesan uji: {$errorMessage}");
+            }
+
+            return back()->with('success', 'Pesan uji berhasil dikirim.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal mengirim pesan uji: ' . $e->getMessage());
+        }
     }
 }

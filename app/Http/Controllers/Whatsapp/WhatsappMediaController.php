@@ -1,17 +1,17 @@
 <?php
 
-namespace App\Http\Controllers\Whatsapp;
+namespace App\Http\Controllers\WhatsApp;
 
 use App\Http\Controllers\Controller;
-use App\Models\Whatsapp\WhatsappMessageMedia;
+use App\Models\WhatsApp\WhatsAppMessageMedia;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Filesystem\FilesystemAdapter;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Str;
 
-class WhatsappMediaController extends Controller
+class WhatsAppMediaController extends Controller
 {
-    public function show(WhatsappMessageMedia $media)
+    public function show(WhatsAppMessageMedia $media)
     {
         $traceId = (string) Str::uuid();
 

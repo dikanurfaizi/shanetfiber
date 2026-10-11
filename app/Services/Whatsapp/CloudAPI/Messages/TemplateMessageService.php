@@ -1,19 +1,19 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Messages;
+namespace App\Services\WhatsApp\CloudAPI\Messages;
 
 use App\Helpers\LogHelper;
-use App\Services\Whatsapp\CloudAPI\Broadcast\MonthlyKickOffBroadcast;
-use App\Services\Whatsapp\CloudAPI\Messaging\MessageDispatcher;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\BroadcastMidMonthCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\CustomerActivationCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPayLaterCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPembayaranCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\MonthlyKickOffBroadcastCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\OverdueBroadcastCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\PaymentChannelUpdateCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\TestMessageCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\ReplyMessageCommand;
+use App\Services\WhatsApp\CloudAPI\Broadcast\MonthlyKickOffBroadcast;
+use App\Services\WhatsApp\CloudAPI\Messaging\MessageDispatcher;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\BroadcastMidMonthCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\CustomerActivationCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\InfoPayLaterCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\InfoPembayaranCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\MonthlyKickOffBroadcastCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\OverdueBroadcastCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\PaymentChannelUpdateCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\TestMessageCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\ReplyMessageCommand;
 
 class TemplateMessageService
 {

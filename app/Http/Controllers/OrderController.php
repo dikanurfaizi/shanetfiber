@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\OrderCreated;
+use App\Events\SingleNotification\OrderCreated;
 use App\Helpers\LogHelper;
 use App\Http\Controllers\PaymentGateway\TripayController;
 use App\Models\Billings\Billing;
@@ -12,7 +12,7 @@ use App\Models\Billings\Order;
 use App\Models\PaymentGateway;
 use App\Models\Websystem;
 use App\Services\Midtrans\CreateSnapTokenService;
-use App\Services\Whatsapp\GowaService;
+use App\Services\WhatsApp\GowaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;

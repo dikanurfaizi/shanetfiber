@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Jobs\Whatsapp;
+namespace App\Jobs\WhatsApp;
 
-use App\Models\Whatsapp\WhatsappChatSession;
-use App\Models\Whatsapp\WhatsappMessage;
+use App\Models\WhatsApp\WhatsAppChatSession;
+use App\Models\WhatsApp\WhatsAppMessage;
 use App\Services\Messaging\MessageDispatcher;
 use App\Services\Messaging\Handlers\WebhookReplyHandler;
 use App\Helpers\LogHelper;
@@ -38,13 +38,13 @@ class CloseIdleHumanChatSessionsJob implements ShouldQueue
         $timer = new ExecutionTimer();
 
         // Ambil data session berdasarkan ID yang dikirim oleh Command
-        $idleSessions = WhatsappChatSession::whereIn('id', $this->sessionIds)->get();
+        $idleSessions = WhatsAppChatSession::whereIn('id', $this->sessionIds)->get();
 
         if ($idleSessions->isEmpty()) {
             return;
         }
 
-        $closingKeyword = WhatsappMessage::where('slug', 'session_timeout')->first();
+        $closingKeyword = WhatsAppMessage::where('slug', 'session_timeout')->first();
 
         foreach ($idleSessions as $session) {
             try {
@@ -66,11 +66,9 @@ class CloseIdleHumanChatSessionsJob implements ShouldQueue
                             customerId: $session->customer_id,
                             category: $category
                         ),
-                        queue: 'notification', // Queue internal untuk dispatcher message Anda
                         traceId: $this->traceId,
                         eventId: null,
-                        deviceId: $targetDeviceId,
-                        delaySeconds: 1,
+                        deviceId: $targetDeviceId
                     );
                 }
 
@@ -79,10 +77,18 @@ class CloseIdleHumanChatSessionsJob implements ShouldQueue
                     'device_id'    => $targetDeviceId,
                 ], 200, '[Job] Session timeout processed via Queue.', $this->traceId, $timer->lap());
             } catch (\Throwable $e) {
+                $exceptionCode = $e->getCode();
+                $statusCode = (is_numeric($exceptionCode) && $exceptionCode >= 400 && $exceptionCode <= 599)
+                    ? (int) $exceptionCode
+                    : 500;
+
                 LogHelper::logError(null, [
-                    'phone_number' => $session->phone_number,
-                    'error'        => $e->getMessage()
-                ], 500, '[Job] Failed to execute session timeout from Queue', $this->traceId, $timer->lap());
+                    'phone_number'    => $session->phone_number,
+                    'error_message'   => $e->getMessage(),
+                    'exception_class' => get_class($e),
+                    'file'            => $e->getFile(),
+                    'line'            => $e->getLine(),
+                ], $statusCode, '[Job] Failed to execute session timeout from Queue', $this->traceId, $timer->lap());
             }
         }
     }

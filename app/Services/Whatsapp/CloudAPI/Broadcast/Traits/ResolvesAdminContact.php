@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Broadcast\Traits;
+namespace App\Services\WhatsApp\CloudAPI\Broadcast\Traits;
 
 use App\Helpers\FormatReceiver;
-use App\Models\Whatsapp\WhatsappNumber;
+use App\Models\WhatsApp\WhatsAppNumber;
 
 trait ResolvesAdminContact
 {
@@ -16,7 +16,7 @@ trait ResolvesAdminContact
         $formatter = new FormatReceiver;
 
         // Ambil data nomor default yang aktif sesuai kriteria Anda
-        $whatsappNumberRecord = WhatsappNumber::where('is_enabled', true)
+        $whatsappNumberRecord = WhatsAppNumber::where('is_enabled', true)
             ->where('is_default', true)
             ->whereHas('account', function ($query) {
                 $query->where('is_active', 1)

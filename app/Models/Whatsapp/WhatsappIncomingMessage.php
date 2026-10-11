@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Models\Whatsapp;
+namespace App\Models\WhatsApp;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Customers\Customer;
 
-class WhatsappIncomingMessage extends Model
+class WhatsAppIncomingMessage extends Model
 {
     protected $table = 'whatsapp_incoming_messages';
 

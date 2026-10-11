@@ -1,15 +1,17 @@
 <?php
 
-namespace App\Models\Whatsapp;
+namespace App\Models\WhatsApp;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class WhatsappNumber extends Model
+class WhatsAppNumber extends Model
 {
     use HasFactory, SoftDeletes;
+
+    protected $table = 'whatsapp_numbers';
 
     protected $guarded = [
         'id',
@@ -28,7 +30,7 @@ class WhatsappNumber extends Model
     public function account()
     {
         return $this->belongsTo(
-            WhatsappGatewayAccount::class,
+            WhatsAppGatewayAccount::class,
             'whatsapp_gateway_account_id' // FOREIGN KEY BENAR
         );
     }

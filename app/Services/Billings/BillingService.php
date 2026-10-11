@@ -89,8 +89,8 @@ class BillingService
 
             foreach ($routers as $router) {
                 $customers = Customer::where('mikrotik_id', $router->id)
-                    ->where('disabled', 'false')
-                    ->where('activation', 'true')
+                    ->where('is_active', true)
+                    ->where('activation', true)
                     ->get();
 
                 foreach ($customers as $customer) {

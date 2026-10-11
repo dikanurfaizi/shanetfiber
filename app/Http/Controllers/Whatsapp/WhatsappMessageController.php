@@ -1,22 +1,22 @@
 <?php
 
-namespace App\Http\Controllers\Whatsapp;
+namespace App\Http\Controllers\WhatsApp;
 
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use App\Models\Whatsapp\WhatsappMessage;
+use App\Models\WhatsApp\WhatsAppMessage;
 
-class WhatsappMessageController extends Controller
+class WhatsAppMessageController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        $messages = WhatsappMessage::orderBy('name', 'ASC')->paginate(20);
+        $messages = WhatsAppMessage::orderBy('name', 'ASC')->paginate(20);
         return view('whatsapp_gateways.messages.index', compact('messages'))->with('i', (request()->input('page', 1) - 1) * 10);
     }
 
@@ -45,7 +45,7 @@ class WhatsappMessageController extends Controller
         $slug = Str::of($validated['incoming_message'])->lower()->replace(' ', '_');
 
         // Simpan ke database
-        $message = new WhatsappMessage();
+        $message = new WhatsAppMessage();
         $message->name = $validated['name'];
         $message->incoming_message = $validated['incoming_message'];
         $message->reply_message = $validated['reply_message'];
@@ -63,7 +63,7 @@ class WhatsappMessageController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(WhatsappMessage  $whatsappmessage, Request $request)
+    public function show(WhatsAppMessage $whatsappmessage, Request $request)
     {
 
         $message = $whatsappmessage->reply_message;
@@ -158,7 +158,7 @@ class WhatsappMessageController extends Controller
      */
     public function delete(WhatsAppMessage $whatsappmessage)
     {
-        return view('whatsapp_gateways.messages.delete', compact('whatsappmessage'));
+        return view('whatsapp_gateways.messages.delete', compact('whatsAppMessage'));
     }
     public function destroy(WhatsAppMessage $whatsappmessage)
     {

@@ -8,7 +8,7 @@
             style="cursor: pointer; text-decoration: none; margin-left: 10px; margin-right: 10px;">
             <i class="fab fa-whatsapp" style="font-size: 1.15rem;"></i>
 
-            @if ($unreadChatCount > 0)
+            @if (($unreadChatCount ?? 0) > 0)
                 {{-- TAMBAHKAN id="topbar-unread-badge" DI SINI --}}
                 <span id="topbar-unread-badge"
                     class="badge bg-danger text-white rounded-circle position-absolute d-flex align-items-center justify-content-center"

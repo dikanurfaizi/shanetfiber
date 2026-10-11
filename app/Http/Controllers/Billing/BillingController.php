@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Billing;
 
-use App\Events\PaymentSucceeded;
-use App\Events\PayLaterApplied;
-use App\Events\PaymentCancelled;
+use App\Events\SingleNotification\PayLaterRequest;
+use App\Events\SingleNotification\PaymentSucceeded;
+use App\Events\SingleNotification\PaymentCancelled;
 use App\Exports\Billing\BillingSnapshotExport;
 use App\Exports\Billing\BillingYearWorkbookExport;
 use App\Helpers\ExecutionTimer;
@@ -13,7 +13,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Bank;
 use App\Models\Billings\Billing;
 use App\Models\Billings\BillingPeriode;
-use App\Models\Customers\CustomerSubscription;
 use App\Models\Websystem;
 use App\Models\Receipt;
 use App\Models\Membership\CustomerMembership;
@@ -26,7 +25,6 @@ use App\Services\Billings\PaymentService;
 use App\Services\Customers\CustomerActivationService;
 use App\Services\Messaging\Collectors\AdminBankCollector;
 use App\Services\Routerboard\MikrotikService;
-use App\Services\Routerboard\Ppp\SecretService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
@@ -234,12 +232,12 @@ class BillingController extends Controller
             'billing_id' => $billing->id,
             'customer_id' => $billing->customer_id,
             'payload' => $request->all()
-        ], 200, 'Processing post paylater request.', $traceId);
+        ], 200, 'Processing post paylater request.', $traceId, $timer->lap());
 
         $result = $this->payLaterService->processPayLater($request, $billing, $traceId);
 
         if ($result['success']) {
-            event(new PayLaterApplied(billingId: $billing->id, eventId: null, traceId: $traceId));
+            PayLaterRequest::dispatch($billing->id, null, $traceId);
 
             LogHelper::logInfo('BillingController::post_paylater', ['billing_id' => $billing->id], 200, 'Paylater applied successfully.', $traceId, $timer->lap());
             return redirect()->back()->with('success', $result['message']);
@@ -259,7 +257,7 @@ class BillingController extends Controller
         $timer = new ExecutionTimer();
         $paymentMethod = $request->payment_methode;
 
-        LogHelper::logInfo('BillingController::payment', [
+        LogHelper::logInfo(null, [
             'billing_id' => $billing->id,
             'customer_id' => $billing->customer_id,
             'payment_method' => $paymentMethod,
@@ -267,7 +265,7 @@ class BillingController extends Controller
 
         // === 1. ROUTING DECISIONS ===
         if (in_array($paymentMethod, ['transfer', 'paylater'])) {
-            LogHelper::logInfo('BillingController::payment', [
+            LogHelper::logInfo(null, [
                 'billing_id' => $billing->id,
                 'target_route' => $paymentMethod
             ], 200, "Redirecting payment request to internal route format.", $traceId, $timer->lap());
@@ -279,7 +277,7 @@ class BillingController extends Controller
         $mikrotik = $customer?->mikrotik;
 
         if (!$mikrotik) {
-            LogHelper::logWarning('BillingController::payment', [
+            LogHelper::logWarning(null, [
                 'billing_id' => $billing->id,
                 'customer_id' => $customer?->id
             ], 404, 'Mikrotik router info not found for customer.', $traceId, $timer->lap());
@@ -290,7 +288,7 @@ class BillingController extends Controller
             try {
                 $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             } catch (\Throwable $e) {
-                LogHelper::logError('BillingController::payment', [
+                LogHelper::logError(null, [
                     'billing_id' => $billing->id,
                     'router_id' => $mikrotik->id,
                     'host' => $mikrotik->host,
@@ -319,16 +317,16 @@ class BillingController extends Controller
             $result = $this->paymentService->processPayment($billing, $paymentData, $traceId);
 
             if (!empty($result['receipt'])) {
-                event(new PaymentSucceeded($result['receipt']->id, $traceId));
-                LogHelper::logInfo('BillingController::payment', [
+                event(new PaymentSucceeded($result['receipt']->id, null, $traceId));
+                LogHelper::logInfo(null, [
                     'billing_id' => $billing->id,
                     'receipt_id' => $result['receipt']->id
                 ], 200, 'Payment transactions completed & succeeded event dispatched.', $traceId, $timer->lap());
             }
 
-            return redirect()->back()->with('success', __('payment.success.processed', ['name' => $billing->customer_name]));
+            return redirect()->back()->with('success', __('payment.success.processed', ['name' => $billing->customer->name]));
         } catch (\Throwable $e) {
-            LogHelper::logError('BillingController::payment', [
+            LogHelper::logError(null, [
                 'billing_id' => $billing->id,
                 'exception' => get_class($e),
                 'message' => $e->getMessage(),
@@ -377,7 +375,7 @@ class BillingController extends Controller
         LogHelper::logInfo('BillingController::unpayment', [
             'billing_id' => $billing->id,
             'payment_id' => $billing->billingPayment?->id
-        ], 200, 'Received payment cancellation request (unpayment).', $traceId);
+        ], 200, 'Received payment cancellation request (unpayment).', $traceId, $timer->lap());
 
         try {
             $result = $this->paymentCancellationService->cancelPayment($billing->billingPayment, $traceId);
@@ -509,7 +507,7 @@ class BillingController extends Controller
 
     public function transfer(Request $request, Billing $billing)
     {
-        $banks = Bank::orderBy('name', 'ASC')->where('disabled', 'false')->get();
+        $banks = Bank::orderBy('name', 'ASC')->get();
         $billings = Billing::where('customer_id', $billing->customer_id)->where('status', 'BL')->get();
 
         return view('billings.transfer', compact('billing', 'banks'), ['billings' => $billings]);

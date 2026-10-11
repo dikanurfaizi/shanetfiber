@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Services\Whatsapp;
+namespace App\Services\WhatsApp;
 
-use App\Models\Whatsapp\WhatsappMessage;
+use App\Models\WhatsApp\WhatsAppMessage;
 
 class TemplateResolver
 {
-    public function fill(WhatsappMessage $template, array $data): string
+    public function fill(WhatsAppMessage $template, array $data): string
     {
         $text = $template->reply_message;
 

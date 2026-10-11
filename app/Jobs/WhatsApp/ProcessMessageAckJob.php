@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Jobs\Whatsapp;
+namespace App\Jobs\WhatsApp;
 
 use App\Helpers\ExecutionTimer; // 👈 Tetap import di sini
 use App\Helpers\LogHelper;

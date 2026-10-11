@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Messaging;
+namespace App\Services\WhatsApp\CloudAPI\Messaging;
 
-use App\Services\Whatsapp\CloudAPI\Payloads\DTO\TemplateMessageDTO;
+use App\Services\WhatsApp\CloudAPI\Payloads\DTO\TemplateMessageDTO;
 
 class MessageResult
 {
@@ -10,4 +10,19 @@ class MessageResult
         public TemplateMessageDTO $payload,
         public array $response
     ) {}
+
+    public function getResponse(): array
+    {
+        return $this->response;
+    }
+
+    public function getPayload(): TemplateMessageDTO
+    {
+        return $this->payload;
+    }
+
+    public function isSuccess(): bool
+    {
+        return ($this->response['success'] ?? false) && (($this->response['status'] ?? 0) === 200);
+    }
 }

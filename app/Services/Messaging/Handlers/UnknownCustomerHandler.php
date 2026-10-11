@@ -4,7 +4,7 @@ namespace App\Services\Messaging\Handlers;
 
 use App\Services\Messaging\Contracts\MessageActionHandler;
 use App\Services\Messaging\MessageBuilder;
-use App\Models\Whatsapp\WhatsappMessage;
+use App\Models\WhatsApp\WhatsAppMessage;
 use App\Models\Packages\Package;
 use App\Helpers\LogHelper;
 
@@ -12,7 +12,7 @@ class UnknownCustomerHandler implements MessageActionHandler
 {
     public function __construct(
         private string $sender,
-        private WhatsappMessage $whatsappMessage,
+        private WhatsAppMessage $whatsappMessage,
         private MessageBuilder $builder,
         private string $category,
     ) {}

@@ -36,20 +36,23 @@ class CustomerViewService
 
             LogHelper::logInfo(null, [
                 'customer_id' => $customer->id,
-                'router_id' => $router->id,
+                'router_id'   => $router->id,
                 'router_name' => $router->name
             ], 200, 'Fetching customer view data', $traceId);
 
             $secretData = $this->getSecretData($router, $customer, $traceId);
             $customer->refresh();
 
-            // Update kolom ip_address dan mac_address kalau ada data dari secret
-            if (!empty($secretData['secretActive']['address'])) {
-                $customer->ip_address = $secretData['secretActive']['address'];
+            // 💡 PERBAIKAN 1: Pengambilan IP Address secara aman
+            $activeAddress = $secretData['secretActive']['address'] ?? null;
+            if (!empty($activeAddress)) {
+                $customer->ip_address = $activeAddress;
             }
 
-            if (!empty($secretData['pppsecret']['last-caller-id'])) {
-                $customer->mac_address = $secretData['pppsecret']['last-caller-id'];
+            // 💡 PERBAIKAN 2: Pengambilan MAC Address (last-caller-id) secara aman
+            $lastCallerId = $secretData['pppsecret']['last-caller-id'] ?? null;
+            if (!empty($lastCallerId)) {
+                $customer->mac_address = $lastCallerId;
             }
 
             $customer->save();
@@ -57,19 +60,20 @@ class CustomerViewService
             $result = array_merge(
                 $secretData,
                 [
-                    'customer' => $customer,
+                    'customer'         => $customer,
                     'customer_contact' => $formatter->formatReceiver($customer->contact, 'display', false),
-                    'ont' => CustomerOnt::where('customer_id', $customer->id)->first(),
-                    'mikrotik' => $router
+                    'ont'              => CustomerOnt::where('customer_id', $customer->id)->first(),
+                    'mikrotik'         => $router
                 ],
                 $this->customerDataService->getCustomerDetails($customer, $traceId)
             );
 
+            // 💡 PERBAIKAN 3: Safe logging menggunakan variabel aman (tanpa direct array key access)
             LogHelper::logInfo(null, [
-                'ip_address' => $secretData['secretActive']['address'],
-                'mac_address' => $secretData['pppsecret']['last-caller-id'],
+                'ip_address'  => $activeAddress,
+                'mac_address' => $lastCallerId,
                 'customer_id' => $customer->id,
-                'data_count' => count($result)
+                'data_count'  => count($result)
             ], 200, 'Successfully retrieved customer view data', $traceId);
 
             return $result;
@@ -78,14 +82,15 @@ class CustomerViewService
                 null,
                 [
                     'customer_id' => $customer->id,
-                    'router_id' => $customer->mikrotik_id ?? null,
-                    'code' => $e->getCode(),
-                    'message' => $e->getMessage()
+                    'router_id'   => $customer->mikrotik_id ?? null,
+                    'code'        => $e->getCode(),
+                    'message'     => $e->getMessage()
                 ],
                 500,
                 'Failed to get customer view data',
                 $traceId
             );
+
             return $this->getOfflineData($router ?? null, $customer, $traceId, $e->getMessage());
         }
     }

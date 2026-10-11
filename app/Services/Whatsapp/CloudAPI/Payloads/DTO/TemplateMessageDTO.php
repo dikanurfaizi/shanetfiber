@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Payloads\DTO;
+namespace App\Services\WhatsApp\CloudAPI\Payloads\DTO;
 
 use RuntimeException;
 

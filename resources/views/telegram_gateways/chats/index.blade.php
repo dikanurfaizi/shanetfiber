@@ -3,8 +3,9 @@
     <div class="card-header py-3 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
         <h5 class="m-0 font-weight-bold text-primary">User Telegram Management</h5>
         <div class="d-flex flex-wrap gap-2">
-            <button id="fetchTelegramBtn" class="btn btn-sm btn-info">
-                <i class="fab fa-telegram"></i> <span class="d-none d-md-inline">Fetch from Telegram API</span>
+            <button id="fetchTelegramBtn" class="btn btn-sm btn-info" data-toggle="modal" data-target="#telegramModal">
+                <i class="fab fa-telegram"></i>
+                <span class="d-none d-md-inline">Fetch from Telegram API</span>
                 <span class="d-inline d-md-none">Fetch</span>
             </button>
         </div>
@@ -175,7 +176,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="telegramModalLabel">Telegram API Results</h5>
-                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
@@ -183,7 +184,7 @@
                     <!-- Results will be displayed here -->
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary d-none" id="saveTelegramBtn">Save</button>
                 </div>
             </div>
@@ -193,21 +194,25 @@
     @section('custom_scripts')
         <script>
             $(document).ready(function() {
+                // Debug check
+                console.log("DOM Ready - Initializing Telegram Management Scripts");
+
                 // Initialize select2 for desktop
-                $('.select2-user').select2({
-                    theme: 'bootstrap-5',
-                    width: '100%'
-                });
+                if ($.fn.select2) {
+                    $('.select2-user').select2({
+                        theme: 'bootstrap-5',
+                        width: '100%'
+                    });
 
-                // Initialize select2 for mobile
-                $('.select2-user-mobile').select2({
-                    theme: 'bootstrap-5',
-                    width: '100%',
-                    dropdownParent: $('.card-body')
-                });
+                    $('.select2-user-mobile').select2({
+                        theme: 'bootstrap-5',
+                        width: '100%',
+                        dropdownParent: $('.card-body')
+                    });
+                }
 
-                // Common change handler for both desktop and mobile selects
-                $('.select2-user, .select2-user-mobile').on('change', function() {
+                // Common change handler
+                $(document).on('change', '.select2-user, .select2-user-mobile', function() {
                     let id = $(this).data('id');
                     let selectedUserId = $(this).val();
 
@@ -218,7 +223,8 @@
                     }
                 });
 
-                $('.btn-update-user').on('click', function() {
+                // Update user AJAX
+                $(document).on('click', '.btn-update-user', function() {
                     let id = $(this).data('id');
                     let userId = $(`select[name="user_id_${id}"]`).val();
 
@@ -251,52 +257,86 @@
 
                 let newTelegramChatIds = [];
 
-                $('#fetchTelegramBtn').click(function() {
+                $(document).on('hidden.bs.modal', '#telegramModal', function() {
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open').css({
+                        'overflow': '',
+                        'padding-right': ''
+                    });
+                });
+
+                // 🔹 FIX UTAMA: Gunakan Event Delegation pada tombol Fetch Telegram
+                $(document).on('click', '#fetchTelegramBtn', function(e) {
+                    console.log("Fetch button clicked - Executing AJAX Request...");
+
+                    // Set tampilan spinner di modal
                     $('#telegramResults').html(
-                        '<div class="text-center"><i class="fa fa-spinner fa-spin fa-3x"></i><p>Fetching data from Telegram...</p></div>'
+                        '<div class="text-center py-4"><i class="fa fa-spinner fa-spin fa-2x mb-2"></i><p>Fetching data from Telegram...</p></div>'
                     );
                     $('#saveTelegramBtn').addClass('d-none');
+
+                    // Buka modal secara manual (opsional jika data-toggle kadang glitch)
                     $('#telegramModal').modal('show');
 
+                    let targetUrl = '{{ route('telegramchatid.get_updates') }}';
+                    console.log("AJAX Target URL:", targetUrl);
+
                     $.ajax({
-                        url: '{{ url('cpanel/settings/telegramchat/get_updates') }}',
+                        url: targetUrl,
                         method: 'GET',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        },
                         success: function(response) {
-                            let html = '<h6>Telegram Users</h6>';
+                            console.log("AJAX Success Response:", response);
+                            let html = '';
                             newTelegramChatIds = [];
 
                             if (response.chat_ids && response.chat_ids.length > 0) {
                                 newTelegramChatIds = response.chat_ids;
+                                html += '<h6>Telegram Users (' + response.chat_ids.length +
+                                    ')</h6>';
                                 html +=
-                                    '<div class="table-responsive"><table class="table table-sm"><thead><tr><th>Chat ID</th><th>Username</th><th>First Name</th><th>Last Name</th></tr></thead><tbody>';
+                                    '<div class="table-responsive"><table class="table table-sm table-bordered"><thead><tr><th>Chat ID</th><th>Username</th><th>First Name</th><th>Last Name</th></tr></thead><tbody>';
 
                                 response.chat_ids.forEach(function(user) {
                                     html += `<tr>
-                                        <td>${user.chat_id}</td>
-                                        <td>${user.username || '-'}</td>
-                                        <td>${user.first_name || '-'}</td>
-                                        <td>${user.last_name || '-'}</td>
-                                    </tr>`;
+                                    <td><code>${user.chat_id}</code></td>
+                                    <td>${user.username ? '@' + user.username : '-'}</td>
+                                    <td>${user.first_name || '-'}</td>
+                                    <td>${user.last_name || '-'}</td>
+                                </tr>`;
                                 });
 
                                 html += '</tbody></table></div>';
                                 $('#saveTelegramBtn').removeClass('d-none');
                             } else {
-                                html += '<p>No new Telegram users found.</p>';
+                                let msg = response.message || 'Tidak ada chat ID baru ditemukan.';
+                                html =
+                                    `<div class="alert alert-warning mb-0"><i class="fa fa-exclamation-triangle me-1"></i> ${msg}</div>`;
                             }
 
                             $('#telegramResults').html(html);
                         },
-                        error: function(xhr) {
+                        error: function(xhr, status, error) {
+                            console.error("AJAX Error Status:", status, error);
+                            console.error("XHR Object:", xhr);
+
+                            let errorMsg = 'Error fetching data from Telegram API (' + xhr.status +
+                                ')';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMsg = xhr.responseJSON.message;
+                            }
                             $('#telegramResults').html(
-                                '<div class="alert alert-danger">Error fetching data from Telegram API</div>'
+                                `<div class="alert alert-danger mb-0"><i class="fa fa-times-circle me-1"></i> ${errorMsg}</div>`
                             );
                         }
                     });
                 });
 
                 // Save button handler
-                $('#saveTelegramBtn').click(function() {
+                $(document).on('click', '#saveTelegramBtn', function() {
                     if (newTelegramChatIds.length === 0) return;
 
                     $.ajax({
@@ -330,7 +370,8 @@
                     });
                 });
 
-                $('.btn-confirm-delete').click(function() {
+                // Delete confirmation
+                $(document).on('click', '.btn-confirm-delete', function() {
                     let id = $(this).data('id');
                     Swal.fire({
                         title: 'Apakah Anda yakin?',
@@ -348,10 +389,10 @@
                     });
                 });
 
-                $('.btn-test-message').on('click', function() {
+                // Test message
+                $(document).on('click', '.btn-test-message', function() {
                     let id = $(this).data('id');
 
-                    // Tampilkan loading
                     Swal.fire({
                         title: 'Mengirim pesan...',
                         html: 'Mohon tunggu sebentar',

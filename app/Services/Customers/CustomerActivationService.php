@@ -192,8 +192,8 @@ class CustomerActivationService
                  * ----------------------------------------- */
                 $customer->update([
                     'activation_date' => $activationDate,
-                    'activation'      => 'true',
-                    'disabled'        => 'false',
+                    'activation'      => true,
+                    'is_active'        => true,
                 ]);
 
                 $customer->refresh();
@@ -509,8 +509,8 @@ class CustomerActivationService
 
             $secretId = $createSecret['after']['ret'];
             $customer->update([
-                'activation' => 'true',
-                'disabled'   => 'false',
+                'activation' => true,
+                'is_active'   => true,
                 'secret_id'  => $secretId,
             ]);
 
@@ -608,8 +608,8 @@ class CustomerActivationService
 
             $arpId = $createArp['after']['ret'];
             $customer->update([
-                'activation'   => 'true',
-                'disabled'     => 'false',
+                'activation'   => true,
+                'is_active'     => true,
                 'simpleque_id' => $simpleQueueId,
                 'arp_id'       => $arpId,
             ]);

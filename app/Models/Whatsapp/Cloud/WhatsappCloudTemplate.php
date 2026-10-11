@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Models\Whatsapp\Cloud;
+namespace App\Models\WhatsApp\Cloud;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class WhatsappCloudTemplate extends Model
+class WhatsAppCloudTemplate extends Model
 {
     protected $table = 'whatsapp_cloud_templates';
 
@@ -34,7 +34,7 @@ class WhatsappCloudTemplate extends Model
     public function components(): HasMany
     {
         return $this->hasMany(
-            WhatsappCloudTemplateComponent::class,
+            WhatsAppCloudTemplateComponent::class,
             'template_id'
         )->orderBy('position');
     }

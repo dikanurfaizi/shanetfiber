@@ -60,8 +60,8 @@ class BankController extends Controller
         // Otomatis men-set default disabled ke 'false' (aktif) saat pertama kali disimpan 
         // agar sesuai dengan spesifikasi enum ('false', 'true') di skema database Anda
         $request->request->add([
-            'slug'     => str($request->bank . '-' . \Illuminate\Support\Str::random(4))->slug(),
-            'disabled' => 'true'
+            'slug'      => str($request->bank . '-' . \Illuminate\Support\Str::random(4))->slug(),
+            'is_active' => false
         ]);
 
         Bank::create($request->all());
@@ -110,7 +110,7 @@ class BankController extends Controller
     public function enable(Bank $bank)
     {
         $bank->update([
-            'disabled' => 'false',
+            'is_active' => true,
         ]);
 
         // 🔥 Menggunakan translasi parameter dinamis lewat array :attribute pengganti concatenation string
@@ -124,7 +124,7 @@ class BankController extends Controller
     public function disable(Bank $bank)
     {
         $bank->update([
-            'disabled' => 'true',
+            'is_active' => false,
         ]);
 
         // 🔥 Menggunakan translasi parameter dinamis lewat array :attribute pengganti concatenation string

@@ -1,21 +1,21 @@
 <?php
 
-namespace App\Http\Controllers\Whatsapp;
+namespace App\Http\Controllers\WhatsApp;
 
 use App\Helpers\LogHelper;
 use App\Http\Controllers\Controller;
-use App\Models\Whatsapp\Cloud\WhatsappCloudTemplate;
-use App\Models\Whatsapp\WhatsappGateway;
-use App\Models\Whatsapp\WhatsappGatewayAccount;
-use App\Services\Whatsapp\CloudAPI\Templates\Integration\MetaTemplateFetcherService;
-use App\Services\Whatsapp\CloudAPI\Templates\Sync\TemplateSyncService;
+use App\Models\WhatsApp\Cloud\WhatsAppCloudTemplate;
+use App\Models\WhatsApp\WhatsAppGateway;
+use App\Models\WhatsApp\WhatsAppGatewayAccount;
+use App\Services\WhatsApp\CloudAPI\Templates\Integration\MetaTemplateFetcherService;
+use App\Services\WhatsApp\CloudAPI\Templates\Sync\TemplateSyncService;
 use Illuminate\Support\Str;
 
-class WhatsappCloudController extends Controller
+class WhatsAppCloudController extends Controller
 {
     public function index()
     {
-        $templates = WhatsappCloudTemplate::with('components')
+        $templates = WhatsAppCloudTemplate::with('components')
             ->orderBy('name')
             ->paginate(20);
 
@@ -28,7 +28,7 @@ class WhatsappCloudController extends Controller
     ) {
         $traceId = Str::uuid()->toString();
 
-        $gateway = WhatsappGateway::where('type', 'cloud')
+        $gateway = WhatsAppGateway::where('type', 'cloud')
             ->where('is_active', true)
             ->with(['accounts' => function ($q) {
                 $q->where('is_active', true);
@@ -113,7 +113,7 @@ class WhatsappCloudController extends Controller
 
     public function show($id)
     {
-        $template = WhatsappCloudTemplate::with('components.buttons')->findOrFail($id);
+        $template = WhatsAppCloudTemplate::with('components.buttons')->findOrFail($id);
 
         $examples = [
             'header' => [],
@@ -145,10 +145,10 @@ class WhatsappCloudController extends Controller
     ) {
         $traceId = Str::uuid()->toString();
         // dd($id);
-        $template = WhatsappCloudTemplate::findOrFail($id);
+        $template = WhatsAppCloudTemplate::findOrFail($id);
 
-        $gateway = WhatsappGateway::where('is_active', true)->first();
-        $account = WhatsappGatewayAccount::where('whatsapp_gateway_id', $gateway->id)
+        $gateway = WhatsAppGateway::where('is_active', true)->first();
+        $account = WhatsAppGatewayAccount::where('whatsapp_gateway_id', $gateway->id)
             ->where('is_active', true)
             ->first();
 

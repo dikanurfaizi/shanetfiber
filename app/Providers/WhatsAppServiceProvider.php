@@ -2,25 +2,25 @@
 
 namespace App\Providers;
 
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\BroadcastMidMonthCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\CustomerActivationCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPayLaterCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPembayaranCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\MonthlyKickOffBroadcastCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\OverdueBroadcastCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\PaymentChannelUpdateCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\ReplyMessageCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\TestMessageCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\BroadcastMidMonthHandler;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\CustomerActivationHandler;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\InfoPayLaterHandler;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\InfoPembayaranHandler;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\MonthlyKickOffBroadcastHandler;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\OverdueBroadcastHandler;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\PaymentChannelUpdateHandler;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\ReplyMessageHandler;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers\TestMessageHandler;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\TemplateHandlerRegistry;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\BroadcastMidMonthCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\CustomerActivationCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\InfoPayLaterCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\InfoPembayaranCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\MonthlyKickOffBroadcastCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\OverdueBroadcastCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\PaymentChannelUpdateCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\ReplyMessageCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\TestMessageCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Handlers\BroadcastMidMonthHandler;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Handlers\CustomerActivationHandler;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Handlers\InfoPayLaterHandler;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Handlers\InfoPembayaranHandler;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Handlers\MonthlyKickOffBroadcastHandler;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Handlers\OverdueBroadcastHandler;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Handlers\PaymentChannelUpdateHandler;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Handlers\ReplyMessageHandler;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Handlers\TestMessageHandler;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\TemplateHandlerRegistry;
 use Illuminate\Support\ServiceProvider;
 
 class WhatsAppServiceProvider extends ServiceProvider

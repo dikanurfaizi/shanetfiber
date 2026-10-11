@@ -1,18 +1,18 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Templates\Sync;
+namespace App\Services\WhatsApp\CloudAPI\Templates\Sync;
 
-use App\Models\Whatsapp\Cloud\WhatsappCloudTemplate;
-use App\Models\Whatsapp\Cloud\WhatsappCloudTemplateComponent;
-use App\Models\Whatsapp\Cloud\WhatsappCloudTemplateButton;
-use App\Models\Whatsapp\WhatsappGatewayAccount;
+use App\Models\WhatsApp\Cloud\WhatsAppCloudTemplate;
+use App\Models\WhatsApp\Cloud\WhatsAppCloudTemplateComponent;
+use App\Models\WhatsApp\Cloud\WhatsAppCloudTemplateButton;
+use App\Models\WhatsApp\WhatsAppGatewayAccount;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class TemplateSyncService
 {
     public function syncFromMeta(
-        WhatsappGatewayAccount $account,
+        WhatsAppGatewayAccount $account,
         array $metaTemplates
     ): array {
         $synced = 0;
@@ -36,7 +36,7 @@ class TemplateSyncService
         }
 
         // 🔥 DELETE TEMPLATE YANG TIDAK ADA DI META
-        WhatsappCloudTemplate::where('account_id', $account->id)
+        WhatsAppCloudTemplate::where('account_id', $account->id)
             ->whereNotIn('name', $metaNames)
             ->delete();
 
@@ -48,10 +48,10 @@ class TemplateSyncService
     }
 
     protected function syncSingleTemplate(
-        WhatsappGatewayAccount $account,
+        WhatsAppGatewayAccount $account,
         array $tpl
     ): void {
-        $template = WhatsappCloudTemplate::updateOrCreate(
+        $template = WhatsAppCloudTemplate::updateOrCreate(
             [
                 'account_id' => $account->id,
                 'name' => $tpl['name'],
@@ -71,13 +71,13 @@ class TemplateSyncService
     }
 
     protected function syncComponents(
-        WhatsappCloudTemplate $template,
+        WhatsAppCloudTemplate $template,
         array $components
     ): void {
         $existingIds = [];
 
         foreach ($components as $pos => $component) {
-            $model = WhatsappCloudTemplateComponent::updateOrCreate(
+            $model = WhatsAppCloudTemplateComponent::updateOrCreate(
                 [
                     'template_id' => $template->id,
                     'position' => $pos,
@@ -98,19 +98,19 @@ class TemplateSyncService
             }
         }
 
-        WhatsappCloudTemplateComponent::where('template_id', $template->id)
+        WhatsAppCloudTemplateComponent::where('template_id', $template->id)
             ->whereNotIn('id', $existingIds)
             ->delete();
     }
 
     protected function syncButtons(
-        WhatsappCloudTemplateComponent $component,
+        WhatsAppCloudTemplateComponent $component,
         array $buttons
     ): void {
         $existingIds = [];
 
         foreach ($buttons as $pos => $btn) {
-            $model = WhatsappCloudTemplateButton::updateOrCreate(
+            $model = WhatsAppCloudTemplateButton::updateOrCreate(
                 [
                     'component_id' => $component->id,
                     'position' => $pos,
@@ -129,7 +129,7 @@ class TemplateSyncService
             $existingIds[] = $model->id;
         }
 
-        WhatsappCloudTemplateButton::where('component_id', $component->id)
+        WhatsAppCloudTemplateButton::where('component_id', $component->id)
             ->whereNotIn('id', $existingIds)
             ->delete();
     }

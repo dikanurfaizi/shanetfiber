@@ -1,17 +1,17 @@
 <?php
 
-namespace App\Services\Whatsapp\Meta;
+namespace App\Services\WhatsApp\Meta;
 
-use App\Models\Whatsapp\WhatsappConversation;
-use App\Models\Whatsapp\WhatsappMessageMedia;
-use App\Models\Whatsapp\WhatsappWebhookMessage;
-use App\Models\Whatsapp\WhatsappMessageStatus;
-use App\Jobs\Whatsapp\DownloadWhatsappMediaJob;
+use App\Models\WhatsApp\WhatsAppConversation;
+use App\Models\WhatsApp\WhatsAppMessageMedia;
+use App\Models\WhatsApp\WhatsAppWebhookMessage;
+use App\Models\WhatsApp\WhatsAppMessageStatus;
+use App\Jobs\WhatsApp\DownloadWhatsAppMediaJob;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 
-class HandleIncomingWhatsappWebhook
+class HandleIncomingWhatsAppWebhook
 {
     public function handleMessages(array $value, string $traceId): void
     {
@@ -28,7 +28,7 @@ class HandleIncomingWhatsappWebhook
 
             try {
                 // Insert langsung — biarkan unique index handle duplikasi
-                $message = WhatsappWebhookMessage::create([
+                $message = WhatsAppWebhookMessage::create([
                     'conversation_id' => $conversation->id,
                     'wa_message_id'   => $waMessageId,
                     'trace_id'        => $traceId,
@@ -55,7 +55,7 @@ class HandleIncomingWhatsappWebhook
             }
 
             // Append-only status audit (anggap table ini juga punya unique)
-            WhatsappMessageStatus::firstOrCreate(
+            WhatsAppMessageStatus::firstOrCreate(
                 [
                     'wa_message_id' => $waMessageId,
                     'status'        => 'received',
@@ -74,9 +74,9 @@ class HandleIncomingWhatsappWebhook
         }
     }
 
-    private function resolveConversation(string $customerNumber): WhatsappConversation
+    private function resolveConversation(string $customerNumber): WhatsAppConversation
     {
-        return WhatsappConversation::firstOrCreate(
+        return WhatsAppConversation::firstOrCreate(
             ['customer_number' => $customerNumber],
             [
                 'channel'         => 'whatsapp',
@@ -92,7 +92,7 @@ class HandleIncomingWhatsappWebhook
     }
 
     private function handleMediaIfExists(
-        WhatsappWebhookMessage $message,
+        WhatsAppWebhookMessage $message,
         array $messageData,
         string $traceId
     ): void {
@@ -109,7 +109,7 @@ class HandleIncomingWhatsappWebhook
             return;
         }
 
-        $media = WhatsappMessageMedia::create([
+        $media = WhatsAppMessageMedia::create([
             'message_id'      => $message->id,
             'wa_media_id'     => $mediaData['id'],
             'file_name'       => $mediaData['filename'] ?? null,
@@ -120,7 +120,7 @@ class HandleIncomingWhatsappWebhook
         ]);
 
         // Dispatch async download
-        DownloadWhatsappMediaJob::dispatch($media->id, $traceId)
+        DownloadWhatsAppMediaJob::dispatch($media->id, $traceId)
             ->onQueue('default')
             ->delay(now()->addSeconds(5)); // kasih jeda dikit biar WhatsApp siapin media-nya dulu
     }

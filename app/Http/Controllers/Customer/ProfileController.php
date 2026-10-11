@@ -3,88 +3,66 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Helpers\ExecutionTimer;
-use App\Models\Customers\Customer;
-use App\Models\ActivityLog;
-use App\Models\PasswordHistory;
-use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
-use App\Services\Customers\PaymentDashboardService;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 use App\Helpers\FormatReceiver;
-use Illuminate\Support\Facades\Hash;
 use App\Helpers\LogHelper;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
+use App\Models\Customers\Customer;
+use App\Models\PasswordHistory;
 use App\Rules\NotInPasswordHistory;
+use App\Services\Customers\PaymentDashboardService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
 {
-    private function formatContact($contact, $action = null)
+    public function __construct(
+        private FormatReceiver $formatter
+    ) {}
+
+    private function formatContact(?string $contact, ?string $action = null): string
     {
-        $formatter = new FormatReceiver();
-        return $formatter->formatReceiver($contact, $action, false);
+        return $this->formatter->formatReceiver($contact, $action, false);
     }
 
     /**
-     * Display a listing of the resource.
+     * Display customer dashboard (Auto switch Mobile / Desktop view via PaymentDashboardService)
      */
     public function index(PaymentDashboardService $dashboardService)
     {
-        $customer = auth()->guard('customer')->user();
-        $result = $dashboardService->getDashboardData($customer);
+        $customer = Auth::guard('customer')->user();
+        $result   = $dashboardService->getDashboardData($customer);
 
         return view($result['view'], $result['data']);
     }
 
-
     /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
+     * Display customer profile details
      */
     public function show()
     {
-        $customerId = (auth()->guard('customer')->user()->id);
-        $customer = Customer::where('id', $customerId)->first();
+        /** @var Customer $customer */
+        $customer = Auth::guard('customer')->user();
         $customer->contact_formatted = $this->formatContact($customer->contact, 'display');
-        // return dd($customer);
+
         return view('customers.pages.profile', compact('customer'));
     }
 
     /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
+     * Update profile information
      */
     public function update(Request $request)
     {
         $customerLogin = Auth::guard('customer')->user();
 
         $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => [
+            'name'    => ['required', 'string', 'max:255'],
+            'email'   => [
                 'required',
                 'string',
                 'email',
@@ -94,28 +72,29 @@ class ProfileController extends Controller
             'contact' => ['required', 'string', 'max:20'],
             'address' => ['nullable', 'string', 'max:500'],
         ], [
-            'name.required' => 'Nama lengkap wajib diisi',
-            'email.required' => 'Alamat email wajib diisi',
-            'email.email' => 'Format email tidak valid',
-            'email.unique' => 'Email ini sudah digunakan oleh akun lain',
+            'name.required'    => 'Nama lengkap wajib diisi',
+            'email.required'   => 'Alamat email wajib diisi',
+            'email.email'      => 'Format email tidak valid',
+            'email.unique'     => 'Email ini sudah digunakan oleh akun lain',
             'contact.required' => 'Nomor kontak wajib diisi',
-            'address.max' => 'Alamat terlalu panjang (maksimal 500 karakter)',
+            'address.max'      => 'Alamat terlalu panjang (maksimal 500 karakter)',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validasi gagal',
-                'errors' => $validator->errors()
+                'errors'  => $validator->errors()
             ], 422);
         }
 
         try {
-            $customer = Customer::find($customerLogin->id);
-            $contact = $this->formatContact($request->contact, null);
+            $customer = Customer::findOrFail($customerLogin->id);
+            $contact  = $this->formatContact($request->contact, null);
+
             $customer->update([
-                'name' => $request->name,
-                'email' => $request->email,
+                'name'    => $request->name,
+                'email'   => $request->email,
                 'contact' => $contact,
                 'address' => $request->address,
             ]);
@@ -123,7 +102,7 @@ class ProfileController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Profil berhasil diperbarui',
-                'data' => $customer
+                'data'    => $customer
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -134,18 +113,13 @@ class ProfileController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Update customer password
      */
-    public function destroy(string $id)
-    {
-        //
-    }
-
     public function updatePassword(Request $request)
     {
-        $customer = Customer::find(Auth::guard('customer')->id());
-        $traceId = Str::uuid();
-        $timer = new ExecutionTimer();
+        $customer = Customer::findOrFail(Auth::guard('customer')->id());
+        $traceId  = (string) Str::uuid();
+        $timer    = new ExecutionTimer();
 
         $validator = Validator::make($request->all(), [
             'current_password' => [
@@ -170,34 +144,32 @@ class ProfileController extends Controller
         ]);
 
         if ($validator->fails()) {
-            $context = [
+            LogHelper::logInfo(null, [
                 'success' => false,
                 'message' => 'Terdapat kesalahan validasi',
-                'errors' => $validator->errors()->toArray(),
-            ];
-
-            LogHelper::logInfo(null, $context, 400, 'Validation Password Failed', $traceId, $timer->lap());
+                'errors'  => $validator->errors()->toArray(),
+            ], 400, 'Validation Password Failed', $traceId, $timer->lap());
 
             return response()->json([
-                'success' => false,
-                'message' => 'Terdapat kesalahan validasi',
-                'errors' => $validator->errors()->toArray(),
+                'success'  => false,
+                'message'  => 'Terdapat kesalahan validasi',
+                'errors'   => $validator->errors()->toArray(),
                 'trace_id' => $traceId
             ], 422);
         }
 
         try {
-            DB::transaction(function () use ($customer, $request, $traceId, $timer) {
+            DB::transaction(function () use ($customer, $request) {
                 // 1. Simpan password lama ke history
                 PasswordHistory::create([
                     'customer_id' => $customer->id,
-                    'password' => $customer->password,
-                    'created_at' => now()
+                    'password'    => $customer->password,
+                    'created_at'  => now()
                 ]);
 
                 // 2. Update password baru
                 $customer->update([
-                    'password' => Hash::make($request->new_password),
+                    'password'            => Hash::make($request->new_password),
                     'password_changed_at' => now()
                 ]);
 
@@ -207,25 +179,25 @@ class ProfileController extends Controller
                     ->take(5)
                     ->pluck('id');
 
-                // 4. Hapus yang tidak termasuk 5 terbaru
+                // 4. Hapus history lama di luar 5 terbaru
                 PasswordHistory::where('customer_id', $customer->id)
                     ->whereNotIn('id', $latestFive)
                     ->delete();
 
                 // 5. Catat aktivitas
                 ActivityLog::create([
-                    'customer_id' => $customer->id,
+                    'customer_id'   => $customer->id,
                     'activity_type' => 'password_change',
-                    'ip_address' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                    'details' => json_encode([
-                        'action' => 'password_changed',
+                    'ip_address'    => $request->ip(),
+                    'user_agent'    => $request->userAgent(),
+                    'details'       => json_encode([
+                        'action'     => 'password_changed',
                         'changed_at' => now()->toDateTimeString()
                     ])
                 ]);
             });
 
-            // 5. Logout semua session
+            // 6. Logout session
             Auth::guard('customer')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -233,10 +205,10 @@ class ProfileController extends Controller
             LogHelper::logInfo(
                 null,
                 [
-                    'success' => true,
-                    'message' => 'Password berhasil diperbarui! Silakan login kembali.',
+                    'success'         => true,
+                    'message'         => 'Password berhasil diperbarui! Silakan login kembali.',
                     'requires_logout' => true,
-                    'show_toast' => true
+                    'show_toast'      => true
                 ],
                 200,
                 '[G9] Finished Update Password',
@@ -245,39 +217,28 @@ class ProfileController extends Controller
             );
 
             return response()->json([
-                'success' => true,
-                'message' => 'Password berhasil diperbarui! Silakan login kembali.',
-                'redirect' => route('customerLogin'), // Redirect ke halaman login
+                'success'         => true,
+                'message'         => 'Password berhasil diperbarui! Silakan login kembali.',
+                'redirect'        => route('customerLogin'),
                 'requires_logout' => true,
-                'show_toast' => true
+                'show_toast'      => true
             ]);
         } catch (\Exception $e) {
             LogHelper::logError(null, [
                 'customer_id' => $customer->id,
-                'ip' => $request->ip(),
-                'error' => [
-                    'code' => $e->getCode(),
+                'ip'          => $request->ip(),
+                'error'       => [
+                    'code'    => $e->getCode(),
                     'message' => $e->getMessage()
                 ],
             ], 500, "Password Change Failed", $traceId, $timer->lap());
 
             return response()->json([
-                'success' => false,
-                'message' => 'Gagal memperbarui password. Silakan coba lagi.',
+                'success'    => false,
+                'message'    => 'Gagal memperbarui password. Silakan coba lagi.',
                 'error_code' => 'SYSTEM_ERROR',
-                'trace_id' => $traceId
+                'trace_id'   => $traceId
             ], 500);
         }
-    }
-
-    protected function generatePasswordSuggestion()
-    {
-        // Contoh generate password yang memenuhi kriteria
-        $lower = str_shuffle('abcdefghjkmnpqrstuvwxyz');
-        $upper = str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ');
-        $number = rand(1000, 9999);
-        $special = str_shuffle('@$!%*#?&');
-
-        return substr($lower, 0, 4) . substr($upper, 0, 3) . $number . $special[0];
     }
 }

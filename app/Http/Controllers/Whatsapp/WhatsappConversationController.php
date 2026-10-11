@@ -1,22 +1,22 @@
 <?php
 
-namespace App\Http\Controllers\Whatsapp;
+namespace App\Http\Controllers\WhatsApp;
 
 use App\Http\Controllers\Controller;
-use App\Models\Whatsapp\WhatsappConversation;
-use App\Models\Whatsapp\WhatsappWebhookMessage;
-use App\Services\Whatsapp\CloudAPI\Single\ReplyMessage;
-use App\Services\Whatsapp\WhatsappGatewayResolver;
+use App\Models\WhatsApp\WhatsAppConversation;
+use App\Models\WhatsApp\WhatsAppWebhookMessage;
+use App\Services\WhatsApp\CloudAPI\Single\ReplyMessage;
+use App\Services\WhatsApp\WhatsAppGatewayResolver;
 use App\Helpers\LogHelper;
 use App\Helpers\FormatReceiver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
-class WhatsappConversationController extends Controller
+class WhatsAppConversationController extends Controller
 {
     public function __construct(
         private ReplyMessage $replyMessageService,
-        private WhatsappGatewayResolver $gatewayResolver,
+        private WhatsAppGatewayResolver $gatewayResolver,
     ) {}
 
     public function index()
@@ -28,7 +28,7 @@ class WhatsappConversationController extends Controller
         $isKasir = $currentUser->hasRole('Kasir');
         $isSuperAdmin = $currentUser->hasRole('Super Admin');
 
-        $query = WhatsappConversation::with([
+        $query = WhatsAppConversation::with([
             'customer',
             'messages.media'
         ]);
@@ -124,7 +124,7 @@ class WhatsappConversationController extends Controller
             [$gateway, $account, $number] = $resolved;
 
             // 3. Cari Data Conversation
-            $conversation = WhatsappConversation::findOrFail($validated['conversation_id']);
+            $conversation = WhatsAppConversation::findOrFail($validated['conversation_id']);
             $customerContact = $conversation->customer_number;
 
             if (!$customerContact) {
@@ -192,7 +192,7 @@ class WhatsappConversationController extends Controller
         $lastId = $request->query('last_id');
 
         // 1. Ambil hanya pesan yang lebih baru dari last_id
-        $newMessages = WhatsappWebhookMessage::with(['media'])
+        $newMessages = WhatsAppWebhookMessage::with(['media'])
             ->where('conversation_id', $conversationId)
             ->when($lastId, function ($query) use ($lastId) {
                 // Mengambil pesan yang ID-nya lebih besar dari ID terakhir yang ada di browser
@@ -230,7 +230,7 @@ class WhatsappConversationController extends Controller
     {
         LogHelper::logInfo(null, ['conversation_id' => $id], 200, "[ChatController] Marking conversation as read", Str::uuid()->toString());
         // Cari percakapan berdasarkan ID
-        $conversation = WhatsappConversation::find($id);
+        $conversation = WhatsAppConversation::find($id);
 
         if ($conversation) {
             // Update status di database (sesuaikan nama kolomnya)

@@ -43,7 +43,7 @@ return [
             'cert-file'   => 'Certificate File',
             'schedule-time'   => 'Schedule',
             'description'   => 'Description',
-            'telegram-bot'   => 'Telegram Bot Name',
+            'telegram-bot'   => 'Telegram Bot Username',
             'setting-gateway' => 'Setting Gateway',
             'send-bot-to-wa' => 'Send Telegram Bot Link to WhatsApp',
             'test-number' => 'Number',

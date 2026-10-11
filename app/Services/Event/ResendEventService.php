@@ -2,44 +2,42 @@
 
 namespace App\Services\Event;
 
-use App\Helpers\DelayMessage;
-use App\Helpers\FormatReceiver;
+use App\Events\SingleNotification\CustomerActivated;
+use App\Events\SingleNotification\DirectMessageRequested;
+use App\Events\SingleNotification\PayLaterRequest;
+use App\Events\SingleNotification\PaymentSucceeded;
+use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
-use App\Jobs\Whatsapp\SendWhatsappMessageJob;
-use App\Models\Messaging\MessageEvent;
-use App\Models\Receipt;
-use App\Models\Customers\CustomerSubscription;
 use App\Models\Billings\Billing;
+use App\Models\Customers\CustomerSubscription;
 use App\Models\Membership\CustomerMembership;
 use App\Models\Membership\Membership;
-use App\Services\Notification\CustomerActivationNotificationService;
-use App\Services\Notification\PaymentNotificationService;
-use App\Services\Notification\PaymentPayLaterNotificationService;
-use App\Services\Notification\PaymentChannelUpdateNotificationService;
-use App\Services\Whatsapp\WhatsappGatewayResolver;
+use App\Models\Messaging\MessageEvent;
+use App\Models\Receipt;
+use App\Services\Notification\WhatsApp\Broadcast\BroadcastManagerService;
+use App\Services\Notification\WhatsApp\Broadcast\PaymentChannelUpdateNotificationService;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
+use RuntimeException;
+use Throwable;
 
 class ResendEventService
 {
     public function __construct(
-        protected PaymentNotificationService $paymentNotification,
-        protected CustomerActivationNotificationService $activationService,
-        protected PaymentPayLaterNotificationService $paylaterService,
-        protected PaymentChannelUpdateNotificationService $channelUpdateService,
-        protected WhatsappGatewayResolver $gatewayResolver,
+        protected BroadcastManagerService $broadcastManagerService,
     ) {}
 
     public function handle(MessageEvent $event, string $traceId): void
     {
-        $startTime = microtime(true);
+        $timer = new ExecutionTimer();
 
         // Guard clause awal: Hanya melayani channel go_whatsapp
         if ($event->channel !== 'go_whatsapp') {
-            throw new \InvalidArgumentException("Unsupported channel: {$event->channel}");
+            throw new InvalidArgumentException("Unsupported channel: {$event->channel}");
         }
 
         // 👉 LANGKAH 1: Set Status awal ke 'pending' di dalam transaksi singkat
-        DB::transaction(function () use ($event, $traceId) {
+        DB::transaction(function () use ($event, $traceId, $timer) {
             LogHelper::logInfo(
                 null,
                 [
@@ -50,7 +48,8 @@ class ResendEventService
                 ],
                 200,
                 '[RESEND] Start Resend Event',
-                $traceId
+                $traceId,
+                $timer->lap()
             );
 
             $event->update([
@@ -59,6 +58,20 @@ class ResendEventService
                 'retry_count'   => $event->retry_count + 1,
                 'last_error_at' => null,
             ]);
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'original_event_id' => $event->id,
+                    'message_type'      => $event->message_type,
+                    'retry_count'       => $event->retry_count,
+                    'customer_id'       => $event->customer_id,
+                ],
+                200,
+                '[RESEND] Update Status Event',
+                $traceId,
+                $timer->lap()
+            );
         });
 
         $newEvent = $event->refresh();
@@ -93,16 +106,16 @@ class ResendEventService
 
                 if (!$receipt) {
                     LogHelper::logError(null, ['customer_id' => $newEvent->customer_id], 500, '[RESEND] Receipt not found', $traceId);
-                    throw new \RuntimeException("Receipt not found for customer {$newEvent->customer_id}");
+                    throw new RuntimeException("Receipt not found for customer {$newEvent->customer_id}");
                 }
 
                 LogHelper::logInfo(null, ['receipt_id' => $receipt->id], 200, '[RESEND] Receipt Found', $traceId);
 
-                $this->paymentNotification->sendWhatsAppPaymentNotificationByReceiptId(
+                event(new PaymentSucceeded(
                     $receipt->id,
-                    $traceId,
-                    $newEvent->id
-                );
+                    $newEvent->id,
+                    $traceId
+                ));
 
                 LogHelper::logInfo(null, [], 200, '[RESEND] PAYMENT resend dispatched', $traceId);
                 return;
@@ -166,14 +179,14 @@ class ResendEventService
                     }
                 }
 
-                $this->activationService->send(
+                event(new CustomerActivated(
                     $customerMembershipId,
                     $customerSubscription,
                     $billing,
                     $receipt,
                     $newEvent->id,
                     $traceId
-                );
+                ));
 
                 LogHelper::logInfo(null, [], 200, '[RESEND] ACTIVATION resend dispatched', $traceId);
                 return;
@@ -202,7 +215,7 @@ class ResendEventService
 
                 LogHelper::logInfo(null, ['billing_id' => $billing->id, 'event_id' => $newEvent->id], 200, '[RESEND] PAYLATER billing resolved', $traceId);
 
-                $this->paylaterService->send($billing->id, $newEvent->id, $traceId);
+                event(new PayLaterRequest($billing->id, $newEvent->id, $traceId));
 
                 LogHelper::logInfo(null, [], 200, '[RESEND] PAYLATER resend dispatched', $traceId);
                 return;
@@ -214,44 +227,44 @@ class ResendEventService
             |--------------------------------------------------------------------------
             */
             if (in_array($newEvent->message_type, ['update_rekening_juni_2026', 'payment_channel_update'])) {
-                LogHelper::logInfo(null, ['event_id' => $newEvent->id], 200, '[RESEND] Routing to PAYMENT CHANNEL UPDATE single flow', $traceId, round(microtime(true) - $startTime, 4));
+                LogHelper::logInfo(null, ['event_id' => $newEvent->id], 200, '[RESEND] Routing to PAYMENT CHANNEL UPDATE single flow', $traceId, $timer->lap());
 
-                $this->channelUpdateService->sendSingleEvent($newEvent, $traceId);
+                $this->broadcastManagerService->sendSingleEvent($newEvent, $traceId);
 
-                LogHelper::logInfo(null, [], 200, '[RESEND] PAYMENT CHANNEL UPDATE single resend dispatched', $traceId, round(microtime(true) - $startTime, 4));
+                LogHelper::logInfo(null, [], 200, '[RESEND] PAYMENT CHANNEL UPDATE single resend dispatched', $traceId, $timer->lap());
                 return;
             }
 
             /*
             |--------------------------------------------------------------------------
-            | UNKNOWN KEYWORD FLOW
+            | UNKNOWN KEYWORD FLOW (EVENT DRIVEN DISPATCH)
             |--------------------------------------------------------------------------
             */
             if (in_array($newEvent->message_type, ['unknown_keyword', 'info_tagihan', 'info_paket', 'menu', 'stop', 'hubungi_admin', 'gangguan'])) {
-                LogHelper::logInfo(null, ['message_type' => $newEvent->message_type], 200, '[RESEND] Routing to UNKNOWN KEYWORD flow', $traceId);
+                LogHelper::logInfo(null, ['message_type' => $newEvent->message_type], 200, '[RESEND] Routing to UNKNOWN KEYWORD event flow', $traceId);
 
-                $this->sendingMessageDirectly($newEvent, $traceId, $startTime);
+                event(new DirectMessageRequested($newEvent->id, $traceId));
 
-                LogHelper::logInfo(null, [], 200, '[RESEND] Unknown keyword message dispatched successfully', $traceId, round(microtime(true) - $startTime, 4));
-                return; // ✅ FIX: Wajib di-return agar tidak mengeksekusi logic di bawahnya
+                LogHelper::logInfo(null, [], 200, '[RESEND] Unknown keyword message event dispatched successfully', $traceId, $timer->lap());
+                return;
             }
 
             /*
             |--------------------------------------------------------------------------
-            | FALLBACK: UNKNOWN CUSTOMER / CUSTOM FLOW VIA PAYLOAD
+            | FALLBACK: UNKNOWN CUSTOMER / CUSTOM FLOW VIA PAYLOAD (EVENT DRIVEN DISPATCH)
             |--------------------------------------------------------------------------
             */
             if (empty($newEvent->customer_id)) {
-                LogHelper::logInfo(null, ['message_type' => $newEvent->message_type, 'event_id' => $newEvent->id], 200, '[RESEND] No Customer ID - Fallback sending message directly from payload', $traceId, round(microtime(true) - $startTime, 4));
+                LogHelper::logInfo(null, ['message_type' => $newEvent->message_type, 'event_id' => $newEvent->id], 200, '[RESEND] No Customer ID - Fallback dispatching direct message event from payload', $traceId, $timer->lap());
 
-                $this->sendingMessageDirectly($newEvent, $traceId, $startTime);
+                event(new DirectMessageRequested($newEvent->id, $traceId));
 
-                LogHelper::logInfo(null, [], 200, '[RESEND] Fallback message dispatched successfully', $traceId, round(microtime(true) - $startTime, 4));
+                LogHelper::logInfo(null, [], 200, '[RESEND] Fallback direct message event dispatched successfully', $traceId, $timer->lap());
                 return;
             }
 
-            throw new \InvalidArgumentException("Unsupported message type: {$newEvent->message_type} or invalid customer configuration.");
-        } catch (\Throwable $e) {
+            throw new InvalidArgumentException("Unsupported message type: {$newEvent->message_type} or invalid customer configuration.");
+        } catch (Throwable $e) {
             // 👉 LANGKAH 3: Tangkap exception, amankan state DB ke status 'failed'
             LogHelper::logError(
                 $e,
@@ -259,7 +272,7 @@ class ResendEventService
                 500,
                 '[RESEND] Handling Exception - Updating state to FAILED',
                 $traceId,
-                round(microtime(true) - $startTime, 4)
+                $timer->lap()
             );
 
             $currentMeta = is_array($newEvent->meta) ? $newEvent->meta : [];
@@ -275,51 +288,5 @@ class ResendEventService
 
             throw $e;
         }
-    }
-
-    private function sendingMessageDirectly(MessageEvent $newEvent, string $traceId, float $startTime): void
-    {
-        [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, 'update_rekening_juni_2026') ?? [null, null, null];
-        if (!$gateway || !$account || !$number) {
-            throw new \RuntimeException("Failed to resolve active gateway components.");
-        }
-
-        $queueName = 'notification';
-        $deviceId = $number->device_id;
-
-        // Hitung delay pengiriman secara dinamis
-        $finalDelay = (new DelayMessage())->calculation(
-            $newEvent->message_type,
-            $traceId,
-            rand(60, 270),
-            $queueName,
-            round(microtime(true) - $startTime, 4)
-        );
-
-        // Amankan konversi data payload bertipe array ke string JSON murni
-        $payloadString = is_array($newEvent->request_payload) ? json_encode($newEvent->request_payload) : $newEvent->request_payload;
-
-        $newEvent->update([
-            'status'       => 'pending',
-            'stage'        => 'SENDING JOB',
-            'meta'         => $newEvent->meta,
-            'payload'      => $payloadString,
-            'device_id'    => $deviceId,
-            'scheduled_at' => $finalDelay,
-        ]);
-
-        $formattedReceiver = (new FormatReceiver())->formatReceiver($newEvent->phone_number, null, false);
-
-        SendWhatsappMessageJob::dispatch(
-            $newEvent->message_type,
-            $formattedReceiver,
-            $payloadString,
-            null,
-            $traceId,
-            $newEvent->id,
-            $deviceId
-        )
-            ->onQueue($queueName)
-            ->delay($finalDelay);
     }
 }

@@ -1,28 +1,30 @@
 <?php
 
-namespace App\Http\Controllers\Whatsapp;
+namespace App\Http\Controllers\WhatsApp;
 
+use App\Events\SingleNotification\WhatsAppTestRequest;
+use App\Helpers\ExecutionTimer;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Http\Controllers\Controller;
-use App\Models\Whatsapp\WhatsappGateway;
-use App\Models\Whatsapp\WhatsappGatewayAccount;
-use App\Models\Whatsapp\WhatsappNumber;
-use App\Services\Whatsapp\CloudAPI\Single\TestMessage;
-use App\Services\Whatsapp\GowaService;
+use App\Models\WhatsApp\WhatsAppGateway;
+use App\Models\WhatsApp\WhatsAppGatewayAccount;
+use App\Models\WhatsApp\WhatsAppNumber;
+use App\Services\WhatsApp\CloudAPI\Single\TestMessage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
-class WhatsappGatewayAccountController extends Controller
+class WhatsAppGatewayAccountController extends Controller
 {
     public function __construct() {}
 
     /**
      * Show create form.
      */
-    public function create(WhatsappGateway $whatsappgateway)
+    public function create(WhatsAppGateway $whatsappgateway)
     {
         $view = $whatsappgateway->type === 'cloud'
             ? 'whatsapp_gateways.accounts.create_cloud'
@@ -34,7 +36,7 @@ class WhatsappGatewayAccountController extends Controller
     /**
      * Store new account.
      */
-    public function store(Request $request, WhatsappGateway $whatsappgateway)
+    public function store(Request $request, WhatsAppGateway $whatsappgateway)
     {
         if ($whatsappgateway->type === 'cloud') {
             return $this->storeCloud($request, $whatsappgateway);
@@ -43,7 +45,7 @@ class WhatsappGatewayAccountController extends Controller
         return $this->storeOnPrem($request, $whatsappgateway);
     }
 
-    protected function storeCloud(Request $request, WhatsappGateway $gateway)
+    protected function storeCloud(Request $request, WhatsAppGateway $whatsappgateway)
     {
         $validated = $request->validate([
             // General
@@ -76,13 +78,13 @@ class WhatsappGatewayAccountController extends Controller
             ])->withInput();
         }
 
-        // VALIDASI CROSS-WABA (tidak boleh dipakai WABA lain)
+        // VALIDASI CROSS-WABA
         foreach ($validated['phone_numbers'] as $num) {
             $pnid = $num['meta_phone_number_id'];
 
-            $exists = WhatsappNumber::query()
+            $exists = WhatsAppNumber::query()
                 ->where('meta_phone_number_id', $pnid)
-                ->exists(); // strict global uniqueness
+                ->exists();
 
             if ($exists) {
                 return back()->withErrors([
@@ -95,7 +97,7 @@ class WhatsappGatewayAccountController extends Controller
 
         try {
             // 1. Create Gateway Account
-            $account = $gateway->accounts()->create([
+            $account = $whatsappgateway->accounts()->create([
                 'purpose' => $validated['purpose'] ?? null,
                 'description' => $validated['description'] ?? null,
                 'is_active' => $request->boolean('is_active'),
@@ -111,7 +113,6 @@ class WhatsappGatewayAccountController extends Controller
             $existingIds = [];
 
             foreach ($validated['phone_numbers'] as $idx => $num) {
-
                 $source = $num['number'] ?? $num['meta_phone_number_id'];
                 $clean = preg_replace('/\D/', '', $source);
                 $last4 = substr($clean, -4);
@@ -138,12 +139,11 @@ class WhatsappGatewayAccountController extends Controller
             DB::commit();
 
             return redirect()
-                ->route('whatsappgateway.show', $gateway->slug)
+                ->route('whatsappgateway.show', $whatsappgateway->slug)
                 ->with('success', 'Cloud API account successfully added.');
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            // Optional: log error
             LogHelper::logError(null, [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -155,7 +155,7 @@ class WhatsappGatewayAccountController extends Controller
         }
     }
 
-    protected function storeOnPrem(Request $request, WhatsappGateway $gateway)
+    protected function storeOnPrem(Request $request, WhatsAppGateway $whatsappgateway)
     {
         $validated = $request->validate([
             'purpose' => 'nullable|string|max:255',
@@ -187,10 +187,8 @@ class WhatsappGatewayAccountController extends Controller
         try {
             DB::beginTransaction();
 
-            // -----------------------------------------
             // 1) Insert account
-            // -----------------------------------------
-            $account = $gateway->accounts()->create([
+            $account = $whatsappgateway->accounts()->create([
                 'purpose' => $validated['purpose'] ?? null,
                 'description' => $validated['description'] ?? null,
                 'is_active' => $request->boolean('is_active'),
@@ -207,9 +205,7 @@ class WhatsappGatewayAccountController extends Controller
                 'cert_file' => $validated['cert_file'] ?? null,
             ]);
 
-            // -----------------------------------------
-            // 2) Insert number (default = true always for Gowa)
-            // -----------------------------------------
+            // 2) Insert number
             $slug = Str::slug($validated['number']);
             $account->numbers()->create([
                 'number' => $validated['number'],
@@ -217,7 +213,7 @@ class WhatsappGatewayAccountController extends Controller
                 'slug' => $slug,
                 'name' => 'gowa_phone_number',
                 'country_code' => $validated['country_code'] ?? '62',
-                'device_id' => $formattedNumber,
+                'device_id' => $validated['device_id'],
                 'is_default' => true,
                 'is_enabled' => true,
             ]);
@@ -225,13 +221,11 @@ class WhatsappGatewayAccountController extends Controller
             DB::commit();
 
             return redirect()
-                ->route('whatsappgateway.show', $gateway->slug)
+                ->route('whatsappgateway.show', $whatsappgateway->slug)
                 ->with('success', 'Gowa account successfully added.');
         } catch (\Throwable $e) {
-
             DB::rollBack();
 
-            // Optional: log error
             LogHelper::logError(null, [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -246,7 +240,7 @@ class WhatsappGatewayAccountController extends Controller
     /**
      * Edit form.
      */
-    public function edit(WhatsappGateway $whatsappgateway, WhatsappGatewayAccount $account)
+    public function edit(WhatsAppGateway $whatsappgateway, WhatsAppGatewayAccount $account)
     {
         if ($whatsappgateway->id !== $account->whatsapp_gateway_id) {
             abort(404);
@@ -265,7 +259,7 @@ class WhatsappGatewayAccountController extends Controller
     /**
      * Update data.
      */
-    public function update(Request $request, WhatsappGateway $whatsappgateway, WhatsappGatewayAccount $account)
+    public function update(Request $request, WhatsAppGateway $whatsappgateway, WhatsAppGatewayAccount $account)
     {
         if ($whatsappgateway->id !== $account->whatsapp_gateway_id) {
             abort(404);
@@ -278,7 +272,7 @@ class WhatsappGatewayAccountController extends Controller
         return $this->updateOnPrem($request, $account, $whatsappgateway);
     }
 
-    protected function updateCloud(Request $request, WhatsappGatewayAccount $account, WhatsappGateway $gateway)
+    protected function updateCloud(Request $request, WhatsAppGatewayAccount $account, WhatsAppGateway $whatsappgateway)
     {
         $validated = $request->validate([
             'purpose' => 'nullable|string|max:50',
@@ -292,6 +286,7 @@ class WhatsappGatewayAccountController extends Controller
             'meta_webhook_verify_token' => 'nullable|string',
 
             'phone_numbers' => 'required|array|min:1',
+            'phone_numbers.*.id' => 'nullable|integer', // Tambahkan validasi ID jika nomor sudah ada
             'phone_numbers.*.meta_phone_number_id' => 'required|string',
             'phone_numbers.*.number' => 'nullable|string',
             'phone_numbers.*.country_code' => 'nullable|string|max:5',
@@ -310,11 +305,11 @@ class WhatsappGatewayAccountController extends Controller
         foreach ($validated['phone_numbers'] as $num) {
             $pnid = $num['meta_phone_number_id'];
 
-            $exists = WhatsappNumber::query()
+            $exists = WhatsAppNumber::query()
                 ->where('meta_phone_number_id', $pnid)
                 ->whereHas('account', function ($q) use ($validated, $account) {
-                    $q->where('meta_waba_id', '!=', $validated['meta_waba_id']); // avoid different WABA
-                    $q->where('id', '!=', $account->id); // avoid self
+                    $q->where('meta_waba_id', '!=', $validated['meta_waba_id']);
+                    $q->where('id', '!=', $account->id);
                 })
                 ->exists();
 
@@ -325,7 +320,6 @@ class WhatsappGatewayAccountController extends Controller
             }
         }
 
-        // PROSES UPDATE (same as previous answer)
         DB::beginTransaction();
         try {
             $account->update([
@@ -338,43 +332,55 @@ class WhatsappGatewayAccountController extends Controller
                 'meta_webhook_verify_token' => $validated['meta_webhook_verify_token'] ?? null,
                 'meta_user_access_token' => $validated['meta_user_access_token']
                     ? encrypt($validated['meta_user_access_token'])
-                    : null,
+                    : $account->meta_user_access_token,
             ]);
 
-            $existingIds = [];
+            $processedIds = [];
 
             foreach ($validated['phone_numbers'] as $idx => $num) {
+                $numberId = $num['id'] ?? null;
+                $pnid = $num['meta_phone_number_id'];
 
-                $source = $num['number'] ?? $num['meta_phone_number_id'];
-                $clean = preg_replace('/\D/', '', $source);
-                $last4 = substr($clean, -4);
+                // slug unik dengan menggabungkan account_id & meta_phone_number_id
+                $slug = Str::slug("cloudapi-{$account->id}-{$pnid}");
 
-                $slug = Str::slug("cloudapi-{$account->id}-{$last4}");
+                $dataToSave = [
+                    'meta_phone_number_id' => $pnid,
+                    'slug'                 => $slug,
+                    'name'                 => 'meta_number_id',
+                    'number'               => $num['number'] ?? null,
+                    'country_code'         => $num['country_code'] ?? '62',
+                    'is_default'           => ($validated['default_phone_number'] == $idx),
+                    'is_enabled'           => true,
+                ];
 
-                $model = $account->numbers()->updateOrCreate(
-                    [
-                        'meta_phone_number_id' => $num['meta_phone_number_id']
-                    ],
-                    [
-                        'slug' => $slug,
-                        'name' => 'meta_number_id',
-                        'number' => $num['number'] ?? null,
-                        'country_code' => $num['country_code'] ?? '62',
-                        'is_default' => ($validated['default_phone_number'] == $idx),
-                        'is_enabled' => true,
-                    ]
-                );
+                // Cek berdasarkan ID jika ada
+                if ($numberId) {
+                    $model = $account->numbers()->where('id', $numberId)->first();
+                    if ($model) {
+                        $model->update($dataToSave);
+                    } else {
+                        $model = $account->numbers()->create($dataToSave);
+                    }
+                } else {
+                    // Jika tidak ada ID (nomor baru), cek by meta_phone_number_id atau create baru
+                    $model = $account->numbers()->updateOrCreate(
+                        ['meta_phone_number_id' => $pnid],
+                        $dataToSave
+                    );
+                }
 
-                $existingIds[] = $model->id;
+                $processedIds[] = $model->id;
             }
 
+            // Hapus nomor yang dicopot/dihapus dari form
             $account->numbers()
-                ->whereNotIn('id', $existingIds)
+                ->whereNotIn('id', $processedIds)
                 ->delete();
 
             DB::commit();
 
-            return redirect()->route('whatsappgateway.show', $gateway->slug)
+            return redirect()->route('whatsappgateway.show', $whatsappgateway->slug)
                 ->with('success', 'Cloud API account updated successfully.');
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -383,8 +389,10 @@ class WhatsappGatewayAccountController extends Controller
         }
     }
 
-    protected function updateOnPrem(Request $request, WhatsappGatewayAccount $account, WhatsappGateway $gateway)
+    protected function updateOnPrem(Request $request, WhatsAppGatewayAccount $account, WhatsAppGateway $whatsAppGateway)
     {
+        $existingNumber = $account->numbers()->first();
+
         $validated = $request->validate([
             'purpose' => 'nullable|string|max:50',
             'description' => 'nullable|string',
@@ -406,7 +414,7 @@ class WhatsappGatewayAccountController extends Controller
                 'required',
                 'string',
                 'max:255',
-                'unique:whatsapp_numbers,device_id'
+                Rule::unique('whatsapp_numbers', 'device_id')->ignore($existingNumber?->id),
             ],
         ]);
 
@@ -416,41 +424,56 @@ class WhatsappGatewayAccountController extends Controller
 
         DB::beginTransaction();
 
-        $validated['auth_enabled'] = $request->has('auth_enabled');
+        try {
+            $authEnabled = $request->has('auth_enabled');
 
-        if (! $validated['auth_enabled']) {
-            $validated['basic_auth_username'] = null;
-            $validated['basic_auth_password'] = null;
+            $updateAccountData = [
+                'purpose' => $validated['purpose'] ?? null,
+                'description' => $validated['description'] ?? null,
+                'is_active' => $request->boolean('is_active'),
+                'base_url' => $validated['base_url'],
+                'webhook_secret' => $validated['webhook_secret'] ?? null,
+                'auth_enabled' => $authEnabled,
+                'basic_auth_username' => $authEnabled ? ($validated['basic_auth_username'] ?? null) : null,
+                'cert_file' => $validated['cert_file'] ?? null,
+            ];
+
+            if ($authEnabled && $request->filled('basic_auth_password')) {
+                $updateAccountData['basic_auth_password'] = encrypt($request->basic_auth_password);
+            } elseif (!$authEnabled) {
+                $updateAccountData['basic_auth_password'] = null;
+            }
+
+            $account->update($updateAccountData);
+
+            // ✅ PERBAIKAN: Cari berdasarkan ID number jika ada, atau cukup berdasarkan whatsapp_gateway_account_id
+            $account->numbers()->updateOrCreate(
+                ['whatsapp_gateway_account_id' => $account->id],
+                [
+                    'number' => $formattedNumber,
+                    'country_code' => $validated['country_code'] ?? '62',
+                    'device_id' => $validated['device_id'],
+                    'jid' => $jid,
+                    'is_enabled' => true,
+                ]
+            );
+
+            DB::commit();
+
+            return redirect()->route('whatsappgateway.show', $whatsAppGateway->slug)
+                ->with('success', 'Gowa account updated successfully');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return back()->withErrors(['error' => $e->getMessage()])->withInput();
         }
-
-        if ($validated['auth_enabled'] && $request->filled('basic_auth_password')) {
-            $validated['basic_auth_password'] = encrypt($request->basic_auth_password);
-        }
-
-        $validated['is_active'] = $request->has('is_active');
-
-        $account->update($validated);
-
-        $account->numbers()->update([
-            'number' => $formattedNumber,
-            'country_code' => $validated['country_code'] ?? '62',
-            'device_id' => $validated['device_id'],
-            'jid' => $jid,
-            'is_enabled' => true,
-        ]);
-
-        DB::commit();
-
-        return redirect()->route('whatsappgateway.show', $gateway->slug)
-            ->with('success', 'Gowa account updated successfully');
     }
 
     /**
      * Delete data.
      */
-    public function destroy(WhatsappGateway $whatsappgateway, WhatsappGatewayAccount $account)
+    public function destroy(WhatsAppGateway $whatsappgateway, WhatsAppGatewayAccount $account)
     {
-        // 1. Pastikan account memang milik gateway -> keamanan tambahan
         if ($account->whatsapp_gateway_id !== $whatsappgateway->id) {
             abort(404);
         }
@@ -458,15 +481,12 @@ class WhatsappGatewayAccountController extends Controller
         DB::beginTransaction();
 
         try {
-            // 2. Hapus phone numbers dulu (jika tidak ada cascade)
             $account->numbers()->delete();
-
-            // 3. Hapus account
             $account->delete();
 
             DB::commit();
 
-            return back()->with('success', 'Akun Cloud API berhasil dihapus.');
+            return back()->with('success', 'Akun WhatsApp Gateway berhasil dihapus.');
         } catch (\Throwable $e) {
             DB::rollBack();
 
@@ -477,28 +497,66 @@ class WhatsappGatewayAccountController extends Controller
     /**
      * Test account connection.
      */
-    public function test(Request $request, WhatsappGateway $whatsappgateway)
+    public function test(Request $request, WhatsAppGateway $whatsappgateway)
     {
+        $traceId = (string) Str::uuid();
+        $timer   = new ExecutionTimer();
+
         $request->validate([
-            'receive_number' => 'required|numeric',
+            'receive_number' => 'required|string',
         ]);
 
+        $receiveNumber = $request->input('receive_number');
+
         if ($whatsappgateway->type === 'onprem') {
+            try {
+                LogHelper::logInfo(null, [
+                    'gateway_id'     => $whatsappgateway->id,
+                    'receive_number' => $receiveNumber,
+                ], 200, '[TestGateway] Start dispatching test message', $traceId, $timer->lap());
 
-            return app(GowaService::class)
-                ->test($whatsappgateway, $request->receive_number);
-        } else {
-            $account = $whatsappgateway->accounts->first();
+                event(new WhatsAppTestRequest($receiveNumber, $traceId));
 
-            return app(TestMessage::class)
-                ->test($account, $request->receive_number);
+                LogHelper::logInfo(null, [
+                    'gateway_id'     => $whatsappgateway->id,
+                    'receive_number' => $receiveNumber,
+                ], 200, '[TestGateway] Test message queued successfully.', $traceId, $timer->lap());
+
+                return back()->with('success', 'Pesan uji berhasil dikirim ke antrean.');
+            } catch (\Throwable $e) {
+                $exceptionCode = $e->getCode();
+                $statusCode = (is_numeric($exceptionCode) && $exceptionCode >= 400 && $exceptionCode <= 599)
+                    ? (int) $exceptionCode
+                    : 500;
+
+                LogHelper::logError(null, [
+                    'gateway_id'      => $whatsappgateway->id,
+                    'receive_number'  => $receiveNumber,
+                    'error_message'   => $e->getMessage(),
+                    'exception_class' => get_class($e),
+                    'file'            => $e->getFile(),
+                    'line'            => $e->getLine(),
+                ], $statusCode, '[TestGateway] Failed to dispatch test message', $traceId, $timer->lap());
+
+                return back()->with('error', 'Gagal mengirim pesan uji: ' . $e->getMessage());
+            }
         }
+
+        // Cabang Cloud API
+        $account = $whatsappgateway->accounts()->where('is_active', true)->first()
+            ?? $whatsappgateway->accounts()->first();
+
+        if (!$account) {
+            return back()->with('error', 'Tidak ada akun terdaftar pada gateway Cloud API ini.');
+        }
+
+        return app(TestMessage::class)->test($account, $receiveNumber);
     }
 
     /**
      * Test Cloud API connection.
      */
-    protected function testCloud(WhatsappGateway $gateway, WhatsappGatewayAccount $account)
+    protected function testCloud(WhatsAppGateway $whatsappgateway, WhatsAppGatewayAccount $account)
     {
         try {
             $url = "{$account->meta_graph_url}/{$account->meta_graph_version}/{$account->meta_phone_number_id}?access_token={$account->meta_user_access_token}";

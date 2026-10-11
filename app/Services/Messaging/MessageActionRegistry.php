@@ -3,7 +3,7 @@
 namespace App\Services\Messaging;
 
 use App\Services\Messaging\Contracts\MessageActionHandler;
-use App\Models\Whatsapp\WhatsappMessage;
+use App\Models\WhatsApp\WhatsAppMessage;
 
 class MessageActionRegistry
 {
@@ -12,7 +12,7 @@ class MessageActionRegistry
 
     public function getCategory(string $action): string
     {
-        $template = WhatsappMessage::where('slug', $action)->first();
+        $template = WhatsAppMessage::where('slug', $action)->first();
 
         return $template->category ?? 'BROADCAST';
     }

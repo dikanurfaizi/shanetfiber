@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Services\WhatsappWebhook;
+namespace App\Services\WhatsAppWebhook;
 
 use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
-use App\Services\WhatsappWebhook\DTO\WebhookPayload;
-use App\Services\WhatsappWebhook\Handlers\MessageAckHandler;
-use App\Services\WhatsappWebhook\Handlers\GroupHandler;
-use App\Services\WhatsappWebhook\Handlers\TextMessageHandler;
-use App\Services\WhatsappWebhook\Handlers\MediaMessageHandler;
+use App\Services\WhatsAppWebhook\DTO\WebhookPayload;
+use App\Services\WhatsAppWebhook\Handlers\MessageAckHandler;
+use App\Services\WhatsAppWebhook\Handlers\GroupHandler;
+use App\Services\WhatsAppWebhook\Handlers\TextMessageHandler;
+use App\Services\WhatsAppWebhook\Handlers\MediaMessageHandler;
 
 class WebhookEventRouter
 {
@@ -113,7 +113,8 @@ class WebhookEventRouter
             ],
             400,
             '[Webhook] Unhandled event',
-            $traceId
+            $traceId,
+            $timer->lap()
         );
     }
 }

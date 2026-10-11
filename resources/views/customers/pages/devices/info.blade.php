@@ -318,10 +318,19 @@
                     });
 
                     function formatTraffic(value) {
+                        let numericValue = Number(value);
+
+                        if (isNaN(numericValue) || numericValue <= 0) {
+                            return '0 bps';
+                        }
+
                         const sizes = ['bps', 'kbps', 'Mbps', 'Gbps', 'Tbps'];
-                        if (value === 0) return '0 bps';
-                        const i = parseInt(Math.floor(Math.log(value) / Math.log(1024)));
-                        return parseFloat((value / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i];
+                        const i = Math.floor(Math.log(numericValue) / Math.log(1024));
+
+                        // Mencegah index out of bounds jika angka sangat kecil/besar
+                        const index = Math.min(Math.max(i, 0), sizes.length - 1);
+
+                        return parseFloat((numericValue / Math.pow(1024, index)).toFixed(2)) + ' ' + sizes[index];
                     }
 
                     function updateChart() {
@@ -334,22 +343,36 @@
                                 'interface': iface
                             },
                             success: function(response) {
-                                if (response && response[0]) {
-                                    // Process download data (Tx)
+                                // Tangani struktur response baik jika berbentuk array langsung atau terbungkus di response.original
+                                let rawData = response;
+                                if (response && response.original) {
+                                    rawData = response.original;
+                                }
+
+                                if (rawData && rawData[0]) {
+                                    // 1. Process download data (Tx)
                                     let newDownloadData = [...downloadData];
-                                    if (response[0].Tx && response[0].Tx.length > 0) {
+                                    if (rawData[0].Tx && rawData[0].Tx.length > 0) {
+                                        let lastTxObj = rawData[0].Tx[rawData[0].Tx.length - 1];
+                                        // 💡 AMBIL NILAI .y DAN CONVERT KE INT (Default 0 jika null/NaN)
+                                        let txValue = parseInt(lastTxObj.y || lastTxObj) || 0;
+
                                         newDownloadData.shift();
-                                        newDownloadData.push(response[0].Tx[response[0].Tx.length - 1]);
+                                        newDownloadData.push(txValue);
                                     }
 
-                                    // Process upload data (Rx)
+                                    // 2. Process upload data (Rx)
                                     let newUploadData = [...uploadData];
-                                    if (response[0].Rx && response[0].Rx.length > 0) {
+                                    if (rawData[0].Rx && rawData[0].Rx.length > 0) {
+                                        let lastRxObj = rawData[0].Rx[rawData[0].Rx.length - 1];
+                                        // 💡 AMBIL NILAI .y DAN CONVERT KE INT (Default 0 jika null/NaN)
+                                        let rxValue = parseInt(lastRxObj.y || lastRxObj) || 0;
+
                                         newUploadData.shift();
-                                        newUploadData.push(response[0].Rx[response[0].Rx.length - 1]);
+                                        newUploadData.push(rxValue);
                                     }
 
-                                    // Update chart with animation
+                                    // 3. Update chart series secara atomic
                                     chart.updateSeries([{
                                         name: 'Download',
                                         data: newDownloadData
@@ -358,7 +381,7 @@
                                         data: newUploadData
                                     }], true);
 
-                                    // Update our reference arrays
+                                    // Update reference arrays
                                     downloadData = newDownloadData;
                                     uploadData = newUploadData;
                                 }

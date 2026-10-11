@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\SingleNotification\TelegramBotLinkRequest;
 use App\Models\Telegram\TelegramGateway;
 use App\Models\WhatsApp\WhatsAppGateway;
-use App\Models\User;
 use App\Helpers\LogHelper;
-use App\Jobs\Whatsapp\SendWhatsappMessageJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Crypt;
@@ -126,13 +125,13 @@ class TelegramGatewayController extends Controller
         try {
             // Ambil gateway
             $telegramGateway = TelegramGateway::first();
-            $whatsappGateway = WhatsAppGateway::first();
+            $whatsAppGateway = WhatsAppGateway::first();
 
             // Validasi gateway aktif
-            if ($telegramGateway?->disabled || $whatsappGateway?->disabled) {
+            if ($telegramGateway?->disabled || $whatsAppGateway?->disabled) {
                 LogHelper::logWarning(
                     null,
-                    ['telegram_gateway' => $telegramGateway, 'whatsapp_gateway' => $whatsappGateway],
+                    ['telegram_gateway' => $telegramGateway, 'whatsapp_gateway' => $whatsAppGateway],
                     503,
                     "One or more gateways are disabled"
                 );
@@ -149,35 +148,23 @@ class TelegramGatewayController extends Controller
             if (str_starts_with($receiveNumber, '0')) {
                 $receiveNumber = preg_replace(
                     '/^0/',
-                    $whatsappGateway->country_code ?? '62',
+                    $whatsAppGateway->country_code ?? '62',
                     $receiveNumber
                 );
             }
 
-            $senderNumber = $whatsappGateway->whatsapp_number->number ?? 'N/A';
-            $user = User::where('contact', $receiveNumber)->first();
-            $name = $user->name ?? 'Dummy User';
-
-            // Buat pesan
-            $message = "Hai! Untuk mendaftar ke Telegram Bot, silakan klik tautan berikut untuk mulai berinteraksi:\n\n" .
-                "https://t.me/{$telegramGateway->name}?start=start\n\n" .
-                "Terima kasih.";
-
-            // Kirim pesan
-            SendWhatsappMessageJob::dispatch(
-                'bot_link',
-                $receiveNumber,
-                $message,
-                null,
-                $traceId
-            )->delay(now()->addSeconds(1));
+            event(new TelegramBotLinkRequest(
+                receiverNumber: $receiveNumber,
+                telegramGateway: $telegramGateway,
+                eventId: null,
+                traceId: $traceId
+            ));
 
             LogHelper::logInfo(
                 null,
                 [
                     'gateway_id' => $telegramGateway->id,
-                    'receiver' => $receiveNumber,
-                    'sender' => $senderNumber
+                    'receiver' => $receiveNumber
                 ],
                 200,
                 "Test message successfully sent via WhatsApp gateway"

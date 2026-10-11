@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Collectors;
+namespace App\Services\WhatsApp\CloudAPI\Collectors;
 
+use App\Helpers\ExecutionTimer;
 use App\Models\Customers\Customer;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,7 @@ class ActiveCustomerCollector
      */
     public function collect(Carbon $today, string $messageType, string ...$slugs): Collection
     {
+        $timer = new ExecutionTimer();
         $testMode = config('messaging.reminder_allow_test', false);
 
         // Gabungkan semua slug untuk filter anti-double send
@@ -88,7 +90,8 @@ class ActiveCustomerCollector
                 'slugs'     => $allSlugs
             ],
             120,
-            '[ActiveCustomerCollector] Dynamic active customer data collected with optimized existential constraints'
+            '[ActiveCustomerCollector] Dynamic active customer data collected with optimized existential constraints',
+            $timer->lap()
         );
 
         return $data;

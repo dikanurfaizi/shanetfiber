@@ -152,6 +152,7 @@
                                                 <option value="{{ $bank->id }}">
                                                     {{ $bank->name ?? 'No Data' }} ({{ $bank->bank }} -
                                                     {{ $bank->account_number }})
+                                                    {{ !$bank->is_active ? ' - [Non-Active / Manual Only]' : '' }}
                                                 </option>
                                             @endforeach
                                         </select>

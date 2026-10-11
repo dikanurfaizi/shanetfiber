@@ -56,14 +56,14 @@ use App\Http\Controllers\TestConnectionController;
 use App\Http\Controllers\UpdateController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WebsystemController;
-use App\Http\Controllers\Whatsapp\WhatsappGatewayAccountController;
-use App\Http\Controllers\Whatsapp\WhatsappGatewayController;
-use App\Http\Controllers\Whatsapp\WhatsappMessageController;
-use App\Http\Controllers\Whatsapp\WhatsappNumberController;
-use App\Http\Controllers\Whatsapp\WhatsappCloudController;
-use App\Http\Controllers\Whatsapp\WhatsappConversationController;
-use App\Http\Controllers\Whatsapp\WhatsappFeatureController;
-use App\Http\Controllers\Whatsapp\WhatsappMediaController;
+use App\Http\Controllers\WhatsApp\WhatsAppGatewayAccountController;
+use App\Http\Controllers\WhatsApp\WhatsAppGatewayController;
+use App\Http\Controllers\WhatsApp\WhatsAppMessageController;
+use App\Http\Controllers\WhatsApp\WhatsAppNumberController;
+use App\Http\Controllers\WhatsApp\WhatsAppCloudController;
+use App\Http\Controllers\WhatsApp\WhatsAppConversationController;
+use App\Http\Controllers\WhatsApp\WhatsAppFeatureController;
+use App\Http\Controllers\WhatsApp\WhatsAppMediaController;
 use App\Http\Controllers\LocalizationController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -392,44 +392,44 @@ Route::group(['prefix' => 'cpanel'], function () {
 
         // ==================== WHATSAPP GATEWAY ===================
         // WhatsApp Gateway
-        Route::resource('settings/whatsappgateway', WhatsappGatewayController::class)->names('whatsappgateway');
-        Route::patch('settings/whatsappgateway/{whatsappgateway}/test_gateway', [WhatsappGatewayController::class, 'test_gateway'])->name('whatsappgateway.test_gateway');
+        Route::resource('settings/whatsappgateway', WhatsAppGatewayController::class)->names('whatsappgateway');
+        Route::patch('settings/whatsappgateway/{whatsappgateway}/test_gateway', [WhatsAppGatewayController::class, 'test_gateway'])->name('whatsappgateway.test_gateway');
 
         // WhatsApp Gateway Account
-        Route::resource('whatsappgateway.accounts', WhatsappGatewayAccountController::class);
-        Route::post('/settings/whatsappgateway/{whatsappgateway}/accounts/test', [WhatsappGatewayAccountController::class, 'test'])->name('whatsappgateway.accounts.test');
+        Route::resource('whatsappgateway.accounts', WhatsAppGatewayAccountController::class);
+        Route::post('/settings/whatsappgateway/{whatsappgateway}/accounts/test', [WhatsAppGatewayAccountController::class, 'test'])->name('whatsappgateway.accounts.test');
 
         // WhatsApp Numbers
-        Route::resource('settings/whatsappnumber', WhatsappNumberController::class);
-        Route::put('settings/whatsappnumber/{whatsappnumber}/disabled', [WhatsappNumberController::class, 'disable_number'])->name('whatsappnumber.disable');
-        Route::get('settings/whatsappnumber/{whatsappnumber}/delete', [WhatsappNumberController::class, 'delete'])->name('whatsappnumber.delete');
+        Route::resource('settings/whatsappnumber', WhatsAppNumberController::class);
+        Route::put('settings/whatsappnumber/{whatsappnumber}/disabled', [WhatsAppNumberController::class, 'disable_number'])->name('whatsappnumber.disable');
+        Route::get('settings/whatsappnumber/{whatsappnumber}/delete', [WhatsAppNumberController::class, 'delete'])->name('whatsappnumber.delete');
 
         // WhatsApp Messages
-        Route::resource('settings/whatsappmessage', WhatsappMessageController::class);
-        Route::put('settings/whatsappmessage/{whatsappmessage}/disabled', [WhatsappMessageController::class, 'disable_message'])->name('whatsappmessage.disable');
-        Route::get('settings/whatsappmessage/{whatsappmessage}/delete', [WhatsappMessageController::class, 'delete'])->name('whatsappmessage.delete');
+        Route::resource('settings/whatsappmessage', WhatsAppMessageController::class);
+        Route::put('settings/whatsappmessage/{whatsappmessage}/disabled', [WhatsAppMessageController::class, 'disable_message'])->name('whatsappmessage.disable');
+        Route::get('settings/whatsappmessage/{whatsappmessage}/delete', [WhatsAppMessageController::class, 'delete'])->name('whatsappmessage.delete');
 
         // WhatsApp Templates
-        Route::resource('settings/whatsapptemplate', WhatsappCloudController::class);
-        Route::put('settings/whatsapptemplate/{whatsapptemplate}/disabled', [WhatsappCloudController::class, 'disable'])->name('whatsapptemplate.disable');
-        Route::get('settings/whatsapptemplate/{whatsapptemplate}/delete', [WhatsappCloudController::class, 'delete'])->name('whatsapptemplate.delete');
-        Route::post('settings/whatsapptemplate/action/sync', [WhatsappCloudController::class, 'sync'])->name('whatsapptemplate.sync');
-        Route::post('settings/whatsapptemplate/{id}/sync', [WhatsappCloudController::class, 'syncSingle'])->name('whatsapptemplate.sync.single');
+        Route::resource('settings/whatsapptemplate', WhatsAppCloudController::class);
+        Route::put('settings/whatsapptemplate/{whatsapptemplate}/disabled', [WhatsAppCloudController::class, 'disable'])->name('whatsapptemplate.disable');
+        Route::get('settings/whatsapptemplate/{whatsapptemplate}/delete', [WhatsAppCloudController::class, 'delete'])->name('whatsapptemplate.delete');
+        Route::post('settings/whatsapptemplate/action/sync', [WhatsAppCloudController::class, 'sync'])->name('whatsapptemplate.sync');
+        Route::post('settings/whatsapptemplate/{id}/sync', [WhatsAppCloudController::class, 'syncSingle'])->name('whatsapptemplate.sync.single');
 
         // WhatsApp Features
-        Route::resource('settings/whatsappfeature', WhatsappFeatureController::class);
-        Route::get('settings/whatsappfeature/{whatsappfeature}/delete', [WhatsappFeatureController::class, 'delete'])->name('whatsappfeature.delete');
+        Route::resource('settings/whatsappfeature', WhatsAppFeatureController::class);
+        Route::get('settings/whatsappfeature/{whatsappfeature}/delete', [WhatsAppFeatureController::class, 'delete'])->name('whatsappfeature.delete');
 
         // WhatsApp Conversations
         Route::prefix('whatsapp/conversations')->group(function () {
-            Route::get('/', [WhatsappConversationController::class, 'index'])->name('whatsapp.conversations.index');
+            Route::get('/', [WhatsAppConversationController::class, 'index'])->name('whatsapp.conversations.index');
 
             // Route Baru untuk Polling/Sync Pesan Terbaru
-            Route::get('/sync', [WhatsappConversationController::class, 'sync'])->name('whatsapp.conversations.sync');
+            Route::get('/sync', [WhatsAppConversationController::class, 'sync'])->name('whatsapp.conversations.sync');
 
-            Route::get('/{id}', [WhatsappConversationController::class, 'show'])->name('whatsapp.conversations.show');
-            Route::post('/send', [WhatsappConversationController::class, 'sendMessage'])->name('whatsapp.conversations.send');
-            Route::post('/{id}/mark-as-read', [WhatsappConversationController::class, 'markAsRead'])->name('whatsapp.conversations.markAsRead');
+            Route::get('/{id}', [WhatsAppConversationController::class, 'show'])->name('whatsapp.conversations.show');
+            Route::post('/send', [WhatsAppConversationController::class, 'sendMessage'])->name('whatsapp.conversations.send');
+            Route::post('/{id}/mark-as-read', [WhatsAppConversationController::class, 'markAsRead'])->name('whatsapp.conversations.markAsRead');
         });
 
         // ==================== MESSAGE EVENTS ====================
@@ -518,6 +518,6 @@ Route::middleware(['auth'])
     ->group(function () {
 
         Route::middleware('permission:conversation-list')
-            ->get('/media/{media}', [WhatsappMediaController::class, 'show'])
+            ->get('/media/{media}', [WhatsAppMediaController::class, 'show'])
             ->name('whatsapp.media.show');
     });

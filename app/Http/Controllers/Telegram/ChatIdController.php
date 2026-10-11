@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Enums\TelegramAction;
 use App\DataTransferObjects\TelegramJobDto;
+use App\Helpers\ExecutionTimer;
 use App\Http\Controllers\Controller;
 
 class ChatIdController extends Controller
@@ -74,7 +75,7 @@ class ChatIdController extends Controller
         return response()->json(['message' => 'Chat ID berhasil disimpan.']);
     }
 
-    public function update_telegram_data($id, Request $request)
+    public function update_telegram_data(int $id, Request $request)
     {
         $chat = TelegramChatId::findOrFail($id);
 
@@ -91,7 +92,7 @@ class ChatIdController extends Controller
 
     public function destroy(Request $request, TelegramChatId $telegramchat)
     {
-        dd($telegramchat);
+        // dd($telegramchat);
         Log::info('Masuk ke destroy');
 
         $telegramchat->deleted_by = auth()->id();
@@ -141,25 +142,45 @@ class ChatIdController extends Controller
     public function get_updates()
     {
         $traceId = (string) Str::uuid();
+        $timer = new ExecutionTimer(); // Inisialisasi timer di awal request
+
+        // Log request masuk
+        LogHelper::logInfo('TelegramChatIdController@get_updates', [
+            'endpoint' => 'settings/telegramchat/get_updates',
+            'method'   => 'GET',
+        ], 200, 'Incoming request to get Telegram updates', $traceId, $timer->lap());
+
         try {
             $chatIds = $this->telegramGetUpdateService->findNewChatIds($traceId);
 
             if (empty($chatIds)) {
-                Log::info('⚠️ Tidak ada chat ID baru.');
-                return response()->json(['message' => 'Tidak ada chat ID baru dari Telegram']);
+                LogHelper::logInfo('TelegramChatIdController@get_updates', [
+                    'chat_ids_count' => 0,
+                ], 200, 'Tidak ada chat ID baru dari Telegram', $traceId, $timer->lap());
+
+                return response()->json([
+                    'message' => 'Tidak ada chat ID baru dari Telegram'
+                ]);
             }
 
+            LogHelper::logInfo('TelegramChatIdController@get_updates', [
+                'fetched_count' => count($chatIds),
+                'chat_ids'      => $chatIds,
+            ], 200, 'Data berhasil diambil dari Telegram', $traceId, $timer->lap());
+
             return response()->json([
-                'message' => 'Data berhasil diambil dari Telegram',
+                'message'  => 'Data berhasil diambil dari Telegram',
                 'chat_ids' => $chatIds,
             ]);
         } catch (\Exception $e) {
-            Log::error('❌ Terjadi error di get_updates:', [
+            LogHelper::logError('TelegramChatIdController@get_updates', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-            ]);
+            ], 500, 'Gagal memproses data Telegram: ' . $e->getMessage(), $traceId, $timer->lap());
 
-            return response()->json(['message' => 'Gagal memproses data Telegram: ' . $e->getMessage()], 500);
+            return response()->json([
+                'message' => 'Gagal memproses data Telegram: ' . $e->getMessage()
+            ], 500);
         }
     }
 

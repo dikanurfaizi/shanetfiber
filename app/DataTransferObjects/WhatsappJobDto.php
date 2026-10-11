@@ -3,9 +3,8 @@
 namespace App\DataTransferObjects;
 
 use Carbon\Carbon;
-use Illuminate\Support\Str;
 
-class WhatsappJobDto
+class WhatsAppJobDto
 {
     public function __construct(
         public readonly ?int $customerId = null,

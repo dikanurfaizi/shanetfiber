@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Broadcast\Traits;
+namespace App\Services\WhatsApp\CloudAPI\Broadcast\Traits;
 
 use Illuminate\Support\Collection;
 use App\Helpers\LogHelper;
@@ -40,35 +40,44 @@ trait MapsBroadcastBankPayload
         // 1. Evaluasi 3 Bank + 1 E-Wallet
         if ($banksCount >= 3 && $ewalletsCount >= 1 && isset($templates['3_banks_1_ewallet'])) {
             return $this->buildPayloadResponse($templates['3_banks_1_ewallet'], '3_banks_1_ewallet', [
-                'bank1' => $b1, 'bank2' => $b2, 'bank3' => $b3, 'wallet' => $w1
+                'bank1' => $b1,
+                'bank2' => $b2,
+                'bank3' => $b3,
+                'wallet' => $w1
             ]);
         }
 
         // 2. Evaluasi 3 Bank Only
         if ($banksCount >= 3 && $ewalletsCount == 0 && isset($templates['3_banks_only'])) {
             return $this->buildPayloadResponse($templates['3_banks_only'], '3_banks_only', [
-                'bank1' => $b1, 'bank2' => $b2, 'bank3' => $b3
+                'bank1' => $b1,
+                'bank2' => $b2,
+                'bank3' => $b3
             ]);
         }
 
         // 3. Evaluasi 2 Bank + 1 E-Wallet
         if ($banksCount == 2 && $ewalletsCount >= 1 && isset($templates['2_banks_1_ewallet'])) {
             return $this->buildPayloadResponse($templates['2_banks_1_ewallet'], '2_banks_1_ewallet', [
-                'bank1' => $b1, 'bank2' => $b2, 'wallet' => $w1
+                'bank1' => $b1,
+                'bank2' => $b2,
+                'wallet' => $w1
             ]);
         }
 
         // 4. Evaluasi 2 Bank Only
         if ($banksCount == 2 && $ewalletsCount == 0 && isset($templates['2_banks_only'])) {
             return $this->buildPayloadResponse($templates['2_banks_only'], '2_banks_only', [
-                'bank1' => $b1, 'bank2' => $b2
+                'bank1' => $b1,
+                'bank2' => $b2
             ]);
         }
 
         // 5. Evaluasi 1 Bank + 1 E-Wallet
         if ($banksCount == 1 && $ewalletsCount >= 1 && isset($templates['1_bank_1_ewallet'])) {
             return $this->buildPayloadResponse($templates['1_bank_1_ewallet'], '1_bank_1_ewallet', [
-                'bank1' => $b1, 'wallet' => $w1
+                'bank1' => $b1,
+                'wallet' => $w1
             ]);
         }
 
@@ -89,7 +98,8 @@ trait MapsBroadcastBankPayload
         // Fallback Default jika tidak ada yang cocok
         $defaultTemplate = current($templates) ?: 'info_billing_default';
         return $this->buildPayloadResponse($defaultTemplate, 'fallback_default', [
-            'bank1' => $b1, 'bank2' => $b2
+            'bank1' => $b1,
+            'bank2' => $b2
         ]);
     }
 

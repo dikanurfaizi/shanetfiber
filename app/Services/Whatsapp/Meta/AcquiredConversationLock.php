@@ -1,17 +1,17 @@
 <?php
 
-namespace App\Services\Whatsapp\Meta;
+namespace App\Services\WhatsApp\Meta;
 
-use App\Models\Whatsapp\WhatsappConversation;
+use App\Models\WhatsApp\WhatsAppConversation;
 use Illuminate\Support\Facades\DB;
 
-class AcquireConversationLock
+class AcquiredConversationLock
 {
     public function handle(int $conversationId, int $adminId): bool
     {
         return DB::transaction(function () use ($conversationId, $adminId) {
 
-            $conversation = WhatsappConversation::lockForUpdate()->find($conversationId);
+            $conversation = WhatsAppConversation::lockForUpdate()->find($conversationId);
 
             if (!$conversation) {
                 return false;

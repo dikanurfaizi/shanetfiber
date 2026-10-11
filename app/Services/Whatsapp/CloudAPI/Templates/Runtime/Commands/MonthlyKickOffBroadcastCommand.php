@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands;
+namespace App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands;
 
-use App\Models\Whatsapp\WhatsappGatewayAccount;
+use App\Models\WhatsApp\WhatsAppGatewayAccount;
 
 class MonthlyKickOffBroadcastCommand
 {
     public function __construct(
-        public readonly WhatsappGatewayAccount $account,
+        public readonly WhatsAppGatewayAccount $account,
         public readonly string $templateName,
         public readonly string $customerId,
         public readonly string $customerName,

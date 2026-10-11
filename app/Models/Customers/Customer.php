@@ -2,27 +2,29 @@
 
 namespace App\Models\Customers;
 
-use App\Models\Billings\Billing;
-use App\Models\Packages\Package;
-use App\Models\PppType;
-use App\Models\Mikrotik;
-use App\Models\User;
-use App\Models\Membership\CustomerMembership;
-use App\Models\Customers\CustomerSubscription;
-use App\Models\Websystem;
 use App\Models\AutoIsolir;
+use App\Models\Billings\Billing;
+use App\Models\Customers\CustomerSubscription;
+use App\Models\Membership\CustomerMembership;
 use App\Models\Messaging\MessageEvent;
+use App\Models\Mikrotik;
+use App\Models\Packages\Package;
 use App\Models\PasswordHistory;
-use Spatie\Permission\Traits\HasRoles;
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use App\Models\PppType;
+use App\Models\User;
+use App\Models\Websystem;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 class Customer extends Authenticatable
 {
@@ -35,9 +37,60 @@ class Customer extends Authenticatable
     ];
 
     protected $casts = [
-        'password' => 'hashed',
-        'wa_opt_out' => 'boolean',
+        'password'   => 'hashed',
+        'is_active'  => 'boolean',
+        'activation' => 'boolean',
+        'is_opt_out' => 'boolean',
     ];
+
+    // =========================================================================
+    // LOCAL QUERY SCOPES (Satu Sumber Kebenaran Kriteria Customer)
+    // =========================================================================
+
+    /**
+     * Scope: Filter customer yang aktif, sudah aktivasi, tidak opt-out, dan punya nomor HP valid.
+     */
+    public function scopeEligibleForBroadcast(Builder $query): Builder
+    {
+        return $query->where('customers.is_active', true)
+            ->where('customers.activation', true)
+            ->where('customers.is_opt_out', false)
+            ->whereNotNull('customers.contact')
+            ->where('customers.contact', '!=', '');
+    }
+
+    /**
+     * Scope: Exclude customer yang tercatat gagal pesan dikarenakan nomor WA/JID Invalid.
+     */
+    public function scopeWhereValidJid(Builder $query, string $messageType): Builder
+    {
+        $invalidIds = DB::table('message_events')
+            ->where('message_type', $messageType)
+            ->where('status', 'failed')
+            ->where('response_code', 'INVALID_JID')
+            ->whereNotNull('customer_id')
+            ->distinct()
+            ->pluck('customer_id');
+
+        return $query->when($invalidIds->isNotEmpty(), function ($q) use ($invalidIds) {
+            $q->whereNotIn('customers.id', $invalidIds);
+        });
+    }
+
+    /**
+     * Scope: Mencegah duplikasi pesan, pastikan customer belum pernah menerima pesan tipe ini (status success/pending).
+     */
+    public function scopeWhereUnsentMessageType(Builder $query, string $messageType): Builder
+    {
+        return $query->whereDoesntHave('messageEvents', function ($sub) use ($messageType) {
+            $sub->where('message_type', $messageType)
+                ->whereIn('status', ['success', 'pending']);
+        });
+    }
+
+    // =========================================================================
+    // RELASI & HELPER METHODS LAINNYA
+    // =========================================================================
 
     public function getRouteKeyName(): string
     {
@@ -76,7 +129,6 @@ class Customer extends Authenticatable
         return $this->pausedSubscription?->package;
     }
 
-    // Jika ingin yang aktif saja
     public function activeSubscription()
     {
         return $this->hasOne(CustomerSubscription::class)
@@ -120,33 +172,10 @@ class Customer extends Authenticatable
         return $this->hasOne(AutoIsolir::class, 'mikrotik_id', 'mikrotik_id');
     }
 
-    // public function isPreviousPassword($plainPassword)
-    // {
-    //     $previousPasswords = ActivityLog::where('customer_id', $this->id)
-    //         ->where('field_name', 'password')
-    //         ->where('is_sensitive', true)
-    //         ->orderBy('created_at', 'desc')
-    //         ->take(5) // Ambil 5 password terakhir
-    //         ->pluck('old_value');
-
-    //     foreach ($previousPasswords as $oldHash) {
-    //         if (Hash::check($plainPassword, $oldHash)) {
-    //             return true;
-    //         }
-    //     }
-
-    //     return false;
-    // }
-
     public function passwordHistory()
     {
         return $this->hasMany(PasswordHistory::class);
     }
-
-    // public function activityLogs()
-    // {
-    //     return $this->hasMany(ActivityLog::class);
-    // }
 
     public function getEmailForPayment(): string
     {
@@ -198,7 +227,6 @@ class Customer extends Authenticatable
             return 0;
         }
 
-        // legacy discount (kalau masih ada)
         $discountPercent = $this->discount ?? 0;
 
         return $packagePrice * ((100 - $discountPercent) / 100);
@@ -254,7 +282,6 @@ class Customer extends Authenticatable
 
     public function messageEvents(): HasMany
     {
-        // Sesuaikan namespace 'App\Models\Messaging\MessageEvent' jika berbeda di project Anda
         return $this->hasMany(MessageEvent::class, 'customer_id');
     }
 
@@ -265,19 +292,15 @@ class Customer extends Authenticatable
 
     public function currentSubscription()
     {
-        // 1. Ambil semua subscription bertipe 'active'
         $activeSubscriptions = $this->customerSubscriptions()
             ->where('status', 'active')
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // 2. Jika ada yang aktif (baik 1 row maupun > 1 row)
-        // method ->first() otomatis mengambil yang paling baru karena sudah di-orderBy created_at desc
         if ($activeSubscriptions->isNotEmpty()) {
             return $activeSubscriptions->first();
         }
 
-        // 3. Fallback: Jika tidak ada yang aktif sama sekali, ambil yang paling baru tanpa memandang status
         return $this->customerSubscriptions()
             ->orderBy('created_at', 'desc')
             ->first();

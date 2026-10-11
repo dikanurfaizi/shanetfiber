@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Jobs\Whatsapp;
+namespace App\Jobs\WhatsApp;
 
+use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -22,9 +23,10 @@ class ProcessIncomingTextMessageJob implements ShouldQueue
 
     public function handle(): void
     {
+        $timer = new ExecutionTimer();
         // TODO: update status pesan di DB, dsb
         LogHelper::logInfo(null, [
             'payload' => $this->payload,
-        ], 200, '[Job] ProcessIncomingTextMessageJob', $this->traceId);
+        ], 200, '[Job] ProcessIncomingTextMessageJob', $this->traceId, $timer->lap());
     }
 }

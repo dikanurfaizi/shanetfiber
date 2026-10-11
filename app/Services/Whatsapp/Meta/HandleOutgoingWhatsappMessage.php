@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Services\Whatsapp\Meta;
+namespace App\Services\WhatsApp\Meta;
 
-use App\Models\Whatsapp\WhatsappConversation;
-use App\Models\Whatsapp\WhatsappWebhookMessage;
-use App\Models\Whatsapp\Cloud\WhatsappCloudTemplate;
+use App\Models\WhatsApp\WhatsAppConversation;
+use App\Models\WhatsApp\WhatsAppWebhookMessage;
+use App\Models\WhatsApp\Cloud\WhatsAppCloudTemplate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-class HandleOutgoingWhatsappMessage
+class HandleOutgoingWhatsAppMessage
 {
     public function handle(
         ?int $adminId,
@@ -41,7 +41,7 @@ class HandleOutgoingWhatsappMessage
             }
 
             // === Idempotency ===
-            $existing = WhatsappWebhookMessage::where('wa_message_id', $waMessageId)
+            $existing = WhatsAppWebhookMessage::where('wa_message_id', $waMessageId)
                 ->lockForUpdate()
                 ->first();
 
@@ -59,7 +59,7 @@ class HandleOutgoingWhatsappMessage
             // ---------------------------------------
 
             // Create outgoing message
-            WhatsappWebhookMessage::create([
+            WhatsAppWebhookMessage::create([
                 'conversation_id' => $conversation->id,
                 'wa_message_id'   => $waMessageId,
                 'trace_id'        => Str::uuid(),
@@ -91,7 +91,7 @@ class HandleOutgoingWhatsappMessage
         $componentsPayload = data_get($payload, 'template.components', []);
 
         // 1. Ambil template dari DB
-        $dbTemplate = WhatsappCloudTemplate::where('name', $templateName)->first();
+        $dbTemplate = WhatsAppCloudTemplate::where('name', $templateName)->first();
 
         if (!$dbTemplate) {
             return "Template: $templateName (Detail tidak ditemukan)";
@@ -153,9 +153,9 @@ class HandleOutgoingWhatsappMessage
         return $content;
     }
 
-    private function resolveConversation(string $customerNumber): WhatsappConversation
+    private function resolveConversation(string $customerNumber): WhatsAppConversation
     {
-        return WhatsappConversation::firstOrCreate(
+        return WhatsAppConversation::firstOrCreate(
             // 1. Cek berdasarkan nomornya saja. Apa pun statusnya (open/read/closed), kalau ada, langsung ambil.
             ['customer_number' => $customerNumber],
 

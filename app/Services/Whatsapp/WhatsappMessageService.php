@@ -1,16 +1,16 @@
 <?php
 
-namespace App\Services\Whatsapp;
+namespace App\Services\WhatsApp;
 
 use App\Helpers\GatewayHelper;
 use App\Helpers\LogHelper;
 use App\Models\Messaging\MessageEvent;
-use App\Models\Whatsapp\WhatsappGateway;
+use App\Models\WhatsApp\WhatsAppGateway;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 use Throwable;
 
-class WhatsappMessageService
+class WhatsAppMessageService
 {
     public function send(
         string $messageType,
@@ -103,7 +103,7 @@ class WhatsappMessageService
             // =====================
             $event->update(['stage' => 'RESOLVE_GATEWAY']);
 
-            $gateway = WhatsappGateway::where('slug', 'gowa')
+            $gateway = WhatsAppGateway::where('slug', 'gowa')
                 ->where('is_active', true)
                 ->first();
 

@@ -2,26 +2,27 @@
 
 namespace App\Providers;
 
-use App\Events\PayLaterApplied;
-use App\Events\PaymentCancelled;
-use App\Events\PaymentSucceeded;
-use App\Events\CustomerActivated;
-use App\Events\OrderCreated;
-use App\Events\PackageChangesApplied;
-use App\Events\BroadcastMidMonthTriggered;
-use App\Events\MonthlyKickoffBroadcastTriggered;
-use App\Events\OverdueBroadcastTriggered;
-use App\Events\PaymentChannelUpdateTriggered;
-use App\Listeners\QueueCustomerActivationNotification;
-use App\Listeners\QueueOrderCreatedNotification;
-use App\Listeners\QueuePayLaterNotification;
-use App\Listeners\QueuePaymentCancellationNotification;
-use App\Listeners\QueuePaymentNotification;
-use App\Listeners\QueuePackageChangesNotification;
-use App\Listeners\QueueBroadcastMidMonthProcess;
-use App\Listeners\QueueMonthlyKickoffBroadcast;
-use App\Listeners\QueueOverdueBroadcastNotification;
-use App\Listeners\QueuePaymentChannelUpdate;
+use App\Events\SingleNotification\CustomerActivated;
+use App\Events\SingleNotification\DirectMessageRequested;
+use App\Events\SingleNotification\OrderCreated;
+use App\Events\SingleNotification\PackageChangesRequest;
+use App\Events\SingleNotification\PayLaterRequest;
+use App\Events\SingleNotification\PaymentCancelled;
+use App\Events\SingleNotification\PaymentSucceeded;
+use App\Events\SingleNotification\TelegramBotLinkRequest;
+use App\Events\SingleNotification\WhatsAppTestRequest;
+use App\Listeners\Telegram\SendTelegramCustomerActivationListener;
+use App\Listeners\Telegram\SendTelegramPackageChangesListener;
+use App\Listeners\Telegram\SendTelegramPayLaterListener;
+use App\Listeners\WhatsApp\SendDirectNotificationListener;
+use App\Listeners\WhatsApp\SendCustomerActivationListener;
+use App\Listeners\WhatsApp\SendOrderCreatedListener;
+use App\Listeners\WhatsApp\SendPackageChangesListener;
+use App\Listeners\WhatsApp\SendPayLaterListener;
+use App\Listeners\WhatsApp\SendPaymentCancellationListener;
+use App\Listeners\WhatsApp\SendPaymentSucceededListener;
+use App\Listeners\WhatsApp\SendTelegramBotLinkListener;
+use App\Listeners\WhatsApp\SendWhatsAppTestListener;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -38,35 +39,35 @@ class EventServiceProvider extends ServiceProvider
             SendEmailVerificationNotification::class,
         ],
         PaymentSucceeded::class => [
-            QueuePaymentNotification::class,
+            SendPaymentSucceededListener::class,
         ],
         PaymentCancelled::class => [
-            QueuePaymentCancellationNotification::class,
+            SendPaymentCancellationListener::class,
         ],
-        PayLaterApplied::class => [
-            QueuePayLaterNotification::class,
+        PayLaterRequest::class => [
+            SendPayLaterListener::class,
+            SendTelegramPayLaterListener::class,
         ],
         CustomerActivated::class => [
-            QueueCustomerActivationNotification::class,
+            SendCustomerActivationListener::class,
+            SendTelegramCustomerActivationListener::class
         ],
-        PackageChangesApplied::class => [
-            QueuePackageChangesNotification::class,
+        PackageChangesRequest::class => [
+            SendPackageChangesListener::class,
+            SendTelegramPackageChangesListener::class
         ],
         OrderCreated::class => [
-            QueueOrderCreatedNotification::class,
+            SendOrderCreatedListener::class,
         ],
-        BroadcastMidMonthTriggered::class => [
-            QueueBroadcastMidMonthProcess::class,
+        TelegramBotLinkRequest::class => [
+            SendTelegramBotLinkListener::class
         ],
-        MonthlyKickoffBroadcastTriggered::class => [
-            QueueMonthlyKickoffBroadcast::class,
+        WhatsAppTestRequest::class => [
+            SendWhatsAppTestListener::class
         ],
-        OverdueBroadcastTriggered::class => [
-            QueueOverdueBroadcastNotification::class,
-        ],
-        PaymentChannelUpdateTriggered::class => [
-            QueuePaymentChannelUpdate::class,
-        ],
+        DirectMessageRequested::class => [
+            SendDirectNotificationListener::class
+        ]
     ];
 
     /**

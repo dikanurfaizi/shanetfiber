@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Single;
+namespace App\Services\WhatsApp\CloudAPI\Single;
 
-use App\Models\Whatsapp\WhatsappGatewayAccount;
-use App\Services\Whatsapp\CloudAPI\Messages\TemplateMessageService;
+use App\Models\WhatsApp\WhatsAppGatewayAccount;
+use App\Services\WhatsApp\CloudAPI\Messages\TemplateMessageService;
 
 class ReplyMessage
 {
@@ -15,7 +15,7 @@ class ReplyMessage
      * Mengirim balasan teks manual melalui infrastruktur Dispatcher.
      */
     public function send(
-        WhatsappGatewayAccount $account,
+        WhatsAppGatewayAccount $account,
         string $contact,
         string $text,
         ?string $replyToMessageId = null

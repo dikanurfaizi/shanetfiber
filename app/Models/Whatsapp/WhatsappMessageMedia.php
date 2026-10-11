@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Models\Whatsapp;
+namespace App\Models\WhatsApp;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class WhatsappMessageMedia extends Model
+class WhatsAppMessageMedia extends Model
 {
     use HasFactory;
 
@@ -32,7 +32,7 @@ class WhatsappMessageMedia extends Model
 
     public function message()
     {
-        return $this->belongsTo(WhatsappWebhookMessage::class, 'message_id');
+        return $this->belongsTo(WhatsAppWebhookMessage::class, 'message_id');
     }
 
     public function isDownloaded(): bool

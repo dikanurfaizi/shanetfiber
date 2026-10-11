@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Models\Whatsapp\Cloud;
+namespace App\Models\WhatsApp\Cloud;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class WhatsappCloudTemplateButton extends Model
+class WhatsAppCloudTemplateButton extends Model
 {
     protected $table = 'whatsapp_cloud_template_buttons';
 
@@ -36,7 +36,7 @@ class WhatsappCloudTemplateButton extends Model
     public function component(): BelongsTo
     {
         return $this->belongsTo(
-            WhatsappCloudTemplateComponent::class,
+            WhatsAppCloudTemplateComponent::class,
             'component_id'
         );
     }

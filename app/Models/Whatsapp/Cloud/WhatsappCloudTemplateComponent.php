@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Models\Whatsapp\Cloud;
+namespace App\Models\WhatsApp\Cloud;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class WhatsappCloudTemplateComponent extends Model
+class WhatsAppCloudTemplateComponent extends Model
 {
     protected $table = 'whatsapp_cloud_template_components';
 
@@ -34,7 +34,7 @@ class WhatsappCloudTemplateComponent extends Model
     public function template(): BelongsTo
     {
         return $this->belongsTo(
-            WhatsappCloudTemplate::class,
+            WhatsAppCloudTemplate::class,
             'template_id'
         );
     }
@@ -42,7 +42,7 @@ class WhatsappCloudTemplateComponent extends Model
     public function buttons(): HasMany
     {
         return $this->hasMany(
-            WhatsappCloudTemplateButton::class,
+            WhatsAppCloudTemplateButton::class,
             'component_id'
         )->orderBy('position');
     }

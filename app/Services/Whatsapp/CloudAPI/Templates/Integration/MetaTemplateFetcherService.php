@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Templates\Integration;
+namespace App\Services\WhatsApp\CloudAPI\Templates\Integration;
 
 use App\Helpers\LogHelper;
-use App\Helpers\WhatsappGraph;
-use App\Models\Whatsapp\WhatsappGatewayAccount;
+use App\Helpers\WhatsAppGraph;
+use App\Models\WhatsApp\WhatsAppGatewayAccount;
 use Illuminate\Support\Facades\Http;
 
 class MetaTemplateFetcherService
@@ -19,13 +19,13 @@ class MetaTemplateFetcherService
         ];
     }
 
-    public function fetchAllTemplates(WhatsappGatewayAccount $account): array
+    public function fetchAllTemplates(WhatsAppGatewayAccount $account): array
     {
         $traceId   = (string) \Illuminate\Support\Str::uuid();
         $templates = [];
         $page      = 1;
 
-        $nextUrl = WhatsappGraph::messageTemplates(
+        $nextUrl = WhatsAppGraph::messageTemplates(
             graphUrl: $account->meta_graph_url,
             graphVersion: $account->meta_graph_version,
             wabaId: $account->meta_waba_id
@@ -82,11 +82,11 @@ class MetaTemplateFetcherService
     }
 
     public function fetchTemplateByName(
-        WhatsappGatewayAccount $account,
+        WhatsAppGatewayAccount $account,
         string $name
     ): ?array {
 
-        $url = WhatsappGraph::templateByName(
+        $url = WhatsAppGraph::templateByName(
             graphUrl: $account->meta_graph_url,
             graphVersion: $account->meta_graph_version,
             wabaId: $account->meta_waba_id,
@@ -109,11 +109,11 @@ class MetaTemplateFetcherService
     }
 
     public function fetchTemplateById(
-        WhatsappGatewayAccount $account,
+        WhatsAppGatewayAccount $account,
         string $metaTemplateId
     ): ?array {
 
-        $url = WhatsappGraph::templateById(
+        $url = WhatsAppGraph::templateById(
             graphUrl: $account->meta_graph_url,
             graphVersion: $account->meta_graph_version,
             templateId: $metaTemplateId

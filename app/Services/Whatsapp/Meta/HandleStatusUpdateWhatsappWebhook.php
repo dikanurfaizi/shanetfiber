@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Services\Whatsapp\Meta;
+namespace App\Services\WhatsApp\Meta;
 
-use App\Models\Whatsapp\WhatsappWebhookMessage;
-use App\Models\Whatsapp\WhatsappMessageStatus;
+use App\Models\WhatsApp\WhatsAppWebhookMessage;
+use App\Models\WhatsApp\WhatsAppMessageStatus;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
-class HandleStatusUpdateWhatsappWebhook
+class HandleStatusUpdateWhatsAppWebhook
 {
     public function handleStatuses(array $value, string $traceId): void
     {
@@ -25,7 +25,7 @@ class HandleStatusUpdateWhatsappWebhook
                 : now();
 
             // Append-only audit (idempotent)
-            WhatsappMessageStatus::firstOrCreate(
+            WhatsAppMessageStatus::firstOrCreate(
                 [
                     'wa_message_id' => $waMessageId,
                     'status'        => $status,
@@ -65,7 +65,7 @@ class HandleStatusUpdateWhatsappWebhook
                 break;
         }
 
-        WhatsappWebhookMessage::where('wa_message_id', $waMessageId)
+        WhatsAppWebhookMessage::where('wa_message_id', $waMessageId)
             ->update($fields);
     }
 }

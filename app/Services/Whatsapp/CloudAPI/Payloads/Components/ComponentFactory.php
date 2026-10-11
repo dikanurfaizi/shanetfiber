@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Payloads\Components;
+namespace App\Services\WhatsApp\CloudAPI\Payloads\Components;
 
 use App\Helpers\LogHelper;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\TemplateContext;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\TemplateContext;
 use RuntimeException;
 
 class ComponentFactory

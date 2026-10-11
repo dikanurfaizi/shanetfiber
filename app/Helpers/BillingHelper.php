@@ -5,6 +5,7 @@ namespace App\Helpers;
 use Carbon\Carbon;
 use App\Models\Billings\Billing;
 use App\Models\Customers\Customer;
+use App\Models\User;
 use App\Helpers\UserAuth;
 
 class BillingHelper
@@ -121,8 +122,11 @@ class BillingHelper
             return $html;
         }
 
+        /** @var User|null $user */
+        $user = auth()->user();
+
         // Jika user TIDAK punya permission billing-edit → hanya tampilkan label merah
-        if (!auth()->user() || !auth()->user()->can('billing-edit')) {
+        if (!$user || !$user->can('billing-edit')) {
             $dueDate = $billing->due_date
                 ? Carbon::parse($billing->due_date)->translatedFormat('d F Y')
                 : '-';
@@ -178,7 +182,7 @@ class BillingHelper
         // ======================
         if (in_array($billing->status, ['BL', 'PL'], true)) {
 
-            if ($customer && $customer->activation === 'true') {
+            if ($customer && $customer->activation == true) {
 
                 $buttons[] = '<button type="button"
                         class="btn btn-success btn-sm billing-submit-btn"

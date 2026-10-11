@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Telegram;
 
+use App\Events\SingleNotification\TelegramBotLinkRequest;
+use App\Helpers\FormatReceiver;
 use App\Models\Telegram\TelegramGateway;
 use App\Models\WhatsApp\WhatsAppGateway;
-use App\Models\User;
 use App\Helpers\LogHelper;
-use App\Jobs\Whatsapp\SendWhatsappMessageJob;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Crypt;
@@ -55,37 +57,48 @@ class GatewayController extends Controller
     public function update_gateway(Request $request, TelegramGateway $telegramGateway)
     {
         try {
-            $this->validate(
-                $request,
-                [
-                    'url_callback' => 'nullable',
-                    'token' => 'nullable',
-                    'cert_file' => 'nullable',
-                ]
-            );
+            $this->validate($request, [
+                'url_callback'        => 'nullable|string',
+                'token'               => 'nullable|string',
+                'cert_file'           => 'nullable|string',
+                'auth_disabled'       => 'nullable|boolean',
+                'basic_auth_username' => 'nullable|string',
+                'basic_auth_password' => 'nullable|string',
+            ]);
 
-            // Update data di model WhatsappGateway
-            $telegramGateway->url_callback = $request->input('url_callback');
-            $telegramGateway->token = $request->input('token');
-            $telegramGateway->cert_file = $request->input('cert_file');
-            $telegramGateway->auth_disabled = $request->input('auth_disabled');
-            $telegramGateway->basic_auth_username = $request->input('basic_auth_username') ? $request->input('basic_auth_username') : null;
-            if ($request->input('basic_auth_password')) {
-                $telegramGateway->basic_auth_password = Crypt::encryptString($request->input('basic_auth_password'));
-            } else {
-                $telegramGateway->basic_auth_password = null;
+            // 1. Update field umum hanya jika input dikirimkan (tidak null)
+            if ($request->has('url_callback')) {
+                $telegramGateway->url_callback = $request->input('url_callback');
             }
 
-            // dd($request, $telegramGateway);
+            if ($request->has('token')) {
+                $telegramGateway->token = $request->input('token');
+            }
 
-            // Simpan perubahan ke database
-            $telegramGateway->update();
+            if ($request->has('cert_file')) {
+                $telegramGateway->cert_file = $request->input('cert_file');
+            }
 
-            // Kembalikan response sukses
+            if ($request->has('auth_disabled')) {
+                $telegramGateway->auth_disabled = $request->boolean('auth_disabled');
+            }
+
+            if ($request->has('basic_auth_username')) {
+                $telegramGateway->basic_auth_username = $request->input('basic_auth_username');
+            }
+
+            // 2. Password hanya dienkripsi & diperbarui jika diisi (filled)
+            // Jika form password dikosongkan saat update, gunakan nilai password lama
+            if ($request->filled('basic_auth_password')) {
+                $telegramGateway->basic_auth_password = Crypt::encryptString($request->input('basic_auth_password'));
+            }
+
+            // 3. Simpan perubahan (Laravel otomatis mendeteksi isDirty, jika tidak ada nilai yang berubah maka query UPDATE di-skip)
+            $telegramGateway->save();
+
             return redirect()->route('telegramgateway.index')
                 ->with('success', trans('telegram.gateway.notify.update-success'));
         } catch (\Exception $e) {
-            // Tangani error, misalnya log kesalahan dan beri feedback ke pengguna
             Log::error('Failed to update TelegramGateway: ' . $e->getMessage());
 
             return redirect()->route('telegramgateway.index')
@@ -125,15 +138,39 @@ class GatewayController extends Controller
         $traceId = (string) Str::uuid();
 
         try {
-            // Ambil gateway
-            $telegramGateway = TelegramGateway::first();
-            $whatsappGateway = WhatsAppGateway::first();
+            // 1. Validasi input nomor penerima (Mandatory & Numeric)
+            $validator = Validator::make($request->all(), [
+                'test_number' => 'required|numeric',
+            ], [
+                'test_number.required' => 'Nomor WhatsApp penerima wajib diisi (mandatory).',
+                'test_number.numeric'  => 'Nomor WhatsApp penerima harus berupa angka.',
+            ]);
 
-            // Validasi gateway aktif
-            if ($telegramGateway?->disabled || $whatsappGateway?->disabled) {
+            if ($validator->fails()) {
+                return redirect()->route('telegramgateway.index')
+                    ->withErrors($validator)
+                    ->withInput()
+                    ->with('error', 'Nomor WhatsApp penerima wajib diisi (mandatory).');
+            }
+
+            $receiveNumber = trim($request->input('test_number'));
+
+            // Guard tambahan jika value kosong setelah trim
+            if (blank($receiveNumber)) {
+                return redirect()->route('telegramgateway.index')
+                    ->withInput()
+                    ->with('error', 'Nomor WhatsApp penerima wajib diisi (mandatory).');
+            }
+
+            // Ambil data Gateway
+            $telegramGateway = TelegramGateway::first();
+            $whatsAppGateway = WhatsAppGateway::first();
+
+            // 2. Validasi status aktif Gateway
+            if ($telegramGateway?->disabled || $whatsAppGateway?->disabled) {
                 LogHelper::logWarning(
                     null,
-                    ['telegram_gateway' => $telegramGateway, 'whatsapp_gateway' => $whatsappGateway],
+                    ['telegram_gateway' => $telegramGateway, 'whatsapp_gateway' => $whatsAppGateway],
                     503,
                     "One or more gateways are disabled"
                 );
@@ -142,67 +179,39 @@ class GatewayController extends Controller
                     ->with('error', trans('telegram.gateway.notify.test-error'));
             }
 
-            // Validasi input nomor
-            $request->validate(['test_number' => 'required|numeric']);
-            $receiveNumber = $request->input('test_number');
+            $formatter = new FormatReceiver();
+            $receiver = $formatter->formatReceiver($receiveNumber, null, false);
 
-            // Format nomor tujuan
-            if (str_starts_with($receiveNumber, '0')) {
-                $receiveNumber = preg_replace(
-                    '/^0/',
-                    $whatsappGateway->country_code ?? '62',
-                    $receiveNumber
-                );
-            }
-
-            $senderNumber = $whatsappGateway->whatsapp_number->number ?? 'N/A';
-            $user = User::where('contact', $receiveNumber)->first();
-            $name = $user->name ?? 'Dummy User';
-
-            // Buat pesan
-            $message = "Hai! Untuk mendaftar ke Telegram Bot, silakan klik tautan berikut untuk mulai berinteraksi:\n\n" .
-                "https://t.me/{$telegramGateway->name}?start=start\n\n" .
-                "Terima kasih.";
-
-            // Kirim pesan
-            SendWhatsappMessageJob::dispatch(
-                'bot_link',
-                $receiveNumber,
-                $message,
-                null,
-                $traceId
-            )->delay(now()->addSeconds(1));
+            // 3. Trigger Event
+            event(new TelegramBotLinkRequest($receiver, $telegramGateway, null, $traceId));
 
             LogHelper::logInfo(
                 null,
                 [
                     'gateway_id' => $telegramGateway->id,
-                    'receiver' => $receiveNumber,
-                    'sender' => $senderNumber
+                    'receiver'   => $receiveNumber,
                 ],
                 200,
-                "Test message successfully sent via WhatsApp gateway"
+                "Test message event successfully triggered"
             );
 
             return redirect()->route('telegramgateway.index')
                 ->with('success', trans('whatsapp.gateway.notify.test-success'));
+        } catch (ValidationException $e) {
+            return redirect()->route('telegramgateway.index')
+                ->withErrors($e->validator)
+                ->withInput()
+                ->with('error', 'Nomor WhatsApp penerima wajib diisi (mandatory).');
         } catch (\Exception $e) {
             LogHelper::logError(
                 null,
                 ['message_error' => $e->getMessage()],
                 500,
-                "Error to send WhatsApp test message"
-            );
-
-            LogHelper::logWarning(
-                null,
-                ['trace_as_string' => $e->getTraceAsString()],
-                500,
-                "Exception trace"
+                "Error to trigger Telegram bot link test event"
             );
 
             return redirect()->route('telegramgateway.index')
-                ->with('error', 'Terjadi kesalahan saat mengirim pesan uji coba. Silakan periksa log.');
+                ->with('error', 'Terjadi kesalahan saat menguji pesan Telegram bot. Silakan periksa log.');
         }
     }
 }

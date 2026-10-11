@@ -1,19 +1,19 @@
 <?php
 
-namespace App\Http\Controllers\Whatsapp;
+namespace App\Http\Controllers\WhatsApp;
 
 use App\Http\Controllers\Controller;
-use App\Models\Whatsapp\WhatsappGateway;
+use App\Models\WhatsApp\WhatsAppGateway;
 use Illuminate\Http\Request;
 
-class WhatsappGatewayController extends Controller
+class WhatsAppGatewayController extends Controller
 {
     /**
      * INDEX — List all providers.
      */
     public function index()
     {
-        $gateways = WhatsappGateway::with('accounts')->get();
+        $gateways = WhatsAppGateway::withCount('accounts')->get();
 
         return view('whatsapp_gateways.gateways.index', compact('gateways'));
     }
@@ -21,9 +21,8 @@ class WhatsappGatewayController extends Controller
     /**
      * SHOW — Provider detail + all accounts.
      */
-    public function show(WhatsappGateway $whatsappgateway)
+    public function show(WhatsAppGateway $whatsappgateway)
     {
-        // dd($whatsappgateway);
         $whatsappgateway->load('accounts');
 
         return view('whatsapp_gateways.gateways.show', [
@@ -33,13 +32,8 @@ class WhatsappGatewayController extends Controller
 
     /**
      * EDIT — Provider-level edit page.
-     * Provider hanya punya:
-     * - name
-     * - type (onprem/cloud)
-     * - description
-     * - is_active
      */
-    public function edit(WhatsappGateway $whatsappgateway)
+    public function edit(WhatsAppGateway $whatsappgateway)
     {
         return view('whatsapp_gateways.gateways.edit', [
             'gateway' => $whatsappgateway,
@@ -49,26 +43,20 @@ class WhatsappGatewayController extends Controller
     /**
      * UPDATE — Save provider info.
      */
-    public function update(Request $request, WhatsappGateway $whatsappgateway)
+    public function update(Request $request, WhatsAppGateway $whatsappgateway)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:120',
-            'type' => 'required|in:onprem,cloud',
+            'name'        => 'required|string|max:120',
+            'type'        => 'required|in:onprem,cloud',
             'description' => 'nullable|string',
-            'is_active' => 'nullable|boolean',
+            'is_active'   => 'nullable|boolean',
         ]);
 
-        // Jika provider diaktifkan, nonaktifkan provider lain
-        // if ($request->boolean('is_active')) {
-        //     WhatsappGateway::where('id', '!=', $whatsappgateway->id)
-        //         ->update(['is_active' => false]);
-        // }
-
         $whatsappgateway->update([
-            'name' => $validated['name'],
-            'type' => $validated['type'],
+            'name'        => $validated['name'],
+            'type'        => $validated['type'],
             'description' => $validated['description'] ?? null,
-            'is_active' => $request->boolean('is_active'),
+            'is_active'   => $request->boolean('is_active'),
         ]);
 
         return redirect()

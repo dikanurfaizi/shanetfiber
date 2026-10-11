@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Templates\Runtime\Handlers;
+namespace App\Services\WhatsApp\CloudAPI\Templates\Runtime\Handlers;
 
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands\InfoPembayaranCommand;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\Contracts\TemplateHandler as ContractsTemplateHandler;
-use App\Services\Whatsapp\CloudAPI\Templates\Runtime\TemplateContext;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands\InfoPembayaranCommand;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\Contracts\TemplateHandler as ContractsTemplateHandler;
+use App\Services\WhatsApp\CloudAPI\Templates\Runtime\TemplateContext;
 use InvalidArgumentException;
 
 class InfoPembayaranHandler implements ContractsTemplateHandler

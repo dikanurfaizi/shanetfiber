@@ -1,25 +1,20 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Broadcast;
+namespace App\Services\WhatsApp\CloudAPI\Broadcast;
 
-use App\Enums\WhatsAppAction;
 use App\Helpers\ExecutionTimer;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
-use App\Jobs\Whatsapp\CloudAPI\Broadcast\MonthlyKickOffBroadcastJob;
-use App\Models\Whatsapp\WhatsappGateway;
-use App\Services\Whatsapp\CloudAPI\Collectors\ActiveCustomerCollector;
-use App\Services\Whatsapp\CloudAPI\Collectors\AdminBankCollector;
-
-// 💡 Import kedua Trait Anda di sini
-use App\Services\Whatsapp\CloudAPI\Broadcast\Traits\MapsBroadcastBankPayload;
-use App\Services\Whatsapp\CloudAPI\Broadcast\Traits\ResolvesAdminContact;
+use App\Models\WhatsApp\WhatsAppGateway;
+use App\Services\WhatsApp\CloudAPI\Collectors\ActiveCustomerCollector;
+use App\Services\Messaging\Collectors\AdminBankCollector;
+use App\Services\WhatsApp\CloudAPI\Broadcast\Traits\MapsBroadcastBankPayload;
+use App\Services\WhatsApp\CloudAPI\Broadcast\Traits\ResolvesAdminContact;
+use App\Services\WhatsApp\CloudAPI\Messages\TemplateMessageService;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class MonthlyKickOffBroadcast
 {
-    // 💡 Gunakan kedua trait secara bersamaan
     use MapsBroadcastBankPayload, ResolvesAdminContact;
 
     private const BILLING_TEMPLATES = [
@@ -34,10 +29,12 @@ class MonthlyKickOffBroadcast
 
     public function __construct(
         private ActiveCustomerCollector $collector,
-        private AdminBankCollector $bankCollector
+        private AdminBankCollector $bankCollector,
+        private TemplateMessageService $templateMessageService,
+        private FormatReceiver $formatter
     ) {}
 
-    public function run(string $messageType, string $traceId)
+    public function run(string $messageType, string $traceId): void
     {
         $timer = new ExecutionTimer();
         LogHelper::logInfo(null, [], 100, '[MonthlyKickOffBroadcast] Start process', $traceId, $timer->lap());
@@ -58,7 +55,7 @@ class MonthlyKickOffBroadcast
         // ===============================================================
         // RESOLVE GATEWAY & ACCOUNT
         // ===============================================================
-        $gateway = WhatsappGateway::where('type', 'cloud')
+        $gateway = WhatsAppGateway::where('type', 'cloud')
             ->where('is_active', true)
             ->with(['accounts' => fn($q) => $q->where('is_active', true)])
             ->first();
@@ -74,14 +71,11 @@ class MonthlyKickOffBroadcast
         $contactWhatsapp = $adminContact['contact_whatsapp'];
 
         // ===============================================================
-        // PROCESS ENGINE LOOP
+        // PROCESS ENGINE LOOP (DIRECT EXECUTION TO META CLOUD API)
         // ===============================================================
-        $delayInSeconds    = 0;
-        $delay             = $this->getNextDelay('notification', $traceId);
-        $initialDate       = Carbon::now()->translatedFormat('d F Y'); // Menyesuaikan property handler: initialDate
-        $formatter         = new FormatReceiver;
+        $initialDate = Carbon::now()->translatedFormat('d F Y');
 
-        foreach ($customers as $idx => $data) {
+        foreach ($customers as $data) {
             $adminBanks = $this->bankCollector->getBanksByUserId($data->user_id ?? 0);
             $banks      = $adminBanks->where('type', 'bank')->values();
             $ewallets   = $adminBanks->where('type', 'ewallet')->values();
@@ -93,42 +87,30 @@ class MonthlyKickOffBroadcast
             $bankPayload      = $bankResolution['payload'];
             $channel          = $data?->package_name ?? 'Shanetfiber';
 
-            $targetContact = $overrideNumber ? (string) $overrideNumber : $data->customer_contact;
-            $recipient     = $formatter->formatReceiver($targetContact, null, false);
+            // Resolusi penerima & format via FormatReceiver
+            $recipient = $this->formatter->resolveRecipient($data->customer_contact);
 
-            MonthlyKickOffBroadcastJob::dispatch(
-                account: $account,
-                templateName: $resolvedTemplate,
-                customerId: (string) $data->customer_id,
-                customerName: $data->customer_name,
-                contact: $recipient,
-                initialDate: $initialDate,
-                channel: $channel,
-                bankPayload: $bankPayload,
-                contactAdmin: $contactAdmin,
-                contactWhatsapp: $contactWhatsapp
-            )
-                ->delay($delay)
-                ->onQueue('notification');
-
-            $delayInSeconds += 2;
-            $delay = now()->addSeconds($delayInSeconds);
+            $this->templateMessageService->sendMonthlyKickOffBroadcast([
+                'account'          => $account,
+                'templateName'     => $resolvedTemplate,
+                'customer_id'      => $data->customer_id,
+                'customer_name'    => $data->customer_name,
+                'recipient'        => $recipient['formatted'],
+                'initial_date'     => $initialDate,
+                'channel'          => $channel,
+                'bank_payload'     => $bankPayload,
+                'contact_admin'    => $contactAdmin,
+                'contact_whatsapp' => $contactWhatsapp,
+            ]);
         }
 
-        LogHelper::logInfo(null, ['total_dispatched' => $customers->count()], 900, '[MonthlyKickOffBroadcast] Finished process', $traceId, $timer->lap());
-    }
-
-    private function getNextDelay(string $queue, string $traceId): Carbon
-    {
-        $last = DB::table('jobs')
-            ->where('queue', $queue)
-            ->orderByDesc('available_at')
-            ->first();
-
-        if (!$last || !$last->reserved_at) {
-            return now();
-        }
-
-        return Carbon::createFromTimestamp($last->reserved_at)->addSeconds(1);
+        LogHelper::logInfo(
+            null,
+            ['total_sent' => $customers->count()],
+            200,
+            '[MonthlyKickOffBroadcast] Direct execution to Meta Cloud API finished successfully',
+            $traceId,
+            $timer->lap()
+        );
     }
 }

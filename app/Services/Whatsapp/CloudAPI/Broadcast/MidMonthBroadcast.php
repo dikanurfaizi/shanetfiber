@@ -1,20 +1,18 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Broadcast;
+namespace App\Services\WhatsApp\CloudAPI\Broadcast;
 
 use App\Helpers\ExecutionTimer;
 use App\Helpers\FormatReceiver;
 use App\Helpers\LogHelper;
 use App\Helpers\MaskCustomerName;
-use App\Jobs\Whatsapp\CloudAPI\Broadcast\MidMonthReminderJob; // 💡 Pastikan terpanggil
-use App\Models\Whatsapp\WhatsappGateway;
-use App\Services\Whatsapp\CloudAPI\Collectors\BillingReminderCollector;
-use App\Services\Whatsapp\CloudAPI\Collectors\AdminBankCollector;
-use App\Services\Whatsapp\CloudAPI\Messages\TemplateMessageService;
-use App\Services\Whatsapp\CloudAPI\Broadcast\Traits\MapsBroadcastBankPayload;
-use App\Services\Whatsapp\CloudAPI\Broadcast\Traits\ResolvesAdminContact;
+use App\Models\WhatsApp\WhatsAppGateway;
+use App\Services\WhatsApp\CloudAPI\Collectors\BillingReminderCollector;
+use App\Services\Messaging\Collectors\AdminBankCollector;
+use App\Services\WhatsApp\CloudAPI\Messages\TemplateMessageService;
+use App\Services\WhatsApp\CloudAPI\Broadcast\Traits\MapsBroadcastBankPayload;
+use App\Services\WhatsApp\CloudAPI\Broadcast\Traits\ResolvesAdminContact;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class MidMonthBroadcast
 {
@@ -33,10 +31,11 @@ class MidMonthBroadcast
     public function __construct(
         private BillingReminderCollector $collector,
         private TemplateMessageService $templateMessageService,
-        private AdminBankCollector $bankCollector
+        private AdminBankCollector $bankCollector,
+        private FormatReceiver $formatter
     ) {}
 
-    public function run(string $traceId)
+    public function run(string $traceId): void
     {
         $timer = new ExecutionTimer();
         LogHelper::logInfo(null, [], 100, '[MidMonthBroadcast] Start', $traceId, $timer->lap());
@@ -53,9 +52,18 @@ class MidMonthBroadcast
         }
 
         // ===============================================================
+        // 💡 LIMIT HANDLING UNTUK OVERRIDE MODE (MAKSIMAL 3 PESAN TESTING)
+        // ===============================================================
+        $sampleRecipient = $this->formatter->resolveRecipient(null);
+        if ($sampleRecipient['is_override']) {
+            $reminders = $reminders->take(3);
+            LogHelper::logInfo(null, ['override_detected' => true], 100, '[MidMonthBroadcast] Throttling active. Reminders sliced to max 3 items for testing.', $traceId, $timer->lap());
+        }
+
+        // ===============================================================
         // RESOLVE GATEWAY & ACCOUNT
         // ===============================================================
-        $gateway = WhatsappGateway::where('type', 'cloud')
+        $gateway = WhatsAppGateway::where('type', 'cloud')
             ->where('is_active', true)
             ->with(['accounts' => function ($q) {
                 $q->where('is_active', true);
@@ -76,20 +84,10 @@ class MidMonthBroadcast
         $contactAdmin    = $adminContact['contact_admin'];
         $contactWhatsapp = $adminContact['contact_whatsapp'];
 
-        $formatter = new FormatReceiver;
-        $overrideNumber    = config('messaging.phone_number_override', null);
-
         // ===============================================================
-        // PREPARE QUEUE TIMING DELAY
+        // PROCESS ENGINE LOOP (DIRECT EXECUTION TO META CLOUD API)
         // ===============================================================
-        $delayInSeconds = 0;
-        $delay = $this->getNextDelay('notification', $traceId);
-
-        // ===============================================================
-        // PROCESS ENGINE LOOP
-        // ===============================================================
-        foreach ($reminders as $idx => $data) {
-
+        foreach ($reminders as $data) {
             $adminBanks = $this->bankCollector->getBanksByUserId($data->user_id ?? 0);
             $banks      = $adminBanks->where('type', 'bank')->values();
             $ewallets   = $adminBanks->where('type', 'ewallet')->values();
@@ -100,54 +98,40 @@ class MidMonthBroadcast
             $resolvedTemplate = $bankResolution['template'];
             $bankPayload      = $bankResolution['payload'];
 
-            $targetContact = $overrideNumber ? (string) $overrideNumber : $data->customer_contact;
-            $recipient     = $formatter->formatReceiver($targetContact, null, false);
-
             $due_date_formatted = $data->final_due_date
                 ? Carbon::parse($data->final_due_date)->translatedFormat('d F Y')
                 : '-';
 
             $accountData = MaskCustomerName::buildAccountData($data->customer_name, $data->package_name);
 
-            // 💡 5. OPER SELLER / INJECT KE JOB ANTRIAN
-            MidMonthReminderJob::dispatch(
-                account: $account,
-                customerId: (string) $data->customer_id,
-                customerName: $data->customer_name,
-                packageName: $data->package_name,
-                accountData: $accountData,
-                totalAmount: $this->currency($data->total),
-                dueDate: $due_date_formatted,
-                note: 'gangguan layanan internet',
-                templateName: $resolvedTemplate,
-                contact: $recipient,
-                bankPayload: $bankPayload,          // 💡 Parameter baru untuk Trait Bank
-                contactAdmin: $contactAdmin,        // 💡 Parameter baru untuk Admin Contact
-                contactWhatsapp: $contactWhatsapp   // 💡 Parameter baru untuk WA Link Admin
-            )
-                ->delay($delay)
-                ->onQueue('notification');
+            // Resolusi penerima & format via FormatReceiver (Otomatis handle override number)
+            $recipient = $this->formatter->resolveRecipient($data->customer_contact);
 
-            // Naikkan delay 2 detik per iterasi data agar merata dan aman dari rate limit
-            $delayInSeconds += 2;
-            $delay = now()->addSeconds($delayInSeconds);
+            $this->templateMessageService->sendBroadcastMidMonth([
+                'recipient'        => $recipient['formatted'],
+                'customer_id'      => $data->customer_id,
+                'customer_name'    => $data->customer_name,
+                'package_name'     => $data->package_name,
+                'account_data'     => $accountData,
+                'total_amount'     => $this->currency($data->total),
+                'due_date'         => $due_date_formatted,
+                'note'             => 'gangguan layanan internet',
+                'templateName'     => $resolvedTemplate,
+                'account'          => $account,
+                'bank_payload'     => $bankPayload,
+                'contact_admin'    => $contactAdmin,
+                'contact_whatsapp' => $contactWhatsapp,
+            ]);
         }
 
-        LogHelper::logInfo(null, [], 900, '[MidMonthBroadcast] Finished dispatch to Queue', $traceId, $timer->lap());
-    }
-
-    private function getNextDelay(string $queue, string $traceId): Carbon
-    {
-        $last = DB::table('jobs')
-            ->where('queue', $queue)
-            ->orderByDesc('available_at')
-            ->first();
-
-        if (!$last || !$last->reserved_at) {
-            return now();
-        }
-
-        return Carbon::createFromTimestamp($last->reserved_at)->addSeconds(1);
+        LogHelper::logInfo(
+            null,
+            ['total_sent' => $reminders->count()],
+            200,
+            '[MidMonthBroadcast] Direct execution to Meta Cloud API finished successfully',
+            $traceId,
+            $timer->lap()
+        );
     }
 
     private function currency(int|float|null $n): string

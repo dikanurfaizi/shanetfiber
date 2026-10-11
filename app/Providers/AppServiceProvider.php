@@ -8,12 +8,12 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Carbon;
 use App\Services\Billings\PaymentCancellationService;
 use App\Services\Billings\PaymentProcessingService;
-use App\Services\Billings\PaymentService;
 use App\Services\Routerboard\Ppp\SecretService;
 use App\Services\Routerboard\IpStaticService;
 use App\Services\Networks\Olt\OltDataService;
 use App\Services\Networks\Olt\OltScanJobService;
-use App\Services\Networks\Olt\OltValidationService;;
+use App\Services\Networks\Olt\OltValidationService;
+use App\View\Components\Layouts\TopBar;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -63,5 +63,6 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Paginator::useBootstrap();
+        Blade::component(TopBar::class, 'layouts.top-bar');
     }
 }

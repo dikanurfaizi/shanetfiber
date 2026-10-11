@@ -159,8 +159,8 @@ class HomeController extends Controller
             ->join('billing_subscription_periodes', 'billing_subscription_periodes.id', '=', 'billings.billing_subscription_id')
             ->join('billing_periodes', 'billing_subscription_periodes.billing_periode_id', '=', 'billing_periodes.id')
             ->leftJoin('users as admins', 'customers.user_id', '=', 'admins.id')
-            ->where('customers.disabled', 'false')  // Pelanggan aktif
-            ->where('customers.activation', 'true')
+            ->where('customers.is_active', true)  // Pelanggan aktif
+            ->where('customers.activation', true)
             ->where('billings.status', 'VD')       // Status tidak dibayar sama sekali (VD)
             ->whereIn('billing_periodes.id', $recentPeriodeIds); // Filter 3 periode (3 bulan) terakhir
 
@@ -445,14 +445,14 @@ class HomeController extends Controller
         // 🔹 Hitung ringkasan total
         $total = (clone $customerQuery)->selectRaw('
         COUNT(*) as totalCustomers,
-        SUM(CASE WHEN disabled = "false" AND activation = "true" AND deleted_at IS NULL THEN 1 ELSE 0 END) as totalEnabled,
-        SUM(CASE WHEN disabled = "true" AND activation = "false" AND deleted_at IS NULL THEN 1 ELSE 0 END) as totalDisabled,
-        SUM(CASE WHEN disabled = "true" AND activation = "false" AND deleted_at IS NOT NULL THEN 1 ELSE 0 END) as totalNonActiveDisabled
+        SUM(CASE WHEN is_active = 1 AND activation = 1 AND deleted_at IS NULL THEN 1 ELSE 0 END) as totalEnabled,
+        SUM(CASE WHEN is_active = 0 AND activation = 0 AND deleted_at IS NULL THEN 1 ELSE 0 END) as totalDisabled,
+        SUM(CASE WHEN is_active = 0 AND activation = 0 AND deleted_at IS NOT NULL THEN 1 ELSE 0 END) as totalNonActiveDisabled
     ')->first();
 
         $totalActiveCustomers = (clone $customerQuery)
-            ->where('disabled', 'false')
-            ->where('activation', 'true')
+            ->where('is_active', true)
+            ->where('activation', true)
             ->whereNull('deleted_at')
             ->count();
 
@@ -460,8 +460,8 @@ class HomeController extends Controller
         $perMikrotik = DB::table('mikrotiks')
             ->leftJoin('customers', function ($join) use ($user, $visibleUserIds) {
                 $join->on('customers.mikrotik_id', '=', 'mikrotiks.id')
-                    ->where('customers.disabled', 'false')
-                    ->where('customers.activation', 'true')
+                    ->where('customers.is_active', true)
+                    ->where('customers.activation', true)
                     ->whereNull('customers.deleted_at');
 
                 // Filter user scope jika tidak punya izin total view

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\WhatsappWebhook\DTO;
+namespace App\Services\WhatsAppWebhook\DTO;
 
-use App\Models\Whatsapp\WhatsappNumber;
+use App\Models\WhatsApp\WhatsAppNumber;
 
 class WebhookPayload
 {
@@ -59,7 +59,7 @@ class WebhookPayload
 
     public function deviceId(): ?string
     {
-        $numbers = WhatsappNumber::where('jid', $this->deviceId)->first();
+        $numbers = WhatsAppNumber::where('jid', $this->deviceId)->first();
         if ($numbers) {
             return $numbers->device_id;
         }

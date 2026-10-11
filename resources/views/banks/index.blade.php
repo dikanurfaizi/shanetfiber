@@ -35,8 +35,7 @@
                                     class="badge badge-pill badge-light text-secondary border">{{ ++$desktopI }}</span>
                             </td>
                             <td>
-                                <span
-                                    class="font-weight-bold {{ $bank->disabled === 'false' ? 'text-primary' : 'text-muted' }}">
+                                <span class="font-weight-bold {{ $bank->is_active ? 'text-primary' : 'text-muted' }}">
                                     {{ $bank->name }}
                                 </span>
                             </td>
@@ -64,7 +63,7 @@
                                 </span>
                             </td>
                             <td>
-                                @if ($bank->disabled === 'false')
+                                @if ($bank->is_active)
                                     <span class="badge text-white bg-success">
                                         <i class="fas fa-lock-open mr-1"></i> {{ __('bank.info.enabled') }}
                                     </span>
@@ -82,7 +81,7 @@
                                         </a>
                                     </li>
                                     <li>
-                                        @if ($bank->disabled === 'false')
+                                        @if ($bank->is_active)
                                             <form method="POST" class="d-inline"
                                                 action="{{ route('bank.disable', $bank) }}">
                                                 @csrf @method('put')

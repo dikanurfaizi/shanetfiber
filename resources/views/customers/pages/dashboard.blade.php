@@ -184,7 +184,7 @@
                 </div>
                 <div class="text-center mt-3">
                     <p class="mb-0">
-                        Silahkan konfirmasi ke nomor WhatsApp
+                        Silakan konfirmasi ke nomor WhatsApp
                         <a href="https://wa.me/{{ $contactWhatsapp }}" target="_blank" rel="noopener noreferrer">
                             <span class="badge badge-primary">{{ $contactAdmin }}</span>
                         </a>

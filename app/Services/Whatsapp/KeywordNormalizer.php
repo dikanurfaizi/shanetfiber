@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Whatsapp;
+namespace App\Services\WhatsApp;
 
 use Illuminate\Support\Str;
 

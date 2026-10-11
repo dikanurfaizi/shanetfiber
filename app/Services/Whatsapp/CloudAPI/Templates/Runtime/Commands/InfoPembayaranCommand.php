@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\Whatsapp\CloudAPI\Templates\Runtime\Commands;
+namespace App\Services\WhatsApp\CloudAPI\Templates\Runtime\Commands;
 
-use App\Models\Whatsapp\WhatsappGatewayAccount;
+use App\Models\WhatsApp\WhatsAppGatewayAccount;
 
 class InfoPembayaranCommand
 {
@@ -15,6 +15,6 @@ class InfoPembayaranCommand
         public readonly string $paymentTime,
         public readonly string $tellerName,
         public readonly string $receiptCode,
-        public readonly WhatsappGatewayAccount $account,
+        public readonly WhatsAppGatewayAccount $account,
     ) {}
 }
