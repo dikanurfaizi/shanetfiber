@@ -97,7 +97,7 @@ class CustomerStatusService
     {
         $online = $this->getOnlineSecrets($router, $traceId);
         $allCustomers = Customer::where('mikrotik_id', $router->id)
-            ->where('disabled', 'false')
+            ->where('is_active', true)
             ->pluck('username')
             ->toArray();
 
@@ -233,7 +233,7 @@ class CustomerStatusService
 
     public function forceDisableCustomer(Customer $customer, string $traceId): array
     {
-        $customer->update(['disabled' => 'true']);
+        $customer->update(['is_active' => false]);
         LogHelper::logWarning(
             null,
             ['customer_id' => $customer->id],
@@ -289,7 +289,7 @@ class CustomerStatusService
 
     public function forceEnableCustomer(Customer $customer, string $traceId): array
     {
-        $customer->update(['disabled' => 'false']);
+        $customer->update(['is_active' => true, 'activation' => false]);
         LogHelper::logWarning(
             null,
             ['customer_id' => $customer->id],

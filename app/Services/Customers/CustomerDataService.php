@@ -169,8 +169,8 @@ class CustomerDataService
     {
         try {
             return match ($status) {
-                'active' => $query->where('activation', 'true')->where('disabled', 'false'),
-                'inactive' => $query->where('activation', 'false')->where('disabled', 'true'),
+                'active' => $query->where('activation', true)->where('is_active', true),
+                'inactive' => $query->where('activation', false)->where('is_active', true),
                 default => $query,
             };
         } catch (\Throwable $e) {

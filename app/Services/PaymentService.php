@@ -98,15 +98,13 @@ class PaymentService
             'receipt_id' => $receipt->id,
         ]);
 
-        $getBilling = $billing->fresh();
-
         $order->update(['payment_time' => $now]);
 
-        if (WhatsAppGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
-            $this->messageService->payment_package($getBilling, $getReceipt, 'payment_gateway', $traceId);
-        }
+        // if (WhatsAppGateway::where('slug', 'gateway')->value('disabled') == false && $customer->contact) {
+        //     $this->messageService->payment_package($getBilling, $getReceipt, 'payment_gateway', $traceId);
+        // }
 
-        return $receipt;
+        return $getReceipt;
     }
 
     protected function mapCustomerData(Customer $customer): array

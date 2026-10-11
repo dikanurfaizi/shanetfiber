@@ -194,8 +194,8 @@ class CustomerCreateService
             'mikrotik_id' => $data['mikrotik_id'],
             'username' => $creds['username'],
             'user_id' => $data['user_id'],
-            'disabled' => 'true',
-            'activation' => 'false'
+            'is_active' => true,
+            'activation' => false
 
         ], $data, $creds, $traceId);
     }

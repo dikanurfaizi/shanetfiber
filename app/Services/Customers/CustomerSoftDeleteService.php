@@ -137,8 +137,8 @@ class CustomerSoftDeleteService
             // 3. Update customer state
             $customer->update([
                 'activation_date' => null,
-                'disabled'        => 'true',
-                'activation'      => 'false',
+                'is_active'       => false,
+                'activation'      => false,
             ]);
 
             // 4. Soft delete customer
