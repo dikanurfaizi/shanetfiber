@@ -146,7 +146,7 @@
                 @endcan
 
                 @canany('customer-edit', 'customer-create')
-                    @if ($customer->activation == 'false')
+                    @if (!$customer->activation)
                         <div class="d-block d-md-inline-block mb-2 mr-md-2">
                             <form method="POST" action="{{ route('customers.activation', $customer->slug) }}">
                                 @csrf @method('put')
@@ -159,7 +159,7 @@
                 @endcanany
 
                 @can('secret-disable')
-                    @if ($customer->activation == 'true')
+                    @if ($customer->activation)
                         @if ($disabledState === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
                             <div class="d-block d-md-inline-block mb-2 mr-md-2">
                                 <form method="POST" action="{{ route('customers.enable', $customer->slug) }}">

@@ -444,17 +444,13 @@ class HomeController extends Controller
 
         // 🔹 Hitung ringkasan total
         $total = (clone $customerQuery)->selectRaw('
-        COUNT(*) as totalCustomers,
-        SUM(CASE WHEN is_active = 1 AND activation = 1 AND deleted_at IS NULL THEN 1 ELSE 0 END) as totalEnabled,
-        SUM(CASE WHEN is_active = 0 AND activation = 0 AND deleted_at IS NULL THEN 1 ELSE 0 END) as totalDisabled,
-        SUM(CASE WHEN is_active = 0 AND activation = 0 AND deleted_at IS NOT NULL THEN 1 ELSE 0 END) as totalNonActiveDisabled
-    ')->first();
+    COUNT(*) as totalCustomers,
+    SUM(CASE WHEN is_active = 1 AND activation = 1 AND deleted_at IS NULL THEN 1 ELSE 0 END) as totalEnabled,
+    SUM(CASE WHEN ( (is_active = 1 AND activation = 0) OR (is_active = 0 AND activation = 0) ) AND deleted_at IS NULL THEN 1 ELSE 0 END) as totalDisabled,
+    SUM(CASE WHEN is_active = 0 AND activation = 0 AND deleted_at IS NOT NULL THEN 1 ELSE 0 END) as totalNonActiveDisabled
+')->first();
 
-        $totalActiveCustomers = (clone $customerQuery)
-            ->where('is_active', true)
-            ->where('activation', true)
-            ->whereNull('deleted_at')
-            ->count();
+        $totalActiveCustomers = (int) $total->totalEnabled;
 
         // 🔹 Group per Mikrotik
         $perMikrotik = DB::table('mikrotiks')

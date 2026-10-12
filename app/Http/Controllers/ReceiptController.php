@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Models\Websystem;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ReceiptsExport;
+use App\Helpers\ExecutionTimer;
 use Illuminate\Support\Str;
 use App\Helpers\LogHelper;
 use Illuminate\Support\Facades\Crypt;
@@ -37,7 +38,7 @@ class ReceiptController extends Controller
     public function index(Request $request)
     {
         $traceId = (string) Str::uuid();
-        $startTime = microtime(true);
+        $timer = new ExecutionTimer();
         $paginate = 25;
 
         // === 🔍 Ambil parameter pencarian bawaan ===
@@ -65,7 +66,6 @@ class ReceiptController extends Controller
         }
 
         // === 🔍 Deteksi Apakah User Sedang Melakukan Pencarian/Filter Aktif ===
-        // Kita cek semua parameter input dari request.
         $isFiltering = $searchName
             || $searchAddress
             || $paymentMethode
@@ -75,30 +75,24 @@ class ReceiptController extends Controller
             || $filterPaymentMethod
             || $filterDate
             || $request->account_bank
-            || $request->filled('search_month') // Jika user sengaja memilih bulan di dropdown
-            || $request->filled('search_year'); // Jika user sengaja memilih tahun di dropdown
+            || $request->filled('search_month')
+            || $request->filled('search_year');
 
         // === 🔧 Tentukan Periode Pencarian ===
         $searchPeriode = null;
 
         if (!$isFiltering) {
-            // JIKA TIDAK ADA FILTER SAMA SEKALI (Default pertama kali load):
-            // Batasi hanya menampilkan kuitansi periode bulan berjalan saat ini
             $searchPeriode = date('M-y');
         } elseif ($request->filled('search_month') || $request->filled('search_year')) {
-            // JIKA USER SENGAJA MEMILIH FILTER BULAN/TAHUN SPESIFIK:
             $year  = $request->search_year ?: date('Y');
             $month = $request->search_month ?: date('m');
             $searchPeriode = date('M-y', strtotime("{$year}-{$month}-01"));
         }
-        // Jika sedang melakukan filter lain (misal cari nama "Dian"), $searchPeriode tetap NULL (mencari ke semua data historis)
-
 
         // === 🧾 Query utama ===
         $query = Receipt::query()
             ->when($searchName, fn($q) => $q->where('customer_name', 'like', "%{$searchName}%"))
             ->when($searchPeriode, function ($q) use ($searchPeriode) {
-                // Hanya membatasi periode jika $searchPeriode tidak NULL
                 $monthShort = date('M-y', strtotime($searchPeriode));
                 $monthFull  = date('F Y', strtotime($searchPeriode));
 
@@ -125,14 +119,11 @@ class ReceiptController extends Controller
 
         if (!empty($filterPaymentMethod)) {
             if (str_contains($filterPaymentMethod, '|')) {
-                // JIKA USER MEMILIH BANK SPESIFIK (Misal: "transfer|BCA")
                 [$method, $bank] = explode('|', $filterPaymentMethod);
 
                 $query->whereRaw('LOWER(payment_methode) = ?', [strtolower($method)])
                     ->where('bank_name', $bank);
             } else {
-                // JIKA USER MEMILIH UMUM (Misal: memilih "TRANSFER" saja, atau "CASH", "QRIS")
-                // Query ini otomatis akan mencari semua yang payment_methode-nya "transfer" tanpa peduli bank_name-nya apa
                 $query->whereRaw('LOWER(payment_methode) = ?', [strtolower($filterPaymentMethod)]);
             }
         }
@@ -153,13 +144,7 @@ class ReceiptController extends Controller
             ->orderByRaw("STR_TO_DATE(CONCAT('01 ', periode), '%d %M %Y') DESC")
             ->pluck('periode', 'periode');
 
-        // === 👥 Ambil List Unik untuk Dropdown Filter (Tanpa AJAX) ===
-        // $customers = Receipt::whereNotNull('customer_name')
-        //     ->distinct()
-        //     ->orderBy('customer_name', 'asc')
-        //     ->pluck('customer_name', 'customer_name');
-
-        // 1. Ambil list payment method unik seperti biasa
+        // === 👥 Ambil List Unik untuk Dropdown Filter ===
         $rawPaymentMethods = Receipt::whereNotNull('payment_methode')
             ->distinct()
             ->orderBy('payment_methode', 'asc')
@@ -171,12 +156,9 @@ class ReceiptController extends Controller
         foreach ($rawPaymentMethods as $method) {
             $upperMethod = strtoupper($method);
 
-            // 2. Jika method adalah 'TRANSFER'
             if ($upperMethod === 'TRANSFER') {
-                // Tambahkan opsi "TRANSFER" umum terlebih dahulu di paling atas kelompok transfer
                 $paymentMethodsList[$method] = 'TRANSFER';
 
-                // Ambil daftar bank unik yang diurutkan sesuai abjad (A-Z)
                 $banks = Receipt::where('payment_methode', $method)
                     ->whereNotNull('bank_name')
                     ->where('bank_name', '!=', '')
@@ -188,19 +170,15 @@ class ReceiptController extends Controller
                 if (!empty($banks)) {
                     foreach ($banks as $bank) {
                         $bankUpper = strtoupper($bank);
-
-                        // Opsi spesifik dengan pipa '|', misal: "transfer|BCA" -> "TRANSFER - BCA"
                         $key = $method . '|' . $bank;
                         $paymentMethodsList[$key] = "TRANSFER - " . $bankUpper;
                     }
                 }
             } else {
-                // Untuk payment method non-transfer (misal: CASH, QRIS, dll)
                 $paymentMethodsList[$method] = $upperMethod;
             }
         }
 
-        // Ubah ke Collection
         $paymentMethods = collect($paymentMethodsList);
 
         $tellers = Receipt::whereNotNull('teller_name')
@@ -208,16 +186,42 @@ class ReceiptController extends Controller
             ->orderBy('teller_name', 'asc')
             ->pluck('teller_name', 'teller_name');
 
-        $endTime = microtime(true);
-        $duration = round(($endTime - $startTime) * 1000, 2);
+        // 🏠 Ambil daftar address/alamat unik dari tabel Receipt
+        $address = Receipt::whereNotNull('customer_address')
+            ->where('customer_address', '!=', '')
+            ->distinct()
+            ->orderBy('customer_address', 'asc')
+            ->pluck('customer_address');
+
+        // 📅 Data pendukung untuk dropdown bulan & tahun (jika belum didefinisikan sebelumnya)
+        $months = [
+            '01' => 'Januari',
+            '02' => 'Februari',
+            '03' => 'Maret',
+            '04' => 'April',
+            '05' => 'Mei',
+            '06' => 'Juni',
+            '07' => 'Juli',
+            '08' => 'Agustus',
+            '09' => 'September',
+            '10' => 'Oktober',
+            '11' => 'November',
+            '12' => 'Desember'
+        ];
+
+        $currentYear = (int) date('Y');
+        $years = array_combine(
+            range($currentYear, $currentYear - 5),
+            range($currentYear, $currentYear - 5)
+        );
 
         LogHelper::logInfo($request, [
             'trace_id' => $traceId,
             'result_count' => $receipts->total(),
-        ], 200, 'Successfully retrieved receipt index with local filters', $traceId, $duration);
+        ], 200, 'Successfully retrieved receipt index with local filters', $traceId, $timer->lap());
 
-        // Kirim $customers dan $tellers ke view
-        return view('receipts.index', compact('receipts', 'totalPrice', 'periods', 'tellers', 'paymentMethods'))
+        // Kirim $address, $months, $years beserta data lainnya ke view
+        return view('receipts.index', compact('receipts', 'totalPrice', 'periods', 'tellers', 'paymentMethods', 'address', 'months', 'years'))
             ->with('i', (request()->input('page', 1) - 1) * $paginate);
     }
 

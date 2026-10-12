@@ -187,7 +187,7 @@
                         @endcanany
                     </tr>
                     @foreach ($data as $key => $customer)
-                        <tr class="@if ($customer->disabled === 'true') text-secondary @else text-primary @endif">
+                        <tr class="@if (!$customer->is_active) text-secondary @else text-primary @endif">
                             <td>
                                 <span class="badge bg-danger-soft">
                                     {{ ++$i }}
@@ -195,7 +195,7 @@
                             </td>
                             <td>
                                 @can('customer-list')
-                                    <a class="@if ($customer->disabled === 'true') text-secondary @else text-primary @endif"
+                                    <a class="@if (!$customer->is_active) text-secondary @else text-primary @endif"
                                         href="{{ route('customers.show', $customer->slug) }}">{{ $customer->name }}</a>
                                 @else
                                     {{ $customer->name }}
@@ -213,7 +213,7 @@
                             </td>
                             <td>
                                 <span class="badge bg-danger-soft">
-                                    @if ($customer->activation == 'true')
+                                    @if ($customer->activation)
                                         {{ Carbon\Carbon::parse($customer->activation_date)->translatedFormat('d F Y') ?? 'No Data' }}
                                     @else
                                         <i class="text-danger">{{ __('Not Activated') }}</i>
@@ -403,17 +403,17 @@
                                 #{{ $data->firstItem() + $loop->index }}
                             </span>
                             <div>
-                                @if ($customer->activation == 'false')
+                                @if (!$customer->activation)
                                     <span class="badge text-white bg-danger py-1">
                                         <i class="fa fa-times mr-1"></i> {{ __('customer.info.not-activation') }}
                                     </span>
                                 @else
-                                    @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
+                                    @if (!$customer->is_active)
                                         <span class="badge text-white bg-success py-1">
                                             <i class="fas fa-lock-open mr-1"></i> {{ __('pppoe.secret.enabled') }}
                                         </span>
                                     @endif
-                                    @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
+                                    @if ($customer->is_active)
                                         <span class="badge text-white bg-secondary py-1">
                                             <i class="fas fa-lock mr-1"></i> {{ __('pppoe.secret.disabled') }}
                                         </span>
@@ -426,7 +426,7 @@
                         <div class="d-flex justify-content-between align-items-center mb-1 mt-2">
                             <h6 class="mb-0 font-weight-bold" style="max-width: 60%">
                                 @can('customer-list')
-                                    <a class="{{ $customer->disabled === 'true' ? 'text-secondary' : 'text-primary' }}"
+                                    <a class="{{ !$customer->is_active ? 'text-secondary' : 'text-primary' }}"
                                         href="{{ route('customers.show', $customer->slug) }}">
                                         {{ $customer->name }}
                                     </a>
@@ -494,7 +494,7 @@
                                         @endcan
 
                                         @can('customer-edit')
-                                            @if ($customer->activation == 'false')
+                                            @if (!$customer->activation)
                                                 <form method="POST" class="d-inline"
                                                     action="{{ route('customers.activation', $customer->slug) }}">
                                                     @csrf @method('put')
@@ -505,7 +505,7 @@
                                                     </a>
                                                 </form>
                                             @else
-                                                @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
+                                                @if (!$customer->is_active)
                                                     <form method="POST" class="d-inline"
                                                         action="{{ route('customers.enable', $customer->slug) }}">
                                                         @csrf @method('put')
@@ -524,7 +524,7 @@
                                                             {{ __('pppoe.secret.force-enable') }}
                                                         </a>
                                                     </form>
-                                                @elseif ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
+                                                @elseif (!$customer->is_active)
                                                     <form method="POST" class="d-inline"
                                                         action="{{ route('customers.disable', $customer->slug) }}">
                                                         @csrf @method('put')

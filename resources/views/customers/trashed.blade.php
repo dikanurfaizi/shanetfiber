@@ -184,7 +184,7 @@
                         </th>
                     </tr>
                     @foreach ($data as $key => $customer)
-                        <tr class="@if ($customer->disabled === 'true') text-secondary @else text-primary @endif">
+                        <tr class="@if (!$customer->is_active) text-secondary @else text-primary @endif">
                             <td>
                                 <span class="badge bg-danger-soft">
                                     {{ ++$i }}
@@ -192,7 +192,7 @@
                             </td>
                             <td>
                                 @can('customer-list')
-                                    <a class="@if ($customer->disabled === 'true') text-secondary @else text-primary @endif"
+                                    <a class="@if (!$customer->is_active) text-secondary @else text-primary @endif"
                                         href="{{ route('customers.show', $customer->slug) }}">{{ $customer->name }}</a>
                                 @else
                                     {{ $customer->name }}
@@ -210,7 +210,7 @@
                             </td>
                             <td>
                                 <span class="badge bg-danger-soft">
-                                    @if ($customer->activation == 'true')
+                                    @if ($customer->activation)
                                         {{ Carbon\Carbon::parse($customer->activation_date)->translatedFormat('d F Y') ?? 'No Data' }}
                                     @else
                                         <i class="text-danger">{{ __('Not Activated') }}</i>
@@ -291,21 +291,21 @@
                             <span class="badge bg-secondary-soft">
                                 #{{ $data->firstItem() + $loop->index }}
                             </span>
-                            @if ($customer->activation == 'false')
+                            @if (!$customer->activation)
                                 <span class="custom-badge text-white bg-danger">
                                     <i class="fa fa-times text-white me-2"></i>
                                     {{ __('customer.info.not-activation') }}
                                 </span>
                             @else
-                                @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
+                                @if (!$customer->is_active)
                                     <span
-                                        class="custom-badge text-white @if ($customer->disabled === 'false') bg-success @endif">
+                                        class="custom-badge text-white @if (!$customer->is_active) bg-success @endif">
                                         <i class="fas fa-lock-open"></i> {{ __('pppoe.secret.enabled') }}
                                     </span>
                                 @endif
-                                @if ($customer->disabled === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
+                                @if ($customer->is_active)
                                     <span
-                                        class="custom-badge text-white @if ($customer->disabled === 'false') bg-secondary @endif">
+                                        class="custom-badge text-white @if ($customer->is_active) bg-secondary @endif">
                                         <i class="fas fa-lock"></i> {{ __('pppoe.secret.disabled') }}
                                     </span>
                                 @endif
@@ -316,7 +316,7 @@
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <h6 class="mb-0" style="max-width: 60%">
                                 @can('customer-list')
-                                    <a class="text white {{ $customer->disabled === 'true' ? 'text-secondary' : 'text-primary' }}"
+                                    <a class="text white {{ !$customer->is_active ? 'text-secondary' : 'text-primary' }}"
                                         href="{{ route('customers.show', $customer->slug) }}">
                                         {{ $customer->name }}
                                     </a>

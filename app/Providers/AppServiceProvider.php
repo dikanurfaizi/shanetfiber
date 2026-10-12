@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Receipt;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
@@ -14,6 +15,7 @@ use App\Services\Networks\Olt\OltDataService;
 use App\Services\Networks\Olt\OltScanJobService;
 use App\Services\Networks\Olt\OltValidationService;
 use App\View\Components\Layouts\TopBar;
+use Illuminate\Support\Facades\View;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -64,5 +66,41 @@ class AppServiceProvider extends ServiceProvider
 
         Paginator::useBootstrap();
         Blade::component(TopBar::class, 'layouts.top-bar');
+
+        View::composer('components.layouts.cpanel.billings.navigation', function ($view) {
+            $address = Receipt::whereNotNull('customer_address')
+                ->where('customer_address', '!=', '')
+                ->distinct()
+                ->orderBy('customer_address', 'asc')
+                ->pluck('customer_address');
+
+            $tellers = Receipt::whereNotNull('teller_name')
+                ->distinct()
+                ->orderBy('teller_name', 'asc')
+                ->pluck('teller_name', 'teller_name');
+
+            $months = [
+                '01' => 'Januari',
+                '02' => 'Februari',
+                '03' => 'Maret',
+                '04' => 'April',
+                '05' => 'Mei',
+                '06' => 'Juni',
+                '07' => 'Juli',
+                '08' => 'Agustus',
+                '09' => 'September',
+                '10' => 'Oktober',
+                '11' => 'November',
+                '12' => 'Desember'
+            ];
+
+            $currentYear = (int) date('Y');
+            $years = array_combine(
+                range($currentYear, $currentYear - 5),
+                range($currentYear, $currentYear - 5)
+            );
+
+            $view->with(compact('address', 'tellers', 'months', 'years'));
+        });
     }
 }

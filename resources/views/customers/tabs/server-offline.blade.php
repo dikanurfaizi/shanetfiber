@@ -1,10 +1,9 @@
 <div class="card-header py-3">
     <h5 class="m-0 font-weight-bold text-primary">{{ __('customer.header.show-server') }}</h5>
-
     <span class="text-danger">{{ $info_msg }}</span>
 </div>
 
-<div class="card-body col-lg-12">
+<div class="card-body">
     <div class="row">
 
         {{-- SERVER --}}
@@ -13,7 +12,7 @@
                 {{ __('customer.label.server') }}
             </div>
             <div class="mt-1">
-                <span class="badge bg-secondary text-white">
+                <span class="badge badge-secondary">
                     <i class="fas fa-server"></i>
                     {{ $customer->mikrotik->name ?? '-' }}
                 </span>
@@ -74,7 +73,7 @@
                 {{ __('customer.label.state') }}
             </div>
             <div class="mt-1">
-                <span class="badge bg-danger text-white">
+                <span class="badge badge-danger">
                     {{ __('customer.info.not-activation') }}
                 </span>
             </div>
@@ -82,21 +81,19 @@
 
     </div>
 
-    {{-- ACTION --}}
-    @canany('customer-edit', 'customer-create')
-        @if ($customer->activation == 'false')
-            <div class="row mt-3">
-                <div class="col-12">
-                    <form method="POST" action="{{ route('customers.activation', $customer->slug) }}">
-                        @csrf
-                        @method('put')
+    {{-- ACTION (Pojok Kanan Bawah) --}}
+    @canany(['customer-edit', 'customer-create'])
+        @if (!$customer->activation)
+            <div class="d-flex justify-content-end mt-3">
+                <form method="POST" action="{{ route('customers.activation', $customer->slug) }}">
+                    @csrf
+                    @method('PUT')
 
-                        <button class="btn-soft btn-green btn-block btn-md-inline">
-                            <i class="fa fa-check me-2"></i>
-                            {{ __('customer.action.activation') }}
-                        </button>
-                    </form>
-                </div>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fa fa-check mr-2"></i>
+                        {{ __('customer.action.activation') }}
+                    </button>
+                </form>
             </div>
         @endif
     @endcanany

@@ -10,7 +10,7 @@
 @endphp
 
 {{-- NOT ACTIVATED --}}
-@if ($customer->activation === 'false')
+@if (!$customer->activation)
     <span class="badge bg-danger text-white">
         <i class="fa fa-times me-1"></i>
         {{ __('customer.info.not-activation') }}

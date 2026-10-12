@@ -130,8 +130,7 @@
 @if (request()->routeIs('receipts.index'))
     <li class="nav-item active">
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSearchCustomer"
-            aria-expanded="false" aria-controls="collapseSearchCustomer" style="padding-top: inherit;"
-            style="padding-top: inherit;">
+            aria-expanded="false" aria-controls="collapseSearchCustomer" style="padding-top: inherit;">
             <i class="fas fa-search"></i>
             <span>{{ __('billing.header.search') }}</span>
         </a>
@@ -148,19 +147,20 @@
                         <select name="search_address" class="form-control">
                             <option value="">{{ __('billing.placeholder.search-address') }}</option>
                             <option value="NULL">{{ __('billing.placeholder.search-without-address') }}</option>
-                            @foreach ($address as $addrr)
+                            {{-- Gunakan ?? [] untuk keamanan --}}
+                            @foreach ($address ?? [] as $addrr)
                                 <option value="{{ $addrr }}">{{ $addrr }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="row align-items-center mb-1">
-                        {!! Form::select('search_month', $months, null, [
+                        {!! Form::select('search_month', $months ?? [], null, [
                             'placeholder' => __('billing.placeholder.search-month'),
                             'class' => 'form-control',
                         ]) !!}
                     </div>
                     <div class="row align-items-center mb-1">
-                        {!! Form::select('search_year', $years, null, [
+                        {!! Form::select('search_year', $years ?? [], null, [
                             'placeholder' => __('billing.placeholder.search-year'),
                             'class' => 'form-control',
                         ]) !!}
@@ -176,11 +176,10 @@
                     <div class="row align-items-center mb-1">
                         <select name="account_bank" class="form-control d-none" id="account-bank-dropdown">
                             <option value="">{{ __('customer.placeholder.search-account-bank') }}</option>
-
                         </select>
                     </div>
                     <div class="row align-items-center mb-1">
-                        {!! Form::select('teller', $tellers, null, [
+                        {!! Form::select('teller', $tellers ?? [], null, [
                             'placeholder' => __('billing.placeholder.search-teller'),
                             'class' => 'form-control',
                         ]) !!}
