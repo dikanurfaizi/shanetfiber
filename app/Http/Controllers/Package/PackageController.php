@@ -17,9 +17,9 @@ use App\Services\Packages\PackageQueryService;
 
 class PackageController extends Controller
 {
-    protected $packageService;
-    protected $queryService;
-    private PackageGetService $packageGetService;
+    protected PackageService $packageService;
+    protected PackageQueryService $queryService;
+    protected PackageGetService $packageGetService;
 
     public function __construct(PackageService $packageService, PackageQueryService $queryService, PackageGetService $packageGetService)
     {

@@ -2,7 +2,10 @@
 
 namespace App\Services\Packages;
 
-use App\Enums\SubscriptionDuration as SubsDurationEnum;
+use App\Enums\SubscriptionDuration;
+use App\Http\Requests\PackageStoreRequest;
+use App\Http\Requests\PackageUpdateRequest;
+use App\Models\Packages\DurationLabel;
 use App\Models\Packages\Package;
 use Illuminate\Support\Str;
 use App\Services\Packages\PackageQueryService;
@@ -13,19 +16,19 @@ class PackageService
 {
     use PackageLogTrait;
 
-    protected $query;
+    protected PackageQueryService $queryService;
 
-    public function __construct(PackageQueryService $query)
+    public function __construct(PackageQueryService $queryService)
     {
-        $this->query = $query;
+        $this->queryService = $queryService;
     }
 
-    public function store($request)
+    public function store(PackageStoreRequest $request)
     {
         [$traceId, $startTime] = $this->startTrace();
 
         try {
-            $package = DB::transaction(function () use ($request, $traceId, $startTime) {
+            $package = DB::transaction(function () use ($request) {
                 // 🔹 Generate slug
                 $request->merge([
                     'slug' => str($request->name . '-' . Str::random(4))->slug(),
@@ -48,19 +51,31 @@ class PackageService
                     throw new \RuntimeException('Failed to create package');
                 }
 
-                // 🔹 Buat subscription duration
+                // 🔹 Validasi input duration_months dengan Enum
                 $durationMonths = (int) $request->duration_months;
-                $enum = SubsDurationEnum::tryFrom($durationMonths);
+                $enum = SubscriptionDuration::tryFrom($durationMonths);
 
                 if (!$enum) {
                     throw new \InvalidArgumentException("Invalid duration value: {$durationMonths}");
                 }
 
+                // 🔹 Ambil / buat master duration_labels berdasarkan Enum
+                $durationLabel = DurationLabel::firstOrCreate(
+                    ['duration_months' => $enum->value],
+                    [
+                        'slug'    => str($enum->labelEn())->slug(),
+                        'name_en' => $enum->labelEn(),
+                        'name_id' => $enum->labelId(),
+                    ]
+                );
+
+                // 🔹 Buat PackageDuration dengan duration_id (FK ke duration_labels.id)
                 PackageDuration::create([
-                    'package_id' => $package->id,
-                    'duration_months' => $durationMonths,
-                    'name_en' => $enum->labelEn(),
-                    'name_id' => $enum->labelId(),
+                    'package_id'     => $package->id,
+                    'duration_id'    => $durationLabel->id, // Menggunakan Primary Key ID (1, 2, dst.)
+                    'discount_type'  => $request->discount_type ?? 'none',
+                    'discount_value' => $request->discount_value ?? 0,
+                    'is_active'      => true,
                 ]);
 
                 return $package;
@@ -73,13 +88,13 @@ class PackageService
 
             return $package;
         } catch (\Exception $e) {
-            // ❌ Rollback otomatis dilakukan oleh DB::transaction()
+            // ❌ Rollback otomatis oleh DB::transaction()
             $this->endTraceError($request, $traceId, $startTime, $e, 'Failed to create package');
             throw $e;
         }
     }
 
-    public function update($request, Package $package)
+    public function update(PackageUpdateRequest $request, Package $package)
     {
         [$traceId, $startTime] = $this->startTrace();
 
@@ -170,7 +185,7 @@ class PackageService
         [$traceId, $startTime] = $this->startTrace();
 
         try {
-            $package = $this->query->loadData($package);
+            $package = $this->queryService->loadData($package);
 
             $this->endTraceSuccess(null, $traceId, $startTime, [
                 'package_id' => $package->id,
