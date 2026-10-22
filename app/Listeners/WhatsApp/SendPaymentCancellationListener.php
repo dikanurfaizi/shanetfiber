@@ -4,6 +4,7 @@ namespace App\Listeners\WhatsApp;
 
 use App\Enums\WhatsAppAction;
 use App\Events\SingleNotification\PaymentCancelled;
+use App\Events\UnpaymentBillingEvent;
 use App\Services\Notification\WhatsApp\Single\PaymentCancellationNotificationService;
 
 class SendPaymentCancellationListener extends BaseWhatsAppListener
@@ -20,14 +21,14 @@ class SendPaymentCancellationListener extends BaseWhatsAppListener
     /**
      * Listener handle hanya menerima 1 argumen ($event)
      */
-    public function handle(PaymentCancelled $event): void
+    public function handle(UnpaymentBillingEvent $event): void
     {
         $this->service->send(
             action: $this->action,
             receiptId: $event->receiptId,
-            billingId: $event->billingId,
+            billingId: $event->billing->id,
             receiptData: $event->receiptData,
-            eventId: $event->eventId ?? null,
+            eventId: $event->eventId,
             traceId: $event->traceId
         );
     }

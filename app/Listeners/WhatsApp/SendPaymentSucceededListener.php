@@ -3,7 +3,7 @@
 namespace App\Listeners\WhatsApp;
 
 use App\Enums\WhatsAppAction;
-use App\Events\SingleNotification\PaymentSucceeded;
+use App\Events\BillingPaymentEvent;
 use App\Services\Notification\WhatsApp\Single\PaymentNotificationService;
 
 class SendPaymentSucceededListener extends BaseWhatsAppListener
@@ -20,11 +20,11 @@ class SendPaymentSucceededListener extends BaseWhatsAppListener
     /**
      * Listener handle hanya menerima 1 argumen ($event)
      */
-    public function handle(PaymentSucceeded $event): void
+    public function handle(BillingPaymentEvent $event): void
     {
         $this->service->send(
             $this->action,
-            $event->receiptId,
+            $event->receipt->id,
             $event->traceId,
             $event->eventId,
         );

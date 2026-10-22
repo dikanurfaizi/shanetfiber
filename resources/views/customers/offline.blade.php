@@ -32,7 +32,7 @@
 
                 @foreach ($data as $key => $customer)
                     <tr>
-                        <td>{{ ++$i }}</td>
+                        <td>{{ ($data->currentPage() - 1) * $data->perPage() + $loop->iteration }}</td>
                         <td><a
                                 href="{{ route('customers.show', $customer->slug) }}">{{ $customer->name ?? 'no data' }}</a>
                         </td>

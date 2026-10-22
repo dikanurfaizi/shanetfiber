@@ -63,6 +63,20 @@ return [
             ]) : [],
         ],
 
+        // Tambahkan koneksi khusus database FreeRADIUS ini:
+        'mysql_radius' => [
+            'driver' => 'mysql',
+            'host' => env('DB_RADIUS_HOST', '127.0.0.1'),
+            'port' => env('DB_RADIUS_PORT', '3306'),
+            'database' => env('DB_RADIUS_DATABASE', 'radius'),
+            'username' => env('DB_RADIUS_USERNAME', 'root'),
+            'password' => env('DB_RADIUS_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => false,
+        ],
+
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DATABASE_URL'),

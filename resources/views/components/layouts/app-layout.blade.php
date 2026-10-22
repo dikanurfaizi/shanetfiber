@@ -108,21 +108,35 @@
     <!-- Page level custom scripts -->
     @yield('custom_scripts')
     @stack('scripts')
-    @if ($message = Session::get('success'))
+    @if (Session::has('success') || Session::has('error'))
         <script>
-            Swal.fire({
-                icon: 'success',
-                text: '{{ $message }}',
-            })
-        </script>
-    @endif
+            document.addEventListener('DOMContentLoaded', function() {
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.addEventListener('mouseenter', Swal.stopTimer);
+                        toast.addEventListener('mouseleave', Swal.resumeTimer);
+                    }
+                });
 
-    @if ($message = Session::get('error'))
-        <script>
-            Swal.fire({
-                icon: 'error',
-                text: '{{ $message }}',
-            })
+                @if ($message = Session::get('success'))
+                    Toast.fire({
+                        icon: 'success',
+                        title: {!! json_encode($message) !!}
+                    });
+                @endif
+
+                @if ($message = Session::get('error'))
+                    Toast.fire({
+                        icon: 'error',
+                        title: {!! json_encode($message) !!}
+                    });
+                @endif
+            });
         </script>
     @endif
 

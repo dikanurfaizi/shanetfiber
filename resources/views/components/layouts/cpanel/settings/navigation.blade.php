@@ -258,6 +258,31 @@
 
     </li>
 @endcanany
+@can('is-admin')
+    <li class="nav-item @if (request()->routeIs('radius*')) active @endif">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseProvisioning"
+            aria-expanded="true" aria-controls="collapseProvisioning" style="padding-top: inherit;">
+            <i class="fas fa-network-wired"></i>
+            <span>{{ __('radius.sidebar.provisioning') }}</span>
+        </a>
+        <div id="collapseProvisioning" class="collapse @if (request()->routeIs('radius*')) show @endif"
+            aria-labelledby="headingProvisioning" data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                <h6 class="collapse-header">{{ __('radius.sidebar.section_header') }}</h6>
+                <a class="collapse-item @if (request()->routeIs('radius.index')) active @endif"
+                    href="{{ route('radius.index') }}">
+                    <i class="fas fa-database mr-2"></i>
+                    <span>{{ __('radius.sidebar.radius_management') }}</span>
+                </a>
+                <a class="collapse-item @if (request()->routeIs('radius.settings')) active @endif"
+                    href="{{ route('radius.settings') }}">
+                    <i class="fas fa-cogs mr-2"></i>
+                    <span>{{ __('radius.sidebar.provisioning_mode') }}</span>
+                </a>
+            </div>
+        </div>
+    </li>
+@endcan
 <li class="nav-item @if (request()->routeIs('settings.update*')) active @endif">
     <a class="nav-link collapsed" href="{{ route('settings.update.index') }}" aria-expanded="true"
         aria-controls="collapseSetting" style="padding-top: inherit;">

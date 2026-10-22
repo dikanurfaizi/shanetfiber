@@ -29,6 +29,8 @@ return [
         'create' => 'Tambah Pelanggan Baru',
         'edit' => 'Edit Pelanggan',
         'show' => 'Detail Pelanggan',
+        'suspend' => 'Menangguhkan Pelanggan',
+        'delete' => 'Menghapus Pelanggan'
     ],
     'header' => [
         'index' => 'Daftar Pelanggan',
@@ -44,7 +46,8 @@ return [
         'activation-all' => 'Aktivasi Masal Pelanggan',
         'traffic-monitoring' => 'Monitoring Trafik',
         'profile-info' => 'Informasi Profil',
-        'change-password' => 'Ubah Password'
+        'change-password' => 'Ubah Password',
+        'suspend' => 'Menangguhkan Pelanggan'
     ],
     'label' => [
         'id' => 'ID Pelanggan',
@@ -107,6 +110,7 @@ return [
         'new-password' => 'Password Baru',
         'total-customers' => 'pelanggan ditemukan',
         'show' => 'Tampilkan',
+        'customer-info' => 'Informasi Pelanggan',
     ],
     'placeholder' => [
         'name' => 'Masukkan nama pelanggan',
@@ -192,6 +196,11 @@ return [
         'not-activation' => 'Belum Diaktivasi',
         'activation-count' => 'Mengaktivasi :customer pelanggan',
         'deleted' => 'Terhapus',
+        'suspend' => 'Apakah Anda yakin ingin menghapus pelanggan ini?',
+        'suspend-action' => 'Tindakan ini akan menghapus tagihan serta',
+        'user-secret' => 'user secret / ip configuration',
+        'on-server' => 'pada server',
+        'after-deleted' => 'Setelah dihapus, pelanggan ini tidak akan dapat terhubung ke layanan internet.',
     ],
     'validate' => [],
     'page' => [

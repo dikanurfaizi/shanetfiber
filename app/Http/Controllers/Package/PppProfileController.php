@@ -2,33 +2,50 @@
 
 namespace App\Http\Controllers\Package;
 
+// Framework & Laravel Core
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Str;
+use Illuminate\Bus\Batch;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+
+// Form Requests
+use App\Http\Requests\Package\GetMikrotikProfilesRequest;
+use App\Http\Requests\Package\ImportPppProfileRequest;
+use App\Http\Requests\Package\StorePppProfileRequest;
+use App\Http\Requests\Package\UpdatePppProfileRequest;
+
+// Models
 use App\Models\Mikrotik;
 use App\Models\Packages\PppProfile;
-use App\Services\Routerboard\Ppp\SecretService;
-use App\Services\Routerboard\TestConnectionService;
+
+// Services & Helpers
 use App\Helpers\LogHelper;
 use App\Helpers\UserAuth;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Bus\Batch;
-use Illuminate\Support\Facades\Bus;
-use Throwable;
+use App\Services\Packages\PppProfileCalculationService;
+use App\Services\Radius\RadiusProfileService;
+use App\Services\Routerboard\Ppp\SecretService;
+
+// Events & Jobs
+use App\Events\Radius\RadiusProfileUpdateRequested;
 use App\Jobs\ExportMikrotik\CreatePppProfileToRouter;
 use App\Jobs\UpdateRateLimitProfileSecretJob;
+
+// PHP Native Exceptions
+use Throwable;
 
 class PppProfileController extends Controller
 {
     private SecretService $secretService;
-    private TestConnectionService $testConnectionService;
+    private RadiusProfileService $radiusProfileService;
     protected $model;
 
-    public function __construct(SecretService $secretService, TestConnectionService $testConnectionService)
+    public function __construct(SecretService $secretService, RadiusProfileService $radiusProfileService)
     {
         $this->secretService = $secretService;
-        $this->testConnectionService = $testConnectionService;
+        $this->radiusProfileService = $radiusProfileService;
         $this->model = PppProfile::class;
     }
     /**
@@ -62,192 +79,33 @@ class PppProfileController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request, PppProfile $pppProfile)
+    public function store(StorePppProfileRequest $request, PppProfileCalculationService $calculationService)
     {
-        $validated = $request->validate([
-            'profile_name' => 'required|unique:ppp_profiles,profile_name',
-            'dns_server' => 'nullable|string',
-            'use_encryption' => 'required|string',
-            'max_upload' => 'required_if:rate_limit,true',
-            'max_download' => 'required_if:rate_limit,true',
-            'rasio_cir' => 'required|numeric',
-            'priority' => 'required',
-        ], [
-            'profile_name.required' => 'Profile name is required.',
-            'profile_name.unique' => 'Profile name already exists.',
-            'max_upload.required_if' => 'Maximum upload is required when rate limit is enabled.',
-            'max_download.required_if' => 'Maximum download is required when rate limit is enabled.',
-            'use_encryption.required' => 'Encryption setting is required.',
+        $traceId = (string) Str::uuid();
+
+        // 1. Ekstrak data yang sudah lolos validasi dari Form Request
+        $validated = $request->validated();
+
+        // 2. Olah perhitungan CIR, burst, dan format rate limit via Service
+        $calculatedData = $calculationService->calculate($validated);
+
+        // 3. Gabungkan atribut form dengan hasil perhitungan kalkulasi
+        $payload = array_merge($validated, $calculatedData, [
+            'dns_server'          => $request->dns_server ?? '8.8.8.8, 8.8.4.4',
+            'only_one'            => $request->only_one ?? 'yes',
+            'insert_queue_before' => $request->insert_before,
+            'script_on_up'        => $request->on_up,
+            'script_on_down'      => $request->on_down,
         ]);
 
-        $calculation = $this->calculation(
-            $request->max_upload,
-            $request->max_download,
-            $request->rasio_cir ?? 3.33,
-            $request->burst_upload ?? '',
-            $request->burst_download ?? '',
-            $request->threshold_upload ?? '',
-            $request->threshold_download ?? '',
-            $request->burst_time_upload ?? '',
-            $request->burst_time_download ?? '',
-            $request->limit_at_upload ?? '',
-            $request->limit_at_download ?? '',
-            $request->priority ?? '',
-        );
+        // 4. Simpan ke database
+        $profile = PppProfile::create($payload);
 
-        // Destructuring hasil perhitungan
-        [
-            'maxLimitUpload'         => $maxUpload,
-            'maxLimitDownload'       => $maxDownload,
-            'minLimitUpload'         => $minUpload,
-            'minLimitDownload'       => $minDownload,
-            'rasioCir'               => $rasioCir,
-            'rateLimitMikrotik'      => $rateLimit,
-            'burstLimitUpload'       => $burstUpload,
-            'burstLimitDownload'     => $burstDownload,
-            'thresholdUpload'        => $thresholdUpload,
-            'thresholdDownload'      => $thresholdDownload,
-            'burstTimeUpload'        => $burstTimeUpload,
-            'burstTimeDownload'      => $burstTimeDownload,
-            'limitAtUpload'          => $limitAtUpload,
-            'limitAtDownload'        => $limitAtDownload,
-        ] = $calculation;
-
-        $data = array_merge($validated, [
-            'local_address'           => $request->local_address,
-            'remote_address'          => $request->remote_address,
-            'dns_server'              => $request->dns_server ?? '8.8.8.8, 8.8.4.4',
-            'parent_queue'            => $request->parent_queue,
-            'queue_type'              => $request->queue_type,
-            'insert_queue_before'     => $request->insert_before,
-            'rate_limit'              => $rateLimit,
-            'use_encryption'          => $request->use_encryption,
-            'script_on_up'            => $request->on_up,
-            'script_on_down'          => $request->on_down,
-            'change_tcp_mss'          => $request->change_tcp_mss,
-            'use_upnp'                => $request->use_upnp,
-            'comment'                 => $request->comment,
-            'only_one'                => $request->only_one ?? 'yes',
-
-            'max_upload'              => $maxUpload,
-            'max_download'            => $maxDownload,
-            'min_upload'              => $minUpload,
-            'min_download'            => $minDownload,
-            'rasio_cir'               => $rasioCir,
-
-            'burst_upload'            => $burstUpload,
-            'burst_download'          => $burstDownload,
-            'burst_threshold_upload'  => $thresholdUpload,
-            'burst_threshold_download' => $thresholdDownload,
-            'burst_time_upload'       => $burstTimeUpload,
-            'burst_time_download'     => $burstTimeDownload,
-            'limit_at_upload'         => $limitAtUpload,
-            'limit_at_download'       => $limitAtDownload,
-        ]);
-
-        $pppProfile->create($data);
+        // 5. Sinkronkan ke FreeRADIUS secara async/service
+        $this->radiusProfileService->syncProfile($profile, $traceId);
 
         return redirect()->route('ppp-profiles.index')
             ->with('success', 'PPP Profile created successfully.');
-    }
-
-    private function calculation(
-        string  $max_upload,
-        string  $max_download,
-        float   $rasio_cir = 3.33,
-        ?string $burst_up = null,
-        ?string $burst_down = null,
-        ?string $threshold_up = null,
-        ?string $threshold_down = null,
-        ?string $burst_time_up = null,
-        ?string $burst_time_down = null,
-        ?string $limit_at_upload = null,
-        ?string $limit_at_download = null,
-        ?int    $priority = 8
-    ) {
-        // ── Helper untuk normalisasi input ──
-        $normalize = function (?string $raw, bool $allowEmpty = true) {
-            if ($raw === null || trim($raw) === '') {
-                return $allowEmpty ? [null, null] : throw new \Exception('Input wajib diisi.');
-            }
-
-            $clean = str_replace(',', '.', trim($raw));
-            $unit = strtolower(preg_replace('/[0-9.\s]/', '', $clean)) ?: 'k'; // Default ke K jika hanya angka
-
-            if (!in_array($unit, ['k', 'm'])) {
-                throw new \Exception("Satuan harus k atau M (input: $raw)");
-            }
-
-            $value = floatval(preg_replace('/[^0-9.]/', '', $clean));
-            return [$value, $value . strtoupper($unit)];
-        };
-
-        // ── Normalisasi semua field ──
-        $maxUp  = $normalize($max_upload, false);
-        $maxDn  = $normalize($max_download, false);
-
-        $burstUp = $normalize($burst_up);
-        $burstDn = $normalize($burst_down);
-
-        $thresUp = $normalize($threshold_up);
-        $thresDn = $normalize($threshold_down);
-
-        $limUp   = $normalize($limit_at_upload);
-        $limDn   = $normalize($limit_at_download);
-
-        $btUp = $burst_time_up !== null ? trim($burst_time_up) : null;
-        $btDn = $burst_time_down !== null ? trim($burst_time_down) : null;
-
-        // ── Bantu susun pasangan ──
-        $pair = fn($a, $b) => ($a && $b) ? "$a/$b" : null;
-
-        // Ambil string satuan (M/k)
-        [$maxUpStr, $maxDnStr]     = [$maxUp[1], $maxDn[1]];
-        [$burstUpStr, $burstDnStr] = [$burstUp[1] ?? null, $burstDn[1] ?? null];
-        [$thresUpStr, $thresDnStr] = [$thresUp[1] ?? null, $thresDn[1] ?? null];
-        [$limUpStr, $limDnStr]     = [$limUp[1] ?? null, $limDn[1] ?? null];
-
-        $burst   = $pair($burstUpStr, $burstDnStr);
-        $thres   = $pair($thresUpStr, $thresDnStr);
-        $burstT  = $pair($btUp, $btDn);
-        $limitAt = $pair($limUpStr, $limDnStr);
-        $max     = $pair($maxUpStr, $maxDnStr);
-
-        // Cek apakah hanya max yang valid
-        $hasPartialOther = $burst && $thres && $burstT && $limitAt;
-        $onlyMaxFilled = $max && !$hasPartialOther;
-
-        // Susun final segments
-        $segments = [];
-        if ($max) $segments[] = $max;
-
-        if (!$onlyMaxFilled) {
-            if ($burst)   $segments[] = $burst;
-            if ($thres)   $segments[] = $thres;
-            if ($burstT)  $segments[] = $burstT;
-            $segments[] = $priority ?? 8;
-            if ($limitAt) $segments[] = $limitAt;
-        }
-
-        $rateLimit = implode(' ', $segments);
-
-        return [
-            'maxLimitUpload'      => $maxUpStr,
-            'maxLimitDownload'    => $maxDnStr,
-            'minLimitUpload'      => $limUpStr,
-            'minLimitDownload'    => $limDnStr,
-            'limitAtUpload'       => $limUpStr,
-            'limitAtDownload'     => $limDnStr,
-            'burstLimitUpload'    => $burstUpStr,
-            'burstLimitDownload'  => $burstDnStr,
-            'thresholdUpload'     => $thresUpStr,
-            'thresholdDownload'   => $thresDnStr,
-            'burstTimeUpload'     => $btUp,
-            'burstTimeDownload'   => $btDn,
-            'priority'            => $priority ?? 8,
-            'rasioCir'            => $rasio_cir,
-            'rateLimitMikrotik'   => $rateLimit,
-        ];
     }
 
     /**
@@ -276,88 +134,46 @@ class PppProfileController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, PppProfile $pppProfile)
-    {
+    public function update(
+        UpdatePppProfileRequest $request,
+        PppProfile $pppProfile,
+        PppProfileCalculationService $calculationService
+    ) {
         $traceId = (string) Str::uuid();
+        $validated = $request->validated();
 
-        $data = $request->only([
-            'profile_name',
-            'local_address',
-            'remote_address',
-            'dns_server',
-            'rate_limit',
-            'rasio_cir',
-            'priority',
-            'parent_queue',
-            'queue_type',
-            'bridge_learning',
-            'use_ipv6',
-            'use_mpls',
-            'use_compression',
-            'use_encryption',
-            'only_one',
-            'change_tcp_mss',
-            'use_upnp',
-            'comment',
-        ]);
+        // 1. Olah kalkulasi bandwidth & format rate limit Mikrotik
+        $calculatedData = $calculationService->calculate($validated);
 
-        $data = array_merge($data, [
-            'script_on_up' => $request->input('on_up'),
-            'script_on_down' => $request->input('on_down'),
+        // 2. Susun payload pembaruan
+        $payload = array_merge($validated, $calculatedData, [
             'insert_queue_before' => $request->input('insert_before'),
+            'script_on_up'        => $request->input('on_up'),
+            'script_on_down'      => $request->input('on_down'),
         ]);
 
-        $calculation = $this->calculation(
-            $request->max_upload,
-            $request->max_download,
-            $request->rasio_cir ?? 3.33,
-            $request->burst_upload ?? '',
-            $request->burst_download ?? '',
-            $request->threshold_upload ?? '',
-            $request->threshold_download ?? '',
-            $request->burst_time_upload ?? '',
-            $request->burst_time_download ?? '',
-            $request->limit_at_upload ?? '',
-            $request->limit_at_download ?? '',
-            $request->priority ?? '',
-        );
+        // 3. Update data profil di database utama
+        $pppProfile->update($payload);
 
-        [
-            'maxLimitUpload'      => $data['max_upload'],
-            'maxLimitDownload'    => $data['max_download'],
-            'minLimitUpload'      => $data['min_upload'],
-            'minLimitDownload'    => $data['min_download'],
-            'rasioCir'            => $data['rasio_cir'],
-            'rateLimitMikrotik'   => $rateLimitMikrotik,
-            'burstLimitUpload'    => $data['burst_upload'],
-            'burstLimitDownload'  => $data['burst_download'],
-            'thresholdUpload'     => $data['burst_threshold_upload'],
-            'thresholdDownload'   => $data['burst_threshold_download'],
-            'burstTimeUpload'     => $data['burst_time_upload'],
-            'burstTimeDownload'   => $data['burst_time_download'],
-            'limitAtUpload'       => $data['limit_at_upload'],
-            'limitAtDownload'     => $data['limit_at_download'],
-        ] = $calculation;
-
-        $userId = UserAuth::getUserDetails()['userId']; // Atau auth()->id()
-
+        // 4. Dispatch job pembaruan rate limit ke seluruh router MikroTik aktif
+        $userId = auth()->id() ?? UserAuth::getUserDetails()['userId'];
         $routers = Mikrotik::where('disabled', 'false')->get();
 
         foreach ($routers as $router) {
             UpdateRateLimitProfileSecretJob::dispatch(
                 $router->id,
                 $pppProfile->profile_name,
-                $rateLimitMikrotik,
+                $calculatedData['rateLimitMikrotik'] ?? $pppProfile->rate_limit,
                 $userId,
                 $traceId
             );
         }
 
-        $data['rate_limit'] = $rateLimitMikrotik;
-        $pppProfile->update($data);
+        // 5. Sinkronkan profil terbaru ke FreeRADIUS (radgroupreply)
+        $this->radiusProfileService->syncProfile($pppProfile->refresh(), $traceId);
 
         return redirect()->route('ppp-profiles.index')
-            ->with('success', 'Profile updated. Update to router is being processed via background job.');
+            ->with('success', 'Profile updated. Router update is being processed via background job.');
     }
 
     public function delete(PppProfile $pppProfile)
@@ -371,6 +187,8 @@ class PppProfileController extends Controller
      */
     public function destroy(PppProfile $pppProfile)
     {
+        $traceId = (string) Str::uuid();
+        $this->radiusProfileService->deleteProfile($pppProfile, $traceId);
         $pppProfile->delete(); // hapus profile dari database
         return redirect()->route('ppp-profiles.index') // sesuai resource route kamu
             ->with('success', 'Profile deleted successfully');
@@ -384,18 +202,14 @@ class PppProfileController extends Controller
         return view('packages.profiles.import', compact('mikrotikServers'));
     }
 
-    public function get_mikrotik_profiles(Request $request)
+    public function get_mikrotik_profiles(GetMikrotikProfilesRequest $request)
     {
         $traceId = (string) Str::uuid();
-        $sourceMikrotikId = $request->mikrotik_id;
-        if (!$sourceMikrotikId) {
-            return response()->json(['error' => 'Mikrotik ID is required'], 400);
-        }
 
         try {
-            $sourceRouter = Mikrotik::findOrFail($sourceMikrotikId);
-
+            $sourceRouter = Mikrotik::findOrFail($request->mikrotik_id);
             $mikrotikProfiles = $this->secretService->getPppProfile($sourceRouter, $traceId);
+
             if (empty($mikrotikProfiles)) {
                 return response()->json(['error' => 'No profiles found from Mikrotik'], 404);
             }
@@ -417,11 +231,11 @@ class PppProfileController extends Controller
 
             return response()->json($profileList, 200);
         } catch (ModelNotFoundException $e) {
-            LogHelper::logError($e, ['error' => $e->getMessage()], 500, 'Gagal mendapat informasi mikrotik', $traceId);
+            LogHelper::logError($e, ['mikrotik_id' => $request->mikrotik_id], 404, 'Mikrotik server not found', $traceId);
             return response()->json(['error' => 'Mikrotik server not found'], 404);
         } catch (\Exception $e) {
-            LogHelper::logError($e, ['error' => $e->getMessage()], 500, 'Gagal mengambil profil dari Mikrotik.', $traceId);
-            return response()->json(['error' => 'Gagal mengambil profil dari Mikrotik.'], 500);
+            LogHelper::logError($e, ['mikrotik_id' => $request->mikrotik_id], 500, 'Gagal mengambil profil dari Mikrotik', $traceId);
+            return response()->json(['error' => 'Gagal mengambil profil dari Mikrotik: ' . $e->getMessage()], 500);
         }
     }
 
@@ -469,36 +283,50 @@ class PppProfileController extends Controller
         ];
     }
 
-    public function import(Request $request)
+    public function import(ImportPppProfileRequest $request)
     {
-        $request->validate([
-            'profiles' => 'required|array',
-            'profiles.*.profile_name' => 'required|string',
-            // tambahkan validasi sesuai field lainnya...
-        ]);
+        $traceId = (string) Str::uuid();
+        $importedProfiles = $request->validated()['profiles'];
 
-        foreach ($request->profile as $profileData) {
-            DB::table('ppp_profiles')->insert([
-                'profile_name' => $profileData['profile_name'],
-                'max_upload' => $profileData['max_upload'],
-                'max_download' => $profileData['max_download'],
-                'min_upload' => $profileData['min_upload'],
-                'min_download' => $profileData['min_download'],
-                'rasio_cir' => $profileData['rasio_cir'],
-                'priority' => $profileData['priority'],
-                'mikrotik_name' => $profileData['mikrotik_name'],
-                'db_profile_id' => $profileData['db_profile_id'],
-                'db_profile_name' => $profileData['db_profile_name'],
-                'dns_server' => $profileData['dns_server'],
-                'use_encryption' => $profileData['use_encryption'],
-                'rate_limit' => $profileData['rate_limit'],
-                'only_one' => $profileData['only_one'],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+        DB::beginTransaction();
+        try {
+            foreach ($importedProfiles as $profileData) {
+                $profile = PppProfile::updateOrCreate(
+                    ['profile_name' => $profileData['profile_name']],
+                    [
+                        'max_upload'     => $profileData['max_upload'] ?? '0',
+                        'max_download'   => $profileData['max_download'] ?? '0',
+                        'min_upload'     => $profileData['min_upload'] ?? '0',
+                        'min_download'   => $profileData['min_download'] ?? '0',
+                        'rasio_cir'      => $profileData['rasio_cir'] ?? 3.33,
+                        'priority'       => $profileData['priority'] ?? 8,
+                        'dns_server'     => $profileData['dns_server'] ?? '8.8.8.8, 8.8.4.4',
+                        'use_encryption' => $profileData['use_encryption'] ?? 'yes',
+                        'rate_limit'     => $profileData['rate_limit'] ?? null,
+                        'only_one'       => $profileData['only_one'] ?? 'yes',
+                    ]
+                );
+
+                // Pemicu otomatis sinkronisasi ke FreeRADIUS
+                $this->radiusProfileService->syncProfile($profile, $traceId);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => count($importedProfiles) . ' profile(s) imported and synced to FreeRADIUS successfully.'
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            LogHelper::logError($e, ['count' => count($importedProfiles)], 500, 'Failed to import profiles', $traceId);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to import profiles: ' . $e->getMessage()
+            ], 500);
         }
-
-        return response()->json(['message' => 'Profiles saved successfully']);
     }
 
     public function export($mikrotikSlug)
@@ -699,21 +527,108 @@ class PppProfileController extends Controller
         }
     }
 
-    public function enable($id)
+    public function enable(int $id)
     {
+        $traceId = (string) Str::uuid();
         $profile = PppProfile::findOrFail($id);
         $profile->disabled = 'false';
         $profile->save();
 
+        $this->radiusProfileService->syncProfile($profile, $traceId);
+
         return redirect()->back()->with('success', 'Profile enabled successfully.');
     }
 
-    public function disable($id)
+    public function disable(int $id)
     {
+        $traceId = (string) Str::uuid();
         $profile = PppProfile::findOrFail($id);
         $profile->disabled = 'true';
         $profile->save();
 
+        $this->radiusProfileService->deleteProfile($profile, $traceId);
+
         return redirect()->back()->with('success', 'Profile disabled successfully.');
+    }
+
+    public function syncRadius(Request $request)
+    {
+        $traceId = (string) Str::uuid();
+
+        try {
+            event(new RadiusProfileUpdateRequested($traceId));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Proses sinkronisasi PPP Profile ke FreeRADIUS berhasil dipicu secara asynchronous.',
+                'trace_id' => $traceId
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memicu sinkronisasi RADIUS: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Synchronize a single PPP Profile to FreeRADIUS database asynchronously/synchronously.
+     */
+    public function singleSyncRadius(Request $request, PppProfile $pppProfile)
+    {
+        $traceId = (string) Str::uuid();
+        $uri = $request->path();
+
+        LogHelper::logInfo($uri, [
+            'profile_id'   => $pppProfile->id,
+            'profile_name' => $pppProfile->profile_name,
+        ], 200, 'Initiating single PPP Profile sync to FreeRADIUS', $traceId);
+
+        try {
+            // Eksekusi sinkronisasi profil tunggal
+            $this->radiusProfileService->syncProfile($pppProfile, $traceId);
+
+            LogHelper::logInfo($uri, [
+                'profile_id'   => $pppProfile->id,
+                'profile_name' => $pppProfile->profile_name,
+            ], 200, 'Successfully synced single PPP Profile to FreeRADIUS', $traceId);
+
+            // Pesan sukses terjemahan dinamis
+            $message = __('package.profile.messages.sync_success', [
+                'name' => $pppProfile->profile_name,
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success'  => true,
+                    'message'  => $message,
+                    'trace_id' => $traceId,
+                ], 200);
+            }
+
+            return redirect()->back()->with('success', $message);
+        } catch (Throwable $e) {
+            LogHelper::logError($uri, [
+                'profile_id'   => $pppProfile->id,
+                'profile_name' => $pppProfile->profile_name,
+                'error'        => $e->getMessage(),
+                'trace'        => substr($e->getTraceAsString(), 0, 500),
+            ], 500, 'Failed to sync single PPP Profile to FreeRADIUS', $traceId);
+
+            // Pesan gagal terjemahan dinamis
+            $errorMessage = __('package.profile.messages.sync_failed', [
+                'name'  => $pppProfile->profile_name,
+                'error' => $e->getMessage(),
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage,
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', $errorMessage);
+        }
     }
 }

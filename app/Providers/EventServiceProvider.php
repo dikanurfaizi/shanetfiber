@@ -2,15 +2,27 @@
 
 namespace App\Providers;
 
-use App\Events\SingleNotification\CustomerActivated;
+use App\Events\Radius\RadiusProfileUpdateRequested;
+use App\Events\Radius\RadiusUserProvisionRequested;
+use App\events\SingleNotification\ActivateCustomerEvent;
 use App\Events\SingleNotification\DirectMessageRequested;
 use App\Events\SingleNotification\OrderCreated;
 use App\Events\SingleNotification\PackageChangesRequest;
 use App\Events\SingleNotification\PayLaterRequest;
-use App\Events\SingleNotification\PaymentCancelled;
-use App\Events\SingleNotification\PaymentSucceeded;
 use App\Events\SingleNotification\TelegramBotLinkRequest;
 use App\Events\SingleNotification\WhatsAppTestRequest;
+use App\Events\UserRegisteredEvent;
+use App\Events\UserVoidEvent;
+use App\Events\BillingPaymentEvent;
+use App\Events\UnpaymentBillingEvent;
+use App\Listeners\Mikrotik\HandleMikrotikUnpaymentRequested;
+use App\Listeners\Radius\HandleRadiusGroupUpdateRequested;
+use App\Listeners\Radius\HandleRadiusPaymentUpdateRequested;
+use App\Listeners\Radius\HandleRadiusUnpaymentUpdateRequested;
+use App\Listeners\Radius\HandleRadiusUserProvisionRequested;
+use App\Listeners\Routerboard\SyncCustomerExpiredToMikrotik;
+use App\Listeners\Routerboard\SyncCustomerToMikrotik;
+use App\Listeners\Routerboard\HandleMiikrotikPaymentRequested;
 use App\Listeners\Telegram\SendTelegramCustomerActivationListener;
 use App\Listeners\Telegram\SendTelegramPackageChangesListener;
 use App\Listeners\Telegram\SendTelegramPayLaterListener;
@@ -38,19 +50,18 @@ class EventServiceProvider extends ServiceProvider
         Registered::class => [
             SendEmailVerificationNotification::class,
         ],
-        PaymentSucceeded::class => [
-            SendPaymentSucceededListener::class,
-        ],
-        PaymentCancelled::class => [
-            SendPaymentCancellationListener::class,
+        ActivateCustomerEvent::class => [
+            SendCustomerActivationListener::class
         ],
         PayLaterRequest::class => [
             SendPayLaterListener::class,
             SendTelegramPayLaterListener::class,
         ],
-        CustomerActivated::class => [
+        UserRegisteredEvent::class => [
             SendCustomerActivationListener::class,
-            SendTelegramCustomerActivationListener::class
+            SendTelegramCustomerActivationListener::class,
+            HandleRadiusUserProvisionRequested::class,
+            SyncCustomerToMikrotik::class
         ],
         PackageChangesRequest::class => [
             SendPackageChangesListener::class,
@@ -67,6 +78,26 @@ class EventServiceProvider extends ServiceProvider
         ],
         DirectMessageRequested::class => [
             SendDirectNotificationListener::class
+        ],
+        RadiusProfileUpdateRequested::class => [
+            HandleRadiusGroupUpdateRequested::class
+        ],
+        RadiusUserProvisionRequested::class => [
+            HandleRadiusUserProvisionRequested::class
+        ],
+        UserVoidEvent::class => [
+            SyncCustomerExpiredToMikrotik::class,
+            HandleRadiusUserProvisionRequested::class
+        ],
+        BillingPaymentEvent::class => [
+            HandleMiikrotikPaymentRequested::class,
+            HandleRadiusPaymentUpdateRequested::class,
+            SendPaymentSucceededListener::class,
+        ],
+        UnpaymentBillingEvent::class => [
+            HandleMikrotikUnpaymentRequested::class,
+            HandleRadiusUnpaymentUpdateRequested::class,
+            SendPaymentCancellationListener::class,
         ]
     ];
 

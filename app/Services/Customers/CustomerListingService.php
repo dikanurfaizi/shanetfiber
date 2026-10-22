@@ -17,35 +17,46 @@ class CustomerListingService
     {
         $timer = new ExecutionTimer();
         $statusFilter = new CustomerStatusFilterService();
+
         try {
             $query = Customer::with(['user'])
-                ->when($filters['search_name'] ?? null, fn($query, $name) => $query->where('name', 'like', "%{$name}%"))
-                ->when($filters['search_address'] ?? null, function ($query, $address) {
-                    if ($address === 'NULL') {
-                        $query->whereNull('address');
+                ->when($filters['search_name'] ?? null, fn($q, $name) => $q->where('name', 'like', "%{$name}%"))
+
+                // Filter Alamat
+                ->when(isset($filters['search_address']), function ($q) use ($filters) {
+                    if ($filters['search_address'] === 'NULL') {
+                        $q->whereNull('address');
                     } else {
-                        $query->where('address', $address);
+                        $q->where('address', $filters['search_address']);
                     }
                 })
-                ->when($filters['search_admin'] ?? null, function ($query, $admin) {
-                    if ($admin === 'NULL') {
-                        $query->whereNull('user_id');
+
+                // Filter Admin (User ID)
+                ->when(isset($filters['search_admin']), function ($q) use ($filters) {
+                    if ($filters['search_admin'] === 'NULL') {
+                        $q->whereNull('user_id');
                     } else {
-                        $query->where('user_id', $admin);
+                        $q->where('user_id', $filters['search_admin']);
                     }
                 })
-                ->when($filters['status'] ?? null, fn($query, $status) => $statusFilter->applyStatusFilter($query, $status, $traceId))
-                ->when($filters['server_search'] ?? null, fn($query, $server) => $query->where('mikrotik_id', $server))
-                ->when($filters['search_package'] ?? null, function ($query, $packageId) {
-                    $query->whereHas('activeSubscription', function ($q) use ($packageId) {
-                        $q->where('package_id', $packageId);
+
+                ->when($filters['status'] ?? null, fn($q, $status) => $statusFilter->applyStatusFilter($q, $status, $traceId))
+                ->when($filters['server_search'] ?? null, fn($q, $server) => $q->where('mikrotik_id', $server))
+                ->when($filters['search_package'] ?? null, function ($q, $packageId) {
+                    $q->whereHas('activeSubscription', fn($sq) => $sq->where('package_id', $packageId));
+                })
+
+                // Filter status = 'free' (Cek harga paket <= 0 via relasi activeSubscription)
+                ->when(($filters['status'] ?? null) === 'free', function ($q) {
+                    $q->whereHas('activeSubscription', function ($subQuery) {
+                        $subQuery->whereHas('package', function ($pkgQuery) {
+                            $pkgQuery->where('price', '<=', 0);
+                        });
                     });
                 })
                 ->orderBy('name');
 
-            $result = $query->paginate($perPage);
-
-            return $result;
+            return $query->paginate($perPage);
         } catch (\Throwable $e) {
             LogHelper::logError(
                 null,
@@ -154,7 +165,7 @@ class CustomerListingService
         }
     }
 
-    public function getActiveServers(string $traceId): Collection
+    public function getActiveServers($server, string $traceId): Collection
     {
         $timer = new ExecutionTimer();
         try {

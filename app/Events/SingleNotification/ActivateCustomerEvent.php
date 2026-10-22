@@ -8,16 +8,16 @@ use App\Models\Receipt;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class CustomerActivated
+class ActivateCustomerEvent
 {
     use Dispatchable, SerializesModels;
 
     public function __construct(
-        public readonly ?int $customerMembershipId,
-        public readonly CustomerSubscription $customerSubscription,
-        public readonly Billing $billing,
-        public readonly Receipt $receipt,
-        public readonly ?int $eventId,
-        public readonly string $traceId
+        public int $customerMembershipId,
+        public CustomerSubscription $customerSubscription,
+        public Billing $billing,
+        public Receipt $receipt,
+        public ?int $eventId = null,
+        public string $traceId
     ) {}
 }

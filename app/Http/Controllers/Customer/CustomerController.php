@@ -19,8 +19,6 @@ use App\Services\Customers\CustomerBillingInfoService;
 use App\Services\Customers\CustomerListingService;
 use App\Services\Customers\CustomerStatusService;
 use App\Services\Customers\CustomerUpdateService;
-use App\Services\Customers\CustomerQueryService;
-use App\Services\Customers\CustomerRestoreService;
 use App\Services\Routerboard\Ppp\SecretService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,65 +26,32 @@ use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use RouterOS\Exceptions\ClientException;
 use RouterOS\Exceptions\ConnectException;
-use App\Events\SingleNotification\CustomerActivated;
+use App\Events\UserRegisteredEvent;
 use App\Exports\CustomerMasterExport;
 use App\Helpers\ExecutionTimer;
-use App\Models\Billings\Billing;
-use App\Models\Billings\BillingPayment;
-use App\Models\Billings\BillingPeriode;
-use App\Models\Billings\BillingSubscriptionPeriode;
-use App\Services\Customers\CustomerSoftDeleteService;
+use App\Models\Websystem;
+use App\Services\Customers\CustomerResendActivationService;
 use App\Services\Customers\CustomerSubscriptionGuardService;
+use App\Services\Mikrotik\MikrotikExport;
 use DomainException;
 
 class CustomerController extends Controller
 {
-    private SecretService $secretService;
-    private CustomerStatusService $customerStatusService;
-    private CustomerFormService $customerFormService;
-    private CustomerPppService $customerPppService;
-    private CustomerRouterService $customerRouterService;
-    private CustomerUpdateService $customerUpdateService;
-    private CustomerActivationService $customerActivationService;
-    private CustomerDeletionService $customerDeletionService;
-    private CustomerListingService $customerListingService;
-    private CustomerBillingInfoService $customerBillingInfoService;
-    private CustomerQueryService $customerQueryService;
-    private CustomerRestoreService $customerRestoreService;
-    private CustomerSoftDeleteService $customerSoftDeleteService;
-    private CustomerSubscriptionGuardService $subscriptionGuard;
-
     public function __construct(
-        SecretService $secretService,
-        CustomerStatusService $customerStatusService,
-        CustomerFormService $customerFormService,
-        CustomerPppService $customerPppService,
-        CustomerRouterService $customerRouterService,
-        CustomerUpdateService $customerUpdateService,
-        CustomerActivationService $customerActivationService,
-        CustomerDeletionService $customerDeletionService,
-        CustomerListingService $customerListingService,
-        CustomerBillingInfoService $customerBillingInfoService,
-        CustomerQueryService $customerQueryService,
-        CustomerRestoreService $customerRestoreService,
-        CustomerSoftDeleteService $customerSoftDeleteService,
-        CustomerSubscriptionGuardService $subscriptionGuard
+        private SecretService $secretService,
+        private CustomerStatusService $customerStatusService,
+        private CustomerFormService $customerFormService,
+        private CustomerPppService $customerPppService,
+        private CustomerRouterService $customerRouterService,
+        private CustomerUpdateService $customerUpdateService,
+        private CustomerActivationService $customerActivationService,
+        private CustomerDeletionService $customerDeletionService,
+        private CustomerListingService $customerListingService,
+        private CustomerBillingInfoService $customerBillingInfoService,
+        private CustomerSubscriptionGuardService $subscriptionGuard,
+        private MikrotikExport $mikrotikExport,
+        private CustomerResendActivationService $customerResendActivationService
     ) {
-        $this->secretService = $secretService;
-        $this->customerStatusService = $customerStatusService;
-        $this->customerFormService = $customerFormService;
-        $this->customerPppService = $customerPppService;
-        $this->customerRouterService = $customerRouterService;
-        $this->customerUpdateService = $customerUpdateService;
-        $this->customerActivationService = $customerActivationService;
-        $this->customerDeletionService = $customerDeletionService;
-        $this->customerListingService = $customerListingService;
-        $this->customerBillingInfoService = $customerBillingInfoService;
-        $this->customerQueryService = $customerQueryService;
-        $this->customerRestoreService = $customerRestoreService;
-        $this->customerSoftDeleteService = $customerSoftDeleteService;
-        $this->subscriptionGuard = $subscriptionGuard;
-
         $this->middleware('permission:customer-list|customer-create|customer-edit|customer-delete|secret-disable|secret-edit', ['only' => ['index', 'show']]);
         $this->middleware('permission:customer-create', ['only' => ['create', 'store', 'activation']]);
         $this->middleware('permission:customer-edit', ['only' => ['edit', 'update', 'activation', 'editRouter', 'updateRouter']]);
@@ -106,23 +71,12 @@ class CustomerController extends Controller
 
     public function index(Request $request)
     {
-        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
+        ['traceId' => $traceId] = $this->startTrace();
         $perPage = $request->input('perPage', 25);
-        $searchParams = $this->prepareSearchParams($request, $traceId);
 
-        // Handle status filter case
-        if ($this->shouldFilterByStatus($searchParams, $traceId)) {
-            return $this->handleStatusFilter($request, $searchParams, $perPage, $traceId);
-        }
-
-        // Default case - regular listing
-        return $this->showCustomerList($searchParams, $perPage, $traceId);
-    }
-
-    private function prepareSearchParams(Request $request, string $traceId): array
-    {
+        // 1. Ambil kriteria pencarian dari request
         $auth = UserAuth::getUserDetails();
-        $user = $auth['user'];
+        $user = $auth['user'] ?? null;
 
         $searchParams = $request->only([
             'search_name',
@@ -130,60 +84,55 @@ class CustomerController extends Controller
             'server_search',
             'search_package',
             'status',
-            'search_admin',
+            'search_admin'
         ]);
 
-        // Auto-set admin filter if user has permission
-        if (empty($searchParams['search_admin']) && $user && $user->can('view-customers-widget-related')) {
+        // Gunakan 'Super Admin' (dengan spasi) sesuai nama role di database
+        $isSuperAdmin = $user && ($user->hasRole('Super Admin') || $user->can('view-all-customers'));
+
+        if (!$isSuperAdmin) {
+            // Jika bukan Super Admin (misal: Admin atau Kasir), kunci ke ID user yang login
             $searchParams['search_admin'] = $user->id;
         }
 
-        return $searchParams;
-    }
+        $status = $searchParams['status'] ?? null;
 
-    private function shouldFilterByStatus(array $searchParams, string $traceId): bool
-    {
-        return in_array($searchParams['status'] ?? null, ['isolir', 'offline', 'online']);
-    }
+        // 2. Jika filter status spesifik (isolir, offline)
+        if (in_array($status, ['isolir', 'offline'])) {
+            $routers = Mikrotik::where('disabled', 'false')
+                ->when($searchParams['server_search'] ?? null, fn($q, $server) => $q->where('id', $server))
+                ->get();
 
-    private function showCustomerList(array $searchParams, int $perPage, string $traceId)
-    {
+            if ($routers->isEmpty()) {
+                return redirect()->route('customers.index')->withErrors(['msg' => 'No active servers available']);
+            }
+
+            try {
+                $result = $this->customerStatusService->processStatusFilter(
+                    $routers,
+                    $searchParams,
+                    $perPage,
+                    $request->url(),
+                    $traceId
+                );
+
+                return view('customers.offline', $result);
+            } catch (\Exception $e) {
+                return redirect()->route('customers.index')->withErrors(['msg' => $this->getUserFriendlyError($e)]);
+            }
+        }
+
+        // 3. Default (Listing Biasa)
         $data = $this->customerListingService->getPaginatedCustomers($searchParams, $perPage, $traceId);
 
         return view('customers.index', [
             'data' => $data,
-            // 'totalIncoming' => $this->calculateTotalIncoming($data, $traceId),
             'address' => $this->customerListingService->getCustomerAddresses($traceId),
-            'allServers' => $this->customerListingService->getActiveServers($traceId),
+            'allServers' => $this->customerListingService->getActiveServers($searchParams['server_search'] ?? null, $traceId),
             'allAdmin' => $this->customerListingService->getActiveAdmins($traceId),
             'periodeName' => $this->customerBillingInfoService->getCurrentBillingPeriod($traceId),
             'perPage' => $perPage,
         ])->with('i', (request()->input('page', 1) - 1) * $perPage);
-    }
-
-    private function handleStatusFilter(Request $request, array $searchParams, int $perPage, string $traceId)
-    {
-        $routers = $this->customerListingService->getActiveServers($searchParams['server_search'] ?? null);
-
-        if ($routers->isEmpty()) {
-            return redirect()->route('customers.index')
-                ->withErrors(['msg' => 'No active servers available']);
-        }
-
-        try {
-            $result = $this->customerStatusService->processStatusFilter(
-                $routers,
-                $searchParams,
-                $perPage,
-                $request->url(),
-                $traceId
-            );
-
-            return view('customers.offline', $result);
-        } catch (\Exception $e) {
-            return redirect()->route('customers.index')
-                ->withErrors(['msg' => $this->getUserFriendlyError($e)]);
-        }
     }
 
     private function calculateTotalIncoming($customers, $traceId): float
@@ -464,17 +413,19 @@ class CustomerController extends Controller
         }
 
         if (isset($result['success'])) {
-            $membershipId = $result['membership']->id ?? null;
-            event(
-                new CustomerActivated(
-                    $membershipId,
-                    $result['subscription'],
-                    $result['billing'],
-                    $result['receipt'],
-                    null,
-                    $result['traceId']
-                )
-            );
+            $webSystem = Websystem::first();
+
+            event(new UserRegisteredEvent(
+                customer: $result['customer'],
+                pppProfile: $result['pppProfile'] ?? null,
+                customerMembershipId: $result['membership']->id ?? null,
+                customerSubscription: $result['subscription'],
+                billing: $result['billing'],
+                receipt: $result['receipt'],
+                eventId: null,
+                traceId: $result['traceId'],
+                driver: $webSystem->provisioning_driver ?? 'both' // Kirim driver ke event
+            ));
         }
 
         LogHelper::logInfo(null, [
@@ -554,21 +505,38 @@ class CustomerController extends Controller
 
     public function delete(Customer $customer)
     {
-        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
-        $result = $this->customerDeletionService->checkCustomerDeletionEligibility($customer, $traceId);
+        ['traceId' => $traceId] = $this->startTrace();
 
-        if (! $result['eligible']) {
-            return redirect()->route('billings.index', $result['redirect_data'])
+        $result = $this->customerDeletionService->checkEligibility($customer, $traceId);
+
+        if (!$result['eligible']) {
+            LogHelper::logWarning(null, ["customer_id" => $customer->id, "message" => $result['message']], 200, 'Customer has unpaid bills', $traceId);
+
+            return redirect()
+                ->route($result['redirect_route'], $result['redirect_data'])
                 ->with('warning', $result['message']);
         }
 
-        return view('customers.delete', ['customer' => $result['customer']]);
+        return view('customers.delete', compact('customer'));
+    }
+
+    public function destroy(Customer $customer)
+    {
+        ['traceId' => $traceId] = $this->startTrace();
+
+        $result = $this->customerDeletionService->processCustomerDeletion($customer, $traceId);
+
+        if (!$result['success']) {
+            return redirect()->back()->with('error', $result['message']);
+        }
+
+        return redirect()->route('customers.index')->with('success', $result['message']);
     }
 
     public function exportSecret(Customer $customer): RedirectResponse
     {
         ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
-        $result = $this->customerActivationService->exportCustomerSecret($customer, $traceId);
+        $result = $this->mikrotikExport->handle($customer, $traceId);
 
         if (isset($result['error'])) {
             return redirect()->back()->withErrors(['msg' => $result['error']]);
@@ -608,104 +576,18 @@ class CustomerController extends Controller
         }
     }
 
-    public function destroy(Customer $customer)
-    {
-        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
-        try {
-            $this->customerSoftDeleteService->deleteCustomer($customer, $traceId);
-
-            return redirect()->route('customers.index')
-                ->with('success', 'Customer deleted successfully');
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['msg' => $e->getMessage()]);
-        }
-    }
-
     /**
      * Mengirim ulang email aktivasi ke Customer tertentu
      */
-    public function resendActivation(Customer $customer)
+    public function resendActivation(Customer $customer): RedirectResponse
     {
-        $traceId = (string) Str::uuid();
-        // 1. Log debug awal dengan standard JSON baru Anda
-        LogHelper::logDebug(null, [
-            "customer_id"   => $customer->id,
-            "customer_slug" => $customer->slug,
-            "email"         => $customer->email
-        ], "CustomerController@resendActivation initiated", $traceId);
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
 
-        try {
-            // 1. Ambil Billing Periode terbaru/terakhir yang ada di sistem
-            $latestPeriode = BillingPeriode::orderByDesc('id')->first();
-            $membership = $customer->activeMembership; // Memanfaatkan relasi hasOne di model Customer
-            $membershipId = $membership->id ?? null;
+        $result = $this->customerResendActivationService->resendActivation($customer, $traceId, $timer);
 
-            $latestBilling = null;
-
-            if ($latestPeriode) {
-                // 2. Ambil subscription milik customer ini yang statusnya sedang 'active'
-                $activeSubscription = $customer->activeSubscription; // Memanfaatkan relasi hasOne di model Customer
-
-                if ($activeSubscription) {
-                    // 3. Cari data penghubung di tabel billing_subscription_periodes
-                    // berdasarkan customer_subscription_id dan billing_periode_id terbaru
-                    $billingSubscriptionPeriode = BillingSubscriptionPeriode::where('customer_subscription_id', $activeSubscription->id)
-                        ->where('billing_periode_id', $latestPeriode->id)
-                        ->first();
-
-                    if ($billingSubscriptionPeriode) {
-                        // 4. Cari data ke tabel billings berdasarkan billing_subscription_id (id dari pivot)
-                        // dan juga pastikan customer_id-nya sesuai
-                        $latestBilling = Billing::where('billing_subscription_id', $billingSubscriptionPeriode->id)
-                            ->where('customer_id', $customer->id)
-                            ->first();
-                    }
-                }
-            }
-
-            // 5. Cari data receipt terakhir milik customer ini (jika ada) untuk disertakan di event
-            $billingPayment = BillingPayment::where('billing_id', $latestBilling->id ?? null)
-                ->latest()
-                ->first();
-
-            $latestReceipt = $billingPayment ? $billingPayment->receipt : null;
-
-            // Sekarang variabel $latestBilling siap disuplay ke dalam array $result untuk event Anda
-            $result = [
-                'subscription' => $customer->activeSubscription,
-                'billing'      => $latestBilling, // 👈 Sudah berisi objek billing periode terakhir (atau null jika belum digenerate)
-                'receipt'      => $latestReceipt, // 👈 Sudah berisi objek receipt terakhir (atau null jika belum ada pembayaran)
-                'traceId'      => $traceId
-            ];
-
-            // 2. 🔥 Trigger Event Aktivasi Ulang sesuai dengan parameter Anda
-            event(
-                new CustomerActivated(
-                    $membershipId,
-                    $result['subscription'],
-                    $result['billing'],
-                    $result['receipt'],
-                    null,
-                    $result['traceId']
-                )
-            );
-
-            // 3. Log info di akhir setelah proses trigger dipastikan sukses tanpa exception
-            LogHelper::logInfo(null, [
-                "customer_id" => $customer->id,
-            ], 200, "CustomerController@resendActivation successfully executed", $result['traceId']);
-
-            // Kembali ke halaman detail/index dengan pesan sukses multibahasa
-            return redirect()->back()
-                ->with('success', __('customer.message.resend-activation-success', ['name' => $customer->name]));
-        } catch (\Exception $e) {
-            // 4. Log error jika ada kegagalan mailer sistem / database
-            LogHelper::logError($e, [
-                "customer_id" => $customer->id,
-            ], 500, "CustomerController@resendActivation failed");
-
-            return redirect()->back()
-                ->with('error', __('customer.message.resend-activation-failed'));
-        }
+        return redirect()->back()->with(
+            $result['success'] ? 'success' : 'error',
+            $result['message']
+        );
     }
 }

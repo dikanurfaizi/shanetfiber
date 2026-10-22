@@ -3,32 +3,22 @@
 namespace App\Services\Billings;
 
 use App\Helpers\ExecutionTimer;
-use Illuminate\Support\Facades\DB;
-use Throwable;
-use RuntimeException;
 use App\Helpers\LogHelper;
 use App\Models\Billings\Billing;
 use App\Models\Billings\BillingPayment;
 use App\Models\Customers\CustomerSubscription;
-use App\Services\Billings\PaymentProcessingService;
 use App\Services\Receipts\CreateReceiptService;
 use App\Services\Receipts\ReferenceIdGeneratorService;
+use Illuminate\Support\Facades\DB;
+use RuntimeException;
+use Throwable;
 
 class PaymentService
 {
-    private PaymentProcessingService $paymentProcessingService;
-    private ReferenceIdGeneratorService $referenceIdGeneratorService;
-    private CreateReceiptService $createReceiptService;
-
     public function __construct(
-        PaymentProcessingService $paymentProcessingService,
-        ReferenceIdGeneratorService $referenceIdGeneratorService,
-        CreateReceiptService $createReceiptService
-    ) {
-        $this->paymentProcessingService = $paymentProcessingService;
-        $this->referenceIdGeneratorService = $referenceIdGeneratorService;
-        $this->createReceiptService = $createReceiptService;
-    }
+        private ReferenceIdGeneratorService $referenceIdGeneratorService,
+        private CreateReceiptService $createReceiptService
+    ) {}
 
     public function processPayment(
         Billing $billing,
@@ -36,95 +26,104 @@ class PaymentService
         string $traceId
     ): array {
         $timer = new ExecutionTimer();
+
         LogHelper::logInfo(null, [
             'billing_id'     => $billing->id,
             'customer_id'    => $billing->customer_id,
             'payment_method' => $paymentData['payment_method'] ?? null,
-        ], 100, 'payment.start', $traceId, $timer->lap());
+        ], 100, '[PaymentService] payment start', $traceId, $timer->lap());
 
         try {
-            DB::beginTransaction();
+            $result = DB::transaction(function () use ($billing, $paymentData, $traceId) {
+                // 1. Lock data billing dengan pessimestic locking untuk hindari race condition
+                $billingModel = Billing::query()
+                    ->whereKey($billing->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-            $billing = Billing::query()
-                ->whereKey($billing->id)
-                ->lockForUpdate()
-                ->firstOrFail();
+                // Guard Check: Jangan izinkan pembayaran jika sudah Lunas
+                if ($billingModel->status === 'LS') {
+                    throw new RuntimeException("Billing ID {$billing->id} has already been paid.");
+                }
 
-            if ($billing->status === 'VD') {
-                $billing->billingSubscription->update([
-                    'updated_by' => auth()->user()->id,
-                    'status'      => 'active'
+                // 2. Pemulihan status jika billing sebelumnya 'VD' (Void / Not Active Period)
+                if ($billingModel->status === 'VD') {
+                    $billingModel->loadMissing('billingSubscription.customerSubscription');
+
+                    $billingSubscription = $billingModel->billingSubscription;
+                    if ($billingSubscription) {
+                        $billingSubscription->update([
+                            'updated_by' => auth()->id(),
+                            'status'     => 'active',
+                        ]);
+
+                        $billingSubscription->customerSubscription?->update([
+                            'status'        => 'active',
+                            'terminated_at' => null,
+                        ]);
+                    }
+                }
+
+                // 3. Ambil data langganan aktif pelanggan & kunci barisnya
+                $subscription = CustomerSubscription::query()
+                    ->with(['customer', 'package'])
+                    ->where('customer_id', $billingModel->customer_id)
+                    ->where('status', 'active')
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                // 4. Update status billing menjadi Lunas (LS)
+                $billingModel->update([
+                    'status'     => 'LS',
+                    'updated_by' => auth()->id(),
                 ]);
 
-                $billing->billingSubscription->customerSubscription->update([
-                    'status' => 'active',
-                    'terminated_at' => null,
+                // 5. Catat riwayat pembayaran
+                $billingPayment = BillingPayment::create([
+                    'billing_id'      => $billingModel->id,
+                    'amount_paid'     => $billingModel->total_amount,
+                    'payment_method'  => $paymentData['payment_method'],
+                    'reference_id'    => $paymentData['reference_id'] ?? $this->referenceIdGeneratorService->generate('ACT'),
+                    'paid_by_user_id' => auth()->id(),
+                    'payment_time'    => now(),
                 ]);
-            }
 
-            $subscription = CustomerSubscription::query()
-                ->with(['customer', 'package'])
-                ->where('customer_id', $billing->customer_id)
-                ->where('status', 'active')
-                ->lockForUpdate()
-                ->firstOrFail();
+                // 6. Terbitkan kwitansi (Receipt)
+                $receiptResult = $this->createReceiptService
+                    ->createReceipt($subscription, $billingModel, $billingPayment, $paymentData, $traceId);
 
-            // Update billing
-            $billing->update([
-                'status'     => 'LS',
-                'updated_by' => auth()->id(),
-            ]);
+                if (empty($receiptResult['success'])) {
+                    throw new RuntimeException("Receipt creation failed for billing_id {$billingModel->id}");
+                }
 
-            // Insert billing payment
-            $billingPayment = BillingPayment::create([
-                'billing_id'      => $billing->id,
-                'amount_paid'     => $billing->total_amount,
-                'payment_method'  => $paymentData['payment_method'],
-                'reference_id'    => $paymentData['reference_id']
-                    ?? $this->referenceIdGeneratorService->generate('ACT'),
-                'paid_by_user_id' => auth()->id(),
-                'payment_time'    => now(),
-            ]);
-
-            // Create receipt
-            $receiptResult = $this->createReceiptService
-                ->createReceipt($subscription, $billing, $billingPayment, $paymentData, $traceId);
-
-            if (!$receiptResult['success']) {
-                throw new RuntimeException("Receipt creation failed for billing_id {$billing->id}");
-            }
-
-            DB::commit();
+                return [
+                    'billing' => $billingModel->refresh(),
+                    'receipt' => $receiptResult['receipt'],
+                ];
+            });
 
             LogHelper::logInfo(null, [
                 'billing_id' => $billing->id,
-                'receipt_id' => $receiptResult['receipt']->id,
-            ], 200, 'payment.db.commit', $traceId, $timer->lap());
-
-            // External actions (non-critical)
-            if (config('services.shanetfiber.allow_mikrotik_actions')) {
-                $this->paymentProcessingService
-                    ->processPaymentActions($billing, $traceId);
-
-                LogHelper::logInfo(null, [
-                    'billing_id' => $billing->id,
-                ], 200, 'payment.external.processed', $traceId, $timer->lap());
-            }
+                'receipt_id' => $result['receipt']->id,
+            ], 200, '[PaymentService] payment db commit', $traceId, $timer->lap());
 
             return [
-                'receipt'  => $receiptResult['receipt'],
-                'trace_id' => $traceId
+                'success'  => true,
+                'billing'  => $result['billing'],
+                'receipt'  => $result['receipt'],
+                'trace_id' => $traceId,
             ];
         } catch (Throwable $e) {
-            DB::rollBack();
-
             LogHelper::logError(null, [
                 'billing_id' => $billing->id,
                 'exception'  => class_basename($e),
                 'message'    => $e->getMessage(),
-            ], 500, 'payment.failed', $traceId, $timer->lap());
+            ], 500, '[PaymentService] payment failed', $traceId, $timer->lap());
 
-            throw $e;
+            return [
+                'error'   => true,
+                'message' => $e->getMessage(),
+            ];
         }
     }
 }

@@ -2,311 +2,248 @@
 
 namespace App\Services\Customers;
 
+use App\Helpers\ExecutionTimer;
+use App\Helpers\LogHelper;
 use App\Models\Customers\Customer;
-use App\Models\Customers\DeletedCustomer;
+use App\Models\Customers\CustomerAddon;
+use App\Models\Membership\CustomerMembership;
 use App\Models\Mikrotik;
 use App\Models\AutoIsolir;
+use App\Services\Routerboard\TestConnectionService;
+use App\Services\Billings\BillingUnpaidService;
 use App\Jobs\Secrets\DeletePppSecretJob;
 use App\Jobs\Secrets\DeleteIpStaticJob;
-use App\Services\Routerboard\TestConnectionService;
-use App\Services\Routerboard\Ppp\SecretService;
-use App\Services\Routerboard\IpStaticService;
-use App\Services\Customers\CustomerRouterService;
-use App\Services\Billings\BillingUnpaidService;
-use App\Helpers\LogHelper;
-use App\Models\Customers\CustomerSubscription;
-use App\Models\Packages\Package;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class CustomerDeletionService
 {
-    protected $testConnectionService;
-    protected $secretService;
-    protected $ipStaticService;
-    private BillingUnpaidService $billingUnpaidService;
-    private CustomerRouterService $customerRouterService;
-
     public function __construct(
-        TestConnectionService $testConnectionService,
-        SecretService $secretService,
-        IpStaticService $ipStaticService,
-        BillingUnpaidService $billingUnpaidService,
-        CustomerRouterService $customerRouterService,
-    ) {
-        $this->testConnectionService = $testConnectionService;
-        $this->secretService = $secretService;
-        $this->ipStaticService = $ipStaticService;
-        $this->billingUnpaidService = $billingUnpaidService;
-        $this->customerRouterService = $customerRouterService;
-    }
+        private TestConnectionService $testConnectionService,
+        private BillingUnpaidService $billingUnpaidService
+    ) {}
 
-    public function moveToDeleted(Customer $customer, string $traceId): DeletedCustomer
+    /**
+     * Memeriksa kelayakan penghapusan customer.
+     */
+    public function checkEligibility(Customer $customer, string $traceId, ?ExecutionTimer $timer = null): array
     {
-        try {
-            $subscription = CustomerSubscription::where('customer_id', $customer->id)->orderBy('created_at')->first();
-            $package = Package::where('id', $subscription->package_id)->first();
-            $deletedCustomer = DeletedCustomer::create([
-                'id' => $customer->id,
-                'name' => $customer->name,
-                'slug' => $customer->slug,
-                'password' => $customer->password,
-                'email' => $customer->email,
-                'package_id' => $package->id,
-                'mikrotik_id' => $customer->mikrotik_id,
-                'internet_service' => $customer->internet_service,
-                'secret_id' => $customer->secret_id,
-                'username' => $customer->username,
-                'password_ppp' => $customer->password_ppp,
-                'ppp_type_id' => $customer->ppp_type_id,
-                'simpleque_id' => $customer->simpleque_id,
-                'simpleque_name' => $customer->simpleque_name,
-                'ip_static' => $customer->ip_static,
-                'mac_address' => $customer->mac_address,
-                'interface' => $customer->interface,
-                'arp_id' => $customer->arp_id,
-                'address_list_id' => $customer->address_list_id,
-                'address' => $customer->address,
-                'contact' => $customer->contact,
-                'disabled' => $customer->disabled,
-                'activation' => $customer->activation,
-                'created_at' => $customer->created_at,
-                'updated_at' => $customer->updated_at,
-                'deleted_at' => now(),
-                'primary_server' => $customer->primary_server,
-                'discount' => $customer->discount,
-                'customer_id' => $customer->customer_id,
-                'activation_date' => $customer->activation_date,
-                'caller_id' => $customer->caller_id,
-                'user_id' => $customer->user_id,
-                'member_id' => $customer->member_id,
-                'billing_option' => $customer->billing_option,
-                'billing_period' => $customer->billing_period,
-            ]);
+        $timer ??= new ExecutionTimer();
+        $hasUnpaidBills = $this->billingUnpaidService->hasUnpaidBills($customer->id, $traceId);
 
-            LogHelper::logInfo(
-                null,
-                ['customer_id' => $customer->id],
-                200,
-                'Successfully moved customer to deleted table',
-                $traceId
-            );
-
-            return $deletedCustomer;
-        } catch (\Throwable $e) {
-            LogHelper::logError(
+        if ($hasUnpaidBills) {
+            LogHelper::logWarning(
                 null,
                 [
-                    'exception' => [
-                        'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
-                    ],
-                    'customer_id' => $customer->id
+                    'customer_id'   => $customer->id,
+                    'customer_name' => $customer->name,
                 ],
-                500,
-                'Failed to move customer to deleted table',
-                $traceId
+                400,
+                'Customer deletion blocked due to unpaid bills.',
+                $traceId,
+                $timer->lap()
             );
-            throw $e;
-        }
-    }
-
-    public function checkCustomerDeletionEligibility(Customer $customer, string $traceId): array
-    {
-        try {
-            $hasUnpaidBills = $this->billingUnpaidService->hasUnpaidBills($customer->id, $traceId);
-
-            if ($hasUnpaidBills) {
-                LogHelper::logWarning(
-                    null,
-                    ['customer_id' => $customer->id],
-                    400,
-                    'Customer deletion blocked due to unpaid bills',
-                    $traceId
-                );
-
-                return [
-                    'eligible' => false,
-                    'redirect' => true,
-                    'message' => 'Customer memiliki tagihan aktif. Harap konfirmasi status billing sebelum melanjutkan penghapusan.',
-                    'redirect_data' => [
-                        'search_name' => $customer->name,
-                        'source' => 'customer-delete',
-                        'customer_name' => $customer->name,
-                    ]
-                ];
-            }
 
             return [
-                'eligible' => true,
-                'customer' => $customer
-            ];
-        } catch (\Throwable $e) {
-            LogHelper::logError(
-                null,
-                [
-                    'exception' => [
-                        'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
-                    ],
-                    'customer_id' => $customer->id
+                'eligible'       => false,
+                'redirect_route' => 'billings.index',
+                'redirect_data'  => [
+                    'search_name'   => $customer->name,
+                    'source'        => 'customer-delete',
+                    'customer_name' => $customer->name,
                 ],
-                500,
-                'Failed to check deletion eligibility',
-                $traceId
-            );
-            throw $e;
+                'message'        => 'Customer memiliki tagihan aktif. Harap konfirmasi status billing sebelum melanjutkan penghapusan.',
+            ];
         }
+
+        LogHelper::logInfo(
+            null,
+            ['customer_id' => $customer->id],
+            200,
+            'Customer eligibility check passed.',
+            $traceId,
+            $timer->lap()
+        );
+
+        return [
+            'eligible'       => true,
+            'redirect_route' => 'customers.delete',
+            'redirect_data'  => ['customer' => $customer->slug ?? $customer->id],
+        ];
     }
 
-    public function forceDeleteCustomer(string $slug, string $traceId): array
+    /**
+     * Memeriksa kelayakan dan mengeksekusi penghapusan customer jika layak.
+     */
+    public function processCustomerDeletion(Customer $customer, string $traceId, ?ExecutionTimer $timer = null): array
     {
+        $timer ??= new ExecutionTimer();
+
+        LogHelper::logInfo(
+            null,
+            [
+                'customer_id' => $customer->id,
+                'activation'  => $customer->activation,
+                'service'     => $customer->internet_service,
+            ],
+            200,
+            'Processing customer deletion.',
+            $traceId,
+            $timer->lap()
+        );
+
         try {
-            $customer = Customer::onlyTrashed()->where('slug', $slug)->firstOrFail();
+            $isActivated = filter_var($customer->activation, FILTER_VALIDATE_BOOLEAN);
+
+            if ($isActivated) {
+                $router = Mikrotik::findOrFail($customer->mikrotik_id);
+
+                $this->ensureRouterOnline($router, $traceId, $timer);
+                $this->dispatchNetworkCleanup($customer, $router, $traceId);
+            }
+
+            $this->terminateCustomer($customer, $isActivated);
 
             LogHelper::logInfo(
                 null,
                 [
                     'customer_id' => $customer->id,
-                    'slug' => $slug,
-                    'activation_status' => $customer->activation
+                    'is_activated' => $isActivated,
                 ],
                 200,
-                'Retrieved trashed customer for deletion',
-                $traceId
+                'Customer deletion process completed successfully.',
+                $traceId,
+                $timer->lap()
             );
 
-            if ($customer->activation === 'true') {
-                try {
-                    $this->customerRouterService->deactivateCustomerServices($customer, $traceId);
-
-                    LogHelper::logInfo(
-                        null,
-                        ['customer_id' => $customer->id],
-                        200,
-                        'Successfully deactivated customer services before deletion',
-                        $traceId
-                    );
-                } catch (\Exception $e) {
-                    LogHelper::logError(
-                        null,
-                        [
-                            'exception' => [
-                                'message' => $e->getMessage(),
-                                'code' => $e->getCode(),
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine()
-                            ],
-                            'customer_id' => $customer->id
-                        ],
-                        500,
-                        'Failed to deactivate customer services',
-                        $traceId
-                    );
-
-                    return [
-                        'success' => false,
-                        'message' => 'An error occurred while handling the router. Please try again.',
-                        'error' => $e->getMessage(),
-                        'status' => 500
-                    ];
-                }
-            }
-
-            try {
-                $deletedCustomer = $this->moveToDeleted($customer, $traceId);
-                $customer->forceDelete();
-
-                LogHelper::logInfo(
-                    null,
-                    [
-                        'customer_id' => $customer->id,
-                        'deleted_customer_id' => $deletedCustomer->id ?? null
-                    ],
-                    200,
-                    'Successfully force deleted customer',
-                    $traceId
-                );
-
-                return [
-                    'success' => true,
-                    'message' => 'Customer permanently deleted.',
-                    'status' => 200
-                ];
-            } catch (ModelNotFoundException $e) {
-                LogHelper::logError(
-                    null,
-                    [
-                        'exception' => [
-                            'message' => $e->getMessage(),
-                            'code' => $e->getCode(),
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine()
-                        ],
-                        'slug' => $slug
-                    ],
-                    404,
-                    'Customer not found for force deletion',
-                    $traceId
-                );
-
-                return [
-                    'success' => false,
-                    'message' => 'Customer not found.',
-                    'error' => $e->getMessage(),
-                    'status' => 404
-                ];
-            } catch (\Exception $e) {
-                LogHelper::logError(
-                    null,
-                    [
-                        'exception' => [
-                            'message' => $e->getMessage(),
-                            'code' => $e->getCode(),
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine()
-                        ],
-                        'customer_id' => $customer->id ?? null,
-                        'slug' => $slug
-                    ],
-                    500,
-                    'Failed to force delete customer',
-                    $traceId
-                );
-
-                return [
-                    'success' => false,
-                    'message' => 'An error occurred while deleting the customer. Please try again.',
-                    'error' => $e->getMessage(),
-                    'status' => 500
-                ];
-            }
-        } catch (\Throwable $e) {
+            return [
+                'success' => true,
+                'message' => 'Customer successfully deleted',
+            ];
+        } catch (Throwable $e) {
             LogHelper::logError(
-                null,
+                $e,
                 [
-                    'exception' => [
-                        'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
-                    ],
-                    'slug' => $slug
+                    'customer_id'  => $customer->id,
+                    'mikrotik_id'  => $customer->mikrotik_id ?? null,
+                    'exception'    => get_class($e),
+                    'message'      => $e->getMessage(),
+                    'file'         => $e->getFile(),
+                    'line'         => $e->getLine(),
                 ],
                 500,
-                'Failed to retrieve customer for deletion',
-                $traceId
+                'Failed during customer deletion process.',
+                $traceId,
+                $timer->lap()
             );
 
             return [
                 'success' => false,
-                'message' => 'An error occurred while processing the request.',
-                'error' => $e->getMessage(),
-                'status' => 500
+                'message' => $e->getMessage() ?: 'Gagal menghapus customer, terjadi kesalahan sistem.',
             ];
         }
+    }
+
+    private function ensureRouterOnline(Mikrotik $router, string $traceId, ExecutionTimer $timer): void
+    {
+        if (!config('services.shanetfiber.allow_mikrotik_actions')) {
+            return;
+        }
+
+        try {
+            $this->testConnectionService->checkOnline($router, $traceId);
+        } catch (Throwable $e) {
+            LogHelper::logError(
+                $e,
+                [
+                    'router_id'   => $router->id,
+                    'router_name' => $router->name ?? null,
+                    'host'        => $router->host ?? null,
+                    'exception'   => get_class($e),
+                    'message'     => $e->getMessage(),
+                ],
+                503,
+                'Router offline during delete customer check.',
+                $traceId,
+                $timer->lap()
+            );
+
+            throw new \Exception('Router offline, silakan periksa koneksi router Anda.');
+        }
+    }
+
+    private function dispatchNetworkCleanup(Customer $customer, Mikrotik $router, string $traceId): void
+    {
+        if (!config('services.shanetfiber.allow_mikrotik_actions')) {
+            return;
+        }
+
+        match ($customer->internet_service) {
+            'ppp' => dispatch(new DeletePppSecretJob(
+                $router,
+                $customer->username,
+                $traceId
+            ))->onQueue('default'),
+
+            'ip_static' => dispatch(new DeleteIpStaticJob(
+                $router,
+                $customer->simpleque_id,
+                $customer->arp_id,
+                $customer->ip_static,
+                AutoIsolir::where('mikrotik_id', $customer->mikrotik_id)->value('address_list_isolir') ?? 'none',
+                $traceId
+            ))->onQueue('default'),
+
+            default => null,
+        };
+    }
+
+    private function terminateCustomer(Customer $customer, bool $expired): void
+    {
+        DB::transaction(function () use ($customer, $expired) {
+            $now = now();
+
+            $deactivateActiveRelation = function ($query, $customer) use ($now) {
+                $query->where('customer_id', $customer->id)
+                    ->where('is_active', true)
+                    ->update([
+                        'is_active'  => false,
+                        'end_date'   => $now,
+                        'updated_at' => $now,
+                    ]);
+            };
+
+            // 1. Nonaktifkan Membership & Addons
+            $deactivateActiveRelation(CustomerMembership::query(), $customer);
+            $deactivateActiveRelation(CustomerAddon::query(), $customer);
+
+            // 2. Handle Subscriptions & Billing Periodes
+            $customer->customerSubscriptions->each(function ($subscription) use ($expired, $now) {
+                $subscription->billingSubscriptionPeriodes->each(function ($periode) use ($expired) {
+                    if ($expired) {
+                        $periode->update(['status' => 'expired']);
+                    }
+                    $periode->delete();
+                });
+
+                if ($expired) {
+                    $subscription->update([
+                        'status'        => 'terminated',
+                        'terminated_at' => $now,
+                    ]);
+                }
+
+                $subscription->delete();
+            });
+
+            // 3. Update State & Soft Delete Customer
+            $customer->update([
+                'activation_date' => null,
+                'is_active'       => false,
+                'activation'      => false,
+            ]);
+
+            $customer->delete();
+        });
     }
 }

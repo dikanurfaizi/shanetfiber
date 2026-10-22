@@ -24,44 +24,85 @@ class CustomerStatusService
     public function getSecretsByStatus($router, string $status, string $traceId): array
     {
         try {
+            // Jika status 'inactive', ambil daftar secret offline dari MikroTik
             $result = match ($status) {
                 'isolir' => $this->getIsolirSecrets($router, $traceId),
-                'offline' => $this->getOfflineSecrets($router, $traceId),
+                'offline', 'inactive' => $this->getOfflineSecrets($router, $traceId),
                 default => $this->getOnlineSecrets($router, $traceId),
             };
 
-            LogHelper::logInfo(
-                null,
-                [
-                    'router_id' => $router->id,
-                    'status' => $status,
-                    'count' => count($result)
-                ],
-                200,
-                'Successfully retrieved secrets by status',
-                $traceId
-            );
+            LogHelper::logInfo(null, [
+                'router_id' => $router->id,
+                'status' => $status,
+                'count' => count($result)
+            ], 200, 'Successfully retrieved secrets by status', $traceId);
 
             return $result;
         } catch (\Exception $e) {
-            LogHelper::logError(
-                null,
-                [
-                    'exception' => [
-                        'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
-                    ],
-                    'router_id' => $router->id ?? null,
-                    'status' => $status
-                ],
-                500,
-                'Failed to get secrets by status',
-                $traceId
-            );
+            LogHelper::logError(null, [
+                'exception' => ['message' => $e->getMessage()],
+                'router_id' => $router->id ?? null,
+                'status' => $status
+            ], 500, 'Failed to get secrets by status', $traceId);
             throw $e;
         }
+    }
+
+    private function mapSecretsToCustomers(array $secrets, string $traceId): Collection
+    {
+        return Customer::whereIn('username', $secrets)
+            // Load customerSubscriptions beserta package-nya
+            ->with(['user', 'customerSubscriptions.package'])
+            ->get();
+    }
+
+    private function applyAdditionalFilters(Collection $customers, array $filters, string $traceId): Collection
+    {
+        $status = $filters['status'] ?? null;
+
+        return $customers
+            // Filter Alamat
+            ->when(isset($filters['search_address']), function ($c) use ($filters) {
+                return $filters['search_address'] === 'NULL'
+                    ? $c->whereNull('address')
+                    : $c->where('address', $filters['search_address']);
+            })
+
+            // Filter Admin (User ID)
+            ->when(isset($filters['search_admin']), function ($c) use ($filters) {
+                return $filters['search_admin'] === 'NULL'
+                    ? $c->whereNull('user_id')
+                    : $c->where('user_id', $filters['search_admin']);
+            })
+
+            ->when($filters['server_search'] ?? null, fn($c, $server) => $c->where('mikrotik_id', $server))
+
+            // Filter Package (Menggunakan Collection filter lewat customerSubscriptions)
+            ->when($filters['search_package'] ?? null, function ($c, $packageId) {
+                return $c->filter(function ($customer) use ($packageId) {
+                    return $customer->customerSubscriptions
+                        && $customer->customerSubscriptions->contains('package_id', $packageId);
+                });
+            })
+
+            // Filter status = 'free' (Menggunakan Collection filter untuk harga paket <= 0)
+            ->when(($filters['status'] ?? null) === 'free', function ($c) {
+                return $c->filter(function ($customer) {
+                    return $customer->customerSubscriptions
+                        && $customer->customerSubscriptions->contains(function ($sub) {
+                            return $sub->package && $sub->package->price <= 0;
+                        });
+                });
+            })
+
+            // Filter status inactive vs active
+            ->when(
+                $status === 'inactive',
+                fn($c) => $c->where('activation', false),
+                fn($c) => $c->where('activation', true)
+            )
+            ->sortBy('name')
+            ->values();
     }
 
     private function getIsolirSecrets($router, string $traceId): array
@@ -158,25 +199,6 @@ class CustomerStatusService
             );
             throw $e;
         }
-    }
-
-    private function mapSecretsToCustomers(array $secrets, string $traceId): Collection
-    {
-        return Customer::whereIn('username', $secrets)
-            ->with(['user', 'package'])
-            ->get();
-    }
-
-    private function applyAdditionalFilters(Collection $customers, array $filters, string $traceId): Collection
-    {
-        return $customers
-            ->when($filters['search_address'] === 'NULL', fn($c) => $c->whereNull('address'))
-            ->when($filters['search_address'] ?? null, fn($c, $addr) => $c->where('address', $addr))
-            ->when($filters['server_search'] ?? null, fn($c, $server) => $c->where('mikrotik_id', $server))
-            ->when($filters['search_package'] ?? null, fn($c, $package) => $c->where('package_id', $package))
-            ->where('activation', 'true')
-            ->sortBy('name')
-            ->values();
     }
 
     private function paginateResults(Collection $items, int $perPage, string $url, string $traceId): LengthAwarePaginator

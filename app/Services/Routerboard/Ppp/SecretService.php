@@ -11,7 +11,7 @@ use RouterOS\Exceptions\QueryException;
 use RouterOS\Query;
 use App\Helpers\LogHelper;
 use App\Models\Mikrotik;
-use App\Services\Routerboard\MikrotikConnectionService;
+use App\Models\Packages\PppProfile;
 use App\Services\Routerboard\MikrotikService;
 
 class SecretService
@@ -23,8 +23,15 @@ class SecretService
      * @throws BadCredentialsException
      * @throws ConfigException
      */
-    public function createSecret($mikrotik, $username, $password, $service, $profile, $comment, string $traceId)
-    {
+    public function createSecret(
+        Mikrotik $mikrotik,
+        string $username,
+        string $password,
+        string $service,
+        string $profile,
+        string $comment,
+        string $traceId
+    ) {
         try {
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
@@ -90,8 +97,15 @@ class SecretService
         }
     }
 
-    public function updateSecret($mikrotik, $username, $password, $service, $profile, $id, string $traceId)
-    {
+    public function updateSecret(
+        Mikrotik $mikrotik,
+        string $username,
+        string $password,
+        string $service,
+        string $profile,
+        string $id,
+        string $traceId
+    ) {
         try {
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
@@ -134,8 +148,15 @@ class SecretService
         }
     }
 
-    public function updateUserPasswordServiceSecret($mikrotik, $username, $password, $service, $id, $callerID, string $traceId)
-    {
+    public function updateUserPasswordServiceSecret(
+        Mikrotik $mikrotik,
+        string $username,
+        string $password,
+        string $service,
+        string $id,
+        string $callerID,
+        string $traceId
+    ) {
         try {
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
@@ -195,8 +216,12 @@ class SecretService
         }
     }
 
-    public function updateProfileSecret($mikrotik, $profile, $id, string $traceId)
-    {
+    public function updateProfileSecret(
+        Mikrotik $mikrotik,
+        string $profile,
+        string $id,
+        string $traceId
+    ) {
         try {
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
@@ -235,8 +260,12 @@ class SecretService
         }
     }
 
-    public function addCommentSecret($mikrotik, $comment, $secretId, string $traceId)
-    {
+    public function addCommentSecret(
+        Mikrotik $mikrotik,
+        string $comment,
+        string $secretId,
+        string $traceId
+    ) {
         try {
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
@@ -275,8 +304,11 @@ class SecretService
         }
     }
 
-    public function enableSecret($mikrotik, $username, string $traceId)
-    {
+    public function enableSecret(
+        Mikrotik $mikrotik,
+        string $username,
+        string $traceId
+    ) {
         try {
             $toEnable = 'false';
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
@@ -316,8 +348,11 @@ class SecretService
         }
     }
 
-    public function enableOneSecret($mikrotik, $secretId, string $traceId)
-    {
+    public function enableOneSecret(
+        Mikrotik $mikrotik,
+        string $secretId,
+        string $traceId
+    ) {
         try {
             $toEnable = 'false';
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
@@ -356,8 +391,11 @@ class SecretService
         }
     }
 
-    public function disableSecret($mikrotik, $username, string $traceId)
-    {
+    public function disableSecret(
+        Mikrotik $mikrotik,
+        string $username,
+        string $traceId
+    ) {
         try {
             $toNoDisable = 'true';
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
@@ -397,8 +435,11 @@ class SecretService
         }
     }
 
-    public function disableOneSecret($mikrotik, $secretId, string $traceId)
-    {
+    public function disableOneSecret(
+        Mikrotik $mikrotik,
+        string $secretId,
+        string $traceId
+    ) {
         try {
             $toNoDisable = 'true';
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
@@ -444,8 +485,11 @@ class SecretService
      * @throws BadCredentialsException
      * @throws ConfigException
      */
-    public function deleteSecretByName($mikrotik, $username, string $traceId): void
-    {
+    public function deleteSecretByName(
+        Mikrotik $mikrotik,
+        string $username,
+        string $traceId
+    ): void {
         try {
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
@@ -493,8 +537,11 @@ class SecretService
         }
     }
 
-    public function deleteOneSecret($mikrotik, $secretId, string $traceId): void
-    {
+    public function deleteOneSecret(
+        Mikrotik $mikrotik,
+        string $secretId,
+        string $traceId
+    ): void {
         try {
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
@@ -527,8 +574,10 @@ class SecretService
      * @throws BadCredentialsException
      * @throws ConfigException
      */
-    public function getAllPppSecrets($mikrotik, string $traceId)
-    {
+    public function getAllPppSecrets(
+        Mikrotik $mikrotik,
+        string $traceId
+    ) {
         try {
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
@@ -623,8 +672,11 @@ class SecretService
         }
     }
 
-    public function deleteActiveSecret($mikrotik, $username, string $traceId): void
-    {
+    public function deleteActiveSecret(
+        Mikrotik $mikrotik,
+        string $username,
+        string $traceId
+    ): void {
         try {
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
@@ -678,8 +730,10 @@ class SecretService
      * @throws BadCredentialsException
      * @throws ConfigException
      */
-    public function getPppActive($mikrotik, string $traceId)
-    {
+    public function getPppActive(
+        Mikrotik $mikrotik,
+        string $traceId
+    ) {
         try {
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
 
@@ -739,8 +793,11 @@ class SecretService
      * @throws BadCredentialsException
      * @throws ConfigException
      */
-    public function getOnePppSecretActive($mikrotik, $username, $traceId)
-    {
+    public function getOnePppSecretActive(
+        Mikrotik $mikrotik,
+        string $username,
+        string $traceId
+    ) {
         try {
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
@@ -767,8 +824,10 @@ class SecretService
         }
     }
 
-    public function getPppSecretActiveByName($mikrotik, string $traceId)
-    {
+    public function getPppSecretActiveByName(
+        Mikrotik $mikrotik,
+        string $traceId
+    ) {
         try {
             $name = request()->username;
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
@@ -796,8 +855,11 @@ class SecretService
         }
     }
 
-    public function getPppSecretActiveByIp($mikrotik, $ipAddress, string $traceId)
-    {
+    public function getPppSecretActiveByIp(
+        Mikrotik $mikrotik,
+        string $ipAddress,
+        string $traceId
+    ) {
         try {
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
@@ -825,8 +887,10 @@ class SecretService
     }
 
     // PPP Profile
-    public function getPppProfile($mikrotik, string $traceId)
-    {
+    public function getPppProfile(
+        Mikrotik $mikrotik,
+        string $traceId
+    ) {
         try {
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
@@ -852,62 +916,69 @@ class SecretService
         }
     }
 
-    public function getPppProfileByName($mikrotik, $profileName, string $traceId)
-    {
+    public function getPppProfileByName(
+        Mikrotik $mikrotik,
+        string $profileName,
+        string $traceId
+    ) {
         try {
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {
                 throw new \RuntimeException("Failed to connect to Mikrotik: {$mikrotik->host}");
             }
 
-           // Terapkan trim pada profil name untuk mencegah whitespace tersembunyi
-           $cleanProfileName = trim($profileName);
-            
-           // Ambil `.id` dan `name` saja agar tidak membebankan response dengan script on-up yang panjang
-           $query = (new Query('/ppp/profile/print'))
-               ->equal('.proplist', '.id,name')
-               ->where('name', $cleanProfileName);
-            
-           $result = $client->query($query)->read();
-            
-           if (empty($result)) {
-               throw new \RuntimeException("PPP profile '{$cleanProfileName}' not found on Mikrotik '{$mikrotik->host}'.");
-           }
-        
-           LogHelper::logInfo(
-               null,
-               [
-                   'name'    => $mikrotik->name ?? 'N/A',
-                   'host'    => $mikrotik->host ?? 'N/A',
-                   'profile' => $cleanProfileName,
-                   'result'  => $result
-               ],
-               200,
-               "Return Result getPppProfileByName",
-               $traceId
-           );
-        
-           return $result;
-       } catch (\Exception $e) {
-           LogHelper::logError(
-               null,
-               [
-                   'name'    => $mikrotik->name ?? 'N/A',
-                   'host'    => $mikrotik->host ?? 'N/A',
-                   'profile' => $profileName,
-                   'error'   => $e->getMessage()
-               ],
-               500,
-               "Failed to fetch PPP profile by name",
-               $traceId
-           );
+            // Terapkan trim pada profil name untuk mencegah whitespace tersembunyi
+            $cleanProfileName = trim($profileName);
+
+            // Ambil `.id` dan `name` saja agar tidak membebankan response dengan script on-up yang panjang
+            $query = (new Query('/ppp/profile/print'))
+                ->equal('.proplist', '.id,name')
+                ->where('name', $cleanProfileName);
+
+            $result = $client->query($query)->read();
+
+            if (empty($result)) {
+                throw new \RuntimeException("PPP profile '{$cleanProfileName}' not found on Mikrotik '{$mikrotik->host}'.");
+            }
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'name'    => $mikrotik->name ?? 'N/A',
+                    'host'    => $mikrotik->host ?? 'N/A',
+                    'profile' => $cleanProfileName,
+                    'result'  => $result
+                ],
+                200,
+                "Return Result getPppProfileByName",
+                $traceId
+            );
+
+            return $result;
+        } catch (\Exception $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'name'    => $mikrotik->name ?? 'N/A',
+                    'host'    => $mikrotik->host ?? 'N/A',
+                    'profile' => $profileName,
+                    'error'   => $e->getMessage()
+                ],
+                500,
+                "Failed to fetch PPP profile by name",
+                $traceId
+            );
 
             throw $e;
         }
-    }  
+    }
 
-    public function updateRateLimitProfileSecret($mikrotik, $rateLimit, $profileName, string $traceId)
-    {
+    public function updateRateLimitProfileSecret(
+        Mikrotik $mikrotik,
+        string $rateLimit,
+        string $profileName,
+        string $traceId
+    ) {
         try {
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             $host = $mikrotik->host ?? 'Unknown Host';
@@ -968,8 +1039,11 @@ class SecretService
         }
     }
 
-    public function createPppProfile($mikrotik, array $data, string $traceId)
-    {
+    public function createPppProfile(
+        Mikrotik $mikrotik,
+        array $data,
+        string $traceId
+    ) {
         try {
             $client = MikrotikService::getMikrotik($mikrotik, $traceId);
             if (!$client) {

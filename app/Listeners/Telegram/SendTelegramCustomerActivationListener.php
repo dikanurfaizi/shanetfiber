@@ -4,20 +4,16 @@ namespace App\Listeners\Telegram;
 
 use App\DataTransferObjects\TelegramJobDto;
 use App\Enums\TelegramAction;
-use App\Events\SingleNotification\CustomerActivated;
+use App\Events\UserRegisteredEvent;
 use App\Services\Telegrams\TelegramMessageService;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
 
-class SendTelegramCustomerActivationListener implements ShouldQueue
+class SendTelegramCustomerActivationListener extends BaseTelegramListener
 {
-    use InteractsWithQueue;
-
     public function __construct(
         private readonly TelegramMessageService $telegramMessageService
     ) {}
 
-    public function handle(CustomerActivated $event): void
+    public function handle(UserRegisteredEvent $event): void
     {
         $telegramJobData = new TelegramJobDto(
             customerId: $event->customerSubscription->customer_id,

@@ -6,13 +6,9 @@ use App\DataTransferObjects\TelegramJobDto;
 use App\Enums\TelegramAction;
 use App\Events\SingleNotification\PackageChangesRequest;
 use App\Services\Telegrams\TelegramMessageService;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
 
-class SendTelegramPackageChangesListener implements ShouldQueue
+class SendTelegramPackageChangesListener extends BaseTelegramListener
 {
-    use InteractsWithQueue;
-
     public function __construct(
         private TelegramMessageService $telegramMessageService,
     ) {}

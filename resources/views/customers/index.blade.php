@@ -51,13 +51,13 @@
                             <div class="col-md-2 col-12 mb-2">
                                 <select name="status" class="form-control">
                                     <option value="">{{ __('customer.placeholder.all-state') }}</option>
-                                    <option value="false">{{ __('customer.placeholder.enable') }}</option>
-                                    <option value="true">{{ __('customer.placeholder.disable') }}</option>
+                                    <option value="active">{{ __('customer.placeholder.enable') }}</option>
+                                    <option value="inactive">{{ __('customer.placeholder.disable') }}</option>
                                     <option value="isolir">{{ __('customer.placeholder.isolir') }}</option>
                                     <option value="offline">{{ __('customer.placeholder.offline') }}</option>
                                     <option value="online">{{ __('customer.placeholder.online') }}</option>
                                     <option value="free">{{ __('customer.placeholder.free') }}</option>
-                                    <option value="deactivated">{{ __('customer.placeholder.deactivated') }}</option>
+                                    {{-- <option value="deactivated">{{ __('customer.placeholder.deactivated') }}</option> --}}
                                 </select>
                             </div>
                             <!-- Kolom Admin -->

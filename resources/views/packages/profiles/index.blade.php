@@ -5,6 +5,12 @@
                 {{ __('package.profile.header.index') }}
             </h5>
             <div class="d-flex flex-wrap" style="gap: 0.75rem !important;">
+                <!-- Tombol Sync All to RADIUS Baru -->
+                <button id="syncRadiusBtn" class="btn btn-sm btn-warning">
+                    <i class="fa fa-refresh"></i>
+                    <span class="d-none d-md-inline">{{ __('package.profile.button.sync_all_profile') }}</span>
+                </button>
+
                 <div>
                     <div class="dropdown">
                         <button class="btn btn-sm btn-primary dropdown-toggle" type="button" id="mikrotikDropdown"
@@ -144,6 +150,16 @@
                                                         </button>
                                                     </form>
                                                 </li>
+                                                <li>
+                                                    <form method="POST"
+                                                        action="{{ route('ppp-profiles.single-sync-radius', $profile->id) }}">
+                                                        @csrf
+                                                        <button type="submit" class="dropdown-item w-100 text-start">
+                                                            <i class="fa fa-refresh me-2 text-warning"></i>
+                                                            {{ __('package.profile.action.single_sync_radius') }}
+                                                        </button>
+                                                    </form>
+                                                </li>
                                             @endcan
                                             @can('package-delete')
                                                 <li>
@@ -277,6 +293,67 @@
                         confirmButtonColor: '#3085d6'
                     });
                 }
+            });
+
+            // Handle Sync All to RADIUS Button Click
+            document.getElementById('syncRadiusBtn').addEventListener('click', function() {
+                Swal.fire({
+                    title: 'Sync RADIUS Confirmation',
+                    text: 'Apakah Anda yakin ingin menyinkronkan seluruh PPP Profiles ke database FreeRADIUS?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#f6c23e',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Ya, Sinkronkan!',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        Swal.fire({
+                            title: 'Syncing to RADIUS...',
+                            html: 'Proses sinkronisasi sedang dikirim ke antrean.',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+
+                        fetch("{{ route('ppp-profiles.sync-radius') }}", {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': document.querySelector(
+                                        'meta[name="csrf-token"]').content,
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json'
+                                },
+                                body: JSON.stringify({})
+                            })
+                            .then(response => {
+                                if (!response.ok) {
+                                    return response.json().then(err => {
+                                        throw err;
+                                    });
+                                }
+                                return response.json();
+                            })
+                            .then(data => {
+                                Swal.fire({
+                                    title: 'Berhasil!',
+                                    text: data.message ||
+                                        'Proses sinkronisasi profil RADIUS berhasil dipicu.',
+                                    icon: 'success'
+                                });
+                            })
+                            .catch(error => {
+                                const errorMsg = error.message ||
+                                    'Gagal menyinkronkan profil ke RADIUS';
+                                Swal.fire({
+                                    title: 'Error!',
+                                    text: errorMsg,
+                                    icon: 'error'
+                                });
+                            });
+                    }
+                });
             });
         });
     </script>

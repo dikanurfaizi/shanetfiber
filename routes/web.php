@@ -65,6 +65,7 @@ use App\Http\Controllers\WhatsApp\WhatsAppConversationController;
 use App\Http\Controllers\WhatsApp\WhatsAppFeatureController;
 use App\Http\Controllers\WhatsApp\WhatsAppMediaController;
 use App\Http\Controllers\LocalizationController;
+use App\Http\Controllers\Radius\RadiusManagementController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -200,6 +201,9 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::post('/packages/ppp-profiles/export/{mikrotik:slug}', [PppProfileController::class, 'export'])->name('ppp-profiles.export');
         Route::post('/packages/ppp-profiles/export-one/{mikrotik:id}', [PppProfileController::class, 'export_one'])->name('ppp-profiles.export-one');
         Route::post('/packages/profiles/import', [PppProfileController::class, 'import'])->name('ppp.profiles.import');
+        Route::post('/packages/ppp-profiles/sync-radius', [PppProfileController::class, 'syncRadius'])->name('ppp-profiles.sync-radius');
+        Route::post('/packages/ppp-profiles/{ppp_profile}/single-sync-radius', [PppProfileController::class, 'singleSyncRadius'])
+            ->name('ppp-profiles.single-sync-radius');
 
         // ==================== PACKET MANAGEMENT ====================
         Route::resource('packages', PackageController::class)->names('packages');
@@ -218,13 +222,22 @@ Route::group(['prefix' => 'cpanel'], function () {
         // ==================== CUSTOMER MANAGEMENT ====================
         Route::get('/customers/{customer:slug}/resend-activation', [CustomerController::class, 'resendActivation'])->name('customers.resend-activation');
 
-        Route::resource('customers', CustomerController::class)->withTrashed();
+        // =========================================================================
+        // 1. ROUTE SPESIFIK / STATIC (Harus ditaruh PALING ATAS sebelum wildcard)
+        // =========================================================================
         Route::get('/customers/search', [PaymentController::class, 'index'])->name('customers.search');
-        Route::put('/customers/{customer:slug}/disabled/true', [CustomerController::class, 'disable'])->name('customers.disable');
-        Route::put('/customers/{customer:slug}/disabled/false', [CustomerController::class, 'enable'])->name('customers.enable');
-        Route::put('/customers/{customer:slug}/force-disabled/true', [CustomerController::class, 'forceDisable'])->name('customers.forceDisable');
-        Route::put('/customers/{customer:slug}/force-disabled/false', [CustomerController::class, 'forceEnable'])->name('customers.forceEnable');
-        Route::get('/customers/{status}/show', [CustomerController::class, 'showStatusCustomer'])->name('customers.show.status');
+        Route::get('/customers/file/export', [CustomerController::class, 'export'])->name('customers.export');
+        Route::get('/customers/view/all/data', CustomerTrashedController::class)->name('customers.trashed');
+        Route::patch('settings/customers/activation', [CustomerController::class, 'activation_all_customer'])->name('customers.all.activation');
+
+        // =========================================================================
+        // 2. ROUTE RESOURCE UTAMA
+        // =========================================================================
+        Route::resource('customers', CustomerController::class)->withTrashed();
+
+        // =========================================================================
+        // 3. ROUTE WILDCARD CUSTOMER ({customer:slug})
+        // =========================================================================
         Route::get('/customers/{customer:slug}/delete', [CustomerController::class, 'delete'])->name('customers.delete');
         Route::get('/customers/{customer:slug}/edit/ppp', [CustomerController::class, 'editPpp'])->name('customers.edit.ppp');
         Route::patch('/customers/{customer:slug}/ppp/update', [CustomerController::class, 'updatePpp'])->name('customers.update.ppp');
@@ -232,36 +245,28 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::patch('/customers/{customer:slug}/router/update', [CustomerController::class, 'updateRouter'])->name('customers.update.router');
         Route::put('/customers/{customer:slug}/activation', [CustomerController::class, 'activation'])->name('customers.activation');
         Route::put('/customers/{customer:slug}/export/secret', [CustomerController::class, 'exportSecret'])->name('customers.pppoe.export');
-        Route::get('/customers/file/export', [CustomerController::class, 'export'])->name('customers.export');
-        Route::patch('settings/customers/activation', [CustomerController::class, 'activation_all_customer'])->name('customers.all.activation');
 
-        Route::get('/customers/{customer:slug}/tab/info', [CustomerTabController::class, 'info'])
-            ->name('customers.tab.info')
-            ->withTrashed();
+        // Status Toggles
+        Route::put('/customers/{customer:slug}/disabled/true', [CustomerController::class, 'disable'])->name('customers.disable');
+        Route::put('/customers/{customer:slug}/disabled/false', [CustomerController::class, 'enable'])->name('customers.enable');
+        Route::put('/customers/{customer:slug}/force-disabled/true', [CustomerController::class, 'forceDisable'])->name('customers.forceDisable');
+        Route::put('/customers/{customer:slug}/force-disabled/false', [CustomerController::class, 'forceEnable'])->name('customers.forceEnable');
 
-        Route::get('/customers/{customer:slug}/tab/billing', [CustomerTabController::class, 'billing'])
-            ->name('customers.tab.billing')
-            ->withTrashed();
+        // Tabs & Details
+        Route::get('/customers/{customer:slug}/tab/info', [CustomerTabController::class, 'info'])->name('customers.tab.info')->withTrashed();
+        Route::get('/customers/{customer:slug}/tab/billing', [CustomerTabController::class, 'billing'])->name('customers.tab.billing')->withTrashed();
+        Route::get('/customers/{customer:slug}/tab/server', [CustomerTabController::class, 'server'])->name('customers.tab.server')->withTrashed();
+        Route::get('/customers/{customer:slug}/tab/ont', [CustomerTabController::class, 'ont'])->name('customers.tab.ont')->withTrashed();
+        Route::get('/customers/{customer:slug}/tab/traffic', [CustomerTabController::class, 'traffic'])->name('customers.tab.traffic')->withTrashed();
+        Route::patch('/customers/{customer:slug}/info', [CustomerInfoController::class, 'update'])->name('customers.update.info');
 
-        Route::get('/customers/{customer:slug}/tab/server', [CustomerTabController::class, 'server'])
-            ->name('customers.tab.server')
-            ->withTrashed();
-
-        Route::get('/customers/{customer:slug}/tab/ont', [CustomerTabController::class, 'ont'])
-            ->name('customers.tab.ont')
-            ->withTrashed();
-
-        Route::get('/customers/{customer:slug}/tab/traffic', [CustomerTabController::class, 'traffic'])
-            ->name('customers.tab.traffic')
-            ->withTrashed();
-
-        Route::get('/customers/view/all/data', CustomerTrashedController::class)->name('customers.trashed');
+        // Restore & Trashed
         Route::delete('/customers/{customer:slug}/force-delete', [CustomerTrashedController::class, 'forceDelete'])->name('customers.forceDelete')->withTrashed();
         Route::get('/customers/{customer:slug}/restore/preview', [CustomerRestoreController::class, 'preview'])->name('customers.restore.preview');
         Route::post('/customers/{slug}/restore/confirm', [CustomerRestoreController::class, 'confirm'])->name('customers.restore.confirm');
 
-        // =================== EDIT TAB CUSTOMER DETAIL ===================
-        Route::patch('/customers/{customer:slug}/info', [CustomerInfoController::class, 'update'])->name('customers.update.info');
+        // Status Filter (Letakkan paling bawah di antara grup wildcard)
+        Route::get('/customers/{status}/show', [CustomerController::class, 'showStatusCustomer'])->name('customers.show.status');
         Route::patch('/cpanel/customers/{customer:slug}/billing', [CustomerBillingController::class, 'update'])->name('customers.update.billing');
 
         // ==================== CUSTOMER SUBSCRIPTIONS ====================
@@ -456,6 +461,16 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::resource('settings/telegrammessage', TelegramMessageController::class);
         Route::put('settings/telegrammessage/{telegrammessage}/disabled', [TelegramMessageController::class, 'disable_message'])->name('telegrammessage.disable');
         Route::get('settings/telegrammessage/{telegrammessage}/delete', [TelegramMessageController::class, 'delete'])->name('telegrammessage.delete');
+
+        // ==================== FREERADIUS MANAGEMENT & SETTINGS ====================
+        Route::prefix('settings/radius')->name('radius.')->group(function () {
+            Route::get('/', [RadiusManagementController::class, 'index'])->name('index');
+            Route::get('/mode', [RadiusManagementController::class, 'settings'])->name('settings');
+            Route::put('/mode', [RadiusManagementController::class, 'updateSettings'])->name('settings.update');
+            Route::post('/export-active', [RadiusManagementController::class, 'exportActiveToRadius'])->name('export-active');
+            Route::post('/sync-single-radius/{customer}', [RadiusManagementController::class, 'syncSingleToRadius'])->name('sync-single-radius');
+            Route::post('/sync-single-mikrotik/{customer}', [RadiusManagementController::class, 'syncSingleToMikrotik'])->name('sync-single-mikrotik');
+        });
 
         // ==================== TEST EMAIL ====================
         Route::get('/test-email', function () {

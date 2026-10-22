@@ -3,7 +3,8 @@
 namespace App\Listeners\WhatsApp;
 
 use App\Enums\WhatsAppAction;
-use App\Events\SingleNotification\CustomerActivated;
+use App\Events\SingleNotification\ActivateCustomerEvent;
+use App\Events\UserRegisteredEvent;
 use App\Services\Notification\WhatsApp\Single\CustomerActivationNotificationService;
 
 class SendCustomerActivationListener extends BaseWhatsAppListener
@@ -20,7 +21,7 @@ class SendCustomerActivationListener extends BaseWhatsAppListener
     /**
      * Listener handle hanya menerima 1 argumen ($event)
      */
-    public function handle(CustomerActivated $event): void
+    public function handle(UserRegisteredEvent|ActivateCustomerEvent $event): void
     {
         $this->service->send(
             action: $this->action,

@@ -7,13 +7,9 @@ use App\Enums\TelegramAction;
 use App\Events\SingleNotification\PayLaterRequest;
 use App\Services\Telegrams\TelegramMessageService;
 use App\Models\Billings\Billing;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
 
-class SendTelegramPayLaterListener implements ShouldQueue
+class SendTelegramPayLaterListener extends BaseTelegramListener
 {
-    use InteractsWithQueue;
-
     public function __construct(
         private TelegramMessageService $telegramService
     ) {}

@@ -2,9 +2,16 @@
 
 namespace App\Http\Controllers\Billing;
 
+use App\Events\Radius\RadiusPaymentUpdateRequested;
+use App\Events\Radius\RadiusUnpaymentUpdateRequested;
+use App\Events\Routerboard\MikrotikPaymentUpdateRequested;
+use App\Events\Routerboard\MikrotikUnpaymentUpdateRequested;
 use App\Events\SingleNotification\PayLaterRequest;
 use App\Events\SingleNotification\PaymentSucceeded;
 use App\Events\SingleNotification\PaymentCancelled;
+use App\Events\UserVoidEvent;
+use App\Events\BillingPaymentEvent;
+use App\Events\UnpaymentBillingEvent;
 use App\Exports\Billing\BillingSnapshotExport;
 use App\Exports\Billing\BillingYearWorkbookExport;
 use App\Helpers\ExecutionTimer;
@@ -24,7 +31,6 @@ use App\Services\Billings\PaymentCancellationService;
 use App\Services\Billings\PaymentService;
 use App\Services\Customers\CustomerActivationService;
 use App\Services\Messaging\Collectors\AdminBankCollector;
-use App\Services\Routerboard\MikrotikService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
@@ -255,58 +261,79 @@ class BillingController extends Controller
     {
         $traceId = (string) Str::uuid();
         $timer = new ExecutionTimer();
-        $paymentMethod = $request->payment_methode;
+        $paymentMethod = $request->input('payment_method', $request->input('payment_methode'));
+
+        // Eager load relasi customer & mikrotik
+        $billing->loadMissing(['customer.mikrotik']);
+        $customer = $billing->customer;
+
+        // Ambil driver provisioning sekali saja di awal
+        $webSystem = Websystem::first();
+        $driver = $webSystem?->provisioning_driver ?? 'both';
 
         LogHelper::logInfo(null, [
-            'billing_id' => $billing->id,
-            'customer_id' => $billing->customer_id,
+            'billing_id'     => $billing->id,
+            'customer_id'    => $customer?->id,
             'payment_method' => $paymentMethod,
+            'driver'         => $driver,
         ], 200, 'Payment request received.', $traceId, $timer->lap());
 
         // === 1. ROUTING DECISIONS ===
         if (in_array($paymentMethod, ['transfer', 'paylater'])) {
             LogHelper::logInfo(null, [
-                'billing_id' => $billing->id,
-                'target_route' => $paymentMethod
+                'billing_id'   => $billing->id,
+                'target_route' => $paymentMethod,
             ], 200, "Redirecting payment request to internal route format.", $traceId, $timer->lap());
+
             return redirect()->route("billings.{$paymentMethod}", $billing->slug);
         }
 
-        // === 2. MIKROTIK INFRASTRUCTURE VALIDATION ===
-        $customer = $billing->customer;
+        // === 2. INFRASTRUCTURE VALIDATION ===
         $mikrotik = $customer?->mikrotik;
 
         if (!$mikrotik) {
             LogHelper::logWarning(null, [
-                'billing_id' => $billing->id,
-                'customer_id' => $customer?->id
+                'billing_id'  => $billing->id,
+                'customer_id' => $customer?->id,
             ], 404, 'Mikrotik router info not found for customer.', $traceId, $timer->lap());
+
             return redirect()->back()->with('error', __('payment.mikrotik.not_found'));
         }
 
-        if (config('services.shanetfiber.allow_mikrotik_actions')) {
-            try {
-                $client = MikrotikService::getMikrotik($mikrotik, $traceId);
-            } catch (\Throwable $e) {
-                LogHelper::logError(null, [
-                    'billing_id' => $billing->id,
-                    'router_id' => $mikrotik->id,
-                    'host' => $mikrotik->host,
-                    'exception' => get_class($e),
-                    'message' => $e->getMessage()
-                ], 500, 'Mikrotik API connection failed during payment authorization.', $traceId, $timer->lap());
+        // if (config('services.shanetfiber.allow_mikrotik_actions')) {
+        //     try {
+        //         $client = MikrotikService::getMikrotik($mikrotik, $traceId);
+        //     } catch (\Throwable $e) {
+        //         LogHelper::logError(null, [
+        //             'billing_id' => $billing->id,
+        //             'router_id'  => $mikrotik->id,
+        //             'host'       => $mikrotik->host,
+        //             'exception'  => get_class($e),
+        //             'message'    => $e->getMessage(),
+        //         ], 500, 'Mikrotik API connection failed during payment authorization.', $traceId, $timer->lap());
 
-                return redirect()->back()->with('error', __('payment.mikrotik.connection_failed'));
-            }
-        }
+        //         return redirect()->back()->with('error', __('payment.mikrotik.connection_failed'));
+        //     }
+        // }
 
-        // === 3. NOT ACTIVE PERIOD FLOW ===
+        // === 3. NOT ACTIVE PERIOD FLOW (EXPIRED / VOID) ===
         if ($paymentMethod === 'not-active-periode') {
-            // Panggil service untuk handle DB & Mikrotik sekaligus
-            $this->customerActivationService->processNotActivePeriod($billing, $traceId);
+            $result = $this->customerActivationService->processNotActivePeriod($billing, $traceId);
+
+            if (isset($result['success'])) {
+                $webSystem = Websystem::first();
+
+                event(new UserVoidEvent(
+                    $customer,
+                    $result['package'],
+                    $result['pppProfile'],
+                    $webSystem->provisioning_driver,
+                    $traceId
+                ));
+            }
 
             return redirect()->back()->with('success', __('payment.success.no_usage', [
-                'name'    => $billing->customer->name,
+                'name'    => $customer?->name,
                 'periode' => $billing->billingSubscription?->billingPeriode?->name,
             ]));
         }
@@ -317,20 +344,29 @@ class BillingController extends Controller
             $result = $this->paymentService->processPayment($billing, $paymentData, $traceId);
 
             if (!empty($result['receipt'])) {
-                event(new PaymentSucceeded($result['receipt']->id, null, $traceId));
+
+                event(new BillingPaymentEvent(
+                    $result['billing'],
+                    $result['receipt'],
+                    null,
+                    $traceId,
+                    $driver
+                ));
+
                 LogHelper::logInfo(null, [
                     'billing_id' => $billing->id,
-                    'receipt_id' => $result['receipt']->id
+                    'receipt_id' => $result['receipt']->id,
+                    'driver'     => $driver,
                 ], 200, 'Payment transactions completed & succeeded event dispatched.', $traceId, $timer->lap());
             }
 
-            return redirect()->back()->with('success', __('payment.success.processed', ['name' => $billing->customer->name]));
+            return redirect()->back()->with('success', __('payment.success.processed', ['name' => $customer?->name]));
         } catch (\Throwable $e) {
             LogHelper::logError(null, [
                 'billing_id' => $billing->id,
-                'exception' => get_class($e),
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'exception'  => get_class($e),
+                'message'    => $e->getMessage(),
+                'trace'      => $e->getTraceAsString(),
             ], 500, 'Unexpected execution error occurred in main payment flow.', $traceId, $timer->lap());
 
             return redirect()->back()->with('error', __('payment.errors.failed'));
@@ -372,43 +408,61 @@ class BillingController extends Controller
         $traceId = (string) Str::uuid();
         $timer = new ExecutionTimer();
 
+        // 1. Ambil data driver provisioning dari Websystem sekali di awal
+        $webSystem = Websystem::first();
+        $driver = $webSystem?->provisioning_driver ?? 'both';
+
+        // Eager load relasi billingPayment & customer agar tidak memicu N+1
+        $billing->loadMissing(['billingPayment', 'customer']);
+        $payment = $billing->billingPayment;
+
+        if (!$payment) {
+            return redirect()->back()->with('error', 'Data pembayaran tidak ditemukan.');
+        }
+
         LogHelper::logInfo('BillingController::unpayment', [
             'billing_id' => $billing->id,
-            'payment_id' => $billing->billingPayment?->id
+            'payment_id' => $payment->id,
+            'driver'     => $driver,
         ], 200, 'Received payment cancellation request (unpayment).', $traceId, $timer->lap());
 
         try {
-            $result = $this->paymentCancellationService->cancelPayment($billing->billingPayment, $traceId);
+            // 2. Transaksi Database Lokal
+            $result = $this->paymentCancellationService->cancelPayment($payment, $traceId);
 
-            if ($result['success']) {
+            if (!empty($result['success'])) {
                 $originalReceipt = $result['originalReceipt'] ?? null;
+                $updatedBilling = $result['billing'] ?? $billing;
 
-                event(new PaymentCancelled(
-                    billingId: $billing->id,
-                    receiptId: is_array($originalReceipt) ? ($originalReceipt['id'] ?? null) : ($originalReceipt->id ?? null),
-                    receiptData: $originalReceipt,
-                    traceId: $traceId,
+                event(new UnpaymentBillingEvent(
+                    $updatedBilling,
+                    is_array($originalReceipt) ? ($originalReceipt['id'] ?? null) : ($originalReceipt->id ?? null),
+                    $originalReceipt,
+                    $traceId,
+                    null,
+                    $driver
                 ));
 
                 LogHelper::logInfo('BillingController::unpayment', [
-                    'billing_id' => $billing->id,
-                    'receipt_id' => is_array($originalReceipt) ? ($originalReceipt['id'] ?? null) : ($originalReceipt->id ?? null)
-                ], 200, 'Unpayment action processed successfully and event fired.', $traceId, $timer->lap());
+                    'billing_id' => $updatedBilling->id,
+                    'receipt_id' => is_array($originalReceipt) ? ($originalReceipt['id'] ?? null) : ($originalReceipt->id ?? null),
+                    'driver'     => $driver,
+                ], 200, 'Unpayment action processed successfully and events dispatched.', $traceId, $timer->lap());
 
                 return redirect()->back()->with('success', $result['message'] ?? 'Unpayment berhasil.');
             }
 
             LogHelper::logWarning('BillingController::unpayment', [
                 'billing_id' => $billing->id,
-                'result' => $result
+                'result'     => $result,
             ], 400, 'Unpayment request failed in cancellation engine.', $traceId, $timer->lap());
 
             return redirect()->back()->with('error', $result['message'] ?? 'Unpayment gagal.');
         } catch (\Throwable $e) {
             LogHelper::logError('BillingController::unpayment', [
                 'billing_id' => $billing->id,
-                'exception' => get_class($e),
-                'message' => $e->getMessage()
+                'exception'  => get_class($e),
+                'message'    => $e->getMessage(),
             ], 500, 'Fatal exception caught during unpayment handler routine.', $traceId, $timer->lap());
 
             return redirect()->back()->with('error', 'Unpayment failed: ' . $e->getMessage());

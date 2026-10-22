@@ -29,6 +29,8 @@ return [
         'create' => 'Create New Customer',
         'edit' => 'Edit Customer',
         'show' => 'View Customer',
+        'suspend' => 'Suspend Customer',
+        'delete' => 'Delete Customer'
     ],
     'header' => [
         'index' => 'Customers List',
@@ -44,7 +46,8 @@ return [
         'activation-all' => 'Activation All Customer',
         'traffic-monitoring' => 'Traffic Monitoring',
         'profile-info' => 'Profile Info',
-        'change-password' => 'Change Password'
+        'change-password' => 'Change Password',
+        'suspend' => 'Suspend Customer'
     ],
     'label' => [
         'id' => 'Customer ID',
@@ -110,6 +113,7 @@ return [
         'new-password' => 'New Password',
         'total-customers' => 'customers found',
         'show' => 'Show',
+        'customer-info' => 'Customer Information',
     ],
     'placeholder' => [
         'name' => 'Insert customer name',
@@ -195,6 +199,11 @@ return [
         'not-activation' => 'Not Activated',
         'activation-count' => 'Activation :customer customer',
         'deleted' => 'Deleted',
+        'suspend' => 'Are you sure you want to delete this customer?',
+        'suspend-action' => 'This action will delete bills and',
+        'user-secret' => 'user secret / ip configuration',
+        'on-server' => 'on server',
+        'after-deleted' => 'After deleted, this customer will not be able to connect to the internet service.',
     ],
     'validate' => [],
     'page' => [

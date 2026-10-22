@@ -157,7 +157,8 @@ return [
             'export_all' => 'Export All Profile',
             'update' => 'Update Profile',
             'delete' => 'Delete Profile',
-            'cancel' => 'Cancel'
+            'cancel' => 'Cancel',
+            'sync_all_profile' => 'Sync All to RADIUS'
         ],
         'action' => [
             'show' => 'View this profile',
@@ -166,8 +167,11 @@ return [
             'enable' => 'Enable',
             'delete' => 'Delete this profile',
             'export' => 'Export profile',
+            'single_sync_radius' => 'Sync to RADIUS'
+        ],
+        'messages' => [
+            'sync_success' => 'Profile :name synced to FreeRADIUS successfully.',
+            'sync_failed'  => 'Failed to sync profile :name to FreeRADIUS: :error',
         ],
     ],
-
-
 ];
