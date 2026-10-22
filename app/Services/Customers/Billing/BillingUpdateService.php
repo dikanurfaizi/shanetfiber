@@ -3,6 +3,7 @@
 namespace App\Services\Customers\Billing;
 
 use App\Events\PackageChangesApplied;
+use App\Events\SingleNotification\PackageChangesRequest;
 use App\Helpers\LogHelper;
 use App\Models\Customers\Customer;
 use App\Models\Websystem;
@@ -264,7 +265,7 @@ class BillingUpdateService
             $events = [];
 
             if ($packageChanged && $oldPackageName && $oldPackagePrice) {
-                $events[] = new PackageChangesApplied(
+                $events[] = new PackageChangesRequest(
                     $customer,
                     $oldPackageName,
                     $oldPackagePrice,
