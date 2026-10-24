@@ -2,10 +2,10 @@
 
 namespace App\Services\Event;
 
-use App\Events\SingleNotification\CustomerActivated;
+use App\Events\BillingPaymentEvent;
+use App\Events\SingleNotification\ActivateCustomerEvent;
 use App\Events\SingleNotification\DirectMessageRequested;
 use App\Events\SingleNotification\PayLaterRequest;
-use App\Events\SingleNotification\PaymentSucceeded;
 use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
 use App\Models\Billings\Billing;
@@ -14,8 +14,8 @@ use App\Models\Membership\CustomerMembership;
 use App\Models\Membership\Membership;
 use App\Models\Messaging\MessageEvent;
 use App\Models\Receipt;
+use App\Models\Websystem;
 use App\Services\Notification\WhatsApp\Broadcast\BroadcastManagerService;
-use App\Services\Notification\WhatsApp\Broadcast\PaymentChannelUpdateNotificationService;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
@@ -97,24 +97,55 @@ class ResendEventService
             if (in_array($newEvent->message_type, ['payment', 'informasi_bayar'])) {
                 LogHelper::logInfo(null, [], 200, '[RESEND] Routing to PAYMENT flow', $traceId);
 
-                $receipt = DB::transaction(function () use ($newEvent) {
-                    return Receipt::where('customer_id', $newEvent->customer_id)
-                        ->latest()
-                        ->lockForUpdate()
-                        ->first();
-                });
-
-                if (!$receipt) {
-                    LogHelper::logError(null, ['customer_id' => $newEvent->customer_id], 500, '[RESEND] Receipt not found', $traceId);
-                    throw new RuntimeException("Receipt not found for customer {$newEvent->customer_id}");
+                if (!$newEvent->customer_id) {
+                    LogHelper::logError(null, [], 400, '[RESEND] Missing customer_id', $traceId);
+                    throw new RuntimeException("Customer ID is missing for event ID {$newEvent->id}");
                 }
 
-                LogHelper::logInfo(null, ['receipt_id' => $receipt->id], 200, '[RESEND] Receipt Found', $traceId);
+                $billing = null;
 
-                event(new PaymentSucceeded(
-                    $receipt->id,
-                    $newEvent->id,
-                    $traceId
+                // 1. Cari Receipt terbaru beserta relasi billingPayment.billing
+                $receipt = Receipt::with('billingPayment.billing')
+                    ->where('customer_id', $newEvent->customer_id)
+                    ->latest()
+                    ->first();
+
+                if ($receipt && $receipt->billingPayment) {
+                    $billing = $receipt->billingPayment->billing;
+                }
+
+                // 2. Fallback: Jika Receipt/Billing tidak ditemukan via Receipt, cari langsung ke Billing
+                if (!$billing) {
+                    $billing = Billing::where('customer_id', $newEvent->customer_id)
+                        ->where('status', 'LS')
+                        ->latest('updated_at')
+                        ->first();
+
+                    // Cari receipt terkait billing ini jika belum ada
+                    if ($billing && !$receipt) {
+                        $receipt = Receipt::whereHas('billingPayment', function ($query) use ($billing) {
+                            $query->where('billing_id', $billing->id);
+                        })->latest()->first();
+                    }
+                }
+
+                // 3. Validasi kelengkapan data sebelum melempar Event
+                if (!$receipt || !$billing) {
+                    LogHelper::logError(null, ['customer_id' => $newEvent->customer_id], 500, '[RESEND] Receipt or Billing not found', $traceId);
+                    throw new RuntimeException("Receipt or Billing context not found for customer {$newEvent->customer_id}");
+                }
+
+                LogHelper::logInfo(null, ['receipt_id' => $receipt->id, 'billing_id' => $billing->id], 200, '[RESEND] Receipt & Billing Found', $traceId);
+
+                $webSystem = Websystem::first();
+
+                // 4. Dispatch Event baru
+                event(new BillingPaymentEvent(
+                    billing: $billing,
+                    receipt: $receipt,
+                    eventId: $newEvent->id,
+                    traceId: $traceId,
+                    driver: $webSystem->provisioning_driver ?? 'both'
                 ));
 
                 LogHelper::logInfo(null, [], 200, '[RESEND] PAYMENT resend dispatched', $traceId);
@@ -179,7 +210,7 @@ class ResendEventService
                     }
                 }
 
-                event(new CustomerActivated(
+                event(new ActivateCustomerEvent(
                     $customerMembershipId,
                     $customerSubscription,
                     $billing,

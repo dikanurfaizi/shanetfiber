@@ -46,6 +46,8 @@ class CustomerActivationNotificationService extends AbstractSingleNotificationSe
     ): void {
         $timer = new ExecutionTimer();
 
+        LogHelper::logInfo(null, [], 100, "[CustomerActivationNotificationService] Start Service Running", $traceId, $timer->lap());
+
         try {
             $context = $this->resolveGatewayContext($action->value, $traceId, $timer);
             if (!$context) return;

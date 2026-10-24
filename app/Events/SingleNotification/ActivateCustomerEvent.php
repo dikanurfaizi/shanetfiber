@@ -13,7 +13,7 @@ class ActivateCustomerEvent
     use Dispatchable, SerializesModels;
 
     public function __construct(
-        public int $customerMembershipId,
+        public ?int $customerMembershipId = null,
         public CustomerSubscription $customerSubscription,
         public Billing $billing,
         public Receipt $receipt,

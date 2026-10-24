@@ -117,18 +117,13 @@ class MessageEventController extends Controller
         // 2. Inisiasi tracking & timer hanya jika data VALID untuk diproses
         $traceId = (string) Str::uuid();
         $timer   = new ExecutionTimer();
-        $queue   = 'notification';
 
         // 3. Eksekusi service utama
         $this->service->handle($event, $traceId);
 
-        // $resendJob = SendResentMessageJob::dispatch($event->id, $traceId);
-        // $resendJob->onQueue($queue);
-
         // 4. Cukup satu log sukses ini saja untuk memantau keberhasilan proses
         LogHelper::logInfo(null, [
-            'event_id' => $event->id,
-            'queue'    => $queue
+            'event_id' => $event->id
         ], 200, 'Message resend job processed successfully.', $traceId, $timer->lap());
 
         return back()->with('success', 'Event queued for resend.');

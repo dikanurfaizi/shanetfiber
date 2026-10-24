@@ -4,7 +4,7 @@ namespace App\Providers;
 
 use App\Events\Radius\RadiusProfileUpdateRequested;
 use App\Events\Radius\RadiusUserProvisionRequested;
-use App\events\SingleNotification\ActivateCustomerEvent;
+use App\Events\SingleNotification\ActivateCustomerEvent;
 use App\Events\SingleNotification\DirectMessageRequested;
 use App\Events\SingleNotification\OrderCreated;
 use App\Events\SingleNotification\PackageChangesRequest;
