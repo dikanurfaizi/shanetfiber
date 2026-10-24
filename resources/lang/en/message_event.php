@@ -1,8 +1,17 @@
 <?php
 
 return [
-    'header' => [],
+    'header' => [
+        'technical_log_detail' => 'Technical Log Detail'
+    ],
     'title' => 'Message Events Log',
+    'sub_title' => [
+        'message_event' => 'Message Event',
+        'event_metada' => 'Event Metadata',
+        'telegram_preview' => 'Telegram Preview',
+        'whatsapp_preview' => 'WhatsApp Preview',
+        'technical_log_json' => 'Technical Log (JSON)'
+    ],
     'app_title' => 'Message Events',
 
     'table' => [
@@ -26,8 +35,16 @@ return [
         'unknown_customer' => 'Unknown Customer',
         'message_id' => 'Message ID',
         'trace_id' => 'Trace ID',
-        'message_type' => 'Message Type (You Can Choose More Than 1)',
-        'find_customer' => 'Find Customer'
+        'message_types' => 'Message Type (You Can Choose More Than 1)',
+        'message_type' => 'Message Type',
+        'find_customer' => 'Find Customer',
+        'channel' => 'Channel',
+        'status' => 'Status',
+        'customer' => 'Customer',
+        'contact' => 'Contact',
+        'sent_at' => 'Send at',
+        'request_payload' => 'Request Payload',
+        'response_payload' => 'Response Payload'
     ],
 
     'placeholder' => [
@@ -41,6 +58,7 @@ return [
         'btn_detail' => 'Detail',
         'btn_view_detail' => 'View Detail',
         'btn_retry' => 'Retry',
+        'back' => 'Back'
     ],
 
     'state' => [

@@ -1,8 +1,17 @@
 <?php
 
 return [
-    'header' => [],
+    'header' => [
+        'technical_log_detail' => 'Detail Log Teknis'
+    ],
     'title' => 'Log Riwayat Pesan',
+    'sub_title' => [
+        'message_event' => 'Riwayat Pesan',
+        'event_metada' => 'Event Metadata',
+        'telegram_preview' => 'Pratinjau Telegram',
+        'whatsapp_preview' => 'Pratinjau WhatsApp',
+        'technical_log_json' => 'Log Teknis (JSON)'
+    ],
     'app_title' => 'Riwayat Pesan',
 
     'table' => [
@@ -26,8 +35,16 @@ return [
         'unknown_customer' => 'Pelanggan Tidak Dikenal',
         'message_id' => 'ID Pesan',
         'trace_id' => 'Trace ID',
-        'message_type' => 'Tipe Pesan (Bisa Pilih Lebih dari 1)',
-        'find_customer' => 'Cari Pelanggan'
+        'message_types' => 'Tipe Pesan (Bisa Pilih Lebih dari 1)',
+        'message_type' => 'Tipe Pesan',
+        'find_customer' => 'Cari Pelanggan',
+        'channel' => 'Saluran',
+        'status' => 'Status',
+        'customer' => 'Pelanggan',
+        'contact' => 'Kontak',
+        'sent_at' => 'Dikirim pada',
+        'request_payload' => 'Request Payload',
+        'response_payload' => 'Response Payload'
     ],
 
     'placeholder' => [
@@ -41,6 +58,7 @@ return [
         'btn_detail' => 'Detail',
         'btn_view_detail' => 'Lihat Detail',
         'btn_retry' => 'Coba Lagi',
+        'back' => 'Kembali'
     ],
 
     'state' => [

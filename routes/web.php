@@ -439,6 +439,7 @@ Route::group(['prefix' => 'cpanel'], function () {
 
         // ==================== MESSAGE EVENTS ====================
         Route::get('settings/message/events', [MessageEventController::class, 'index'])->name('messageevents.index');
+        Route::get('settings/message/events/{event}', [MessageEventController::class, 'show'])->name('messageevents.show');
         Route::post('settings/message/events/{event}/resend', [MessageEventController::class, 'resend'])->name('messageevents.resend');
 
         // ==================== TELEGRAM GATEWAY ====================

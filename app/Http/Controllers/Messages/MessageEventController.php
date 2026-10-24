@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Messages;
 
 use App\Helpers\ExecutionTimer;
 use App\Helpers\LogHelper;
+use App\Helpers\MessageRequestNormalizer;
 use App\Helpers\MessageResponseNormalizer;
 use App\Models\Messaging\MessageEvent;
 use App\Http\Controllers\Controller;
@@ -127,5 +128,43 @@ class MessageEventController extends Controller
         ], 200, 'Message resend job processed successfully.', $traceId, $timer->lap());
 
         return back()->with('success', 'Event queued for resend.');
+    }
+
+    public function show(MessageEvent $event)
+    {
+        $event->load(['customer:id,name,contact']);
+
+        // 1. Ekstrak pesan teks agar mudah dibaca manusia
+        $event->extracted_message = MessageRequestNormalizer::extractMessage(
+            $event->request_payload,
+            $event->channel
+        );
+
+        // 2. Format JSON request & response agar rapi (Pretty Print)
+        $event->formatted_request = $this->prettyJson($event->request_payload);
+        $event->formatted_response = $this->prettyJson($event->response_payload);
+
+        return view('message_events.show', compact('event'));
+    }
+
+    /**
+     * Helper internal untuk format JSON Pretty Print
+     */
+    private function prettyJson(string|array|null $data): string
+    {
+        if (!$data) {
+            return '-';
+        }
+
+        // Jika sudah berupa array (akibat Eloquent casting)
+        if (is_array($data)) {
+            return json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        // Jika berupa string JSON
+        $decoded = json_decode($data, true);
+        return is_array($decoded)
+            ? json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            : $data;
     }
 }

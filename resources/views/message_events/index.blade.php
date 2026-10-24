@@ -77,7 +77,7 @@
                 {{-- DESIGN BARU: Tipe Pesan dalam bentuk Badge/Button Selectable --}}
                 <div class="form-group mb-2">
                     <label
-                        class="small font-weight-bold text-muted mb-1 d-block">{{ __('message_event.label.message_type') }}</label>
+                        class="small font-weight-bold text-muted mb-1 d-block">{{ __('message_event.label.message_types') }}</label>
                     <div class="d-flex flex-wrap align-items-center message-type-badge-group" style="gap: 8px;">
                         @foreach ($messageTypes as $index => $type)
                             @php
@@ -251,10 +251,15 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <button class="btn btn-sm btn-outline-primary" data-toggle="collapse"
+                                    {{-- <button class="btn btn-sm btn-outline-primary" data-toggle="collapse"
                                         data-target="#detail-{{ $event->id }}">
                                         <i class="fas fa-eye"></i> @lang('message_event.button.btn_detail')
-                                    </button>
+                                    </button> --}}
+
+                                    <a href="{{ route('messageevents.show', $event->id) }}"
+                                        class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> @lang('message_event.button.btn_detail')
+                                    </a>
 
                                     @if ($event->status === 'failed')
                                         <form action="{{ route('messageevents.resend', $event->id) }}" method="POST"
@@ -360,10 +365,15 @@
                         </div>
 
                         <div class="mt-2 d-flex" style="gap: 6px;">
-                            <button class="btn btn-sm btn-outline-primary flex-grow-1" data-toggle="collapse"
+                            {{-- <button class="btn btn-sm btn-outline-primary flex-grow-1" data-toggle="collapse"
                                 data-target="#detail-mobile-{{ $event->id }}">
                                 @lang('message_event.button.btn_view_detail')
-                            </button>
+                            </button> --}}
+
+                            <a href="{{ route('messageevents.show', $event->id) }}"
+                                class="btn btn-sm btn-outline-primary flex-grow-1">
+                                @lang('message_event.button.btn_view_detail')
+                            </a>
 
                             @if ($event->status === 'failed')
                                 <form action="{{ route('messageevents.resend', $event->id) }}" method="POST"
