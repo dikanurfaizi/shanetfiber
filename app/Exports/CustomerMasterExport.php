@@ -66,11 +66,12 @@ class CustomerMasterExport implements
         static $no = 1;
 
         $formatter = new FormatReceiver();
-        $contact = "'" . $formatter->formatReceiver(
-            $customer->contact,
-            'display',
-            false
-        );
+
+        $formattedContact = $customer->contact
+            ? $formatter->formatReceiver($customer->contact, 'display', false)
+            : '-';
+
+        $contact = $formattedContact !== '-' ? "'" . $formattedContact : '-';
 
         // ===== Status =====
         $status = $customer->activation === 'false'

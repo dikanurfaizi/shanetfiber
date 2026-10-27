@@ -68,8 +68,9 @@ class FormatReceiver
      * Format untuk UI display
      * hasil: 08xxxxxxxxx
      */
-    public function display(string $contact): string
+    public function display(?string $contact): string
     {
+        if (!$contact) return '';
         $contact = $this->normalize($contact);
 
         return $contact ? '0' . substr($contact, 2) : '';
@@ -142,8 +143,12 @@ class FormatReceiver
     /**
      * Wrapper agar kompatibel dengan helper lama
      */
-    public function formatReceiver(string $contact, $action = null, $whatsAppFormat = false)
+    public function formatReceiver(?string $contact, $action = null, $whatsAppFormat = false)
     {
+        if ($contact === null) {
+            return '';
+        }
+
         try {
             if ($whatsAppFormat) {
                 return $this->whatsApp($contact);
