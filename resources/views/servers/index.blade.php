@@ -1,49 +1,66 @@
-<x-layouts.cpanel.settings.app-layout title="Servers">
+<x-layouts.cpanel.settings.app-layout :title="__('server.title.index')">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">Servers</h5>
+        <h5 class="m-0 font-weight-bold text-primary">{{ __('server.header.index') }}</h5>
         @can('server-create')
-            <span><a class="btn btn-sm btn-success mt-2" href="{{ route('servers.create') }}"><i class="fa fa-plus"></i> Add
-                    Server</a></span>
-            <span><a class="btn btn-sm btn-primary mt-2" href="{{ route('servers.preview') }}"><i
-                        class="fa fa-file-import"></i>
-                    Import Customer Data to Mikrotik</a></span>
+            <span>
+                <a class="btn btn-sm btn-primary mt-2" href="{{ route('servers.preview') }}">
+                    <i class="fa fa-file-import mr-1"></i> {{ __('server.button.import') }}
+                </a>
+            </span>
         @endcan
     </div>
 
     <div class="card-body">
-
         <div style="overflow-x: auto;">
-            <table class="table table-hover">
+            <table class="table table-hover align-middle">
                 <thead>
                     <tr>
                         <th class="border-gray-200" width="50px">#</th>
-                        <th class="border-gray-200">Name</th>
-                        <th class="border-gray-200">Host</th>
-                        <th class="border-gray-200">Port</th>
-                        <th class="border-gray-200" width="280px">Action</th>
+                        <th class="border-gray-200">{{ __('server.table.name') }}</th>
+                        <th class="border-gray-200">{{ __('server.table.host') }}</th>
+                        <th class="border-gray-200">{{ __('server.label.port') }} (API)</th>
+                        <th class="border-gray-200">{{ __('server.label.coa_port') }}</th>
+                        <th class="border-gray-200">RADIUS Status</th>
+                        <th class="border-gray-200 text-center" width="280px">{{ __('server.table.action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($mikrotiks as $mikrotik)
                         <tr>
                             <td><span class="fw-normal">{{ ++$i }}</span></td>
-                            <td><span class="mikrotik-name fw-normal">{{ $mikrotik->name }}</span></td>
-                            <td><span class="mikrotik-host fw-normal">{{ $mikrotik->host }}</span></td>
-                            <td><span class="mikrotik-port fw-normal">{{ $mikrotik->port }}</span></td>
-
+                            <td><span class="mikrotik-name fw-normal font-weight-bold">{{ $mikrotik->name }}</span></td>
+                            <td><span class="mikrotik-host fw-normal font-monospace">{{ $mikrotik->host }}</span></td>
+                            <td><span class="mikrotik-port fw-normal font-monospace">{{ $mikrotik->port }}</span></td>
+                            <td><span class="fw-normal font-monospace">{{ $mikrotik->coa_port ?? 3799 }}</span></td>
                             <td>
+                                @if (!empty($mikrotik->radius_secret))
+                                    <span class="badge bg-success text-white">
+                                        <i class="fas fa-key mr-1"></i> Secret Set
+                                    </span>
+                                @else
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fas fa-exclamation-circle mr-1"></i> No Secret
+                                    </span>
+                                @endif
+                            </td>
 
+                            <td class="text-center">
+                                {{-- Show Mikrotik Details --}}
                                 <a href="{{ route('mikrotiks.show', $mikrotik->slug) }}" data-bs-toggle="tooltip"
                                     data-bs-placement="top" title="Show Mikrotik"
                                     class="btn btn-datatable btn-icon btn-transparent-dark me-2 router-show">
                                     <i class="button-show-mikrotik fas fa-external-link-alt"></i>
                                 </a>
+
                                 @can('server-edit')
+                                    {{-- Edit Server --}}
                                     <a href="{{ route('servers.edit', $mikrotik->slug) }}" data-bs-toggle="tooltip"
-                                        data-bs-placement="top" title="Edit Mikrotik"
+                                        data-bs-placement="top" title="{{ __('server.title.edit') }}"
                                         class="btn btn-datatable btn-icon btn-transparent-dark me-2 router-edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
+
+                                    {{-- Toggle Enable / Disable --}}
                                     @if ($mikrotik->disabled === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
                                         <form method="POST" class="d-inline"
                                             action="{{ route('servers.disable', $mikrotik->slug) }}">
@@ -52,7 +69,7 @@
                                             <a data-bs-toggle="tooltip" data-bs-placement="top" title="Disable Server"
                                                 class="btn btn-datatable btn-icon btn-transparent-dark me-2"
                                                 onclick="event.preventDefault(); this.closest('form').submit();">
-                                                <i class="fa fa-times me-2"></i>
+                                                <i class="fa fa-times me-2 text-danger"></i>
                                             </a>
                                         </form>
                                     @else
@@ -68,16 +85,20 @@
                                         </form>
                                     @endif
                                 @endcan
+
+                                {{-- Test Connection Button --}}
                                 <a href="javascript:void(0)" data-id="{{ $mikrotik->id }}" data-bs-toggle="tooltip"
-                                    data-bs-placement="top" title="Cek Mikrotik Status"
+                                    data-bs-placement="top" title="{{ __('server.label.test_connection') }}"
                                     class="btn-check-online btn btn-datatable btn-icon btn-transparent-dark me-2">
                                     <i class="fas fa-exchange-alt"></i>
                                 </a>
+
+                                {{-- Delete Server --}}
                                 @can('server-delete')
                                     <a href="{{ route('servers.delete', $mikrotik->slug) }}"
                                         class="btn btn-datatable btn-icon btn-transparent-dark me-2" data-bs-placement="top"
-                                        title="Hapus Mikrotik" id="btn-hapus-router" type="button">
-                                        <i class="far fa-trash-alt"></i>
+                                        title="{{ __('server.button.delete') }}" id="btn-hapus-router" type="button">
+                                        <i class="far fa-trash-alt text-danger"></i>
                                     </a>
                                 @endcan
                             </td>
@@ -85,9 +106,12 @@
                     @endforeach
                 </tbody>
             </table>
-            {!! $mikrotiks->links() !!}
+            <div class="mt-3">
+                {!! $mikrotiks->links() !!}
+            </div>
         </div>
     </div>
+
     @section('custom_scripts')
         <script>
             $.ajaxSetup({
@@ -96,12 +120,11 @@
                 }
             });
 
-            // Mengubah selector event dari ID (#check-online) ke Class (.btn-check-online)
             $(document).on('click', '.btn-check-online', function(e) {
                 e.preventDefault();
 
-                const $this = $(this); // Menyimpan referensi tombol yang diklik
-                const $row = $this.closest('tr'); // Mencari baris (tr) terdekat dari tombol ini
+                const $this = $(this);
+                const $row = $this.closest('tr');
 
                 const selectedRouterId = $this.data('id');
                 const url = "{{ route('check-online', ':id') }}".replace(':id', selectedRouterId);
@@ -125,7 +148,6 @@
                             autoclose: true
                         });
 
-                        // Cari class di dalam baris yang bersangkutan saja, lalu ubah warnanya
                         $row.find('.mikrotik-name, .mikrotik-host, .mikrotik-port, .button-show-mikrotik')
                             .removeClass('text-danger')
                             .addClass('text-success');
@@ -133,7 +155,7 @@
                     error: function(data) {
                         new Notify({
                             status: 'error',
-                            title: 'Gagal terkoneksi!',
+                            title: '{{ __('server.label.disconnected') }}',
                             text: data.responseJSON && data.responseJSON.message ? data.responseJSON
                                 .message : 'Terjadi kesalahan',
                             effect: 'slide',
@@ -143,7 +165,6 @@
                             autoclose: true
                         });
 
-                        // Cari class di dalam baris yang bersangkutan saja, lalu ubah warnanya
                         $row.find('.mikrotik-name, .mikrotik-host, .mikrotik-port, .button-show-mikrotik')
                             .removeClass('text-success')
                             .addClass('text-danger');

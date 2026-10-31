@@ -348,13 +348,23 @@ Route::group(['prefix' => 'cpanel'], function () {
         Route::get('settings/users/linkable/another/users', [UserController::class, 'getLinkableUsers'])->name('user.linkable');
 
         // Servers & Routers
-        Route::resource('settings/servers', ServerController::class);
+        // 1. Deklarasikan route spesifik terlebih dahulu
         Route::get('settings/servers/preview', [ServerController::class, 'preview'])->name('servers.preview');
         Route::get('settings/servers/mikrotik/{mikrotik:slug}/preview', [ServerController::class, 'showDataCustomer'])->name('servers.preview.data');
         Route::post('settings/servers/import/{mikrotik:slug}', [ServerController::class, 'importCustomer'])->name('servers.import.customer');
         Route::get('/server/{server:slug}/delete', [ServerController::class, 'delete'])->name('servers.delete');
         Route::put('/server/{server:slug}/disabled/true', [ServerController::class, 'disable'])->name('servers.disable');
         Route::put('/server/{server:slug}/disabled/false', [ServerController::class, 'enable'])->name('servers.enable');
+        // Route AJAX Test RADIUS saat Create Server Baru (tanpa slug)
+        Route::post('settings/servers/test-radius-general', [ServerController::class, 'testRadiusConnectionGeneral'])
+            ->name('servers.test-radius-general');
+
+        // Route AJAX Test RADIUS saat Edit Server (dengan slug)
+        Route::post('settings/servers/{server:slug}/test-radius', [ServerController::class, 'testRadiusConnection'])
+            ->name('servers.test-radius');
+
+        // 2. Taruh Route::resource di bagian paling bawah
+        Route::resource('settings/servers', ServerController::class);
 
         Route::resource('settings/routers', RouterController::class);
         Route::get('settings/routers/{router:id}/delete', [RouterController::class, 'delete'])->name('router.delete');
@@ -471,6 +481,10 @@ Route::group(['prefix' => 'cpanel'], function () {
             Route::post('/export-active', [RadiusManagementController::class, 'exportActiveToRadius'])->name('export-active');
             Route::post('/sync-single-radius/{customer}', [RadiusManagementController::class, 'syncSingleToRadius'])->name('sync-single-radius');
             Route::post('/sync-single-mikrotik/{customer}', [RadiusManagementController::class, 'syncSingleToMikrotik'])->name('sync-single-mikrotik');
+
+            // PERBAIKAN: Hapus prefix 'radius.' pada name agar tidak menjadi radius.radius.xxx
+            Route::post('/customers/{customer}/disconnect', [RadiusManagementController::class, 'disconnectCustomer'])->name('customers.disconnect');
+            Route::get('/active-sessions', [RadiusManagementController::class, 'activeSessions'])->name('active-sessions');
         });
 
         // ==================== TEST EMAIL ====================

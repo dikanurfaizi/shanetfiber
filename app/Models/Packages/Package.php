@@ -48,4 +48,12 @@ class Package extends Model
     {
         return $this->disabled === 'false';
     }
+
+    /**
+     * Relasi ke PPP Profile berdasarkan string nama profile (profile -> profile_name)
+     */
+    public function pppProfile(): BelongsTo
+    {
+        return $this->belongsTo(PppProfile::class, 'profile', 'profile_name');
+    }
 }

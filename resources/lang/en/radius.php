@@ -1,12 +1,6 @@
 <?php
 
 return [
-    'sidebar' => [
-        'provisioning'      => 'Provisioning',
-        'section_header'    => 'FreeRADIUS & MikroTik:',
-        'radius_management' => 'RADIUS Management',
-        'provisioning_mode' => 'Provisioning Mode',
-    ],
     'index' => [
         'title'                   => 'RADIUS Management',
         'header'                  => 'FreeRADIUS & MikroTik Provisioning Management',
@@ -29,6 +23,7 @@ return [
     'button' => [
         'yes_export'              => 'Yes, Export!',
         'cancel'                  => 'Cancel',
+        'yes_kick'           => 'Yes, Disconnect!',
     ],
     'table' => [
         'no'             => 'NO',
@@ -39,6 +34,10 @@ return [
         'mikrotik_status' => 'MIKROTIK STATUS',
         'last_sync'      => 'LAST SYNC',
         'action'         => 'ACTION',
+        'nas_ip'           => 'NAS IP',
+        'start_time'        => 'Start Time',
+        'uptime'           => 'Uptime',
+        'bandwidth_usage' => 'Bandwidth Usage',
     ],
     'status' => [
         'synced'          => 'Synced',
@@ -57,6 +56,7 @@ return [
     'action' => [
         'sync_radius'   => 'Sync to FreeRADIUS',
         'sync_mikrotik' => 'Fallback Sync MikroTik API',
+        'kick'          => 'Kick / Disconnect',
     ],
     'settings' => [
         'title'                   => 'Provisioning Settings',
@@ -72,13 +72,31 @@ return [
         'btn_back'                => 'Back to Management',
     ],
     'messages' => [
-        'export_active_success' => 'Bulk export active customers process to RADIUS executed successfully.',
-        'export_active_failed'  => 'Failed to execute bulk export: :error',
-        'sync_radius_queued'    => 'RADIUS sync request for :name has been queued.',
-        'sync_radius_failed'    => 'Failed to trigger RADIUS sync: :error',
-        'sync_mikrotik_success' => 'Fallback sync to MikroTik API for :name succeeded.',
-        'sync_mikrotik_failed'  => 'Failed to sync to MikroTik API: :error',
-        'settings_updated'      => 'Provisioning Driver Mode updated successfully.',
-        'settings_failed'       => 'Failed to update provisioning mode: :error',
+        // Export & Sync
+        'export_active_success' => 'Bulk synchronization of active customers to RADIUS has been triggered successfully in the background.',
+        'export_active_failed'  => 'Failed to execute bulk synchronization to RADIUS: :error',
+        'sync_radius_queued'    => 'RADIUS synchronization process for customer :name has been queued successfully.',
+        'sync_radius_failed'    => 'Failed to synchronize with RADIUS: :error',
+        'sync_mikrotik_success' => 'Manual synchronization of customer :name to MikroTik API completed successfully.',
+        'sync_mikrotik_failed'  => 'Failed to synchronize with MikroTik API: :error',
+
+        // Settings
+        'settings_updated'      => 'Provisioning driver mode settings updated successfully.',
+        'settings_failed'       => 'Failed to update provisioning driver settings: :error',
+
+        // Disconnect / Kick Session
+        'customer_no_username'    => 'This customer does not have a valid PPP / RADIUS username.',
+        'disconnect_success'     => 'Disconnect Packet (PoD) sent successfully for customer :name. Active session terminated.',
+        'disconnect_failed'      => 'Failed to send Disconnect Packet (PoD) for customer :name. Please check router/NAS connectivity and CoA port 3799.',
+        'disconnect_failed_error' => 'An error occurred while disconnecting customer session: :error',
+    ],
+    'active_sessions' => [
+        'title' => 'Active RADIUS Sessions',
+        'header' => 'Monitoring Online Customer Sessions',
+        'total_online' => 'Total Users Online',
+        'no_active_sessions' => 'There are no active user sessions at the moment.',
+        'kick_title' => 'Disconnect User?',
+        'kick_confirm' => 'Are you sure you want to disconnect this active session?',
+        'kick_processing_text' => 'Sending PoD/CoA signal to NAS Router...',
     ],
 ];

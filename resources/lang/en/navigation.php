@@ -104,6 +104,13 @@ return [
             'create' => 'Add Server',
             'index' => 'All Servers',
         ],
+        'radius' => [
+            'provisioning'      => 'Provisioning',
+            'section_header'    => 'FreeRADIUS & MikroTik:',
+            'management' => 'RADIUS Management',
+            'provisioning_mode' => 'Provisioning Mode',
+            'active_sessions'   => 'RADIUS Active Session'
+        ],
         'routers' => [
             'nav-item' => 'Client Routers',
             'create' => 'Add Router',

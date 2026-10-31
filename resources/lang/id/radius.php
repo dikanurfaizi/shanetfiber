@@ -1,12 +1,6 @@
 <?php
 
 return [
-    'sidebar' => [
-        'provisioning'      => 'Provisioning',
-        'section_header'    => 'FreeRADIUS & MikroTik:',
-        'radius_management' => 'Manajemen RADIUS',
-        'provisioning_mode' => 'Mode Provisioning',
-    ],
     'index' => [
         'title'                   => 'Manajemen RADIUS',
         'header'                  => 'Manajemen Provisioning FreeRADIUS & MikroTik',
@@ -29,6 +23,7 @@ return [
     'button' => [
         'yes_export'              => 'Ya, Jalankan!',
         'cancel'                  => 'Batal',
+        'yes_kick'         => 'Ya, Putuskan!',
     ],
     'table' => [
         'no'             => 'NO',
@@ -39,6 +34,10 @@ return [
         'mikrotik_status' => 'STATUS MIKROTIK',
         'last_sync'      => 'TERAKHIR SYNC',
         'action'         => 'AKSI',
+        'nas_ip'           => 'NAS IP',
+        'start_time'       => 'Waktu Mulai',
+        'uptime'           => 'Uptime',
+        'bandwidth_usage'  => 'Penggunaan Bandwidth',
     ],
     'status' => [
         'synced'          => 'Synced',
@@ -57,6 +56,7 @@ return [
     'action' => [
         'sync_radius'   => 'Sync ke FreeRADIUS',
         'sync_mikrotik' => 'Fallback Sync MikroTik API',
+        'kick'             => 'Kick / Disconnect',
     ],
     'settings' => [
         'title'                   => 'Pengaturan Provisioning',
@@ -72,13 +72,31 @@ return [
         'btn_back'                => 'Kembali ke Manajemen',
     ],
     'messages' => [
-        'export_active_success' => 'Proses ekspor massal pelanggan aktif ke RADIUS berhasil dijalankan.',
-        'export_active_failed'  => 'Gagal menjalankan ekspor massal: :error',
-        'sync_radius_queued'    => 'Permintaan sync RADIUS untuk :name telah dimasukkan ke antrean.',
-        'sync_radius_failed'    => 'Gagal memicu sync RADIUS: :error',
-        'sync_mikrotik_success' => 'Fallback sync ke API MikroTik untuk :name berhasil.',
-        'sync_mikrotik_failed'  => 'Gagal sync ke MikroTik API: :error',
-        'settings_updated'      => 'Mode Provisioning Driver berhasil diperbarui.',
-        'settings_failed'       => 'Gagal memperbarui mode provisioning: :error',
+        // Export & Sync
+        'export_active_success' => 'Proses sinkronisasi massal seluruh pelanggan aktif ke RADIUS berhasil dijalankan di latar belakang.',
+        'export_active_failed'  => 'Gagal menjalankan sinkronisasi massal ke RADIUS: :error',
+        'sync_radius_queued'    => 'Proses sinkronisasi RADIUS untuk pelanggan :name telah dimasukkan ke dalam antrean.',
+        'sync_radius_failed'    => 'Gagal melakukan sinkronisasi RADIUS: :error',
+        'sync_mikrotik_success' => 'Berhasil melakukan sinkronisasi manual pelanggan :name ke API MikroTik.',
+        'sync_mikrotik_failed'  => 'Gagal melakukan sinkronisasi ke API MikroTik: :error',
+
+        // Settings
+        'settings_updated'      => 'Pengaturan mode driver provisioning berhasil diperbarui.',
+        'settings_failed'       => 'Gagal memperbarui pengaturan driver provisioning: :error',
+
+        // Disconnect / Kick Session
+        'customer_no_username'   => 'Pelanggan ini tidak memiliki username PPP / RADIUS yang valid.',
+        'disconnect_success'    => 'Paket Disconnect (PoD) berhasil dikirim untuk pelanggan :name. Session aktif telah diputus.',
+        'disconnect_failed'     => 'Gagal mengirim paket Disconnect (PoD) untuk pelanggan :name. Pastikan router/NAS terhubung dan port CoA 3799 terbuka.',
+        'disconnect_failed_error' => 'Terjadi kesalahan saat memutus session pelanggan: :error',
+    ],
+    'active_sessions' => [
+        'title'               => 'Session RADIUS Aktif',
+        'header'              => 'Monitoring Session Pelanggan Online',
+        'total_online'        => 'Total User Online',
+        'no_active_sessions' => 'Tidak ada session pengguna yang sedang aktif saat ini.',
+        'kick_title'          => 'Putuskan Koneksi User?',
+        'kick_confirm'        => 'Apakah Anda yakin ingin memutuskan session aktif ini?',
+        'kick_processing_text' => 'Mengirim sinyal PoD/CoA ke NAS Router...',
     ],
 ];

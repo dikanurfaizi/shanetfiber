@@ -1,4 +1,4 @@
-<x-layouts.cpanel.settings.app-layout title="Preview Server">
+<x-layouts.cpanel.settings.app-layout :title="__('server.title.import')">
     <div class="card-header py-3">
         <h5 class="m-0 font-weight-bold text-primary">{{ __('server.title.import') }}</h5>
     </div>
@@ -10,8 +10,10 @@
                 {{-- Dropdown Mikrotik --}}
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
-                        <label for="mikrotik-select"><strong>{{ __('server.label.choose') }}</strong><span
-                                class="text-danger">*</span></label>
+                        <label for="mikrotik-select">
+                            <strong>{{ __('server.label.choose') }}</strong>
+                            <span class="text-danger">*</span>
+                        </label>
                         <div class="input-group">
                             {!! Form::select('mikrotik_id', $servers->pluck('name', 'slug'), $selectedMikrotik->slug ?? null, [
                                 'placeholder' => __('server.placeholder.server'),
@@ -27,32 +29,29 @@
                     </div>
                 </div>
 
+                {{-- Alert Info Total Customer --}}
                 <div id="customer-info-box">
                     @if (isset($customers))
                         <div class="alert alert-info">
-                            <i class="fas fa-users"></i>
-                            {{ __('server.label.total') }}
+                            <i class="fas fa-users mr-1"></i>
+                            {{ __('server.import.total_from', ['name' => $selectedMikrotik->name ?? '']) }}
                             <strong>{{ $customers->total() ?? count($customers) }}</strong>
                         </div>
                     @endif
                 </div>
 
-                {{-- Tombol Preview --}}
+                {{-- Action Buttons --}}
                 <div>
-                    {{-- Tombol Preview: warna hijau, ikon mata --}}
                     <button type="button" id="btn-import" class="btn btn-success mt-4">
-                        <i class="fa fa-file-import"></i> {{ __('server.button.import') }}
+                        <i class="fa fa-file-import mr-1"></i> {{ __('server.button.import') }}
                     </button>
 
-                    {{-- Tombol Cancel: warna merah atau abu-abu, ikon panah kiri --}}
-                    <a type="button" class="btn btn-secondary mt-4" href="{{ route('servers.index') }}">
-                        <i class="fa fa-arrow-left"></i> {{ __('server.button.cancel') }}
+                    <a class="btn btn-secondary mt-4" href="{{ route('servers.index') }}">
+                        <i class="fa fa-arrow-left mr-1"></i> {{ __('server.button.cancel') }}
                     </a>
                 </div>
             </div>
             {!! Form::close() !!}
-
-            {{-- Konten lainnya bisa kamu tambahkan di sini --}}
         </div>
     </div>
 
@@ -63,36 +62,55 @@
                 const infoBox = document.getElementById('customer-info-box');
                 const importBtn = document.getElementById('btn-import');
 
-                // Fungsi reusable untuk ambil data preview berdasarkan slug Mikrotik
+                const trans = {
+                    totalFrom: "{{ __('server.import.total_from', ['name' => ':name']) }}",
+                    selectWarningTitle: "{{ __('server.import.select_warning_title') }}",
+                    selectWarningText: "{{ __('server.import.select_warning_text') }}",
+                    confirmTitle: "{{ __('server.import.confirm_title') }}",
+                    confirmText: {!! json_encode(__('server.import.confirm_text')) !!},
+                    btnConfirm: "{{ __('server.import.btn_confirm') }}",
+                    btnCancel: "{{ __('server.button.cancel') }}",
+                    successTitle: "{{ __('server.import.success_title') }}",
+                    successText: "{{ __('server.import.success_text') }}",
+                    errorTitle: "{{ __('server.import.error_title') }}",
+                    errorText: "{{ __('server.import.error_text') }}",
+                    fetchErrorText: "{{ __('server.import.fetch_error_text') }}"
+                };
+
+                // Helper fetch preview data
                 function fetchPreviewData(slug) {
-                    return fetch(`/cpanel/settings/servers/mikrotik/${slug}/preview`, {
+                    const url = "{{ route('servers.preview.data', ':slug') }}".replace(':slug', slug);
+
+                    return fetch(url, {
                             headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
                             }
                         })
                         .then(response => {
-                            if (!response.ok) throw new Error('Gagal fetch preview.');
+                            if (!response.ok) throw new Error(trans.fetchErrorText);
                             return response.json();
                         });
                 }
 
-                // Saat dropdown berubah, update tampilan info
+                // Handler saat Dropdown berubah
                 mikrotikSelect.addEventListener('change', function() {
                     const slug = this.value;
 
                     if (!slug) {
-                        infoBox.innerHTML = ''; // Kosongkan info jika placeholder dipilih
+                        infoBox.innerHTML = '';
                         return;
                     }
 
                     fetchPreviewData(slug)
                         .then(data => {
+                            const infoText = trans.totalFrom.replace(':name', data.serverName);
                             infoBox.innerHTML = `
-                    <div class="alert alert-info">
-                        <i class="fas fa-users"></i>
-                        Total Customer from <strong>${data.serverName}</strong>: <strong>${data.total}</strong>
-                    </div>
-                `;
+                            <div class="alert alert-info">
+                                <i class="fas fa-users mr-1"></i>
+                                ${infoText} <strong>${data.total}</strong>
+                            </div>
+                        `;
                         })
                         .catch(error => {
                             console.error('Error fetching data:', error);
@@ -100,34 +118,42 @@
                         });
                 });
 
-                // Saat tombol import diklik
+                // Handler saat Tombol Import diklik (HANYA 1 EVENT LISTENER)
                 importBtn.addEventListener('click', function() {
                     const slug = mikrotikSelect.value;
 
                     if (!slug) {
                         Swal.fire({
                             icon: 'warning',
-                            title: 'Select Mikrotik',
-                            text: 'Please select Mikrotik first'
+                            title: trans.selectWarningTitle,
+                            text: trans.selectWarningText
                         });
                         return;
                     }
 
-                    // Ambil data preview untuk konfirmasi import
+                    // Fetch data preview untuk konfirmasi import
                     fetchPreviewData(slug)
                         .then(data => {
+                            const confirmMessage = trans.confirmText
+                                .replace(':total', data.total)
+                                .replace(':name', data.serverName);
+
                             Swal.fire({
-                                title: 'Import Confirmation',
-                                html: `Will import <strong>${data.total}</strong> customer from database to <strong>${data.serverName}</strong>.<br>Are you sure you want to continue?`,
+                                title: trans.confirmTitle,
+                                html: confirmMessage, // Menggunakan HTML agar format bold <strong> & <br> muncul rapi
                                 icon: 'question',
                                 showCancelButton: true,
-                                confirmButtonText: 'Yes, go ahead',
-                                cancelButtonText: 'Cancelled'
+                                confirmButtonText: trans.btnConfirm,
+                                cancelButtonText: trans.btnCancel
                             }).then(result => {
                                 if (!result.isConfirmed) return;
 
-                                // Jalankan POST import
-                                fetch(`/cpanel/settings/servers/import/${slug}`, {
+                                // Generate URL import via Laravel Route Helper
+                                const importUrl = "{{ route('servers.import.customer', ':slug') }}"
+                                    .replace(':slug', slug);
+
+                                // Eksekusi proses import via POST
+                                fetch(importUrl, {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
@@ -137,23 +163,22 @@
                                         body: JSON.stringify({})
                                     })
                                     .then(response => {
-                                        if (!response.ok) throw new Error("Import Failed");
+                                        if (!response.ok) throw new Error(trans.errorText);
                                         return response.json();
                                     })
                                     .then(data => {
                                         Swal.fire({
                                             icon: 'success',
-                                            title: 'Succeed',
-                                            text: data.message ||
-                                                'Import successfully started'
+                                            title: trans.successTitle,
+                                            text: data.message || trans.successText
                                         });
                                     })
                                     .catch(error => {
                                         console.error(error);
                                         Swal.fire({
                                             icon: 'error',
-                                            title: 'Gagal',
-                                            text: 'An error occurred while importing'
+                                            title: trans.errorTitle,
+                                            text: trans.errorText
                                         });
                                     });
                             });
@@ -162,13 +187,12 @@
                             console.error('Error during confirmation fetch:', error);
                             Swal.fire({
                                 icon: 'error',
-                                title: 'Failed',
-                                text: 'Unable to retrieve customer data for confirmation'
+                                title: trans.errorTitle,
+                                text: trans.fetchErrorText
                             });
                         });
                 });
             });
         </script>
     @endsection
-
 </x-layouts.cpanel.settings.app-layout>

@@ -104,6 +104,13 @@ return [
             'create' => 'Tambah Server',
             'index' => 'Semua Server',
         ],
+        'radius' => [
+            'provisioning'      => 'Provisioning',
+            'section_header'    => 'FreeRADIUS & MikroTik:',
+            'management' => 'Manajemen RADIUS',
+            'provisioning_mode' => 'Mode Provisioning',
+            'active_sessions'   => 'Sesi Aktif RADIUS'
+        ],
         'routers' => [
             'nav-item' => 'Router Klien',
             'create' => 'Tambah Router',

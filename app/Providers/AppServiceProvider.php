@@ -2,15 +2,14 @@
 
 namespace App\Providers;
 
+use App\Models\Mikrotik;
 use App\Models\Receipt;
+use App\Observers\MikrotikObserver;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Carbon;
 use App\Services\Billings\PaymentCancellationService;
-use App\Services\Billings\PaymentProcessingService;
-use App\Services\Routerboard\Ppp\SecretService;
-use App\Services\Routerboard\IpStaticService;
 use App\Services\Networks\Olt\OltDataService;
 use App\Services\Networks\Olt\OltScanJobService;
 use App\Services\Networks\Olt\OltValidationService;
@@ -30,12 +29,12 @@ class AppServiceProvider extends ServiceProvider
             return new PaymentCancellationService();
         });
 
-        $this->app->bind(PaymentProcessingService::class, function ($app) {
-            return new PaymentProcessingService(
-                $app->make(SecretService::class),
-                $app->make(IpStaticService::class)
-            );
-        });
+        // $this->app->bind(PaymentProcessingService::class, function ($app) {
+        //     return new PaymentProcessingService(
+        //         $app->make(SecretService::class),
+        //         $app->make(IpStaticService::class)
+        //     );
+        // });
 
         $this->app->singleton(OltDataService::class, function ($app) {
             return new OltDataService();
@@ -102,5 +101,7 @@ class AppServiceProvider extends ServiceProvider
 
             $view->with(compact('address', 'tellers', 'months', 'years'));
         });
+
+        Mikrotik::observe(MikrotikObserver::class);
     }
 }

@@ -168,6 +168,70 @@ class RadiusManagementController extends Controller
     }
 
     /**
+     * Action Disconnect / Kick Session Aktif Single Customer (CoA / PoD)
+     */
+    public function disconnectCustomer(Customer $customer): RedirectResponse
+    {
+        ['traceId' => $traceId, 'timer' => $timer] = $this->startTrace();
+
+        try {
+            $username = $customer->username;
+
+            if (empty($username)) {
+                return redirect()->back()->withErrors([
+                    'msg' => __('radius.messages.customer_no_username')
+                ]);
+            }
+
+            // Panggil method disconnectUser dari RadiusUserService
+            $disconnected = $this->radiusUserService->disconnectUser(
+                username: $username,
+                traceId: $traceId,
+                timer: $timer
+            );
+
+            if ($disconnected) {
+                LogHelper::logInfo(
+                    null,
+                    ['customerId' => $customer->id, 'username' => $username],
+                    200,
+                    "Customer disconnect packet sent successfully: {$customer->name}",
+                    $traceId,
+                    $timer->lap()
+                );
+
+                return redirect()->back()->with('success', __('radius.messages.disconnect_success', ['name' => $customer->name]));
+            }
+
+            return redirect()->back()->withErrors([
+                'msg' => __('radius.messages.disconnect_failed', ['name' => $customer->name])
+            ]);
+        } catch (Exception $e) {
+            LogHelper::logError(
+                null,
+                ['customerId' => $customer->id, 'error' => $e->getMessage()],
+                500,
+                'Exception during customer disconnect request',
+                $traceId,
+                $timer->lap()
+            );
+
+            return redirect()->back()->withErrors([
+                'msg' => __('radius.messages.disconnect_failed_error', ['error' => $e->getMessage()])
+            ]);
+        }
+    }
+
+    /**
+     * Halaman Monitoring Session Aktif RADIUS
+     */
+    public function activeSessions(): View
+    {
+        $activeSessions = $this->radiusUserService->getActiveSessions();
+        return view('radius.active_sessions', compact('activeSessions'));
+    }
+
+    /**
      * Tampilkan Halaman Setting Mode Provisioning
      */
     public function settings(): View

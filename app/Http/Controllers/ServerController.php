@@ -2,47 +2,45 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Mikrotik;
-use Illuminate\View\View;
-use Illuminate\Support\Str;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
-use Illuminate\Http\RedirectResponse;
+use App\Helpers\ExecutionTimer;
+use App\Helpers\LogHelper;
 use App\Http\Requests\ServerStoreRequest;
+use App\Http\Requests\ServerTestRadiusRequest;
 use App\Http\Requests\ServerUpdateRequest;
+use App\Jobs\ExportMikrotik\ExportCommentToRouter;
+use App\Jobs\ExportMikrotik\ExportCustomerToRouter;
 use App\Models\AutoIsolir;
 use App\Models\Customers\Customer;
-use App\Services\Routerboard\SystemService;
-use App\Helpers\LogHelper;
-use App\Jobs\MigrateCustomerToRouter;
+use App\Models\Mikrotik;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\View\View;
 
 class ServerController extends Controller
 {
-    private SystemService $systemService;
-    public function __construct(SystemService $systemService)
+    public function __construct()
     {
-        $this->systemService = $systemService;
         $this->middleware('permission:server-list|server-create|server-edit|server-delete', ['only' => ['index', 'show']]);
         $this->middleware('permission:server-create', ['only' => ['create', 'store']]);
         $this->middleware('permission:server-edit', ['only' => ['edit', 'update']]);
         $this->middleware('permission:server-delete', ['only' => ['destroy', 'delete']]);
     }
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-
-        //  $user = auth()->user();
-        // $mikrotiks = Mikrotik::orderBy('name', 'ASC')->paginate(5);
         $paginate = 15;
         $disabled = $request->disabled;
+
         $mikrotiks = Mikrotik::query()
-            ->when($disabled, function ($query) use ($disabled) {
-                $query->where('disabled', $disabled);
-            })
+            ->when($disabled, fn($query) => $query->where('disabled', $disabled))
             ->orderBy('name', 'ASC')
             ->paginate($paginate);
+
         return view('servers.index', compact('mikrotiks'))
             ->with('i', (request()->input('page', 1) - 1) * $paginate);
     }
@@ -60,17 +58,16 @@ class ServerController extends Controller
      */
     public function store(ServerStoreRequest $request): RedirectResponse
     {
-        Mikrotik::create([
-            'name' => $name = $request->name,
-            'slug' => str($name . '-' . Str::random(4))->slug(),
-            'host' => $request->host,
-            'username' => $request->username,
-            'password' => $request->password,
-            'port' => $request->port,
-            'ros_version_id' => $request->ros_version_id
-        ]);
+        $validated = $request->validated();
+
+        $validated['slug'] = str($validated['name'] . '-' . Str::random(4))->slug();
+        $validated['port'] = $validated['port'] ?? 8728;
+        $validated['coa_port'] = $validated['coa_port'] ?? 3799;
+
+        Mikrotik::create($validated);
+
         return redirect()->route('servers.index')
-            ->with('success', 'Mikrotik added successfully.');
+            ->with('success', __('server.message.created'));
     }
 
     /**
@@ -78,7 +75,6 @@ class ServerController extends Controller
      */
     public function edit(Mikrotik $server): View
     {
-
         return view('servers.edit', compact('server'));
     }
 
@@ -87,146 +83,91 @@ class ServerController extends Controller
      */
     public function update(ServerUpdateRequest $request, Mikrotik $server): RedirectResponse
     {
-        // $this->validate($request, [
-        //     'host' => ['required', 'string', Rule::unique('mikrotiks')->ignore($server->slug, 'slug')],
-        // ]);
+        $validated = array_filter($request->validated(), fn($value) => !is_null($value) && $value !== '');
 
-        $this->validate($request, [
-            'host' => ['required', 'string'],
-            'port' => [
-                'required',
-                'numeric',
-                Rule::unique('mikrotiks')->where(function ($query) use ($request) {
-                    return $query->where('host', $request->host);
-                })->ignore($server->id),
-            ],
-        ]);
-        if ($request->password) {
-            $server->update(['password' => $request->password]);
+        if (!empty($validated)) {
+            $server->update($validated);
         }
-
-        // $server->update([
-        //     'name' => $request['name'],
-        //     'host' => $request['host'],
-        //     'username' => $request['username'],
-        //     'port' => $request['port'],
-        //     'ros_version_id' => $request->ros_version_id
-        // ]);
-
-        $updateData = [
-            'name' => $request['name'],
-            'username' => $request['username'],
-            'ros_version_id' => $request->ros_version_id
-        ];
-
-        if ($request->host !== $server->host) {
-            $updateData['host'] = $request->host;
-        }
-
-        if ($request->port != $server->port) {
-            $updateData['port'] = $request->port;
-        }
-
-        if ($request->password) {
-            $updateData['password'] = $request->password;
-        }
-
-        $server->update($updateData);
 
         return redirect()->route('servers.index')
-            ->with('success', 'Mikrotik updated successfully');
+            ->with('success', __('server.message.updated'));
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function delete(Mikrotik $server)
+    public function delete(Mikrotik $server): View
     {
         return view('servers.delete', compact('server'));
     }
+
     public function destroy(Mikrotik $server): RedirectResponse
     {
+        $serverName = $server->name;
         $server->delete();
+
         return redirect()->route('servers.index')
-            ->with('success', 'Server ' . $server->name . ' deleted successfully');
+            ->with('success', __('server.message.deleted', ['server' => $serverName]));
     }
 
-    public function disable(Mikrotik $server)
+    /**
+     * Nonaktifkan Server, Rule AutoIsolir, dan seluruh Pelanggan via Relasi Eloquent.
+     */
+    public function disable(Mikrotik $server): RedirectResponse
     {
-        $autoisolir = AutoIsolir::where('mikrotik_id', $server->id)->first();
-        if ($autoisolir != NULL) {
-            $autoisolir->update([
-                'disabled' => 'true',
-            ]);
-        }
-        $customers = Customer::where('mikrotik_id', $server->id)->get();
-        if ($customers != NULL) {
-            foreach ($customers as $customer) {
-                $customer->update([
-                    'disabled' => 'true',
-                ]);
-            }
-        }
+        $server->autoIsolir()->update(['disabled' => 'true']);
+        $server->customers()->update(['is_active' => false]);
+        $server->update(['disabled' => 'true']);
 
-        $server->update([
-            'disabled' => 'true'
-        ]);
-        return redirect()->back()->with('success', 'Disable server successfully');
+        return redirect()->back()->with('success', __('server.message.disabled_success'));
     }
-    public function enable(Mikrotik $server)
+
+    /**
+     * Aktifkan kembali Server, Rule AutoIsolir, dan seluruh Pelanggan via Relasi Eloquent.
+     */
+    public function enable(Mikrotik $server): RedirectResponse
     {
+        $server->autoIsolir()->update(['disabled' => 'false']);
+        $server->customers()->update(['is_active' => true]);
+        $server->update(['disabled' => 'false']);
 
-        $autoisolir = AutoIsolir::where('mikrotik_id', $server->id)->first();
-        if ($autoisolir != NULL) {
-            $autoisolir->update([
-                'disabled' => 'false',
-            ]);
-        }
-        $customers = Customer::where('mikrotik_id', $server->id)->get();
-        if ($customers != NULL) {
-            foreach ($customers as $customer) {
-                $customer->update([
-                    'disabled' => 'false',
-                ]);
-            }
-        }
-
-        $server->update([
-            'disabled' => 'false'
-        ]);
-        return redirect()->back()->with('success', 'Enable server successfully');
+        return redirect()->back()->with('success', __('server.message.enabled_success'));
     }
 
-    public function preview()
+    public function preview(): View
     {
         $servers = Mikrotik::all();
-        // dd($mikrotiks);
         return view('servers.preview', compact('servers'));
     }
 
-    public function showDataCustomer(Mikrotik $mikrotik)
+    // ==========================================
+    // PREVIEW & IMPORT CUSTOMER
+    // ==========================================
+
+    public function showDataCustomer(Request $request, Mikrotik $mikrotik)
     {
         $customers = $this->getCustomerDataFromMikrotik($mikrotik);
-        $servers = Mikrotik::all();
 
-        if (request()->ajax()) {
+        if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
-                'total' => $customers->total(),
+                'total'      => $customers->total(),
                 'serverName' => $mikrotik->name,
             ]);
         }
 
+        $servers = Mikrotik::all();
+
         return view('servers.preview', [
-            'servers' => $servers,
+            'servers'          => $servers,
             'selectedMikrotik' => $mikrotik,
-            'customers' => $customers,
+            'customers'        => $customers,
         ]);
     }
 
     private function getCustomerDataFromMikrotik(Mikrotik $mikrotik)
     {
         return Customer::where('mikrotik_id', $mikrotik->id)
-            ->where('disabled', 'false')
+            ->where('is_active', true)
             ->orderBy('name')
             ->paginate(50);
     }
@@ -234,17 +175,114 @@ class ServerController extends Controller
     public function importCustomer(Mikrotik $mikrotik)
     {
         $traceId = (string) Str::uuid();
-        $message = 'Import secret from database';
+        $timer = new ExecutionTimer();
+        $message = '[ServerController] Import secret from database';
 
         try {
-            LogHelper::logInfo(null, [], 200, $message . " started with mikrotik id: " . $mikrotik->id, $traceId);
-            dispatch(new MigrateCustomerToRouter($mikrotik, $mikrotik, $traceId))->onQueue('default');
-            LogHelper::logInfo(null, [], 200, $message . " finish with mikrotik id: " . $mikrotik->id, $traceId);
+            LogHelper::logInfo(null, [
+                'mikrotik_id'   => $mikrotik->id,
+                'mikrotik_name' => $mikrotik->name
+            ], 200, $message . " started", $traceId, $timer->lap());
 
-            return response()->json(['message' => 'Import customer successfully started']);
+            dispatch(new ExportCustomerToRouter($mikrotik, $traceId))->onQueue('mikrotik-heavy');
+
+            LogHelper::logInfo(null, [
+                'mikrotik_id'   => $mikrotik->id,
+                'mikrotik_name' => $mikrotik->name
+            ], 200, $message . " finish", $traceId, $timer->lap());
+
+            return response()->json(['message' => __('server.import.success_text')]);
         } catch (\Throwable $e) {
-            LogHelper::logError(null, ["error" => $e->getMessage()], 400, "Failed " . $message, $traceId);
-            return response()->json(['message' => 'An error occurred while starting the import'], 500);
+            $exceptionCode = $e->getCode();
+            $statusCode = (is_numeric($exceptionCode) && $exceptionCode >= 400 && $exceptionCode <= 599)
+                ? (int) $exceptionCode
+                : 500;
+
+            LogHelper::logError(null, [
+                'mikrotik_id'     => $mikrotik->id,
+                'mikrotik_name'   => $mikrotik->name,
+                'error_message'   => $e->getMessage(),
+                'exception_class' => get_class($e),
+                'file'            => $e->getFile(),
+                'line'            => $e->getLine(),
+            ], $statusCode, $message . " failed", $traceId, $timer->lap());
+
+            return response()->json(['message' => __('server.import.error_text')], $statusCode);
+        }
+    }
+
+    /**
+     * Uji koneksi RADIUS Secret & CoA Port pada pembuatan router baru (tanpa model binding).
+     */
+    public function testRadiusConnectionGeneral(ServerTestRadiusRequest $request)
+    {
+        return $this->testRadiusConnection($request, new Mikrotik());
+    }
+
+    /**
+     * Uji koneksi RADIUS Secret (Database Sync Check) & CoA Port (Disconnect Test).
+     */
+    public function testRadiusConnection(ServerTestRadiusRequest $request, Mikrotik $server)
+    {
+        $validated = $request->validated();
+
+        $host = $validated['host'];
+        $radiusSecret = $validated['radius_secret'];
+        $coaPort = (int) ($validated['coa_port'] ?? $server->coa_port ?? 3799);
+
+        try {
+            // 1. Verifikasi Data pada Tabel 'nas' (FreeRADIUS DB)
+            $nas = DB::connection('mysql_radius')->table('nas')->where('nasname', $host)->first();
+
+            if (!$nas) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('server.test_radius.nas_not_found', ['host' => $host])
+                ]);
+            }
+
+            if ($nas->secret !== $radiusSecret) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('server.test_radius.secret_mismatch')
+                ]);
+            }
+
+            // 2. Uji Respons Server/Router pada Port CoA (Disconnect Request Test)
+            $cmd = sprintf(
+                'echo "User-Name=ping_test" | radclient -t 2 -r 1 %s:%d disconnect %s 2>&1',
+                escapeshellarg($host),
+                $coaPort,
+                escapeshellarg($radiusSecret)
+            );
+
+            exec($cmd, $output, $resultCode);
+            $response = implode("\n", $output);
+
+            // Jika Router merespons (Disconnect-NAK / Disconnect-ACK)
+            $isCoaResponsive = str_contains($response, 'Disconnect-NAK')
+                || str_contains($response, 'Disconnect-ACK')
+                || str_contains($response, 'Received response to packet');
+
+            if ($isCoaResponsive) {
+                return response()->json([
+                    'success' => true,
+                    'message' => __('server.test_radius.success_msg', ['port' => $coaPort])
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => __('server.test_radius.timeout_msg', [
+                    'port' => $coaPort,
+                    'detail' => $response ?: __('server.test_radius.no_response')
+                ])
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => __('server.test_radius.error_msg', ['error' => $e->getMessage()])
+            ], 500);
         }
     }
 }

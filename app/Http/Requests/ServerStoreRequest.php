@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Packages\Package;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ServerStoreRequest extends FormRequest
 {
@@ -22,49 +22,41 @@ class ServerStoreRequest extends FormRequest
      */
     public function rules(): array
     {
-        // return [
-
-        //     'name' => ['required', 'string', 'min:5', 'max:25'],
-        //     'host' => ['required', 'string', 'unique:mikrotiks,host'],
-        //     'username' => ['required', 'string', 'min:4', 'max:25'],
-        //     'password' => ['required', 'string', 'min:5', 'max:15'],
-        //     'port' => ['required', 'numeric'],
-        // ];
         return [
-            'name' => ['required', 'string', 'min:5', 'max:25'],
+            'name' => ['required', 'string', 'min:3', 'max:50'],
             'host' => ['required', 'string'],
-            'username' => ['required', 'string', 'min:4', 'max:25'],
-            'password' => ['required', 'string', 'min:5', 'max:15'],
+            'username' => ['required', 'string', 'min:3', 'max:50'],
+            'password' => ['required', 'string', 'min:3', 'max:50'],
             'port' => [
                 'required',
                 'numeric',
-                \Illuminate\Validation\Rule::unique('mikrotiks')->where(function ($query) {
+                Rule::unique('mikrotiks')->where(function ($query) {
                     return $query->where('host', $this->host);
                 }),
             ],
+            'radius_secret' => ['nullable', 'string', 'max:255'],
+            'coa_port' => ['nullable', 'numeric'],
+            'ros_version_id' => ['nullable', 'numeric'],
         ];
     }
 
-    public function messages()
+    /**
+     * Get the error messages for the defined validation rules.
+     */
+    public function messages(): array
     {
         return [
-
-            'name.required' => 'Name Server is required',
-            'name.min' => 'Name Server must be at least 5 characters',
-            'name.max' => 'Name Server must not be greater than 25 characters',
-            'host.required' => 'Host or ip address is required',
-            'host.string' => 'Host or ip address must be a string',
-            'username.required' => 'Username router is required',
-            'username.min' => 'Username must be at least 4 characters',
-            'username.max' => 'Username must not be greater than 25 characters',
-            'username.string' => 'Username must be a string',
-            'password.required' => 'Password router is required',
-            'password.min' => 'Password must be at least 4 characters',
-            'password.max' => 'Password must not be greater than 15 characters',
-            'password.string' => 'Password must be a string',
-            'port.required' => 'Port router is required, default is 8728',
-            'port.numeric' => 'Port field must be a number',
-            'port.unique' => 'This combination of host and port already exists.',
+            'name.required' => __('validation.required', ['attribute' => __('server.label.name')]),
+            'name.min' => __('validation.min.string', ['attribute' => __('server.label.name'), 'min' => 3]),
+            'name.max' => __('validation.max.string', ['attribute' => __('server.label.name'), 'max' => 50]),
+            'host.required' => __('validation.required', ['attribute' => __('server.label.host')]),
+            'username.required' => __('validation.required', ['attribute' => __('server.label.username')]),
+            'password.required' => __('validation.required', ['attribute' => __('server.label.password')]),
+            'port.required' => __('validation.required', ['attribute' => __('server.label.port')]),
+            'port.numeric' => __('validation.numeric', ['attribute' => __('server.label.port')]),
+            'port.unique' => __('validation.unique', ['attribute' => __('server.label.port')]),
+            'radius_secret.string' => __('validation.string', ['attribute' => __('server.label.radius_secret')]),
+            'coa_port.numeric' => __('validation.numeric', ['attribute' => __('server.label.coa_port')]),
         ];
     }
 }

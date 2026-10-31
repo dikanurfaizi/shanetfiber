@@ -4,6 +4,7 @@ namespace App\Models\Customers;
 
 use App\Models\AutoIsolir;
 use App\Models\Billings\Billing;
+use App\Models\Billings\BillingPayment;
 use App\Models\Customers\CustomerSubscription;
 use App\Models\Membership\CustomerMembership;
 use App\Models\Messaging\MessageEvent;
@@ -11,6 +12,7 @@ use App\Models\Mikrotik;
 use App\Models\Packages\Package;
 use App\Models\PasswordHistory;
 use App\Models\PppType;
+use App\Models\Receipt;
 use App\Models\User;
 use App\Models\Websystem;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,6 +20,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -146,9 +149,36 @@ class Customer extends Authenticatable
         return $this->belongsTo(PppType::class, 'ppp_type_id');
     }
 
+    // =========================================================================
+    // RELASI BILLING & RECEIPT
+    // =========================================================================
+
     public function billing(): HasMany
     {
         return $this->hasMany(Billing::class);
+    }
+
+    /**
+     * Mendapatkan Billing terbaru milik Customer
+     */
+    public function latestBilling(): HasOne
+    {
+        return $this->hasOne(Billing::class, 'customer_id')->latestOfMany('id');
+    }
+
+    /**
+     * Mendapatkan Receipt terbaru milik Customer (melalui Billing)
+     */
+    public function latestReceipt(): HasOneThrough
+    {
+        return $this->hasOneThrough(
+            Receipt::class,
+            BillingPayment::class,
+            'billing_id',      // Foreign key di tabel billing_payments
+            'billing_payment_id', // Foreign key di tabel receipts (sesuaikan jika id)
+            'id',              // Local key di tabel billings
+            'id'               // Local key di tabel billing_payments
+        )->latestOfMany();
     }
 
     public function user(): BelongsTo
