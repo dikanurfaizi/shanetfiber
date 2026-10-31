@@ -22,6 +22,7 @@ use App\Services\Customers\CustomerServerService;
 use App\Services\Packages\PackageGetService;
 use Carbon\Carbon;
 use App\Helpers\LogHelper;
+use Illuminate\Support\Facades\Gate;
 
 class CustomerTabController extends Controller
 {

@@ -24,7 +24,7 @@ use App\Listeners\Routerboard\SyncCustomerExpiredToMikrotik;
 use App\Listeners\Routerboard\SyncCustomerToMikrotik;
 use App\Listeners\Routerboard\HandleMiikrotikPaymentRequested;
 use App\Listeners\Telegram\SendTelegramCustomerActivationListener;
-use App\Listeners\Telegram\SendTelegramPackageChangesListener;
+// use App\Listeners\Telegram\SendTelegramPackageChangesListener;
 use App\Listeners\Telegram\SendTelegramPayLaterListener;
 use App\Listeners\WhatsApp\SendDirectNotificationListener;
 use App\Listeners\WhatsApp\SendCustomerActivationListener;
@@ -65,7 +65,7 @@ class EventServiceProvider extends ServiceProvider
         ],
         PackageChangesRequest::class => [
             SendPackageChangesListener::class,
-            SendTelegramPackageChangesListener::class
+            // SendTelegramPackageChangesListener::class
         ],
         OrderCreated::class => [
             SendOrderCreatedListener::class,
