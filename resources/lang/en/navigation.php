@@ -101,15 +101,15 @@ return [
         'general' => 'General',
         'servers' => [
             'nav-item' => 'Radius / NAS Servers',
-            'create' => 'Add Server',
-            'index' => 'All Servers',
+            'create' => 'Add Mikrotik',
+            'index' => 'All Mikrotik',
         ],
         'radius' => [
             'provisioning'      => 'Provisioning',
             'section_header'    => 'FreeRADIUS & MikroTik:',
-            'management' => 'RADIUS Management',
+            'management'        => 'RADIUS Mgmt',
             'provisioning_mode' => 'Provisioning Mode',
-            'active_sessions'   => 'RADIUS Active Session'
+            'active_sessions'   => 'RADIUS Monitoring',
         ],
         'routers' => [
             'nav-item' => 'Client Routers',
@@ -120,9 +120,9 @@ return [
             'nav-item' => 'Customers',
         ],
         'users' => [
-            'nav-item' => 'Users / Staff',
-            'create' => 'Add User',
-            'index' => 'All Users',
+            'nav-item' => 'Admins / Staff',
+            'create' => 'Add Admin',
+            'index' => 'All Admins',
         ],
         'roles' => [
             'nav-item' => 'Roles & Perms',
@@ -130,16 +130,16 @@ return [
             'index' => 'All Roles',
         ],
         'telegram' => [
-            'nav-item' => 'Telegram Bot',
-            'gateways' => 'Gateway Settings',
+            'nav-item' => 'Telegram',
+            'gateways' => 'Gateway',
             'chat-ids' => 'Chat IDs',
             'messages' => 'Msg Templates',
         ],
         'whatsapp' => [
-            'nav-item' => 'WhatsApp Gateway',
-            'gateways' => 'Gateway Settings',
+            'nav-item' => 'WhatsApp',
+            'gateways' => 'Gateway',
             'templates' => 'Meta Templates',
-            'messages' => 'Msg Templates',
+            'messages' => 'Gowa Templates',
             'features' => 'Features',
         ],
         'message-events' => [

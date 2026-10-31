@@ -101,15 +101,15 @@ return [
         'general' => 'Umum',
         'servers' => [
             'nav-item' => 'Server Radius / NAS',
-            'create' => 'Tambah Server',
-            'index' => 'Semua Server',
+            'create' => 'Tambah Mikrotik',
+            'index' => 'Semua Mikrotik',
         ],
         'radius' => [
-            'provisioning'      => 'Provisioning',
+            'provisioning'      => 'Provisi',
             'section_header'    => 'FreeRADIUS & MikroTik:',
-            'management' => 'Manajemen RADIUS',
-            'provisioning_mode' => 'Mode Provisioning',
-            'active_sessions'   => 'Sesi Aktif RADIUS'
+            'management'        => 'Manajemen RADIUS',
+            'provisioning_mode' => 'Mode Provisi',
+            'active_sessions'   => 'Monitoring RADIUS',
         ],
         'routers' => [
             'nav-item' => 'Router Klien',
@@ -120,9 +120,9 @@ return [
             'nav-item' => 'Pelanggan',
         ],
         'users' => [
-            'nav-item' => 'Karyawan / User',
-            'create' => 'Tambah User',
-            'index' => 'Semua User',
+            'nav-item' => 'Karyawan / Admin',
+            'create' => 'Tambah Admin',
+            'index' => 'Semua Admin',
         ],
         'roles' => [
             'nav-item' => 'Peran & Izin',
@@ -130,16 +130,16 @@ return [
             'index' => 'Semua Peran',
         ],
         'telegram' => [
-            'nav-item' => 'Telegram Bot',
-            'gateways' => 'Pengaturan Gateway',
+            'nav-item' => 'Telegram',
+            'gateways' => 'Gateway',
             'chat-ids' => 'Chat ID',
             'messages' => 'Template Pesan',
         ],
         'whatsapp' => [
-            'nav-item' => 'WhatsApp Gateway',
-            'gateways' => 'Pengaturan Gateway',
-            'templates' => 'Meta Templates',
-            'messages' => 'Template Pesan',
+            'nav-item' => 'WhatsApp',
+            'gateways' => 'Gateway',
+            'templates' => 'Template Meta',
+            'messages' => 'Template Gowa',
             'features' => 'Fitur',
         ],
         'message-events' => [
