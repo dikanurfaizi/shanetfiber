@@ -1,5 +1,11 @@
 <x-layouts.cpanel.customers.app-layout :title="'Detail Customer'">
 
+    {{-- CDN Leaflet CSS & JS untuk Render Preview Peta --}}
+    @if (!empty($step1['latitude']) && !empty($step1['longitude']))
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    @endif
+
     <div class="card shadow-sm">
         <div class="card-header bg-info text-white">
             <h5 class="mb-0">{{ __('customer.wizard.step.5') }}</h5>
@@ -23,30 +29,53 @@
 
                 // Variabel penampung total biaya seluruh addon
                 $totalAddons = 0;
+
+                // 💡 LOGIKA RENDER MAP PREVIEW UNTUK STEP 1 REVIEW
+                $mapPreviewRow = '';
+                if (!empty($step1['latitude']) && !empty($step1['longitude'])) {
+                    $mapPreviewRow =
+                        "
+                    <tr>
+                        <th>" .
+                        __('customer.wizard.label.coordinates') .
+                        "</th>
+                        <td>{$step1['latitude']}, {$step1['longitude']}</td>
+                    </tr>
+                    <tr>
+                        <th>" .
+                        __('customer.wizard.label.location_map') .
+                        "</th>
+                        <td>
+                            <div id='review-map' style='height: 200px; width: 100%; border-radius: 6px; border: 1px solid #ced4da; z-index: 1;'></div>
+                        </td>
+                    </tr>";
+                }
             @endphp
 
             {{-- ========== 1. CUSTOMER INFORMATION ========== --}}
             {!! renderReviewSection(
                 'customer.wizard.step.customer_profile',
                 "
-                                                                                                                                                                                                    <table class='table table-sm table-bordered mb-0'>
-                                                                                                                                                                                                        <tr><th width='30%'>" .
+                            <table class='table table-sm table-bordered mb-0'>
+                                <tr><th width='30%'>" .
                     __('customer.wizard.label.pic') .
                     "</th> <td>{$step1['user_name']}</td></tr>
-                                                                                                                                                                                                        <tr><th>" .
+                                <tr><th>" .
                     __('customer.wizard.label.name') .
-                    "</th>         <td>{$step1['name']}</td></tr>
-                                                                                                                                                                                                        <tr><th>" .
+                    "</th> <td>{$step1['name']}</td></tr>
+                                <tr><th>" .
                     __('customer.wizard.label.email') .
-                    "</th>        <td>{$step1['email']}</td></tr>
-                                                                                                                                                                                                        <tr><th>" .
+                    "</th> <td>{$step1['email']}</td></tr>
+                                <tr><th>" .
                     __('customer.wizard.label.contact') .
-                    "</th>      <td>{$step1['contact']}</td></tr>
-                                                                                                                                                                                                        <tr><th>" .
+                    "</th> <td>{$step1['contact']}</td></tr>
+                                <tr><th>" .
                     __('customer.wizard.label.address') .
-                    "</th>      <td>{$step1['address']}</td></tr>
-                                                                                                                                                                                                    </table>
-                                                                                                                                                                                                    ",
+                    '</th> <td>' .
+                    ($step1['address'] ?? '-') .
+                    "</td></tr>
+                                {$mapPreviewRow}
+                            </table>",
             ) !!}
 
             {{-- ========== 2. SERVER & INTERNET SERVICE ========== --}}
@@ -70,18 +99,17 @@
             {!! renderReviewSection(
                 'customer.wizard.step.server_configuration',
                 "
-                                                                                                                                                                                                    <table class='table table-sm table-bordered mb-0'>
-                                                                                                                                                                                                        <tr><th width='30%'>" .
+                            <table class='table table-sm table-bordered mb-0'>
+                                <tr><th width='30%'>" .
                     __('customer.wizard.label.server') .
                     "</th> <td>{$step2['mikrotik_name']}</td></tr>
-                                                                                                                                                                                                        <tr><th>" .
+                                <tr><th>" .
                     __('customer.wizard.label.service_type') .
-                    '</th>      <td>' .
+                    '</th> <td>' .
                     strtoupper($step2['internet_service']) .
                     "</td></tr>
-                                                                                                                                                                                                        $serviceRows
-                                                                                                                                                                                                    </table>
-                                                                                                                                                                                                    ",
+                                $serviceRows
+                            </table>",
             ) !!}
 
             {{-- ========== 3. PACKAGE & MEMBERSHIP ========== --}}
@@ -93,47 +121,46 @@
 
                 // Jika pendaftaran menggunakan metode prorate (DAN di atas tanggal 15), bongkar baris rumus detailnya
                 if (isset($step3['is_prorate']) && $step3['is_prorate'] == '1' && ($step3['current_day'] ?? 0) > 15) {
-                    // Hitung estimasi murni tanpa pembulatan untuk visualisasi text
                     $exactProrateRaw = $catalogPrice * ($step3['active_days'] / $step3['total_days']);
 
                     $prorateCalculationRows =
                         "
-        <tr>
-            <th>" .
+                    <tr>
+                        <th>" .
                         __('customer.wizard.label.prorate_formula') .
                         "</th>
-            <td>
-                ({$step3['active_days']} / {$step3['total_days']} " .
+                        <td>
+                            ({$step3['active_days']} / {$step3['total_days']} " .
                         __('customer.wizard.label.day') .
                         ")
 x Rp " .
                         number_format($catalogPrice) .
                         " = 
-                <span class='text-muted'>Rp " .
+                            <span class='text-muted'>Rp " .
                         number_format($exactProrateRaw, 2, ',', '.') .
                         "</span>
-            </td>
-        </tr>
-        <tr>
-            <th>" .
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>" .
                         __('customer.wizard.label.prorate_price_rounded') .
                         "</th>
-            <td><strong>Rp " .
+                        <td><strong>Rp " .
                         number_format($step3['price_before_discount']) .
                         "</strong> <small class='text-muted'>(Kelipatan Rp 500 ke atas)</small></td>
-        </tr>";
+                    </tr>";
                 } else {
                     // Jika bukan prorate (Full Cost), tampilkan baris standar harga penuh sebulan
                     $prorateCalculationRows =
                         "
-        <tr>
-            <th>" .
+                    <tr>
+                        <th>" .
                         __('customer.wizard.label.package_price') .
                         "</th>
-            <td>Rp " .
+                        <td>Rp " .
                         number_format($catalogPrice) .
                         "</td>
-        </tr>";
+                    </tr>";
                 }
             @endphp
 
@@ -172,7 +199,6 @@ x Rp " .
                     "</span></td>
                                 </tr>
                                 
-                                {{-- 💡 Suntik Rumus / Hasil Prorate di sini sebelum dipotong Member --}}
                                 {$prorateCalculationRows}
                                 
                                 <tr>
@@ -208,8 +234,7 @@ x Rp " .
                                         </small>
                                     </td>
                                 </tr>
-                            </table>
-                            ",
+                            </table>",
             ) !!}
 
             {{-- ========== 4. ADDONS ========== --}}
@@ -264,7 +289,7 @@ x Rp " .
 
             {!! renderReviewSection('customer.wizard.step.addons', $addonsHtml) !!}
 
-            {{-- ========== 💡 5. GRAND TOTAL (RINGKASAN AKHIR) ========== --}}
+            {{-- ========== 5. GRAND TOTAL (RINGKASAN AKHIR) ========== --}}
             @php
                 $grandTotalValue = $step3['final_bill_price'] + $totalAddons;
                 $grandTotalHtml =
@@ -283,7 +308,7 @@ x Rp " .
 
         </div>
 
-        <div class="card-footer text-end mt-3">
+        <div class="card-footer text-right mt-3">
             <a href="{{ route('wizard.step4') }}" class="btn btn-secondary">{{ __('customer.wizard.button.back') }}</a>
 
             <form class="d-inline" method="POST" action="{{ route('wizard.process') }}">
@@ -294,5 +319,37 @@ x Rp " .
             </form>
         </div>
     </div>
+
+    {{-- 💡 SCRIPT LEAFLET JS UNTUK INITIALIZE PREVIEW MAP --}}
+    @if (!empty($step1['latitude']) && !empty($step1['longitude']))
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                const lat = parseFloat("{{ $step1['latitude'] }}");
+                const lng = parseFloat("{{ $step1['longitude'] }}");
+
+                // Disable interaktivitas drag/scroll agar peta murni bertindak sebagai preview visual
+                const map = L.map('review-map', {
+                    dragging: false,
+                    touchZoom: false,
+                    scrollWheelZoom: false,
+                    doubleClickZoom: false,
+                    boxZoom: false,
+                    keyboard: false,
+                    zoomControl: false
+                }).setView([lat, lng], 15);
+
+                // Layer OpenStreetMap
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(map);
+
+                // Marker Titik Lokasi Customer
+                L.marker([lat, lng]).addTo(map)
+                    .bindPopup('<b>{{ $step1['name'] }}</b><br>{{ $step1['address'] ?? '' }}')
+                    .openPopup();
+            });
+        </script>
+    @endif
 
 </x-layouts.cpanel.customers.app-layout>

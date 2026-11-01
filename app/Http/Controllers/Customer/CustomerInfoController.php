@@ -20,15 +20,17 @@ class CustomerInfoController extends Controller
         // VALIDATION
         // =========================
         $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
-            'name'    => ['required', 'string', 'max:255'],
-            'email'   => [
+            'user_id'   => ['required', 'exists:users,id'],
+            'name'      => ['required', 'string', 'max:255'],
+            'email'     => [
                 'required',
                 'email',
                 Rule::unique('customers', 'email')->ignore($customer->id),
             ],
-            'address' => ['nullable', 'string', 'max:255'],
-            'contact' => ['nullable', 'string', 'max:30'],
+            'address'   => ['nullable', 'string', 'max:255'],
+            'contact'   => ['nullable', 'string', 'max:30'],
+            'latitude'  => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         // =========================

@@ -24,6 +24,7 @@ class CustomerBasicInfoService
             ]);
 
             $data = [
+                'slug'            => $customer->slug,
                 'customer_id'     => $customer->customer_id,
                 'name'            => $customer->name,
                 'address'         => $customer->address,
@@ -34,7 +35,9 @@ class CustomerBasicInfoService
                 'contact'         => $customer->contact ? $formatter->formatReceiver($customer->contact, 'display', false) : '-',
                 'activation_date' => $customer->activation_date,
                 'is_deleted'      => $customer->trashed(), // Tambahan info jika butuh status delete
-                'customer'        => $customer
+                'user_id'         => $customer->user_id,
+                'longitude'       => $customer->longitude,
+                'latitude'        => $customer->latitude
             ];
 
             LogHelper::logInfo(null, $data, 200, "Detail Customer Data", $traceId);

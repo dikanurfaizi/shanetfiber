@@ -136,7 +136,7 @@
 
             </div>
 
-            <div class="card-footer text-end">
+            <div class="card-footer text-right">
                 <a href="{{ route('wizard.step2') }}"
                     class="btn btn-secondary">{{ __('customer.wizard.button.back') }}</a>
                 <button class="btn btn-primary">{{ __('customer.wizard.button.next_step') }}</button>

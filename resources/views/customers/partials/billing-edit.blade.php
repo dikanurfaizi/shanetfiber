@@ -5,7 +5,7 @@
     @method('PATCH')
 
     <h5 class="mb-3">
-        <i class="fa fa-edit"></i> Edit Billing Configuration
+        <i class="fa fa-edit"></i> {{ __('billing.header.edit') }}
     </h5>
 
     <div class="card border-0 shadow-sm">
@@ -15,9 +15,10 @@
             SELECT PACKAGE
             ======================== --}}
             <div class="form-group mb-3">
-                <label><strong>Package</strong> <span class="text-danger">*</span></label>
+                <label><strong>{{ __('customer.wizard.label.package') }}</strong> <span
+                        class="text-danger">*</span></label>
                 <select name="package_id" id="package-dropdown" class="form-control" required>
-                    <option value="">Select Package</option>
+                    <option value="">{{ __('customer.wizard.placeholder.select_package') }}</option>
                     @foreach ($packages as $package)
                         <option value="{{ $package->id }}" {{ $package->id == $current_package_id ? 'selected' : '' }}>
                             {{ $package->name }} - @moneyIDR($package->price)
@@ -30,7 +31,7 @@
             PACKAGE DURATION
             ======================== --}}
             <div class="form-group mb-3 {{ $current_duration_id ? '' : 'd-none' }}" id="duration-wrapper">
-                <label><strong>Duration</strong></label>
+                <label><strong>{{ __('customer.wizard.label.duration') }}</strong></label>
                 <select name="package_duration_id" id="duration-select" class="form-control">
                     @if ($current_duration)
                         <option value="{{ $current_duration->id }}" selected>
@@ -44,9 +45,9 @@
             MEMBERSHIP
             ======================== --}}
             <div class="form-group mb-3">
-                <label><strong>Membership</strong></label>
+                <label><strong>{{ __('customer.wizard.label.membership') }}</strong></label>
                 <select name="member_id" id="member-dropdown" class="form-control">
-                    <option value="">Non Member</option>
+                    <option value="">{{ __('customer.wizard.placeholder.non_member') }}</option>
                     @foreach ($members as $member)
                         <option value="{{ $member->id }}"
                             {{ $member->id == $current_membership_id ? 'selected' : '' }}>
@@ -62,18 +63,18 @@
             BILLING OPTION
             ======================== --}}
             <div class="form-group mb-3">
-                <label><strong>Billing Option</strong></label><br>
+                <label><strong>{{ __('customer.wizard.label.billing_option') }}</strong></label><br>
 
-                <label class="me-3">
+                <label class="mr-3">
                     <input type="radio" name="billing_option" value="monthly"
                         {{ $billing_option === 'monthly' ? 'checked' : '' }}>
-                    Monthly
+                    {{ __('customer.wizard.label.monthly') }}
                 </label>
 
                 <label>
                     <input type="radio" name="billing_option" value="one_time"
                         {{ $billing_option === 'one_time' ? 'checked' : '' }}>
-                    One-Time Period
+                    {{ __('customer.wizard.label.one_time') }}
                 </label>
             </div>
 
@@ -81,10 +82,10 @@
             BILLING PERIODE
             ======================== --}}
             <div id="periode-wrapper" class="form-group mb-3 {{ $billing_option === 'one_time' ? '' : 'd-none' }}">
-                <label><strong>Select Billing Period</strong></label>
+                <label><strong>{{ __('customer.wizard.label.select_billing_period') }}</strong></label>
                 <select name="billing_periode_name" class="form-control"
                     {{ $billing_option === 'one_time' ? '' : 'disabled' }}>
-                    <option value="">-- Select Period --</option>
+                    <option value="">-- {{ __('customer.wizard.placeholder.select_billing_period') }} --</option>
                     @foreach ($availablePeriodes as $periode)
                         <option value="{{ $periode['name'] }}"
                             {{ $billing_period == $periode['name'] ? 'selected' : '' }}>
@@ -98,7 +99,7 @@
                  DISCOUNT PREVIEW
             ======================== --}}
             <div class="form-group mb-3">
-                <label><strong>Estimated Discount</strong></label>
+                <label><strong>{{ __('customer.wizard.label.discount_applied') }}</strong></label>
 
                 <input type="text" id="discount_display" class="form-control" readonly
                     value="{{ $discountEstimate
@@ -110,23 +111,22 @@
                         : '' }}">
 
                 <small class="text-muted">
-                    * Nilai final dihitung ulang saat billing digenerate
+                    * {{ __('billing.info.recalculate_discount_note') }}
                 </small>
             </div>
 
-
             {{-- =======================
-     ADDONS (DESKTOP)
-======================= --}}
-            <div class="addons-desktop d-none d-md-block">
-                <table class="table table-sm align-middle addons-table">
+            ADDONS (DESKTOP)
+            ======================== --}}
+            <div class="addons-desktop d-none d-md-block mb-3">
+                <table class="table table-sm align-middle addons-table mb-0">
                     <thead class="table-light">
                         <tr>
                             <th width="50"></th>
-                            <th>Addon</th>
-                            <th width="140">Price</th>
-                            <th width="120">Qty</th>
-                            <th width="160">Subtotal</th>
+                            <th>{{ __('customer.wizard.label.addon_name') }}</th>
+                            <th width="140">{{ __('customer.wizard.label.price') }}</th>
+                            <th width="120">{{ __('customer.wizard.label.qty') }}</th>
+                            <th width="160">{{ __('customer.wizard.label.subtotal') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -166,16 +166,16 @@
             </div>
 
             {{-- =======================
-     ADDONS (MOBILE VIEW)
-======================= --}}
-            <div class="addons-mobile d-md-none">
+            ADDONS (MOBILE VIEW)
+            ======================== --}}
+            <div class="addons-mobile d-md-none mb-3">
                 @foreach ($addons as $addon)
                     @php $activeAddon = $activeCustomerAddons->get($addon->id); @endphp
 
                     <div class="addon-card {{ $activeAddon ? 'active' : '' }}" data-addon="{{ $addon->id }}">
 
                         <div class="addon-header">
-                            <label class="addon-check">
+                            <label class="addon-check mb-0">
                                 <input type="checkbox" class="addon-toggle-mirror" {{ $activeAddon ? 'checked' : '' }}>
                                 <span>{{ $addon->name }}</span>
                             </label>
@@ -187,13 +187,13 @@
 
                         <div class="addon-body">
                             <div class="field">
-                                <label>Qty</label>
+                                <label>{{ __('customer.wizard.label.qty') }}</label>
                                 <input type="text" min="1" class="addon-qty-mirror"
                                     value="{{ $activeAddon?->qty ?? 1 }}" {{ $activeAddon ? '' : 'disabled' }}>
                             </div>
 
                             <div class="field">
-                                <label>Subtotal</label>
+                                <label>{{ __('customer.wizard.label.subtotal') }}</label>
                                 <strong class="addon-subtotal-mirror">
                                     Rp {{ number_format($activeAddon?->subtotal ?? 0) }}
                                 </strong>
@@ -205,18 +205,17 @@
 
         </div>
 
-        <div class="card-footer">
-            <div class="d-flex flex-column flex-md-row">
-
-                <button class="btn-soft btn-green w-100 btn-md-shrink px-4 mb-2 mb-md-0 mr-md-2">
-                    <i class="fa fa-save"></i> Save & Regenerate Billing
+        {{-- ACTION BUTTONS --}}
+        <div class="card-footer bg-white border-top-0 pt-0 pb-4">
+            <div class="action-group">
+                <button type="submit" class="btn-soft btn-green mb-2 mb-md-0">
+                    <i class="fa fa-save mr-1"></i> {{ __('billing.button.save_regenerate') }}
                 </button>
 
                 <a href="{{ route('customers.show', [$customer->slug, 'tab' => 'billing']) }}"
-                    class="btn-soft btn-gray w-100 btn-md-shrink px-4 text-center">
-                    Cancel
+                    class="btn-soft btn-gray">
+                    {{ __('billing.button.cancel') }}
                 </a>
-
             </div>
         </div>
 
@@ -225,7 +224,84 @@
 
 @section('custom_styles')
     <style>
-        @media (max-width: 768px) {
+        /* ===== BASE CUSTOM BUTTONS ===== */
+        .btn-soft {
+            border: none;
+            border-radius: 6px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none !important;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            box-sizing: border-box !important;
+            min-height: 44px;
+            line-height: 1.3;
+        }
+
+        .btn-green {
+            background-color: #28a745;
+            color: #ffffff !important;
+        }
+
+        .btn-green:hover {
+            background-color: #218838;
+            box-shadow: 0 3px 8px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-gray {
+            background-color: #6c757d;
+            color: #ffffff !important;
+        }
+
+        .btn-gray:hover {
+            background-color: #5a6268;
+            box-shadow: 0 3px 8px rgba(108, 117, 125, 0.3);
+        }
+
+        /* ===== ACTION GROUP (DESKTOP) ===== */
+        .action-group {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 12px;
+        }
+
+        /* ===== RESPONSIVE MOBILE (BS4 MAX-WIDTH 767.98px) ===== */
+        @media (max-width: 767.98px) {
+            .action-group {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                /* Paksa seluruh child menyamakan lebar full */
+                width: 100% !important;
+            }
+
+            .action-group .btn-soft {
+                display: flex !important;
+                width: 100% !important;
+                /* Paksa tag <a> dan <button> selebar 100% */
+                max-width: 100% !important;
+                justify-content: center !important;
+                align-items: center !important;
+                text-align: center !important;
+                box-sizing: border-box !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                min-height: 44px !important;
+            }
+
+            .action-group .btn-green {
+                margin-bottom: 0.5rem !important;
+                /* Jarak mb-2 antar tombol di mobile */
+            }
+
+            .action-group .btn-gray {
+                margin-bottom: 0 !important;
+            }
 
             /* ========== ADDON MOBILE CARD ========== */
             .addon-card {
@@ -234,6 +310,7 @@
                 padding: 16px 16px 18px;
                 margin-bottom: 14px;
                 background: #fff;
+                text-align: left;
             }
 
             .addon-card:not(.active) {
@@ -262,7 +339,6 @@
                 font-size: 15px;
             }
 
-
             .addon-price {
                 font-size: .85rem;
                 color: #6c757d;
@@ -276,6 +352,7 @@
 
             .addon-body .field {
                 flex: 1;
+                text-align: left;
             }
 
             .addon-body label {
@@ -285,9 +362,9 @@
                 font-size: 12px;
                 letter-spacing: .4px;
                 text-transform: uppercase;
+                text-align: left;
             }
 
-            /* FORCE MATCH AGAINST SB-ADMIN */
             .addons-mobile .addon-card input.addon-qty-mirror[type="number"] {
                 -webkit-appearance: none;
                 appearance: none;
@@ -302,6 +379,7 @@
 
                 background-color: #ffffff !important;
                 box-shadow: inset 0 1px 2px rgba(0, 0, 0, .05);
+                text-align: left;
             }
 
             .addons-mobile .addon-card input.addon-qty-mirror[type="number"]:disabled {
@@ -320,6 +398,7 @@
                 font-size: 16px;
                 font-weight: 800;
                 color: #212529;
+                text-align: left;
             }
 
             .addons-mobile .addon-card .addon-subtotal-mirror::before {
@@ -330,15 +409,6 @@
             .addon-card.active {
                 border-color: #0d6efd;
                 box-shadow: 0 4px 10px rgba(13, 110, 253, .12);
-            }
-        }
-
-        @media (min-width: 768px) {
-            .btn-md-shrink {
-                width: auto !important;
-                flex: 0 0 auto !important;
-                display: inline-flex;
-                align-items: center;
             }
         }
     </style>

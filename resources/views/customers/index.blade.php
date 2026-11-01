@@ -242,21 +242,21 @@
                             <td>
                                 @if (!$customer->activation)
                                     {{-- Belum Aktivasi Awal --}}
-                                    <span class="badge text-white bg-danger">
-                                        <i class="fa fa-times text-warning me-2"></i>
+                                    <span class="badge badge-danger">
+                                        <i class="fa fa-times text-warning mr-2"></i>
                                         {{ __('customer.info.not-activation') }}
                                     </span>
                                 @else
                                     @if ($customer->is_active)
                                         {{-- Status: Aktif / Enabled --}}
-                                        <span class="badge text-white bg-success">
-                                            <i class="fas fa-lock-open me-1"></i>
+                                        <span class="badge badge-success">
+                                            <i class="fas fa-lock-open mr-1"></i>
                                             {{ __('pppoe.secret.enabled') }}
                                         </span>
                                     @else
                                         {{-- Status: Non-Aktif / Disabled --}}
-                                        <span class="badge text-white bg-danger">
-                                            <i class="fas fa-lock me-1"></i>
+                                        <span class="badge badge-danger">
+                                            <i class="fas fa-lock mr-1"></i>
                                             {{ __('pppoe.secret.disabled') }}
                                         </span>
                                     @endif

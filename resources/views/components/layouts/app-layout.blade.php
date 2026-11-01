@@ -106,6 +106,31 @@
     <script src="{{ asset('assets/vendor/datatables/datatables.min.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <!-- Page level custom scripts -->
+    <script>
+        // Polyfill: Bridge Bootstrap 5 data-bs-* attributes for Bootstrap 4
+        $(function() {
+            if (typeof $ !== 'undefined') {
+                $('[data-bs-toggle="tooltip"]').tooltip();
+                $('[data-bs-toggle="popover"]').popover();
+                $(document).on('click', '[data-bs-toggle="modal"]', function(e) {
+                    e.preventDefault();
+                    var target = $(this).attr('data-bs-target') || $(this).attr('href');
+                    if (target) $(target).modal('show');
+                });
+                $(document).on('click', '[data-bs-dismiss="modal"]', function(e) {
+                    e.preventDefault();
+                    $(this).closest('.modal').modal('hide');
+                });
+                $(document).on('click', '[data-bs-toggle="dropdown"]', function(e) {
+                    $(this).dropdown('toggle');
+                });
+                $(document).on('click', '[data-bs-toggle="collapse"]', function(e) {
+                    var target = $(this).attr('data-bs-target') || $(this).attr('href');
+                    if (target) $(target).collapse('toggle');
+                });
+            }
+        });
+    </script>
     @yield('custom_scripts')
     @stack('scripts')
     @if (Session::has('success') || Session::has('error'))

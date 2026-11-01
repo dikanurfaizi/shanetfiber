@@ -35,7 +35,9 @@ use App\Listeners\WhatsApp\SendPaymentCancellationListener;
 use App\Listeners\WhatsApp\SendPaymentSucceededListener;
 use App\Listeners\WhatsApp\SendTelegramBotLinkListener;
 use App\Listeners\WhatsApp\SendWhatsAppTestListener;
+use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
+use App\Observers\CustomerObserver;
 use App\Observers\MikrotikObserver;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
@@ -109,6 +111,7 @@ class EventServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Mikrotik::observe(MikrotikObserver::class);
+        Customer::observe(CustomerObserver::class);
     }
 
     /**

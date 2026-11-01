@@ -2,7 +2,7 @@
 
     <div class="card-header py-3 bg-gradient-primary">
         <h5 class="m-0 font-weight-bold text-white d-flex align-items-center">
-            <i class="fas fa-user me-3" style="font-size: 1.1em"></i>
+            <i class="fas fa-user mr-3" style="font-size: 1.1em"></i>
             <span class="ml-2 text-wrap">{{ __('customer.page.header.profile') }} -
                 {{ auth()->guard('customer')->user()->name }}</span>
         </h5>

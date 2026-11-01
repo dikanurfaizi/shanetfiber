@@ -341,4 +341,12 @@ class Customer extends Authenticatable
     {
         return $this->hasOne(CustomerProvisioningState::class, 'customer_id');
     }
+
+    /**
+     * Relasi satu Customer memiliki banyak riwayat lokasi
+     */
+    public function locationHistories(): HasMany
+    {
+        return $this->hasMany(CustomerLocationHistory::class)->latest();
+    }
 }

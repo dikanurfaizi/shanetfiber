@@ -275,3 +275,136 @@
     border-top: 1px solid rgba(0, 0, 0, 0.05);
     margin: 1rem 1rem;
 }
+
+/* ==========================================================================
+   BOOTSTRAP 4 COMPATIBILITY POLYFILL (FOR BOOTSTRAP 5 UTILITY CLASSES)
+   ========================================================================== */
+
+/* Spacing - Margin End / Right (me-* -> mr-*) */
+.me-0 { margin-right: 0 !important; }
+.me-1 { margin-right: 0.25rem !important; }
+.me-2 { margin-right: 0.5rem !important; }
+.me-3 { margin-right: 1rem !important; }
+.me-4 { margin-right: 1.5rem !important; }
+.me-5 { margin-right: 3rem !important; }
+.me-auto { margin-right: auto !important; }
+
+/* Spacing - Margin Start / Left (ms-* -> ml-*) */
+.ms-0 { margin-left: 0 !important; }
+.ms-1 { margin-left: 0.25rem !important; }
+.ms-2 { margin-left: 0.5rem !important; }
+.ms-3 { margin-left: 1rem !important; }
+.ms-4 { margin-left: 1.5rem !important; }
+.ms-5 { margin-left: 3rem !important; }
+.ms-auto { margin-left: auto !important; }
+
+/* Spacing - Padding End / Right (pe-* -> pr-*) */
+.pe-0 { padding-right: 0 !important; }
+.pe-1 { padding-right: 0.25rem !important; }
+.pe-2 { padding-right: 0.5rem !important; }
+.pe-3 { padding-right: 1rem !important; }
+.pe-4 { padding-right: 1.5rem !important; }
+.pe-5 { padding-right: 3rem !important; }
+
+/* Spacing - Padding Start / Left (ps-* -> pl-*) */
+.ps-0 { padding-left: 0 !important; }
+.ps-1 { padding-left: 0.25rem !important; }
+.ps-2 { padding-left: 0.5rem !important; }
+.ps-3 { padding-left: 1rem !important; }
+.ps-4 { padding-left: 1.5rem !important; }
+.ps-5 { padding-left: 3rem !important; }
+
+/* Text Alignment (text-start/text-end -> text-left/text-right) */
+.text-start { text-align: left !important; }
+.text-end { text-align: right !important; }
+@media (min-width: 576px) {
+    .text-sm-start { text-align: left !important; }
+    .text-sm-end { text-align: right !important; }
+}
+@media (min-width: 768px) {
+    .text-md-start { text-align: left !important; }
+    .text-md-end { text-align: right !important; }
+}
+@media (min-width: 992px) {
+    .text-lg-start { text-align: left !important; }
+    .text-lg-end { text-align: right !important; }
+}
+
+/* Floats (float-start/float-end -> float-left/float-right) */
+.float-start { float: left !important; }
+.float-end { float: right !important; }
+
+/* Flex Gap Utilities */
+.gap-0 { gap: 0 !important; }
+.gap-1 { gap: 0.25rem !important; }
+.gap-2 { gap: 0.5rem !important; }
+.gap-3 { gap: 1rem !important; }
+.gap-4 { gap: 1.5rem !important; }
+.gap-5 { gap: 3rem !important; }
+.row-gap-1 { row-gap: 0.25rem !important; }
+.row-gap-2 { row-gap: 0.5rem !important; }
+.row-gap-3 { row-gap: 1rem !important; }
+.column-gap-1 { column-gap: 0.25rem !important; }
+.column-gap-2 { column-gap: 0.5rem !important; }
+.column-gap-3 { column-gap: 1rem !important; }
+
+/* Form Label & Select */
+.form-label {
+    margin-bottom: 0.5rem;
+    display: inline-block;
+}
+.form-select {
+    display: block;
+    width: 100%;
+    padding: .375rem 1.75rem .375rem .75rem;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #495057;
+    vertical-align: middle;
+    background: #fff url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='4' height='5' viewBox='0 0 4 5'%3e%3cpath fill='%23343a40' d='M2 0L0 2h4zm0 5L0 3h4z'/%3e%3c/svg%3e") right .75rem center/8px 10px no-repeat;
+    border: 1px solid #ced4da;
+    border-radius: .25rem;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+.form-select-sm {
+    padding-top: .25rem;
+    padding-bottom: .25rem;
+    padding-left: .5rem;
+    font-size: .875rem;
+}
+
+/* Modal Close Button (.btn-close -> .close) */
+.btn-close {
+    box-sizing: content-box;
+    width: 1em;
+    height: 1em;
+    padding: .25em .25em;
+    color: #000;
+    background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3e%3cpath d='M.293.293a1 1 0 011.414 0L8 6.586 14.293.293a1 1 0 111.414 1.414L9.414 8l6.293 6.293a1 1 0 01-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 01-1.414-1.414L6.586 8 .293 1.707a1 1 0 010-1.414z'/%3e%3c/svg%3e") center/1em auto no-repeat;
+    border: 0;
+    border-radius: .25rem;
+    opacity: .5;
+    cursor: pointer;
+}
+.btn-close:hover {
+    opacity: .75;
+}
+
+/* Badges with bg-* utility support */
+.badge.bg-primary { background-color: #4e73df !important; color: #fff !important; }
+.badge.bg-secondary { background-color: #858796 !important; color: #fff !important; }
+.badge.bg-success { background-color: #1cc88a !important; color: #fff !important; }
+.badge.bg-info { background-color: #36b9cc !important; color: #fff !important; }
+.badge.bg-warning { background-color: #f6c23e !important; color: #212529 !important; }
+.badge.bg-danger { background-color: #e74a3b !important; color: #fff !important; }
+.badge.bg-light { background-color: #f8f9fc !important; color: #3a3b45 !important; }
+.badge.bg-dark { background-color: #5a5c69 !important; color: #fff !important; }
+
+/* Rounded Helpers */
+.rounded-start { border-bottom-left-radius: .25rem !important; border-top-left-radius: .25rem !important; }
+.rounded-end { border-bottom-right-radius: .25rem !important; border-top-right-radius: .25rem !important; }
+.rounded-top { border-top-left-radius: .25rem !important; border-top-right-radius: .25rem !important; }
+.rounded-bottom { border-bottom-left-radius: .25rem !important; border-bottom-right-radius: .25rem !important; }

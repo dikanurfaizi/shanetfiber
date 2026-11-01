@@ -237,8 +237,8 @@
                             </td>
 
                             <td>
-                                <span class="badge bg-dark text-white">
-                                    <i class="fas fa-trash-alt me-1"></i>
+                                <span class="badge badge-dark">
+                                    <i class="fas fa-trash-alt mr-1"></i>
                                     {{ __('customer.info.deleted') ?? 'Deleted' }}
                                 </span>
                             </td>
@@ -249,7 +249,7 @@
                                             <li>
                                                 <a class="dropdown-item"
                                                     href="{{ route('customers.restore.preview', $customer->slug) }}">
-                                                    <i class="fas fa-undo-alt me-2 text-success"></i>
+                                                    <i class="fas fa-undo-alt mr-2 text-success"></i>
                                                     {{ __('customer.action.restore') }}
                                                 </a>
                                             </li>
@@ -263,7 +263,7 @@
                                                     @method('DELETE') {{-- spoofing DELETE method --}}
                                                     <a href="#" class="dropdown-item text-danger"
                                                         onclick="event.preventDefault(); this.closest('form').submit();">
-                                                        <i class="fas fa-trash-alt me-2 text-danger"></i>
+                                                        <i class="fas fa-trash-alt mr-2 text-danger"></i>
                                                         {{ __('customer.action.force-delete') }}
                                                     </a>
                                                 </form>
@@ -293,7 +293,7 @@
                             </span>
                             @if (!$customer->activation)
                                 <span class="custom-badge text-white bg-danger">
-                                    <i class="fa fa-times text-white me-2"></i>
+                                    <i class="fa fa-times text-white mr-2"></i>
                                     {{ __('customer.info.not-activation') }}
                                 </span>
                             @else
@@ -335,7 +335,7 @@
                             <small class="text-muted text-truncate" style="max-width: 60%;">
                                 {{ $customer->contact }}
                             </small>
-                            <small class="fw-semibold">
+                            <small class="font-weight-bold">
                                 @moneyIDR(optional($customer->last_package)->price - optional($customer->customerMembership)->discount_value)
                             </small>
                         </div>
@@ -353,15 +353,15 @@
                             <small class="text-muted">{{ $customer->user?->name ?? 'No Admin' }}</small>
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button"
-                                    id="dropdownMenuButton" data-bs-toggle="dropdown">
+                                    id="dropdownMenuButton" data-toggle="dropdown" data-bs-toggle="dropdown">
                                     ⋮
                                 </button>
-                                <div class="dropdown-menu dropdown-menu-end">
+                                <div class="dropdown-menu dropdown-menu-right dropdown-menu-end">
                                     @can('view-deleted-customer')
                                         <li>
                                             <a class="dropdown-item"
                                                 href="{{ route('customers.restore.preview', $customer->slug) }}">
-                                                <i class="fas fa-undo-alt me-2 text-success"></i>
+                                                <i class="fas fa-undo-alt mr-2 text-success"></i>
                                                 {{ __('customer.action.restore') }}
                                             </a>
                                         </li>
@@ -375,7 +375,7 @@
                                             @method('DELETE') {{-- spoofing DELETE method --}}
                                             <a href="#" class="dropdown-item text-danger"
                                                 onclick="event.preventDefault(); this.closest('form').submit();">
-                                                <i class="fas fa-trash-alt me-2 text-danger"></i>
+                                                <i class="fas fa-trash-alt mr-2 text-danger"></i>
                                                 {{ __('customer.action.force-delete') }}
                                             </a>
                                         </form>

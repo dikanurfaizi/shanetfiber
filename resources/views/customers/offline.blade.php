@@ -64,7 +64,7 @@
                                     @can('customer-list')
                                         <li>
                                             <a class="dropdown-item" href="{{ route('customers.show', $customer->slug) }}">
-                                                <i class="far fa-eye me-2 text-success"></i>
+                                                <i class="far fa-eye mr-2 text-success"></i>
                                                 {{ __('customer.action.view') }}
                                             </a>
                                         </li>
@@ -72,7 +72,7 @@
                                     @can('customer-edit')
                                         <li>
                                             <a class="dropdown-item" href="{{ route('customers.edit', $customer->slug) }}">
-                                                <i class="far fa-edit me-2 text-success"></i>
+                                                <i class="far fa-edit mr-2 text-success"></i>
                                                 {{ __('customer.action.edit') }}
                                             </a>
                                         </li>
@@ -84,7 +84,7 @@
                                                     @method('put')
                                                     <a class="dropdown-item" href="#"
                                                         onclick="event.preventDefault(); this.closest('form').submit();">
-                                                        <i class="fa fa-check me-2 text-success"></i>
+                                                        <i class="fa fa-check mr-2 text-success"></i>
                                                         {{ __('pppoe.secret.enable') }}
                                                     </a>
                                                 </form>
@@ -95,7 +95,7 @@
                                                     @method('put')
                                                     <a class="dropdown-item" href="#"
                                                         onclick="event.preventDefault(); this.closest('form').submit();">
-                                                        <i class="fa fa-times text-warning me-2"></i>
+                                                        <i class="fa fa-times text-warning mr-2"></i>
                                                         {{ __('pppoe.secret.disable') }}
                                                     </a>
                                                 </form>
@@ -105,7 +105,7 @@
                                     @can('customer-delete')
                                         <li>
                                             <a class="dropdown-item" href="{{ route('customers.delete', $customer->slug) }}"><i
-                                                    class="fa fa-trash me-2 text-danger"></i>&nbsp{{ __('customer.action.delete') }}</a>
+                                                    class="fa fa-trash mr-2 text-danger"></i>&nbsp{{ __('customer.action.delete') }}</a>
                                         </li>
                                     @endcan
                                 </x-drop-down-action>

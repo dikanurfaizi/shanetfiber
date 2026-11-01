@@ -35,146 +35,240 @@ class CustomerCreateService
     {
         $timer = new ExecutionTimer();
 
-        return DB::transaction(function () use ($data, $traceId, &$timer) {
+        LogHelper::logInfo(
+            null,
+            [
+                'email'            => $data['email'] ?? null,
+                'contact'          => $data['contact'] ?? null,
+                'mikrotik_id'      => $data['mikrotik_id'] ?? null,
+                'internet_service' => $data['internet_service'] ?? null,
+                'has_coordinates'  => !empty($data['latitude']) && !empty($data['longitude']),
+            ],
+            200,
+            'Starting Customer Creation Process',
+            $traceId,
+            $timer->lap()
+        );
 
-            /** ----------------------------------------------------
-             * 1. Password Fallback
-             * ---------------------------------------------------- */
-            if (empty($data['password']) || trim($data['password']) === '') {
-                $data['password'] = '12345678';
-            }
+        try {
+            return DB::transaction(function () use ($data, $traceId, &$timer) {
 
-            /** ----------------------------------------------------
-             * 2. Create Customer
-             * ---------------------------------------------------- */
-            $customerData = $this->prepareCustomerData($data, $traceId);
-            $customer = Customer::create($customerData);
-
-            /** ----------------------------------------------------
-             * 3. Generate Customer ID
-             * ---------------------------------------------------- */
-            $websystem = Websystem::where('slug', 'websystem')->firstOrFail();
-            $longCode = sprintf('%%0%dd', $websystem->long_customer_code);
-            $customerId = sprintf(
-                '%s%02d-%s',
-                $websystem->customer_code,
-                $data['mikrotik_id'],
-                sprintf($longCode, $customer->id)
-            );
-            $customer->update(['customer_id' => $customerId]);
-
-            /** ----------------------------------------------------
-             * 4. Create ONT
-             * ---------------------------------------------------- */
-            CustomerOnt::create(['customer_id' => $customer->id]);
-
-            /** ----------------------------------------------------
-             * 4.5 Create Customer Membership (if member selected)
-             * ---------------------------------------------------- */
-            if (!empty($data['member_id'])) {
-                [$startDate, $endDate] = $this->resolveMembershipDates($data);
-                CustomerMembership::create([
-                    'customer_id'   => $customer->id,
-                    'membership_id' => $data['member_id'],
-                    'start_date'    => $startDate,
-                    'end_date'      => $endDate,
-                    'is_active'     => 1,
-                ]);
-            }
-
-            /** ----------------------------------------------------
-             * 5. Fetch Duration + Package
-             * ---------------------------------------------------- */
-            $packageDuration = PackageDuration::with(['duration', 'package'])
-                ->findOrFail($data['package_duration_id']);
-
-            /** ----------------------------------------------------
-             * 6. Calculate Pricing (💡 Panggilan Satu Pintu via Helper)
-             * ---------------------------------------------------- */
-            $pricing = SubscriptionPricingCalculator::calculateSubscriptionPrice(
-                packageDuration: $packageDuration,
-                isProrateInput: $data['is_prorate'] ?? 0
-            );
-
-            /** ----------------------------------------------------
-             * 7. Create Customer Subscription
-             * ---------------------------------------------------- */
-            $months = $packageDuration->duration->duration_months ?? 1;
-            $subscriptionEndDate = now()->addMonths($months)->day(15);
-
-            $subscription = CustomerSubscription::create([
-                'customer_id'          => $customer->id,
-                'package_id'           => $packageDuration->package_id,
-                'package_duration_id'  => $packageDuration->id,
-                'status'               => 'active',
-                'start_date'           => now(),
-                'end_date'             => $subscriptionEndDate,
-                'price_final'          => $pricing['subscription_price'],      // Harga bersih (Paket - Diskon Durasi + Prorate)
-                'discount_type_final'  => $pricing['duration_discount_type'],  // Diskon durasi paket saja
-                'discount_value_final' => $pricing['duration_discount_value'],
-                'is_prorated'          => $pricing['is_prorated'],
-            ]);
-
-            /** ----------------------------------------------------
-             * 8. Ambil Billing Periode Aktif
-             * ---------------------------------------------------- */
-            $now = now();
-            $billingPeriode = BillingPeriode::where('year', $now->year)
-                ->where('month', $now->format('F'))
-                ->firstOrFail();
-
-            /** ----------------------------------------------------
-             * 9. Create Billing Subscription Periode
-             * ---------------------------------------------------- */
-            $subscriptionPeriod = BillingSubscriptionPeriode::create([
-                'customer_subscription_id' => $subscription->id,
-                'billing_periode_id'       => $billingPeriode->id,
-                'status'                   => 'active',
-            ]);
-
-            /** ----------------------------------------------------
-             * 10. Create Customer Addons (if provided)
-             * ---------------------------------------------------- */
-            if (!empty($data['addons'])) {
-                foreach ($data['addons'] as $addon) {
-                    $subtotal = ($addon['qty'] ?? 1) * $addon['unit_price'];
-                    CustomerAddon::create([
-                        'slug'        => Str::uuid(),
-                        'customer_id' => $customer->id,
-                        'addon_id'    => $addon['id'],
-                        'qty'         => $addon['qty'] ?? 1,
-                        'unit_price'  => $addon['unit_price'],
-                        'subtotal'    => $subtotal,
-                        'start_date'  => now(),
-                        'end_date'    => null,
-                        'is_active'   => 1,
-                    ]);
+                /** ----------------------------------------------------
+                 * 1. Password Fallback
+                 * ---------------------------------------------------- */
+                if (empty($data['password']) || trim($data['password']) === '') {
+                    $data['password'] = '12345678';
                 }
-            }
 
-            /** ----------------------------------------------------
-             * 11. Create Initial Billing
-             * ---------------------------------------------------- */
-            $this->billingCreateService->createBilling(
-                $websystem,
-                $customer,
-                $subscriptionPeriod,
-                $billingPeriode,
-                $subscription,
+                /** ----------------------------------------------------
+                 * 2. Create Customer (Termasuk Latitude & Longitude)
+                 * ---------------------------------------------------- */
+                $customerData = $this->prepareCustomerData($data, $traceId);
+                $customer = Customer::create($customerData);
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id'   => $customer->id,
+                        'name'          => $customer->name,
+                        'email'         => $customer->email,
+                        'has_latitude'  => !is_null($customer->latitude),
+                        'has_longitude' => !is_null($customer->longitude),
+                    ],
+                    201,
+                    'Customer Entity Created',
+                    $traceId,
+                    $timer->lap()
+                );
+
+                /** ----------------------------------------------------
+                 * 3. Generate Customer ID
+                 * ---------------------------------------------------- */
+                $websystem = Websystem::where('slug', 'websystem')->firstOrFail();
+                $longCode = sprintf('%%0%dd', $websystem->long_customer_code);
+                $customerId = sprintf(
+                    '%s%02d-%s',
+                    $websystem->customer_code,
+                    $data['mikrotik_id'],
+                    sprintf($longCode, $customer->id)
+                );
+                $customer->update(['customer_id' => $customerId]);
+
+                /** ----------------------------------------------------
+                 * 4. Create ONT
+                 * ---------------------------------------------------- */
+                CustomerOnt::create(['customer_id' => $customer->id]);
+
+                /** ----------------------------------------------------
+                 * 4.5 Create Customer Membership (if member selected)
+                 * ---------------------------------------------------- */
+                if (!empty($data['member_id'])) {
+                    [$startDate, $endDate] = $this->resolveMembershipDates($data);
+                    CustomerMembership::create([
+                        'customer_id'   => $customer->id,
+                        'membership_id' => $data['member_id'],
+                        'start_date'    => $startDate,
+                        'end_date'      => $endDate,
+                        'is_active'     => 1,
+                    ]);
+
+                    LogHelper::logInfo(
+                        null,
+                        [
+                            'customer_id'   => $customer->id,
+                            'membership_id' => $data['member_id'],
+                            'start_date'    => $startDate,
+                            'end_date'      => $endDate,
+                        ],
+                        201,
+                        'Customer Membership Assigned',
+                        $traceId,
+                        $timer->lap()
+                    );
+                }
+
+                /** ----------------------------------------------------
+                 * 5. Fetch Duration + Package
+                 * ---------------------------------------------------- */
+                $packageDuration = PackageDuration::with(['duration', 'package'])
+                    ->findOrFail($data['package_duration_id']);
+
+                /** ----------------------------------------------------
+                 * 6. Calculate Pricing (💡 Panggilan Satu Pintu via Helper)
+                 * ---------------------------------------------------- */
+                $pricing = SubscriptionPricingCalculator::calculateSubscriptionPrice(
+                    packageDuration: $packageDuration,
+                    isProrateInput: $data['is_prorate'] ?? 0
+                );
+
+                /** ----------------------------------------------------
+                 * 7. Create Customer Subscription
+                 * ---------------------------------------------------- */
+                $months = $packageDuration->duration->duration_months ?? 1;
+                $subscriptionEndDate = now()->addMonths($months)->day(15);
+
+                $subscription = CustomerSubscription::create([
+                    'customer_id'          => $customer->id,
+                    'package_id'           => $packageDuration->package_id,
+                    'package_duration_id'  => $packageDuration->id,
+                    'status'               => 'active',
+                    'start_date'           => now(),
+                    'end_date'             => $subscriptionEndDate,
+                    'price_final'          => $pricing['subscription_price'],      // Harga bersih (Paket - Diskon Durasi + Prorate)
+                    'discount_type_final'  => $pricing['duration_discount_type'],  // Diskon durasi paket saja
+                    'discount_value_final' => $pricing['duration_discount_value'],
+                    'is_prorated'          => $pricing['is_prorated'],
+                ]);
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id'         => $customer->id,
+                        'subscription_id'     => $subscription->id,
+                        'package_id'          => $packageDuration->package_id,
+                        'price_final'         => $pricing['subscription_price'],
+                        'is_prorated'         => $pricing['is_prorated'],
+                    ],
+                    201,
+                    'Customer Subscription Created',
+                    $traceId,
+                    $timer->lap()
+                );
+
+                /** ----------------------------------------------------
+                 * 8. Ambil Billing Periode Aktif
+                 * ---------------------------------------------------- */
+                $now = now();
+                $billingPeriode = BillingPeriode::where('year', $now->year)
+                    ->where('month', $now->format('F'))
+                    ->firstOrFail();
+
+                /** ----------------------------------------------------
+                 * 9. Create Billing Subscription Periode
+                 * ---------------------------------------------------- */
+                $subscriptionPeriod = BillingSubscriptionPeriode::create([
+                    'customer_subscription_id' => $subscription->id,
+                    'billing_periode_id'       => $billingPeriode->id,
+                    'status'                   => 'active',
+                ]);
+
+                /** ----------------------------------------------------
+                 * 10. Create Customer Addons (if provided)
+                 * ---------------------------------------------------- */
+                if (!empty($data['addons'])) {
+                    foreach ($data['addons'] as $addon) {
+                        $subtotal = ($addon['qty'] ?? 1) * $addon['unit_price'];
+                        CustomerAddon::create([
+                            'slug'        => Str::uuid(),
+                            'customer_id' => $customer->id,
+                            'addon_id'    => $addon['id'],
+                            'qty'         => $addon['qty'] ?? 1,
+                            'unit_price'  => $addon['unit_price'],
+                            'subtotal'    => $subtotal,
+                            'start_date'  => now(),
+                            'end_date'    => null,
+                            'is_active'   => 1,
+                        ]);
+                    }
+
+                    LogHelper::logInfo(
+                        null,
+                        [
+                            'customer_id'  => $customer->id,
+                            'addon_count'  => count($data['addons']),
+                        ],
+                        201,
+                        'Customer Addons Attached',
+                        $traceId,
+                        $timer->lap()
+                    );
+                }
+
+                /** ----------------------------------------------------
+                 * 11. Create Initial Billing
+                 * ---------------------------------------------------- */
+                $this->billingCreateService->createBilling(
+                    $websystem,
+                    $customer,
+                    $subscriptionPeriod,
+                    $billingPeriode,
+                    $subscription,
+                    $traceId
+                );
+
+                LogHelper::logInfo(
+                    null,
+                    [
+                        'customer_id'   => $customer->id,
+                        'customer_code' => $customerId,
+                    ],
+                    201,
+                    'Customer created successfully',
+                    $traceId,
+                    $timer->lap()
+                );
+
+                return $customer;
+            });
+        } catch (\Throwable $e) {
+            LogHelper::logError(
+                null,
+                [
+                    'exception' => [
+                        'message' => $e->getMessage(),
+                        'code'    => $e->getCode(),
+                        'file'    => $e->getFile(),
+                        'line'    => $e->getLine()
+                    ],
+                    'customer_name' => $data['name'] ?? null,
+                    'email'         => $data['email'] ?? null,
+                ],
+                500,
+                'Failed to create customer record',
                 $traceId
             );
-
-            LogHelper::logInfo(
-                null,
-                ['customer_id' => $customer->id],
-                201,
-                'Customer created successfully',
-                $traceId,
-                $timer->lap()
-            );
-
-            return $customer;
-        });
+            throw $e;
+        }
     }
 
     private function prepareCustomerData(array $data, string $traceId): array
@@ -183,19 +277,21 @@ class CustomerCreateService
         $creds = $this->generateCredential($data['name'], $traceId);
 
         return $this->addServiceSpecificData([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'slug' => Str::slug(explode(' ', $data['name'])[0] . '-' . Str::random(6)),
-            'password' => Hash::make($data['password']),
-            'address' => $data['address'],
-            'contact' => $formatter->formatReceiver($data['contact'], null, false),
+            'name'             => $data['name'],
+            'email'            => $data['email'],
+            'slug'             => Str::slug(explode(' ', $data['name'])[0] . '-' . Str::random(6)),
+            'password'         => Hash::make($data['password']),
+            'address'          => $data['address'] ?? null,
+            'latitude'         => $data['latitude'] ?? null,  // 💡 Penambahan kolom Latitude
+            'longitude'        => $data['longitude'] ?? null, // 💡 Penambahan kolom Longitude
+            'contact'          => $formatter->formatReceiver($data['contact'], null, false),
             'internet_service' => $data['internet_service'],
-            'primary_server' => $data['mikrotik_id'],
-            'mikrotik_id' => $data['mikrotik_id'],
-            'username' => $creds['username'],
-            'user_id' => $data['user_id'],
-            'is_active' => true,
-            'activation' => false
+            'primary_server'   => $data['mikrotik_id'],
+            'mikrotik_id'      => $data['mikrotik_id'],
+            'username'         => $creds['username'],
+            'user_id'          => $data['user_id'],
+            'is_active'        => true,
+            'activation'       => false
 
         ], $data, $creds, $traceId);
     }
@@ -208,9 +304,9 @@ class CustomerCreateService
         } elseif ($requestData['internet_service'] === 'ip_static') {
             $customerData += [
                 'simpleque_name' => $creds['username'],
-                'ip_static' => $requestData['ip_static'],
-                'mac_address' => $requestData['mac_address'],
-                'interface' => $requestData['interface']
+                'ip_static'      => $requestData['ip_static'],
+                'mac_address'    => $requestData['mac_address'],
+                'interface'      => $requestData['interface']
             ];
         }
 
@@ -238,9 +334,9 @@ class CustomerCreateService
                 [
                     'exception' => [
                         'message' => $e->getMessage(),
-                        'code' => $e->getCode(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'code'    => $e->getCode(),
+                        'file'    => $e->getFile(),
+                        'line'    => $e->getLine()
                     ],
                     'name' => $name
                 ],

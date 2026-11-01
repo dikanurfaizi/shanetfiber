@@ -35,8 +35,8 @@
                 </div>
             </div>
 
-            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#loginModal">
-                <i class="fas fa-sign-in-alt me-2"></i> {{ __('auth.login') }}
+            <button class="btn btn-outline-primary" data-toggle="modal" data-target="#loginModal" data-bs-toggle="modal" data-bs-target="#loginModal">
+                <i class="fas fa-sign-in-alt mr-2"></i> {{ __('auth.login') }}
             </button>
         </div>
     </nav>
@@ -333,8 +333,8 @@
                     <button type="submit" class="btn btn-primary w-100">Login</button>
 
                     <!-- Forgot Password trigger -->
-                    <div class="mt-2 text-end">
-                        <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
+                    <div class="mt-2 text-right">
+                        <a href="javascript:void(0)" data-toggle="modal" data-target="#forgotPasswordModal" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
                             {{ __('Forgot Your Password?') }}
                         </a>
                     </div>
@@ -349,7 +349,9 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Lupa Password</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="close btn-close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
                 <div class="modal-body">
 

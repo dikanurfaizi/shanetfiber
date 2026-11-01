@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
+use App\Helpers\LogHelper;
 use App\Models\Billings\BillingPeriode;
 use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerAddon;
@@ -15,14 +16,13 @@ use App\Models\User;
 use App\Services\Billings\BillingItemService;
 use App\Services\Customers\CustomerBasicInfoService;
 use App\Services\Customers\CustomerBillingInfoService;
-use Illuminate\Support\Str;
 use App\Services\Customers\CustomerMembershipService;
 use App\Services\Customers\CustomerOntService;
 use App\Services\Customers\CustomerServerService;
 use App\Services\Packages\PackageGetService;
 use Carbon\Carbon;
-use App\Helpers\LogHelper;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 
 class CustomerTabController extends Controller
 {
@@ -44,7 +44,8 @@ class CustomerTabController extends Controller
         // 2. Masukkan object $customerModel ke service
         $data = $service->getCustomerBasicInfo($customerModel, $traceId);
 
-        $data['isEdit'] = request()->boolean('edit') && auth()->user()->can('customer-edit');
+        // 💡 Cek permission via Gate Facade dengan menyertakan model Customer agar terikat ke CustomerPolicy
+        $data['isEdit'] = request()->boolean('edit') && Gate::allows('customer-edit', $customerModel);
 
         $data['users'] = User::query()
             ->select('id', 'name')
@@ -155,6 +156,9 @@ class CustomerTabController extends Controller
             'load_time_ms'          => round((microtime(true) - $startTime) * 1000, 2)
         ], 200, "[Customer Tab] Billing tab data compiled", $traceId);
 
+        // 💡 SOLUSI IDE: Cek permission via Gate Facade agar bebas dari error static analyzer
+        $canEditBilling = request()->boolean('edit') && Gate::allows('billing-edit', $customer);
+
         return view('customers.tabs.billing', [
             ...$billingInfo,
             ...$membershipInfo,
@@ -165,18 +169,17 @@ class CustomerTabController extends Controller
             'members'  => $members,
             'availablePeriodes' => $availablePeriodes,
 
-            'current_package_id'     => $activeSubscription?->package_id,
-            'current_duration_id'    => $activeSubscription?->package_duration_id,
-            'current_duration'       => $currentDuration,
-            'current_membership_id'  => $activeMembership?->membership_id,
-            'billing_option'         => $billingOption,
-            'billing_period'         => $billingPeriod,
-            'addons'                 => $addons,
-            'activeCustomerAddons'   => $activeCustomerAddons,
-            'discountEstimate'       => $discountEstimate,
+            'current_package_id'    => $activeSubscription?->package_id,
+            'current_duration_id'   => $activeSubscription?->package_duration_id,
+            'current_duration'      => $currentDuration,
+            'current_membership_id' => $activeMembership?->membership_id,
+            'billing_option'        => $billingOption,
+            'billing_period'        => $billingPeriod,
+            'addons'                => $addons,
+            'activeCustomerAddons'  => $activeCustomerAddons,
+            'discountEstimate'      => $discountEstimate,
 
-            'isEdit' => request()->boolean('edit')
-                && auth()->user()->can('billing-edit', $customer),
+            'isEdit' => $canEditBilling,
 
             'periodes' => $last->name,
         ]);
@@ -193,8 +196,10 @@ class CustomerTabController extends Controller
 
         $data = $service->getServerData($customer, $traceId);
 
-        $data['package_profile'] = $customer->activeSubscription->package->profile ?? null;
-        $data['package_name']    = $customer->activeSubscription->package->name ?? null;
+        // 💡 Safe null-coalescing untuk menghindari IDE undefined property warning
+        $package = $customer->activeSubscription?->package;
+        $data['package_profile'] = $package?->profile;
+        $data['package_name']    = $package?->name;
 
         LogHelper::logInfo(null, [
             'customer_id'     => $customer->id,

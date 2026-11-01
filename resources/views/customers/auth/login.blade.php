@@ -67,7 +67,7 @@
 
                 <!-- Forgot -->
                 <div class="text-center mt-3">
-                    <a href="#" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
+                    <a href="#" data-toggle="modal" data-target="#forgotPasswordModal" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
                         Lupa Password?
                     </a>
                 </div>

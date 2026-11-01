@@ -46,7 +46,7 @@
                         @endif
                     </div>
 
-                    <div class="col-md-3 text-end">
+                    <div class="col-md-3 text-right">
                         <label class="d-block">&nbsp;</label> {{-- Spasi untuk sejajarkan tombol --}}
                         <button type="submit" name="action" value="change_package"
                             class="btn btn-sm btn-success w-100">
@@ -225,7 +225,7 @@
                 </div>
 
                 <div class="row align-items-center mb-3">
-                    <div class="col-md-6 text-end">
+                    <div class="col-md-6 text-right">
                         <label for="activation_date"
                             class="form-label"><strong>{{ __('customer.label.activation-date') }}</strong></label>
                     </div>

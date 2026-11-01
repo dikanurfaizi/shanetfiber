@@ -7,12 +7,12 @@
         ======================== --}}
         <div class="card-header py-3 d-flex justify-content-between align-items-center bg-white border-bottom-0">
             <h5 class="m-0 font-weight-bold text-warning">
-                <i class="fas fa-undo-alt me-1"></i>
+                <i class="fas fa-undo-alt mr-1"></i>
                 Restore & Billing Configuration
             </h5>
 
             <a href="{{ route('customers.trashed') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                <i class="fa fa-arrow-left me-1"></i> Back
+                <i class="fa fa-arrow-left mr-1"></i> Back
             </a>
         </div>
 
@@ -95,9 +95,9 @@
 
                         {{-- BILLING OPTION --}}
                         <div class="form-group mb-3">
-                            <label class="fw-semibold">Billing Option</label><br>
+                            <label class="font-weight-bold">Billing Option</label><br>
 
-                            <label class="me-3">
+                            <label class="mr-3">
                                 <input type="radio" name="billing_option" value="monthly"
                                     {{ $billing_option === 'monthly' ? 'checked' : '' }}>
                                 Monthly
@@ -149,8 +149,8 @@
                 ======================== --}}
                 <hr class="my-4">
 
-                <h6 class="fw-bold text-secondary mb-3">
-                    <i class="fas fa-puzzle-piece me-1"></i>
+                <h6 class="font-weight-bold text-secondary mb-3">
+                    <i class="fas fa-puzzle-piece mr-1"></i>
                     Add-on Services
                 </h6>
 

@@ -3,35 +3,38 @@
     <div style="overflow-x:auto;">
         <table class="table table-borderless no-footer">
             <tr>
-                <td><strong>Total Bill</strong></td>
+                <td><strong>{{ __('billing.label.total-bill') }}</strong></td>
                 <td>: @moneyIDR($totalAmount)</td>
 
-                <td><strong>Unpaid Amount</strong></td>
+                <td><strong>{{ __('customer.label.not-yet-paid') }}</strong></td>
                 <td>: @moneyIDR($notYetPaid)</td>
             </tr>
             <tr>
-                <td><strong>Last Payment Paid</strong></td>
+                <td><strong>{{ __('customer.label.last-payment') }}</strong></td>
                 <td>: @moneyIDR($lastPayment)</td>
 
-                <td><strong>Last Payment Date</strong></td>
+                <td><strong>{{ __('customer.table.last-logged-out') === 'Logout Terakhir' ? 'Tanggal Pembayaran' : 'Payment Date' }}</strong>
+                </td>
                 <td>:
-                    {{ $lastPaymentTime ? \Carbon\Carbon::parse($lastPaymentTime)->format('d F Y') : 'No Payment' }}
+                    {{ $lastPaymentTime ? \Carbon\Carbon::parse($lastPaymentTime)->format('d F Y') : '-' }}
                 </td>
             </tr>
             <tr>
-                <td><strong>Due Date</strong></td>
+                <td><strong>{{ __('billing.table.duedate') }}</strong></td>
                 <td>:
-                    {{ $dueDate ? \Carbon\Carbon::parse($dueDate)->format('d F Y') : 'No Due Date' }}
+                    {{ $dueDate ? \Carbon\Carbon::parse($dueDate)->format('d F Y') : '-' }}
                 </td>
 
-                <td><strong>Discount Membership</strong></td>
+                <td><strong>{{ __('customer.wizard.label.discount') }}
+                        {{ __('customer.wizard.label.membership') }}</strong></td>
                 <td>: @moneyIDR($calculated_discount)</td>
             </tr>
             <tr>
-                <td><strong>Membership Status</strong></td>
-                <td>: {{ $is_member ? $membership_name : 'Non Member' }}</td>
+                <td><strong>{{ __('customer.wizard.label.membership') }}</strong></td>
+                <td>: {{ $is_member ? $membership_name : __('customer.wizard.placeholder.non_member') }}</td>
 
-                <td><strong>Membership Period</strong></td>
+                <td><strong>{{ __('customer.wizard.label.duration') }}
+                        {{ __('customer.wizard.label.membership') }}</strong></td>
                 <td>:
                     @if (!$is_member)
                         —
@@ -53,33 +56,32 @@
 {{-- MOBILE SUMMARY --}}
 <div class="d-block d-md-none mobile-summary">
     <div class="summary-row">
-        <span>Total Bill</span>
+        <span>{{ __('billing.label.total-bill') }}</span>
         <strong>@moneyIDR($totalAmount)</strong>
     </div>
     <div class="summary-row">
-        <span>Unpaid Amount</span>
+        <span>{{ __('customer.label.not-yet-paid') }}</span>
         <strong>@moneyIDR($notYetPaid)</strong>
     </div>
     <div class="summary-row">
-        <span>Last Payment</span>
+        <span>{{ __('customer.label.last-payment') }}</span>
         <strong>@moneyIDR($lastPayment)</strong>
     </div>
     <div class="summary-row">
-        <span>Payment Date</span>
+        <span>{{ __('billing.invoice.header.printed') === 'Dicetak Pada' ? 'Tgl Pembayaran' : 'Payment Date' }}</span>
         <strong>{{ $lastPaymentTime ? \Carbon\Carbon::parse($lastPaymentTime)->format('d M Y') : '-' }}</strong>
     </div>
     <div class="summary-row">
-        <span>Due Date</span>
+        <span>{{ __('billing.table.duedate') }}</span>
         <strong>{{ $dueDate ? \Carbon\Carbon::parse($dueDate)->format('d M Y') : '-' }}</strong>
     </div>
     <div class="summary-row">
-        <span>Membership</span>
-        <strong>{{ $is_member ? $membership_name : 'Non Member' }}</strong>
+        <span>{{ __('customer.wizard.label.membership') }}</span>
+        <strong>{{ $is_member ? $membership_name : __('customer.wizard.placeholder.non_member') }}</strong>
     </div>
 </div>
 
-
-{{-- MOBILE STATUS (SETELAH SUMMARY, SEBELUM BREAKDOWN) --}}
+{{-- MOBILE STATUS --}}
 <div class="d-block d-md-none text-center my-4">
     <div class="billing-stamp-mobile {{ strtolower($billingStatus) }}">
         {{ $stampText }}
@@ -88,8 +90,8 @@
 
 <hr class="my-4">
 
-<h5 class="mb-3 ms-1">
-    <i class="ti ti-list-details"></i> Billing Breakdown for {{ $periodes }}
+<h5 class="mb-3 ml-1">
+    <i class="ti ti-list-details"></i> {{ __('billing.title.breakdown', ['period' => $periodes]) }}
 </h5>
 
 <div class="row">
@@ -104,9 +106,9 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <strong>{{ $item->item_name }}</strong>
-                            <div class="text-muted small">Package</div>
+                            <div class="text-muted small">{{ __('customer.wizard.label.package') }}</div>
                         </div>
-                        <div class="text-end">
+                        <div class="text-right">
                             <div class="currency small">Rp</div>
                             <div class="amount">{{ number_format($item->subtotal, 2, ',', '.') }}</div>
                         </div>
@@ -119,9 +121,10 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             {{ $item->item_name }}
-                            <div class="text-muted small">Addon × {{ $item->qty }}</div>
+                            <div class="text-muted small">{{ __('customer.wizard.label.addon_name') }} ×
+                                {{ $item->qty }}</div>
                         </div>
-                        <div class="text-end">
+                        <div class="text-right">
                             <div class="currency small">Rp</div>
                             <div class="amount">{{ number_format($item->subtotal, 2, ',', '.') }}</div>
                         </div>
@@ -134,9 +137,9 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             {{ $item->item_name }}
-                            <div class="small text-danger">Discount</div>
+                            <div class="small text-danger">{{ __('customer.wizard.label.discount') }}</div>
                         </div>
-                        <div class="text-end text-danger">
+                        <div class="text-right text-danger">
                             <div class="currency small">Rp</div>
                             <div class="amount">{{ number_format($item->subtotal, 2, ',', '.') }}</div>
                         </div>
@@ -147,7 +150,7 @@
             <div class="mobile-total-box">
                 <div class="d-flex justify-content-between align-items-center">
                     <strong>Total</strong>
-                    <div class="text-end">
+                    <div class="text-right">
                         <div class="currency small"><strong>Rp</strong></div>
                         <div class="amount"><strong>{{ number_format($totalAmount, 2, ',', '.') }}</strong></div>
                     </div>
@@ -162,7 +165,7 @@
                     @foreach ($packageItems as $item)
                         <tr>
                             <td><strong>{{ $item->item_name }}</strong>
-                                <div class="text-muted small">Package</div>
+                                <div class="text-muted small">{{ __('customer.wizard.label.package') }}</div>
                             </td>
                             <td class="currency">Rp</td>
                             <td class="amount">{{ number_format($item->subtotal, 2, ',', '.') }}</td>
@@ -170,7 +173,8 @@
                     @endforeach
                     @foreach ($addonItems as $item)
                         <tr>
-                            <td>{{ $item->item_name }} <span class="text-muted small">(Addon x
+                            <td>{{ $item->item_name }} <span
+                                    class="text-muted small">({{ __('customer.wizard.label.addon_name') }} x
                                     {{ $item->qty }})</span></td>
                             <td class="currency">Rp</td>
                             <td class="amount">{{ number_format($item->subtotal, 2, ',', '.') }}</td>
@@ -178,7 +182,8 @@
                     @endforeach
                     @foreach ($discountItems as $item)
                         <tr class="text-danger">
-                            <td>{{ $item->item_name }}<div class="text-muted small">Discount</div>
+                            <td>{{ $item->item_name }}<div class="text-muted small">
+                                    {{ __('customer.wizard.label.discount') }}</div>
                             </td>
                             <td class="currency">Rp</td>
                             <td class="amount">{{ number_format($item->subtotal, 2, ',', '.') }}</td>
@@ -202,19 +207,17 @@
     </div>
 </div>
 
-
 {{-- ACTION: EDIT BILLING --}}
 @can('billing-edit', $customer)
     @if (!$isEdit)
-        <div class="mt-3 text-end">
+        <div class="mt-3 text-right">
             <a href="{{ route('customers.show', [$customer->slug, 'tab' => 'billing', 'edit' => 1]) }}"
                 class="btn-soft btn-blue">
-                <i class="fa fa-edit"></i> Edit Billing
+                <i class="fa fa-edit mr-1"></i> {{ __('billing.button.edit') }}
             </a>
         </div>
     @endif
 @endcan
-</div>
 
 <style>
     /* ===== SUMMARY MOBILE ===== */

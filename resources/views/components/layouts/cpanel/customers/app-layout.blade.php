@@ -24,11 +24,15 @@
     <link href="{{ asset('assets/sweet-alert/sweet-alert.min.css') }}" rel="stylesheet">
     <link href="{{ asset('assets/vendor/datatables/datatables.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
-    <link href="{{ asset('assets/select2/css/select2.min.css') }}" rel="stylesheet" />
+    <link href="{{ asset('assets/select2/select2.min.css') }}" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css" rel="stylesheet" />
 
     <!-- Custom styles for this template-->
     <link href="{{ asset('css/sb-admin-2.min.css') }}" rel="stylesheet">
+
+    {{-- Standard Leaflet CSS & JS --}}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <!-- Custom styles for this Page-->
     @yield('custom_styles')
@@ -110,8 +114,33 @@
     <script src="{{ @asset('vendor/larapex-charts/apexcharts.js') }}"></script>
     <script src="{{ asset('js/customers/billing-edit.js') }}"></script>
     <script src="{{ asset('js/customers/traffic-chart.js') }}"></script>
-    <script src="{{ asset('assets/select2/js/select2.min.js') }}"></script>
+    <script src="{{ asset('assets/select2/select2.min.jssss') }}"></script>
     <!-- Page level custom scripts -->
+    <script>
+        // Polyfill: Bridge Bootstrap 5 data-bs-* attributes for Bootstrap 4
+        $(function() {
+            if (typeof $ !== 'undefined') {
+                $('[data-bs-toggle="tooltip"]').tooltip();
+                $('[data-bs-toggle="popover"]').popover();
+                $(document).on('click', '[data-bs-toggle="modal"]', function(e) {
+                    e.preventDefault();
+                    var target = $(this).attr('data-bs-target') || $(this).attr('href');
+                    if (target) $(target).modal('show');
+                });
+                $(document).on('click', '[data-bs-dismiss="modal"]', function(e) {
+                    e.preventDefault();
+                    $(this).closest('.modal').modal('hide');
+                });
+                $(document).on('click', '[data-bs-toggle="dropdown"]', function(e) {
+                    $(this).dropdown('toggle');
+                });
+                $(document).on('click', '[data-bs-toggle="collapse"]', function(e) {
+                    var target = $(this).attr('data-bs-target') || $(this).attr('href');
+                    if (target) $(target).collapse('toggle');
+                });
+            }
+        });
+    </script>
     @yield('custom_scripts')
     @stack('scripts')
     @if ($message = Session::get('success'))
