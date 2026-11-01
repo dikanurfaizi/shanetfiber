@@ -236,29 +236,39 @@
                         <img src="{{ asset('images/logo_footer_customer.png') }}" alt="Shanum Network Fiber"
                             class="logo-img-footer">
                     </div>
-                    <p class="text-white-50 small mb-0">
+
+                    <!-- Teks Alamat (Dibuat Simetris) -->
+                    <p class="text-white-50 small mb-0 footer-address-text">
                         <a href="https://maps.app.goo.gl/zRT4QfXNmoJysKRQ8" target="_blank" rel="noopener noreferrer"
-                            class="text-white-50 text-decoration-none hover-white">
-                            <i class="fas fa-map-marker-alt mr-2 text-danger"></i>{{ $websystem->address }},
-                            {{ $websystem->city }}, {{ $websystem->postal_code }}
+                            class="text-white-50 text-decoration-none hover-white d-inline-flex align-items-center">
+                            <i class="fas fa-map-marker-alt mr-2 text-danger"></i>
+                            <span>{{ $websystem->address }}, {{ $websystem->city }}, {{ $websystem->postal_code }}</span>
                         </a>
                     </p>
                 </div>
+
                 <div class="col-lg-3 col-md-6 mb-4 mb-md-0">
                     <h6 class="mb-3 font-weight-bold text-white text-uppercase tracking-wider">
                         {{ __('customer.footer.quick_links') ?? 'Tautan Cepat' }}</h6>
                     <ul class="list-unstyled small">
-                        <li class="mb-2"><a href="#packages"
-                                class="text-white-50 text-decoration-none hover-white">{{ __('customer.footer.packages') ?? 'Paket Internet' }}</a>
+                        <li class="mb-2">
+                            <a href="#packages" class="text-white-50 text-decoration-none hover-white">
+                                {{ __('customer.footer.packages') ?? 'Paket Internet' }}
+                            </a>
                         </li>
-                        <li class="mb-2"><a href="#contact"
-                                class="text-white-50 text-decoration-none hover-white">{{ __('customer.footer.contact_us') ?? 'Hubungi Kami' }}</a>
+                        <li class="mb-2">
+                            <a href="#contact" class="text-white-50 text-decoration-none hover-white">
+                                {{ __('customer.footer.contact_us') ?? 'Hubungi Kami' }}
+                            </a>
                         </li>
-                        <li><a href="#"
-                                class="text-white-50 text-decoration-none hover-white">{{ __('customer.footer.terms') ?? 'Syarat & Ketentuan' }}</a>
+                        <li>
+                            <a href="#" class="text-white-50 text-decoration-none hover-white">
+                                {{ __('customer.footer.terms') ?? 'Syarat & Ketentuan' }}
+                            </a>
                         </li>
                     </ul>
                 </div>
+
                 <div class="col-lg-3 col-md-6">
                     <h6 class="mb-3 font-weight-bold text-white text-uppercase tracking-wider">
                         {{ __('customer.footer.contact') ?? 'Kontak' }}</h6>
@@ -502,16 +512,27 @@
             object-fit: contain;
         }
 
-        /* Footer Logo Box (Lebih Kompak) */
+        /* Footer Logo Box (Lebih Besar & Proporsional) */
         .logo-footer-box {
-            padding: 5px 12px;
-            border-radius: 10px;
+            padding: 8px 16px !important;
+            border-radius: 12px !important;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
         }
 
+        /* Ukuran Logo Footer Dibuat Lebih Besar */
         .logo-img-footer {
-            height: 36px;
+            height: 54px !important;
+            /* Diperbesar dari sebelumnya 36px */
             width: auto;
             object-fit: contain;
+        }
+
+        /* Teks Alamat dibuat simetris & rapi */
+        .footer-address-text {
+            line-height: 1.6;
+            margin-top: 4px;
         }
 
         /* Slider Overlay Glass */
@@ -713,8 +734,13 @@
                 height: 26px;
             }
 
+            .logo-footer-box {
+                padding: 6px 12px !important;
+            }
+
             .logo-img-footer {
-                height: 28px;
+                height: 36px !important;
+                /* Disesuaikan sedikit di mobile agar tetap rapi */
             }
 
             .glass-card {
