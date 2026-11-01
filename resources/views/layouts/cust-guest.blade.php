@@ -5,7 +5,8 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="description" content="Shanum Network Fiber - Ultra-Fast Internet Solutions">
     <meta name="author" content="Dian Ardiansyah">
     <meta name="google-site-verification" content="VM3PKBo1GgIleHGysVVsGcowiPLWELh1d5qJ7cIP_pI" />
     <meta name="msvalidate.01" content="54E283E0B2DF8EDBB2221E556F92DECC" />
@@ -31,7 +32,7 @@
 
 </head>
 
-<body>
+<body class="@yield('body_class', 'bg-dark-theme')">
 
     {{-- Memanggil konten halaman utama --}}
     @yield('content')
@@ -45,6 +46,8 @@
     <script src="{{ asset('js/sb-admin-2.min.js') }}"></script>
     <script src="{{ asset('js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('assets/swiper/swiper-bundle.min.js') }}"></script>
+
+    {{-- Memuat script homepage hanya di halaman yang memerlukan --}}
     <script src="{{ asset('js/homepage.js') }}"></script>
 
     {{-- Memanggil skrip kustom dari halaman anak --}}
