@@ -95,6 +95,15 @@ class CustomerController extends Controller
             $searchParams['search_admin'] = $user->id;
         }
 
+        // ====== LOG INPUT FILTER ======
+        LogHelper::logInfo(null, [
+            'trace_id' => $traceId,
+            'user_id' => $user->id ?? null,
+            'is_super_admin' => $isSuperAdmin,
+            'search_params' => $searchParams,
+            'per_page' => $perPage,
+        ], 200, 'Customer Index Requested Filters', $traceId);
+
         $status = $searchParams['status'] ?? null;
 
         // 2. Jika filter status spesifik (isolir, offline)
@@ -104,6 +113,12 @@ class CustomerController extends Controller
                 ->get();
 
             if ($routers->isEmpty()) {
+                LogHelper::logWarning(null, [
+                    'trace_id' => $traceId,
+                    'status' => $status,
+                    'server_search' => $searchParams['server_search'] ?? null,
+                ], 404, 'No active servers available for status filter', $traceId);
+
                 return redirect()->route('customers.index')->withErrors(['msg' => 'No active servers available']);
             }
 
@@ -116,14 +131,36 @@ class CustomerController extends Controller
                     $traceId
                 );
 
+                // ====== LOG HASIL FILTER OFFLINE / ISOLIR ======
+                LogHelper::logInfo(null, [
+                    'trace_id' => $traceId,
+                    'status' => $status,
+                    'active_routers_count' => $routers->count(),
+                    'total_result' => isset($result['data']) ? $result['data']->total() : count($result),
+                ], 200, 'Customer Status Filter Processed Successfully', $traceId);
+
                 return view('customers.offline', $result);
             } catch (\Exception $e) {
+                LogHelper::logError($e, [
+                    'trace_id' => $traceId,
+                    'status' => $status,
+                    'search_params' => $searchParams,
+                ], 500, 'Error processing status filter', $traceId);
+
                 return redirect()->route('customers.index')->withErrors(['msg' => $this->getUserFriendlyError($e)]);
             }
         }
 
         // 3. Default (Listing Biasa)
         $data = $this->customerListingService->getPaginatedCustomers($searchParams, $perPage, $traceId);
+
+        // ====== LOG HASIL LISTING DEFAULT ======
+        LogHelper::logInfo(null, [
+            'trace_id' => $traceId,
+            'current_page' => $data->currentPage(),
+            'per_page' => $data->perPage(),
+            'total_data' => $data->total(),
+        ], 200, 'Customer Listing Processed Successfully', $traceId);
 
         return view('customers.index', [
             'data' => $data,

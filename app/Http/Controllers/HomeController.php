@@ -70,6 +70,13 @@ class HomeController extends Controller
         $user = $auth['user'];
         $userId = $auth['userId'];
 
+        // ====== Log Request/Filter Input ======
+        LogHelper::logInfo(null, [
+            'trace_id' => $traceId,
+            'user_id' => $userId,
+            'filters' => $request->all(), // Mencatat semua parameter filter dari query/form request
+        ], 200, 'Incoming Request Filters', $traceId, $timer->lap());
+
         // ====== Versi Check ======
         if ($this->version != $this->newVersion) {
             LogHelper::logWarning(null, [
@@ -183,6 +190,19 @@ class HomeController extends Controller
             // Urutkan dari jumlah bulan tunggakan terbanyak dalam 1 tahun terakhir
             ->orderByDesc('unpaid_months_count')
             ->get();
+
+        // ====== Log Hasil Data Output ======
+        LogHelper::logInfo(null, [
+            'trace_id' => $traceId,
+            'unpaid_customers_count' => $unpaid3MonthsCustomers->count(),
+            'total_routers' => $totalRouters,
+            'router_enabled' => $routerEnabled,
+            'router_disabled' => $routerDisabled,
+            'movement_data_summary' => [
+                'registration_count' => count($registrationData ?? []),
+                'months_count' => count($months ?? []),
+            ],
+        ], 200, 'Filter Results Processed Successfully', $traceId, $timer->lap());
 
         return view('home', array_merge(compact(
             'mikrotiks',
@@ -366,7 +386,7 @@ class HomeController extends Controller
 
         $billingPeriode = BillingPeriode::orderBy('created_at', 'desc')->first();
 
-        if (! $billingPeriode) {
+        if (!$billingPeriode) {
             LogHelper::logInfo(null, [
                 'billingPeriode' => $billingPeriode,
                 'lastBillings' => collect(),
@@ -446,7 +466,7 @@ class HomeController extends Controller
         $total = (clone $customerQuery)->selectRaw('
     COUNT(*) as totalCustomers,
     SUM(CASE WHEN is_active = 1 AND activation = 1 AND deleted_at IS NULL THEN 1 ELSE 0 END) as totalEnabled,
-    SUM(CASE WHEN ( (is_active = 1 AND activation = 0) OR (is_active = 0 AND activation = 0) ) AND deleted_at IS NULL THEN 1 ELSE 0 END) as totalDisabled,
+    SUM(CASE WHEN is_active = 1 AND activation = 0 AND deleted_at IS NULL THEN 1 ELSE 0 END) as totalDisabled,
     SUM(CASE WHEN is_active = 0 AND activation = 0 AND deleted_at IS NOT NULL THEN 1 ELSE 0 END) as totalNonActiveDisabled
 ')->first();
 

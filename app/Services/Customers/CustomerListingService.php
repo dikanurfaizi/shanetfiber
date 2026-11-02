@@ -56,7 +56,26 @@ class CustomerListingService
                 })
                 ->orderBy('name');
 
-            return $query->paginate($perPage);
+            $result = $query->paginate($perPage);
+
+            LogHelper::logInfo(
+                null,
+                [
+                    'filters' => $filters,
+                    'per_page' => $perPage,
+                    'current_page' => $result->currentPage(),
+                    'total_data' => $result->total(),
+                    'total_pages' => $result->lastPage(),
+                    'sql_query' => $query->toSql(),
+                    'bindings' => $query->getBindings(),
+                ],
+                200,
+                'Successfully retrieved paginated customers',
+                $traceId,
+                $timer->lap()
+            );
+
+            return $result;
         } catch (\Throwable $e) {
             LogHelper::logError(
                 null,
@@ -97,8 +116,10 @@ class CustomerListingService
             LogHelper::logInfo(
                 null,
                 [
+                    'total_results' => $results->count(),
                     'total_pages' => $paginator->lastPage(),
                     'current_page' => $paginator->currentPage(),
+                    'per_page' => $perPage,
                 ],
                 200,
                 'Successfully paginated results',
@@ -173,7 +194,10 @@ class CustomerListingService
 
             LogHelper::logInfo(
                 null,
-                ['server_count' => $servers->count()],
+                [
+                    'requested_server_filter' => $server,
+                    'server_count' => $servers->count(),
+                ],
                 200,
                 'Successfully retrieved active servers',
                 $traceId,
