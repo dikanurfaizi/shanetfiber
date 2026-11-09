@@ -82,7 +82,7 @@ Route::get('install/finish', [InstallController::class, 'finish'])->name('instal
 
 // Route::resource('test-command', TestCommandController::class);
 Route::get('/isolir', [IsolirController::class, 'index'])->name('isolir');
-Route::redirect('/', '/customer/login');
+Route::redirect('/', '/homepage');
 Route::post('payments/midtrans-notification', [PaymentCallbackController::class, 'receive']);
 Route::group(['prefix' => 'customer', 'namespace' => 'Customer'], function () {
     Route::group(['middleware' => 'guest'], function () {
