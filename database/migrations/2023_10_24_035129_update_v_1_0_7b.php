@@ -1,13 +1,10 @@
 <?php
 
-//use DB;
-use App\Models\Midtran;
-use App\Models\Customer;
-use App\Models\PaymentGateway;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 return new class extends Migration
 {
@@ -16,8 +13,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        //Version
-        //Update Midtrans
+        // ======================================================================
+        // 1. Update/Create Midtrans Table
+        // ======================================================================
         if (Schema::hasTable('midtrans')) {
             Schema::table('midtrans', function (Blueprint $table) {
                 if (!Schema::hasColumn('midtrans', 'slug')) {
@@ -64,12 +62,19 @@ return new class extends Migration
             });
         }
 
-        $midtrans = Midtran::create([
-            'name' => 'Midtrans',
-            'slug' => 'midtrans',
-        ]);
+        // Safe Insert menggunakan DB Facade (Mencegah Duplicate Slug Exception)
+        DB::table('midtrans')->updateOrInsert(
+            ['slug' => 'midtrans'],
+            [
+                'name' => 'Midtrans',
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
 
-        // Update table customer
+        // ======================================================================
+        // 2. Update Customers Table
+        // ======================================================================
         Schema::table('customers', function (Blueprint $table) {
             if (!Schema::hasColumn('customers', 'primary_server')) {
                 $table->bigInteger('primary_server')->nullable();
@@ -80,28 +85,44 @@ return new class extends Migration
             }
 
             if (Schema::hasColumn('customers', 'user_id')) {
-                $table->dropForeign(['user_id']);
+                // Gunakan try-catch bawaan DB/Schema untuk lepas FK secara aman
+                try {
+                    $table->dropForeign(['user_id']);
+                } catch (\Exception $e) {
+                    // Abaikan jika FK user_id tidak ditemukan/tidak punya nama constraint standar
+                }
                 $table->dropColumn('user_id');
             }
         });
 
-        $customers = Customer::all();
-        foreach ($customers as $customer) {
-            $customer->update([
-                'primary_server' => $customer->mikrotik_id,
-            ]);
+        // Loop update via DB Facade bukan Eloquent Customer Model
+        if (Schema::hasTable('customers')) {
+            $customers = DB::table('customers')->get();
+            foreach ($customers as $customer) {
+                if (isset($customer->mikrotik_id)) {
+                    DB::table('customers')->where('id', $customer->id)->update([
+                        'primary_server' => $customer->mikrotik_id,
+                    ]);
+                }
+            }
         }
 
-
-        //Update Billing Table
+        // ======================================================================
+        // 3. Update Billings Table
+        // ======================================================================
         Schema::table('billings', function (Blueprint $table) {
             if (!Schema::hasColumn('billings', 'pay_later')) {
                 $table->string('pay_later')->nullable();
             }
         });
-        DB::statement("ALTER TABLE `billings` CHANGE `status` `status` ENUM('BL','LS','PL') NOT NULL DEFAULT 'BL';");
 
-        //Update Auto Isolir Table
+        if (Schema::hasTable('billings')) {
+            DB::statement("ALTER TABLE `billings` CHANGE `status` `status` ENUM('BL','LS','PL') NOT NULL DEFAULT 'BL';");
+        }
+
+        // ======================================================================
+        // 4. Update Auto Isolirs Table
+        // ======================================================================
         Schema::table('auto_isolirs', function (Blueprint $table) {
             if (!Schema::hasColumn('auto_isolirs', 'nat_id')) {
                 $table->string('nat_id')->nullable();
@@ -112,11 +133,9 @@ return new class extends Migration
             if (!Schema::hasColumn('auto_isolirs', 'nat_src_address_list')) {
                 $table->string('nat_src_address_list')->nullable();
             }
-
             if (!Schema::hasColumn('auto_isolirs', 'nat_dst_address_list')) {
                 $table->string('nat_dst_address_list')->nullable();
             }
-
             if (!Schema::hasColumn('auto_isolirs', 'proxy_access_id')) {
                 $table->string('proxy_access_id')->nullable();
             }
@@ -131,7 +150,9 @@ return new class extends Migration
             }
         });
 
-        //Add Payment Gateway Table
+        // ======================================================================
+        // 5. Create Payment Gateways Table
+        // ======================================================================
         if (!Schema::hasTable('payment_gateways')) {
             Schema::create('payment_gateways', function (Blueprint $table) {
                 $table->id();
@@ -143,13 +164,20 @@ return new class extends Migration
             });
         }
 
-        PaymentGateway::create([
-            'name' => 'Midtrans',
-            'slug' => 'midtrans',
-            'description' => 'Midtrans Payment Gateway'
-        ]);
+        // Safe Insert menggunakan DB Facade (Mencegah Duplicate Slug Exception)
+        DB::table('payment_gateways')->updateOrInsert(
+            ['slug' => 'midtrans'],
+            [
+                'name' => 'Midtrans',
+                'description' => 'Midtrans Payment Gateway',
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
 
-        //Update web system table
+        // ======================================================================
+        // 6. Update Web Systems Table
+        // ======================================================================
         if (Schema::hasTable('websystems')) {
             Schema::table('websystems', function (Blueprint $table) {
                 if (!Schema::hasColumn('websystems', 'payment_gateway')) {

@@ -141,12 +141,18 @@
 
         <!-- Billing Section -->
         @if ($lastBillings)
+            @php
+                // Ambil nama periode secara aman
+                $periodName = $lastBillingPeriode?->name;
+                $searchMonth = $periodName ? \Carbon\Carbon::parse($periodName)->format('F') : null;
+                $searchYear = $periodName ? \Carbon\Carbon::parse($periodName)->format('Y') : null;
+            @endphp
+
             <div class="row g-4 mb-4">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
                         <div class="card-header bg-white border-0 py-3">
-                            <h5 class="mb-0">Billing Period: {{ $lastBillingPeriode->name ?? 'No Billing Period' }}
-                            </h5>
+                            <h5 class="mb-0">Billing Period: {{ $periodName ?? 'No Billing Period' }}</h5>
                         </div>
                         <div class="card-body">
                             <div class="row g-4">
@@ -174,7 +180,7 @@
                                         <h6 class="text-uppercase text-muted mb-2">Paid</h6>
                                         <div class="d-flex justify-content-between align-items-center">
                                             <h3 class="mb-0">
-                                                <a href="{{ route('billings.index', ['search_status=LS', 'search_month=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}"
+                                                <a href="{{ route('billings.index', array_filter(['search_status' => 'LS', 'search_month' => $searchMonth, 'search_year' => $searchYear])) }}"
                                                     class="text-decoration-none">
                                                     {{ $lastBillings->where('status', 'LS')->count() }}
                                                 </a>
@@ -193,7 +199,7 @@
                                         <h6 class="text-uppercase text-muted mb-2">Pay Later</h6>
                                         <div class="d-flex justify-content-between align-items-center">
                                             <h3 class="mb-0">
-                                                <a href="{{ route('billings.index', ['search_status=PL', 'search_month=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}"
+                                                <a href="{{ route('billings.index', array_filter(['search_status' => 'PL', 'search_month' => $searchMonth, 'search_year' => $searchYear])) }}"
                                                     class="text-decoration-none">
                                                     {{ $lastBillings->where('status', 'PL')->count() }}
                                                 </a>
@@ -212,7 +218,7 @@
                                         <h6 class="text-uppercase text-muted mb-2">Unpaid</h6>
                                         <div class="d-flex justify-content-between align-items-center">
                                             <h3 class="mb-0">
-                                                <a href="{{ route('billings.index', ['search_status=BL', 'search_month=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year=' . Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}"
+                                                <a href="{{ route('billings.index', array_filter(['search_status' => 'BL', 'search_month' => $searchMonth, 'search_year' => $searchYear])) }}"
                                                     class="text-decoration-none">
                                                     {{ $lastBillings->where('status', 'BL')->count() }}
                                                 </a>
@@ -243,11 +249,14 @@
                                                                 class="d-flex justify-content-between align-items-center mb-2">
                                                                 <span>Total Customers:</span>
                                                                 <strong class="text-end">
-                                                                    <a href="{{ route('billings.index', [
-                                                                        'admin_name' => $adminData->admin_name,
-                                                                        'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
-                                                                        'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
-                                                                    ]) }}"
+                                                                    <a href="{{ route(
+                                                                        'billings.index',
+                                                                        array_filter([
+                                                                            'admin_name' => $adminData->admin_name,
+                                                                            'search_month' => $searchMonth,
+                                                                            'search_year' => $searchYear,
+                                                                        ]),
+                                                                    ) }}"
                                                                         class="text-decoration-none">
                                                                         {{ number_format($adminData->total_customers, 0, ',', '.') }}
                                                                     </a>
@@ -263,12 +272,15 @@
                                                                 <div class="col-auto text-end">
                                                                     <div>
                                                                         <strong class="text-success">
-                                                                            <a href="{{ route('billings.index', [
-                                                                                'admin_name' => $adminData->admin_name,
-                                                                                'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
-                                                                                'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
-                                                                                'search_status' => 'LS',
-                                                                            ]) }}"
+                                                                            <a href="{{ route(
+                                                                                'billings.index',
+                                                                                array_filter([
+                                                                                    'admin_name' => $adminData->admin_name,
+                                                                                    'search_month' => $searchMonth,
+                                                                                    'search_year' => $searchYear,
+                                                                                    'search_status' => 'LS',
+                                                                                ]),
+                                                                            ) }}"
                                                                                 class="text-decoration-none text-success">
                                                                                 {{ number_format($adminData->total_paid_customers, 0, ',', '.') }}
                                                                             </a>
@@ -291,12 +303,15 @@
                                                                 <div class="col-auto text-end">
                                                                     <div>
                                                                         <strong class="text-warning">
-                                                                            <a href="{{ route('billings.index', [
-                                                                                'admin_name' => $adminData->admin_name,
-                                                                                'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
-                                                                                'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
-                                                                                'search_status' => 'PL',
-                                                                            ]) }}"
+                                                                            <a href="{{ route(
+                                                                                'billings.index',
+                                                                                array_filter([
+                                                                                    'admin_name' => $adminData->admin_name,
+                                                                                    'search_month' => $searchMonth,
+                                                                                    'search_year' => $searchYear,
+                                                                                    'search_status' => 'PL',
+                                                                                ]),
+                                                                            ) }}"
                                                                                 class="text-decoration-none text-warning">
                                                                                 {{ number_format($adminData->total_paylater_customers, 0, ',', '.') }}
                                                                             </a>
@@ -319,12 +334,15 @@
                                                                 <div class="col-auto text-end">
                                                                     <div>
                                                                         <strong class="text-danger">
-                                                                            <a href="{{ route('billings.index', [
-                                                                                'admin_name' => $adminData->admin_name,
-                                                                                'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'),
-                                                                                'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'),
-                                                                                'search_status' => 'BL',
-                                                                            ]) }}"
+                                                                            <a href="{{ route(
+                                                                                'billings.index',
+                                                                                array_filter([
+                                                                                    'admin_name' => $adminData->admin_name,
+                                                                                    'search_month' => $searchMonth,
+                                                                                    'search_year' => $searchYear,
+                                                                                    'search_status' => 'BL',
+                                                                                ]),
+                                                                            ) }}"
                                                                                 class="text-decoration-none text-danger">
                                                                                 {{ number_format($adminData->total_unpaid_customers, 0, ',', '.') }}
                                                                             </a>
@@ -338,6 +356,7 @@
                                                                 </div>
                                                             </div>
                                                         </div>
+
                                                     </div>
                                                 </div>
                                             </div>

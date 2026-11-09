@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\WhatsappGateway\WhatsappMessage;
+use App\Models\Whatsapp\WhatsappMessage;
 use Illuminate\Database\Seeder;
 
 class WhatsappMessageTableSeeder extends Seeder

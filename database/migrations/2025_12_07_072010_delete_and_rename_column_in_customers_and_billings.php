@@ -9,18 +9,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // --- CUSTOMERS TABLE ---
-        DB::transaction(function () {
-
-            if (!Schema::hasColumn('customers', 'package_id')) {
-                return;
-            }
+        // --- CUSTOMERS TABLE DATA MIGRATION ---
+        if (Schema::hasColumn('customers', 'package_id')) {
 
             /**
-             * 1. Temp table untuk menentukan 1 ACTIVE subscription per customer
+             * 1. Temp table (DDL - tidak boleh di dalam DB::transaction)
              */
             DB::statement("
-                CREATE TEMPORARY TABLE tmp_active_subs (
+                CREATE TEMPORARY TABLE IF NOT EXISTS tmp_active_subs (
                     customer_id BIGINT UNSIGNED PRIMARY KEY,
                     active_sub_id BIGINT UNSIGNED NULL
                 ) ENGINE=MEMORY
@@ -137,10 +133,9 @@ return new class extends Migration
             DB::statement("DROP TEMPORARY TABLE IF EXISTS tmp_active_subs");
 
             /**
-             * 7. Drop kolom legacy di customers
+             * 7. Drop kolom legacy di customers (DDL Schema)
              */
             Schema::table('customers', function (Blueprint $table) {
-
                 if (Schema::hasColumn('customers', 'package_id')) {
                     $table->dropForeign(['package_id']);
                     $table->dropColumn('package_id');
@@ -150,7 +145,7 @@ return new class extends Migration
                     $table->dropColumn('discount');
                 }
             });
-        });
+        }
 
         // --- BILLINGS TABLE ---
         Schema::table('billings', function (Blueprint $table) {
