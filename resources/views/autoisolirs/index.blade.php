@@ -1,7 +1,7 @@
 <x-layouts.cpanel.settings.app-layout title="{{ __('autoisolir.title.index') }}">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('autoisolir.header.index') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('autoisolir.header.index') }}</h5>
         @can('server-create')
             <span><a class="btn btn-sm btn-success mt-2" href="{{ route('autoisolir.create') }}"><i class="fa fa-plus"></i>
                     {{ __('autoisolir.button.create') }}</a></span>

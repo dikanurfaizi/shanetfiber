@@ -12,12 +12,12 @@
 <!-- Customers -->
 @canany(['customer-list', 'customer-create', 'customer-edit', 'customer-delete', 'customer-trashed'])
     <li class="nav-item @if (request()->routeIs('customers*')) active @endif">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseCustomer">
+        <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseCustomer">
             <i class="fas fa-users"></i>
             <span>{{ __('navigation.customers.nav-item') }}</span>
         </a>
         <div id="collapseCustomer" class="collapse @if (request()->routeIs('customers*')) show @endif"
-            data-parent="#accordionSidebar">
+            data-bs-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 @can('customer-create')
                     <a class="collapse-item @if (request()->routeIs('customers.create')) active @endif"
@@ -51,12 +51,12 @@
 <!-- Billing -->
 @canany(['billing-list', 'billing-create', 'billing-edit'])
     <li class="nav-item @if (request()->routeIs('billings*') || request()->routeIs('billingHistory*')) active @endif">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBilling">
+        <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseBilling">
             <i class="fas fa-layer-group"></i>
             <span>{{ __('navigation.billings.nav-item') }}</span>
         </a>
         <div id="collapseBilling" class="collapse @if (request()->routeIs('billings*') || request()->routeIs('billingHistory*')) show @endif"
-            data-parent="#accordionSidebar">
+            data-bs-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 @can('billing-create')
                     <a class="collapse-item @if (request()->routeIs('billings.create')) active @endif"
@@ -82,12 +82,12 @@
 <!-- Reports -->
 @canany(['report-view'])
     <li class="nav-item @if (request()->routeIs('reports*')) active @endif">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseReports">
+        <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseReports">
             <i class="fas fa-chart-bar"></i>
             <span>{{ __('navigation.reports.nav-item') }}</span>
         </a>
         <div id="collapseReports" class="collapse @if (request()->routeIs('reports*')) show @endif"
-            data-parent="#accordionSidebar">
+            data-bs-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 <a class="collapse-item @if (request()->routeIs('reports.kpi')) active @endif"
                     href="{{ route('reports.kpi') }}">
@@ -109,13 +109,13 @@
 ====================== --}}
 @canany(['receipt-list'])
     <li class="nav-item @if (request()->routeIs('receipts*')) active @endif">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseReceipt">
+        <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseReceipt">
             <i class="fas fa-receipt"></i>
             <span>{{ __('navigation.receipts.nav-item') }}</span>
         </a>
 
         <div id="collapseReceipt" class="collapse @if (request()->routeIs('receipts*')) show @endif"
-            data-parent="#accordionSidebar">
+            data-bs-parent="#accordionSidebar">
 
             <div class="bg-white py-2 collapse-inner rounded">
                 <a class="collapse-item @if (request()->routeIs('receipts.index')) active @endif"
@@ -129,7 +129,7 @@
 
 @if (request()->routeIs('receipts.index'))
     <li class="nav-item active">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSearchCustomer"
+        <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseSearchCustomer"
             aria-expanded="false" aria-controls="collapseSearchCustomer" style="padding-top: inherit;">
             <i class="fas fa-search"></i>
             <span>{{ __('billing.header.search') }}</span>

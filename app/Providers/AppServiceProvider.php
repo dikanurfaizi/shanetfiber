@@ -63,7 +63,7 @@ class AppServiceProvider extends ServiceProvider
             return "<?php echo 'Rp. ' . number_format($amount, 2); ?>";
         });
 
-        Paginator::useBootstrap();
+        Paginator::useBootstrapFive();
         Blade::component(TopBar::class, 'layouts.top-bar');
 
         View::composer('components.layouts.cpanel.billings.navigation', function ($view) {

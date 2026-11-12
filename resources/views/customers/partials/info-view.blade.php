@@ -89,10 +89,10 @@
 @if (!empty($latitude) && !empty($longitude))
     <div class="customer-map-wrapper mt-3">
         <div class="d-flex justify-content-between align-items-center mb-2">
-            <label class="font-weight-bold mb-0">{{ __('customer.label.location_map') }}</label>
+            <label class="fw-bold mb-0">{{ __('customer.label.location_map') }}</label>
             <a href="https://maps.google.com/?q={{ $latitude }},{{ $longitude }}" target="_blank"
                 rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary">
-                <i class="fa fa-external-link-alt mr-1"></i> {{ __('customer.button.open_google_maps') }}
+                <i class="fa fa-external-link-alt me-1"></i> {{ __('customer.button.open_google_maps') }}
             </a>
         </div>
 
@@ -103,10 +103,10 @@
     </div>
 @endif
 
-<div class="mt-3 text-right">
+<div class="mt-3 text-end">
     @can('customer-edit')
         <a href="{{ route('customers.show', [$slug, 'tab' => 'info', 'edit' => 1]) }}" class="btn-soft btn-blue">
-            <i class="fa fa-edit mr-1"></i> {{ __('customer.button.edit_customer') }}
+            <i class="fa fa-edit me-1"></i> {{ __('customer.button.edit_customer') }}
         </a>
     @endcan
 </div>

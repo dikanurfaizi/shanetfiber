@@ -39,7 +39,7 @@ class SecretService
             }
 
             LogHelper::logInfo(
-                null,
+                'SecretService',
                 [
                     'router' => $mikrotik->name ?? 'unknown',
                     'username' => $username,
@@ -63,9 +63,9 @@ class SecretService
             $response = $client->query($query)->read();
 
             LogHelper::logInfo(
-                null,
+                'SecretService',
                 [
-                    'router' => $mikrotik->name,
+                    'router' => $mikrotik->name ?? 'unknown',
                     'username' => $username,
                     'profile' => $profile,
                     'service' => $service,
@@ -80,7 +80,7 @@ class SecretService
             return $response;
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'router' => $mikrotik->name ?? 'unknown',
                     'username' => $username,
@@ -128,11 +128,28 @@ class SecretService
                     ->equal('service', $service)
                     ->equal('profile', $profile);
 
-                return $client->query($edit)->read();
+                $result = $client->query($edit)->read();
+
+                LogHelper::logInfo(
+                    'SecretService',
+                    [
+                        'router' => $mikrotik->name ?? 'unknown',
+                        'id' => $id,
+                        'username' => $username,
+                        'service' => $service,
+                        'profile' => $profile,
+                        'response' => $result
+                    ],
+                    200,
+                    'Secret updated successfully',
+                    $traceId
+                );
+
+                return $result;
             }
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'router' => $mikrotik->name ?? 'unknown',
                     'username' => $username,
@@ -182,9 +199,8 @@ class SecretService
 
                 $result = $client->query($edit)->read();
 
-                // ✅ Log success
                 LogHelper::logInfo(
-                    null,
+                    'SecretService',
                     [
                         'router'   => $mikrotik->name ?? 'unknown',
                         'username' => $username,
@@ -201,7 +217,7 @@ class SecretService
             }
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'router' => $mikrotik->name ?? 'unknown',
                     'username' => $username,
@@ -242,11 +258,26 @@ class SecretService
                     ->equal('.id', $editPppSecret['.id'])
                     ->equal('profile', $profile);
 
-                return $client->query($edit)->read();
+                $result = $client->query($edit)->read();
+
+                LogHelper::logInfo(
+                    'SecretService',
+                    [
+                        'router' => $mikrotik->name ?? 'unknown',
+                        'id' => $id,
+                        'profile' => $profile,
+                        'response' => $result
+                    ],
+                    200,
+                    'Profile secret updated successfully',
+                    $traceId
+                );
+
+                return $result;
             }
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'router' => $mikrotik->name ?? 'unknown',
                     'profile' => $profile,
@@ -286,11 +317,26 @@ class SecretService
                     ->equal('.id', $editPppSecret['.id'])
                     ->equal('comment', $comment);
 
-                return $client->query($edit)->read();
+                $result = $client->query($edit)->read();
+
+                LogHelper::logInfo(
+                    'SecretService',
+                    [
+                        'router' => $mikrotik->name ?? 'unknown',
+                        'secret_id' => $secretId,
+                        'comment' => $comment,
+                        'response' => $result
+                    ],
+                    200,
+                    'Comment added to secret successfully',
+                    $traceId
+                );
+
+                return $result;
             }
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'router' => $mikrotik->name ?? 'unknown',
                     'secret_id' => $secretId,
@@ -331,10 +377,22 @@ class SecretService
                     ->equal('disabled', $toEnable);
                 $client->query($enable)->read();
             }
-            return ($response = 'success');
+
+            LogHelper::logInfo(
+                'SecretService',
+                [
+                    'router' => $mikrotik->name ?? 'unknown',
+                    'username' => $username,
+                ],
+                200,
+                'Secret enabled successfully',
+                $traceId
+            );
+
+            return 'success';
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'router' => $mikrotik->name ?? 'unknown',
                     'username' => $username,
@@ -375,9 +433,20 @@ class SecretService
                     ->equal('disabled', $toEnable);
                 $client->query($enable)->read();
             }
+
+            LogHelper::logInfo(
+                'SecretService',
+                [
+                    'router' => $mikrotik->name ?? 'unknown',
+                    'secret_id' => $secretId,
+                ],
+                200,
+                'Secret enabled by ID successfully',
+                $traceId
+            );
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'router' => $mikrotik->name ?? 'unknown',
                     'secret_id' => $secretId,
@@ -418,10 +487,22 @@ class SecretService
                     ->equal('disabled', $toNoDisable);
                 $client->query($disable)->read();
             }
-            return ($response = 'success');
+
+            LogHelper::logInfo(
+                'SecretService',
+                [
+                    'router' => $mikrotik->name ?? 'unknown',
+                    'username' => $username,
+                ],
+                200,
+                'Secret disabled successfully',
+                $traceId
+            );
+
+            return 'success';
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'router' => $mikrotik->name ?? 'unknown',
                     'username' => $username,
@@ -462,9 +543,20 @@ class SecretService
                     ->equal('disabled', $toNoDisable);
                 $client->query($disable)->read();
             }
+
+            LogHelper::logInfo(
+                'SecretService',
+                [
+                    'router' => $mikrotik->name ?? 'unknown',
+                    'secret_id' => $secretId,
+                ],
+                200,
+                'Secret disabled by ID successfully',
+                $traceId
+            );
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'router' => $mikrotik->name ?? 'unknown',
                     'secret_id' => $secretId,
@@ -502,7 +594,7 @@ class SecretService
 
             if (empty($deleteSecrets)) {
                 LogHelper::logError(
-                    null,
+                    'SecretService',
                     [
                         'host' => $mikrotik->host ?? 'N/A',
                         'username' => $username,
@@ -521,9 +613,20 @@ class SecretService
                     ->equal('.id', $secret['.id']);
                 $client->query($deleteQuery)->read();
             }
+
+            LogHelper::logInfo(
+                'SecretService',
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'username' => $username,
+                ],
+                200,
+                "Mikrotik secret deleted by name successfully",
+                $traceId
+            );
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'host' => $mikrotik->host ?? 'N/A',
                     'username' => $username,
@@ -551,9 +654,20 @@ class SecretService
             $deleteQuery = (new Query('/ppp/secret/remove'))
                 ->where('.id', $secretId);
             $client->query($deleteQuery)->read();
+
+            LogHelper::logInfo(
+                'SecretService',
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'secret_id' => $secretId,
+                ],
+                200,
+                "Mikrotik secret deleted by ID successfully",
+                $traceId
+            );
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'host' => $mikrotik->host ?? 'N/A',
                     'secret_id' => $secretId,
@@ -587,10 +701,21 @@ class SecretService
             $query = new Query('/ppp/secret/print');
             $result = $client->query($query)->read();
 
+            LogHelper::logInfo(
+                'SecretService',
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'count' => is_array($result) ? count($result) : 0,
+                ],
+                200,
+                "All Mikrotik PPP secrets retrieved successfully",
+                $traceId
+            );
+
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'host' => $mikrotik->host ?? 'N/A',
                     'error' => $e->getMessage()
@@ -640,7 +765,7 @@ class SecretService
 
             if (empty($result)) {
                 LogHelper::logWarning(
-                    null,
+                    'SecretService',
                     [
                         'mikrotik_id' => $mikrotik->id ?? 'N/A',
                         'mikrotik_name' => $mikrotik->name ?? 'N/A',
@@ -655,10 +780,23 @@ class SecretService
                 return [];
             }
 
+            LogHelper::logInfo(
+                'SecretService',
+                [
+                    'mikrotik_id' => $mikrotik->id ?? 'N/A',
+                    'filterType' => $filterType,
+                    'filterValue' => $filterValue,
+                    'count' => is_array($result) ? count($result) : 0,
+                ],
+                200,
+                "Fetched Mikrotik secrets by $filterType successfully",
+                $traceId
+            );
+
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'host' => $mikrotik->host ?? 'N/A',
                     'filter' => $filterValue,
@@ -689,7 +827,7 @@ class SecretService
 
             if (empty($activeSecrets)) {
                 LogHelper::logWarning(
-                    null,
+                    'SecretService',
                     [
                         'host' => $mikrotik->host ?? 'N/A',
                         'username' => $username
@@ -707,9 +845,21 @@ class SecretService
                     ->equal('.id', $active['.id']);
                 $client->query($removeQuery)->read();
             }
+
+            LogHelper::logInfo(
+                'SecretService',
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'username' => $username,
+                    'count_removed' => count($activeSecrets),
+                ],
+                200,
+                "Active Mikrotik secret session removed successfully",
+                $traceId
+            );
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'host' => $mikrotik->host ?? 'N/A',
                     'username' => $username,
@@ -739,7 +889,7 @@ class SecretService
 
             if (!$client) {
                 LogHelper::logError(
-                    null,
+                    'SecretService',
                     ['mikrotik_id' => $mikrotik->id ?? null],
                     500,
                     "Failed to connect to Mikrotik",
@@ -753,7 +903,7 @@ class SecretService
 
             if (empty($result)) {
                 LogHelper::logWarning(
-                    null,
+                    'SecretService',
                     [],
                     404,
                     "No active PPP sessions found",
@@ -763,7 +913,7 @@ class SecretService
             }
 
             LogHelper::logInfo(
-                null,
+                'SecretService',
                 ['active_count' => count($result)],
                 200,
                 "Active PPP sessions retrieved successfully",
@@ -773,7 +923,7 @@ class SecretService
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'host' => $mikrotik->host ?? 'N/A',
                     'error' => $e->getMessage()
@@ -807,10 +957,22 @@ class SecretService
             $query = (new Query('/ppp/active/print'))->where('name', $username);
             $result = $client->query($query)->read();
 
+            LogHelper::logInfo(
+                'SecretService',
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'username' => $username,
+                    'is_online' => !empty($result),
+                ],
+                200,
+                "Active PPP secret fetched by username successfully",
+                $traceId
+            );
+
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'host' => $mikrotik->host ?? 'N/A',
                     'username' => $username,
@@ -838,10 +1000,22 @@ class SecretService
             $query = (new Query('/ppp/active/print'))->where('name', $name);
             $result = $client->query($query)->read();
 
+            LogHelper::logInfo(
+                'SecretService',
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'username' => $name,
+                    'is_online' => !empty($result),
+                ],
+                200,
+                "Active PPP secret fetched by request name successfully",
+                $traceId
+            );
+
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'host' => $mikrotik->host ?? 'N/A',
                     'username' => $name,
@@ -869,10 +1043,22 @@ class SecretService
             $query = (new Query('/ppp/active/print'))->where('address', $ipAddress);
             $result = $client->query($query)->read();
 
+            LogHelper::logInfo(
+                'SecretService',
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'ip' => $ipAddress,
+                    'is_online' => !empty($result),
+                ],
+                200,
+                "Active PPP secret fetched by IP successfully",
+                $traceId
+            );
+
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'host' => $mikrotik->host ?? 'N/A',
                     'ip' => $ipAddress,
@@ -900,10 +1086,21 @@ class SecretService
             $query = new Query('/ppp/profile/print');
             $result = $client->query($query)->read();
 
+            LogHelper::logInfo(
+                'SecretService',
+                [
+                    'host' => $mikrotik->host ?? 'N/A',
+                    'count' => is_array($result) ? count($result) : 0,
+                ],
+                200,
+                "PPP profiles fetched successfully",
+                $traceId
+            );
+
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'host' => $mikrotik->host ?? 'N/A',
                     'error' => $e->getMessage()
@@ -942,7 +1139,7 @@ class SecretService
             }
 
             LogHelper::logInfo(
-                null,
+                'SecretService',
                 [
                     'name'    => $mikrotik->name ?? 'N/A',
                     'host'    => $mikrotik->host ?? 'N/A',
@@ -957,7 +1154,7 @@ class SecretService
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'name'    => $mikrotik->name ?? 'N/A',
                     'host'    => $mikrotik->host ?? 'N/A',
@@ -993,7 +1190,7 @@ class SecretService
             // 1. Validasi struktur array response dari getPppProfileByName
             if (!is_array($targetProfile) || empty($targetProfile) || isset($targetProfile['status'])) {
                 LogHelper::logWarning(
-                    null,
+                    'SecretService',
                     [
                         'host' => $host,
                         'profile_name' => $profileName
@@ -1022,10 +1219,23 @@ class SecretService
 
             $result = $client->query($updateQuery)->read();
 
+            LogHelper::logInfo(
+                'SecretService',
+                [
+                    'host' => $host,
+                    'profile_name' => $profileName,
+                    'rate_limit' => $rateLimit,
+                    'result' => $result,
+                ],
+                200,
+                "Updated rate limit for PPP profile successfully",
+                $traceId
+            );
+
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'host' => $mikrotik->host ?? 'N/A',
                     'profile_name' => $profileName,
@@ -1060,7 +1270,7 @@ class SecretService
             $result = $client->query($query)->read();
 
             LogHelper::logInfo(
-                null,
+                'SecretService',
                 [
                     'host' => $mikrotik->host ?? 'N/A',
                     'profile_data' => $data,
@@ -1074,7 +1284,7 @@ class SecretService
             return $result;
         } catch (\Exception $e) {
             LogHelper::logError(
-                null,
+                'SecretService',
                 [
                     'host' => $mikrotik->host ?? 'N/A',
                     'profile_data' => $data,

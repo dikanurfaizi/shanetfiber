@@ -1,7 +1,7 @@
 <x-layouts.app-layout title="PPP Profiles">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('package.profile.header.import') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('package.profile.header.import') }}</h5>
         <a class="btn btn-sm btn-info mt-2" href="{{ route('ppp-profiles.index') }}">
             <i class="fa fa-arrow-left"></i> {{ __('package.profile.button.back') }}
         </a>

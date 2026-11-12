@@ -2,7 +2,7 @@
 
     {{-- HEADER --}}
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-danger">
+        <h5 class="m-0 fw-bold text-danger">
             {{ __('whatsapp.feature.title.delete-feature') }}
         </h5>
 
@@ -36,7 +36,7 @@
                 <tr>
                     <th>{{ __('whatsapp.feature.label.alias') }}</th>
                     <td>
-                        <span class="badge badge-secondary">
+                        <span class="badge bg-secondary">
                             {{ $whatsappfeature->alias }}
                         </span>
                     </td>
@@ -44,7 +44,7 @@
                 <tr>
                     <th>{{ __('whatsapp.feature.label.gateway-type') }}</th>
                     <td>
-                        <span class="badge badge-info">
+                        <span class="badge bg-info">
                             {{ $whatsappfeature->gateway_label }}
                         </span>
                     </td>
@@ -53,11 +53,11 @@
                     <th>{{ __('whatsapp.feature.label.schedule-status') }}</th>
                     <td>
                         @if ($whatsappfeature->is_scheduled)
-                            <span class="badge badge-warning">
+                            <span class="badge bg-warning text-dark">
                                 {{ __('whatsapp.feature.schedule-status.scheduled') }}
                             </span>
                         @else
-                            <span class="badge badge-secondary">
+                            <span class="badge bg-secondary">
                                 {{ __('whatsapp.feature.schedule-status.not-scheduled') }}
                             </span>
                         @endif
@@ -67,12 +67,12 @@
 
             @if ($whatsappfeature->is_scheduled && !empty($whatsappfeature->schedule))
                 <div class="alert alert-warning mt-3 mb-0" style="font-size: .9rem;">
-                    <div class="font-weight-bold mb-1">
-                        <i class="fa fa-clock mr-1"></i>
+                    <div class="fw-bold mb-1">
+                        <i class="fa fa-clock me-1"></i>
                         {{ __('whatsapp.feature.message.active-schedule-detected') }}
                     </div>
 
-                    <ul class="mb-0 pl-3">
+                    <ul class="mb-0 ps-3">
                         <li>
                             {{ __('whatsapp.feature.label.timezone') }}:
                             <strong>{{ data_get($whatsappfeature->schedule, 'timezone', '-') }}</strong>
@@ -96,7 +96,7 @@
                     </ul>
 
                     <div class="mt-2 text-muted">
-                        <i class="fa fa-info-circle mr-1"></i>
+                        <i class="fa fa-info-circle me-1"></i>
                         {{ __('whatsapp.feature.help.delete-with-active-schedule') }}
                     </div>
                 </div>
@@ -104,7 +104,7 @@
 
             <div class="mt-3">
                 <small class="text-muted">
-                    <i class="fa fa-exclamation-triangle mr-1"></i>
+                    <i class="fa fa-exclamation-triangle me-1"></i>
                     {{ __('whatsapp.feature.help.delete-irreversible') }}
                 </small>
             </div>
@@ -114,14 +114,14 @@
     </div>
 
     {{-- FOOTER --}}
-    <div class="card-footer text-right">
-        <a href="{{ route('whatsappfeature.show', $whatsappfeature->slug) }}" class="btn btn-secondary btn-sm mr-2">
-            <i class="fa fa-arrow-left mr-1"></i>
+    <div class="card-footer text-end">
+        <a href="{{ route('whatsappfeature.show', $whatsappfeature->slug) }}" class="btn btn-secondary btn-sm me-2">
+            <i class="fa fa-arrow-left me-1"></i>
             {{ __('whatsapp.feature.button.cancel') }}
         </a>
 
         <button type="submit" class="btn btn-danger btn-sm">
-            <i class="fa fa-trash mr-1"></i>
+            <i class="fa fa-trash me-1"></i>
             {{ __('whatsapp.feature.button.delete') }}
         </button>
     </div>

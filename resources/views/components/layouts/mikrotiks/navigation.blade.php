@@ -17,13 +17,13 @@
 
 <!-- Nav Item - Pages Collapse Menu -->
 <li class="nav-item {{ Request::is('server/*/ppp*') ? 'active' : '' }}">
-    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePPP" aria-expanded="true"
-        aria-controls="collapsePPP" style="padding-top: inherit;">
+    <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapsePPP"
+        aria-expanded="true" aria-controls="collapsePPP" style="padding-top: inherit;">
         <i class="fas fa-stream"></i>
         <span>PPP</span>
     </a>
     <div id="collapsePPP" class="collapse {{ Request::is('server/*/ppp*') ?: '' }}" aria-labelledby="headingPPP"
-        data-parent="#accordionSidebar">
+        data-bs-parent="#accordionSidebar">
 
         <div class="bg-white py-2 collapse-inner rounded">
             <a class="collapse-item {{ Request::is('server/*/ppp/profiles') ? 'active' : '' }}"

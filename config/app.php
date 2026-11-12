@@ -172,7 +172,7 @@ return [
         App\Providers\RouteServiceProvider::class,
         Yajra\DataTables\DataTablesServiceProvider::class,
         Barryvdh\DomPDF\ServiceProvider::class,
-        Jenssegers\Agent\AgentServiceProvider::class,
+        // Jenssegers\Agent\AgentServiceProvider::class,
         Maatwebsite\Excel\ExcelServiceProvider::class,
         App\Providers\MessagingServiceProvider::class,
         App\Providers\WhatsAppWebhookServiceProvider::class,
@@ -193,7 +193,7 @@ return [
     'aliases' => Facade::defaultAliases()->merge([
         // 'Example' => App\Facades\Example::class,
         'PDF' => Barryvdh\DomPDF\Facade::class,
-        'Agent' => Jenssegers\Agent\Facades\Agent::class,
+        // 'Agent' => Jenssegers\Agent\Facades\Agent::class,
         'Excel' => Maatwebsite\Excel\Facades\Excel::class,
     ])->toArray(),
 

@@ -73,7 +73,7 @@
                         $isActive = request('pon_group', $selectedPon ?? 1) == $group;
                     @endphp
                     <a href="{{ request()->fullUrlWithQuery(['pon_group' => $group]) }}"
-                        class="mr-2 btn btn-sm {{ $isActive ? 'btn-primary' : 'btn-outline-primary' }}">
+                        class="me-2 btn btn-sm {{ $isActive ? 'btn-primary' : 'btn-outline-primary' }}">
                         <i class="fas fa-network-wired me-1"></i> PON {{ $group }}
                     </a>
                 @endforeach

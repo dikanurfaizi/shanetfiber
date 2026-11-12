@@ -1,7 +1,7 @@
 <x-layouts.app-layout title="Packages">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('package.header.index') }} - {{ count($packages) }} Packages</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('package.header.index') }} - {{ count($packages) }} Packages</h5>
         <span><a class="btn btn-sm btn-success mt-2" href="{{ route('packets.create') }}"><i class="fa fa-plus"></i>
                 {{ __('package.button.create') }}</a></span>
     </div>

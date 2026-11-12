@@ -1,6 +1,6 @@
 <x-layouts.cpanel.settings.app-layout title="{{ __('user.title.create') }}">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('user.header.create') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('user.header.create') }}</h5>
     </div>
 
     <div class="row">

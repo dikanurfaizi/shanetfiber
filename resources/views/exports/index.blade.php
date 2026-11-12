@@ -1,7 +1,7 @@
 <x-layouts.cpanel.settings.app-layout title="Exports">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('export.title.export') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('export.title.export') }}</h5>
         <span class="text-danger">{{ __('export.message.warning') }}</span>
     </div>
 
@@ -56,7 +56,7 @@
                 <!-- AKSI BARU: FORM UNTUK UPDATE/SYNC COMMENT DENGAN PILIHAN SERVER TARGET -->
                 {!! Form::open(['route' => 'export.sync.comment', 'method' => 'POST', 'id' => 'sync-comment-form']) !!}
                 <div class="card-body px-0 py-2">
-                    <h5 class="font-weight-bold text-primary">{{ __('export.title.comment') }}</h5>
+                    <h5 class="fw-bold text-primary">{{ __('export.title.comment') }}</h5>
                     <p class="text-muted small">{{ __('export.message.comment') }}</p>
 
                     <div class="row align-items-center">

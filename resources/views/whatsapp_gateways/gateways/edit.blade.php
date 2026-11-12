@@ -1,7 +1,7 @@
 <x-layouts.cpanel.settings.app-layout title="Edit Provider">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">Edit Provider</h5>
+        <h5 class="m-0 fw-bold text-primary">Edit Provider</h5>
     </div>
 
     <div class="card mt-4 shadow-sm p-4">
@@ -11,7 +11,7 @@
             @method('PUT')
 
             {{-- General Information --}}
-            <h6 class="font-weight-bold text-muted mb-3">Provider Information</h6>
+            <h6 class="fw-bold text-muted mb-3">Provider Information</h6>
 
             {{-- Provider Name --}}
             <div class="mb-3 row">

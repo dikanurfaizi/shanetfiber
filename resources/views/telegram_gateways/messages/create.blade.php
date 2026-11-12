@@ -1,6 +1,6 @@
 <x-layouts.cpanel.settings.app-layout title="{{ __('whatsapp.message.title.create') }}">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">
+        <h5 class="m-0 fw-bold text-primary">
             {{ __('whatsapp.message.title.create') }}
         </h5>
     </div>
@@ -10,7 +10,7 @@
             {!! Form::open(['method' => 'POST', 'route' => 'whatsappmessage.store']) !!}
             <div class="card-body col-lg-8">
 
-                <div class="form-group has-feedback row mb-2">
+                <div class="mb-3 has-feedback row mb-2">
                     <div class="col-md-3">
                         <label for="name">{!! trans('whatsapp.message.label.name') !!}</label>
                     </div>
@@ -24,7 +24,7 @@
                     </div>
                 </div>
 
-                {{-- <div class="form-group has-feedback row mb-2" id="input-default-number">
+                {{-- <div class="mb-3 has-feedback row mb-2" id="input-default-number">
                     <div class="col-md-3">
                         <label for="default_number">{!! trans('whatsapp.message.label.gateway-number') !!}</label>
                     </div>
@@ -36,7 +36,7 @@
                     </div>
                 </div> --}}
 
-                <div class="form-group has-feedback row mb-2" id="input-keyword">
+                <div class="mb-3 has-feedback row mb-2" id="input-keyword">
                     <div class="col-md-3">
                         <label for="incoming_message">{!! trans('whatsapp.message.label.keyword') !!}</label>
                     </div>
@@ -51,7 +51,7 @@
                     </div>
                 </div>
 
-                <div class="form-group has-feedback row mb-2">
+                <div class="mb-3 has-feedback row mb-2">
                     <div class="col-md-3">
                         <label for="reply_message">{!! trans('whatsapp.message.label.reply_message') !!}</label>
                     </div>
@@ -66,7 +66,7 @@
                     </div>
                 </div>
 
-                <div class="form-group has-feedback row mb-2">
+                <div class="mb-3 has-feedback row mb-2">
                     <div class="col-md-3">
                         <label for="description">{!! trans('whatsapp.message.label.description') !!}</label>
                     </div>

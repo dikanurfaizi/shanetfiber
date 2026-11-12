@@ -1,7 +1,7 @@
 <x-layouts.app-layout title="Packet Show">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('Detail Package') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('Detail Package') }}</h5>
     </div>
 
     <div class="card-body">

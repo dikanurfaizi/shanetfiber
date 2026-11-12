@@ -1,6 +1,6 @@
 <x-layouts.app-layout title="Create Package Category">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary"> {{ __('package_categories.header.create') }}</h5>
+        <h5 class="m-0 fw-bold text-primary"> {{ __('package_categories.header.create') }}</h5>
     </div>
 
     <div class="row">
@@ -27,7 +27,8 @@
 
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
-                        <label for="description"><strong>{{ __('package_categories.label.description') }}</strong></label>
+                        <label
+                            for="description"><strong>{{ __('package_categories.label.description') }}</strong></label>
                         <div class="input-group">
                             {!! Form::text('description', null, [
                                 'placeholder' => __('package_categories.placeholder.description'),

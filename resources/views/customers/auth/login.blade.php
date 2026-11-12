@@ -34,7 +34,7 @@
                         value="{{ old('email') }}" required autofocus>
 
                     @error('email')
-                        <small class="text-danger mt-1 d-block fw-semibold pl-2">{{ $message }}</small>
+                        <small class="text-danger mt-1 d-block fw-semibold ps-2">{{ $message }}</small>
                     @enderror
                 </div>
 
@@ -49,7 +49,7 @@
                     </span>
 
                     @error('password')
-                        <small class="text-danger mt-1 d-block fw-semibold pl-2">{{ $message }}</small>
+                        <small class="text-danger mt-1 d-block fw-semibold ps-2">{{ $message }}</small>
                     @enderror
                 </div>
 
@@ -60,8 +60,8 @@
 
                 <!-- Forgot Password -->
                 <div class="text-center mt-4">
-                    <a href="#" class="small text-white-50 hover-white text-decoration-none" data-toggle="modal"
-                        data-target="#forgotPasswordModal" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
+                    <a href="#" class="small text-white-50 hover-white text-decoration-none" data-bs-toggle="modal"
+                        data-bs-target="#forgotPasswordModal" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
                         {{ __('customer.button.forgot_password') ?? __('Lupa Password?') }}
                     </a>
                 </div>

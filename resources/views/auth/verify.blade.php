@@ -17,7 +17,7 @@
             <div class="row">
                 <div class="col-12">
                     <button type="submit"
-                            class="btn btn-primary btn-block">{{ __('click here to request another') }}</button>
+                            class="btn btn-primary w-100">{{ __('click here to request another') }}</button>
                 </div>
             </div>
         </form>

@@ -1,7 +1,7 @@
 <x-layouts.app-layout title="PPP Profile Show">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('PPP Profile Detail') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('PPP Profile Detail') }}</h5>
     </div>
 
     <div class="card-body col-lg-10">
@@ -34,7 +34,7 @@
         <div class="row">
             @foreach ($fields as $key => $label)
                 <div class="col-12 col-sm-6 col-md-3 mb-3"> <!-- Update grid to col-md-3 for 4 items per row -->
-                    <div class="form-group">
+                    <div class="mb-3">
                         <strong>{{ $label }}:</strong> <br>
                         @if ($key == 'rasio_cir')
                             1:{{ $pppProfiles->$key ?? 'no data' }}

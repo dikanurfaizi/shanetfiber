@@ -1,7 +1,7 @@
 <x-layouts.cpanel.settings.app-layout title="{{ __('whatsapp.number.page-title-deleted-index') }}">
 
     <div class="card-header py-3 alert-danger">
-        <h5 class="m-0 font-weight-bold"> {{ __('whatsapp.number.page-title-deleted-index') }}
+        <h5 class="m-0 fw-bold"> {{ __('whatsapp.number.page-title-deleted-index') }}
         </h5>
     </div>
 

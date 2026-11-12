@@ -1,7 +1,7 @@
 <x-layouts.cpanel.customers.app-layout title="Edit PPP Secrets">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary"> {{ __('customer.header.edit') }} - {{ $customer->name }}</h5>
+        <h5 class="m-0 fw-bold text-primary"> {{ __('customer.header.edit') }} - {{ $customer->name }}</h5>
     </div>
 
     <div class="row">

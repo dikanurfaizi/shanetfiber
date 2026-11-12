@@ -11,7 +11,7 @@
     HEADER
     ======================== --}}
         <div class="card-header py-3 d-flex justify-content-between align-items-center bg-white border-bottom-0">
-            <h5 class="m-0 font-weight-bold text-primary">
+            <h5 class="m-0 fw-bold text-primary">
                 <i class="fas fa-file-invoice me-1 text-secondary"></i>
                 {{ __('billing.header.billing-bank-transfer') }}
             </h5>

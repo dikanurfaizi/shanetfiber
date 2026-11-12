@@ -2,7 +2,7 @@
     <label class="text-primary"><strong>{{ __('Advanced Options') }}</strong></label>
 </div>
 
-<div class="form-group row">
+<div class="mb-3 row">
     <div class="col-sm-3">
         <label for="bridge_learning"><strong>{{ __('Bridge Learning') }}</strong></label>
         {!! Form::select(
@@ -49,7 +49,7 @@
     </div>
 </div>
 
-<div class="form-group row">
+<div class="mb-3 row">
     <div class="col-sm-3">
         <label for="use_encryption"><strong>{{ __('Use Encryption') }}</strong></label>
         {!! Form::select(

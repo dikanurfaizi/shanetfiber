@@ -1,7 +1,7 @@
 <x-layouts.customers.app-layout title="Order #{{ $order->number }}">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('Data Order #') }}{{ $order->number }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('Data Order #') }}{{ $order->number }}</h5>
     </div>
     <div class="card-body p-1 shadow">
         {{-- <div class="d-flex justify-content-center align-items-start"> --}}
@@ -33,11 +33,11 @@
                         <div class="col-8">
                             + <a href="{{ $order->package ?? '#!' }}" target="_blank">{{ $order->package }}</a>
                             <br>
-                            <small class="ml-3 font-weight-bold" style="color: #17a2b8;">
+                            <small class="ms-3 fw-bold" style="color: #17a2b8;">
                                 Rp {{ number_format($order->total_price, 0, ',', '.') }} x {{ $order->quantity }}
                             </small>
                         </div>
-                        <div class="col-4 text-right font-weight-bold" style="color: #17a2b8;">
+                        <div class="col-4 text-end fw-bold" style="color: #17a2b8;">
                             <span style="float: left;">Rp</span>
                             <span style="float: right;">{{ number_format($order->total_price, 0, ',', '.') }}</span>
                         </div>
@@ -46,7 +46,7 @@
                         <div class="col-8">
                             + Biaya Administrasi
                         </div>
-                        <div class="col-4 text-right font-weight-bold" style="color: #17a2b8;">
+                        <div class="col-4 text-end fw-bold" style="color: #17a2b8;">
                             <span style="float: left;">Rp</span>
                             <span style="float: right;">{{ number_format($order->total_fee, 0, ',', '.') }}</span>
                         </div>
@@ -55,7 +55,7 @@
                         <div class="col-8">
                             + Jumlah Pembayaran
                         </div>
-                        <div class="col-4 text-right font-weight-bold" style="color: #17a2b8;">
+                        <div class="col-4 text-end fw-bold" style="color: #17a2b8;">
                             <span style="float: left;">Rp</span>
                             <span style="float: right;">{{ number_format($order->total_amount, 0, ',', '.') }}</span>
                         </div>
@@ -83,16 +83,14 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="statusModalLabel">Detail Pembayaran</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body d-flex justify-content-center">
                     <img src="{{ $order->qr_url }}" alt="QR Besar"
                         style="width: 200px; height: 200px; object-fit: contain;">
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-success" data-dismiss="modal">Tutup</button>
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Tutup</button>
                 </div>
             </div>
         </div>
@@ -104,21 +102,18 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="statusModalLabel">Detail Pembayaran</h5>
-                    <button type="button" class="close" onclick="$('#statusModal').modal('hide')" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="statusModalBody">
                     <!-- AJAX akan isi bagian ini -->
                     <div class="text-center">
                         <div class="spinner-border text-success" role="status">
-                            <span class="sr-only">Memuat...</span>
+                            <span class="visually-hidden">Memuat...</span>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-success"
-                        onclick="$('#statusModal').modal('hide')">Tutup</button>
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Tutup</button>
                 </div>
             </div>
         </div>
@@ -130,15 +125,13 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="modalTitle">Instruksi Pembayaran</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="paymentInstructions">
                     <p>Memuat instruksi pembayaran...</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-success" data-dismiss="modal">Tutup</button>
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Tutup</button>
                 </div>
             </div>
         </div>
@@ -325,7 +318,7 @@
                 font-size: 13px;
             }
 
-            .number-section .font-weight-bold {
+            .number-section .fw-bold {
                 font-size: 14px;
             }
 
@@ -346,7 +339,7 @@
                 margin-bottom: 6px;
             }
 
-            .number-section .text-right {
+            .number-section .text-end {
                 text-align: right !important;
             } */
 
@@ -366,10 +359,10 @@
                 padding-right: 4px;
             }
 
-            /* .number-section .col-4.text-right span {
+            /* .number-section .col-4.text-end span {
                 font-size: 13px;
             } */
-            .number-section .font-weight-bold span {
+            .number-section .fw-bold span {
                 font-size: 13px !important;
             }
 
@@ -622,7 +615,7 @@
                             const html = res.data.map((method, i) => `
                             <div class="card">
                                 <div class="card-header">
-                                    <button class="btn btn-link" data-toggle="collapse" data-target="#collapse${i}">
+                                    <button class="btn btn-link" data-bs-toggle="collapse" data-bs-target="#collapse${i}">
                                         ${method.title}
                                     </button>
                                 </div>
@@ -675,7 +668,7 @@
 
                     $('#statusModalBody').html(`
                     <div class="text-center">
-                        <div class="spinner-border text-success" role="status"><span class="sr-only">Memuat...</span></div>
+                        <div class="spinner-border text-success" role="status"><span class="visually-hidden">Memuat...</span></div>
                     </div>
                 `);
                     $('#statusModal').modal('show');

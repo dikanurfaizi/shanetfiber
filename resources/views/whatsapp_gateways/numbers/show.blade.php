@@ -1,7 +1,7 @@
 <x-layouts.cpanel.settings.app-layout title="{{ __('whatsapp.number.page-title-show') }}">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('whatsapp.number.page-title-show') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('whatsapp.number.page-title-show') }}</h5>
     </div>
 
     <div class="card-body col-lg-8">
@@ -55,14 +55,14 @@
         </div>
         <div class="clearfix"></div>
         <div class="border-bottom"></div>
-        <div class="form-group row">
+        <div class="mb-3 row">
             <div class="col-md-5">
                 <strong>
                     {!! trans('whatsapp.number.label.your-secret') !!}
                 </strong>
             </div>
         </div>
-        <div class="form-group row mb-1">
+        <div class="mb-3 row mb-1">
             <div class="col-md-12">
                 <textarea class="form-control your-secret bg-warning" style="--bs-bg-opacity: .25;" id="your-secret" name="your-secret"
                     type="text" placeholder="{{ trans('whatsapp.number.ph.your-secret') }}"readonly>{{ $secret }}</textarea>

@@ -8,7 +8,7 @@
                 <form method="GET" action="{{ route('customer.pages.order.tripays.show', $order->id) }}">
                     @csrf
                     <input type="hidden" name="payment_channel" value="{{ $gateway->slug }}">
-                    <button type="submit" class="btn btn-primary mr-2">
+                    <button type="submit" class="btn btn-primary me-2">
                         {{ __('billing.button.continue-payment') }}
                     </button>
                 </form>

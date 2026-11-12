@@ -1,14 +1,14 @@
 <x-layouts.cpanel.settings.app-layout :title="__('radius.index.title')">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary mb-2">
+        <h5 class="m-0 fw-bold text-primary mb-2">
             {{ __('radius.index.header') }}
         </h5>
 
         <span>
             @if (session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="fas fa-check-circle mr-1"></i> {{ session('success') }}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <i class="fas fa-check-circle me-1"></i> {{ session('success') }}
+                    <button type="button" class="close" data-bs-dismiss="alert" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
@@ -16,8 +16,8 @@
 
             @if ($errors->any())
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="fas fa-exclamation-triangle mr-1"></i> {{ $errors->first() }}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <i class="fas fa-exclamation-triangle me-1"></i> {{ $errors->first() }}
+                    <button type="button" class="close" data-bs-dismiss="alert" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
@@ -26,8 +26,9 @@
 
         {{-- Form Filter & Action Header --}}
         <span>
-            <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSearchRadius"
-                aria-expanded="false" aria-controls="collapseSearchRadius" style="padding-top: inherit;">
+            <a class="nav-link collapsed" href="#" data-bs-toggle="collapse"
+                data-bs-target="#collapseSearchRadius" aria-expanded="false" aria-controls="collapseSearchRadius"
+                style="padding-top: inherit;">
                 <i class="fas fa-search"></i>
                 <span>{{ __('radius.index.search_toggle') }}</span>
             </a>
@@ -56,7 +57,7 @@
                             </div>
                             <div class="col-md-3 col-12 mb-2">
                                 <button class="btn btn-success btn-sm h-100" type="submit">
-                                    <i class="fas fa-search mr-1"></i> {{ __('radius.index.btn_search') }}
+                                    <i class="fas fa-search me-1"></i> {{ __('radius.index.btn_search') }}
                                 </button>
                             </div>
                         </div>
@@ -75,9 +76,9 @@
             <div class="d-flex align-items-center gap-2">
                 {{-- Tombol Refresh Data DB Terakhir --}}
                 <a href="{{ route('radius.index', request()->query()) }}"
-                    class="btn btn-secondary btn-sm d-flex align-items-center mr-2" style="height: 35px;"
+                    class="btn btn-secondary btn-sm d-flex align-items-center me-2" style="height: 35px;"
                     title="{{ __('radius.index.btn_refresh_title') }}">
-                    <i class="fas fa-sync-alt mr-1"></i> {{ __('radius.index.btn_refresh') }}
+                    <i class="fas fa-sync-alt me-1"></i> {{ __('radius.index.btn_refresh') }}
                 </a>
 
                 {{-- Tombol Export Active Users Massal ke FreeRADIUS --}}
@@ -85,7 +86,7 @@
                     @csrf
                     <button type="button" class="btn btn-primary btn-sm d-flex align-items-center"
                         style="height: 35px;" onclick="confirmBulkSync()">
-                        <i class="fas fa-database mr-2"></i> {{ __('radius.index.btn_bulk_sync') }}
+                        <i class="fas fa-database me-2"></i> {{ __('radius.index.btn_bulk_sync') }}
                     </button>
                 </form>
             </div>
@@ -135,7 +136,7 @@
                                 <td><span
                                         class="badge bg-danger-soft">{{ $customers->firstItem() + $loop->index }}</span>
                                 </td>
-                                <td class="text-left font-weight-bold">
+                                <td class="text-start fw-bold">
                                     <a href="{{ route('customers.show', $customer->slug) }}">{{ $customer->name }}</a>
                                 </td>
                                 <td><span class="badge bg-light text-dark font-monospace">{{ $username }}</span>
@@ -148,18 +149,18 @@
                                     @if ($state && $state->radius_status === 'synced')
                                         <span class="badge bg-success text-white"
                                             title="{{ __('radius.status.active_in_radius') }}">
-                                            <i class="fas fa-check-circle mr-1"></i> {{ __('radius.status.synced') }}
+                                            <i class="fas fa-check-circle me-1"></i> {{ __('radius.status.synced') }}
                                         </span>
                                     @elseif ($state && $state->radius_status === 'failed')
-                                        <span class="badge bg-danger text-white" data-toggle="tooltip"
+                                        <span class="badge bg-danger text-white" data-bs-toggle="tooltip"
                                             title="{{ $state->last_error_message }}">
-                                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
                                             {{ __('radius.status.failed') }}
                                         </span>
                                     @else
                                         <span class="badge bg-warning text-dark"
                                             title="{{ __('radius.status.not_synced_yet') }}">
-                                            <i class="fas fa-clock mr-1"></i> {{ __('radius.status.pending') }}
+                                            <i class="fas fa-clock me-1"></i> {{ __('radius.status.pending') }}
                                         </span>
                                     @endif
                                 </td>
@@ -169,17 +170,17 @@
                                     @if ($mikrotikStatus === 'synced')
                                         <span class="badge bg-info text-white"
                                             title="{{ __('radius.status.connected_via_api') }}">
-                                            <i class="fas fa-network-wired mr-1"></i>
+                                            <i class="fas fa-network-wired me-1"></i>
                                             {{ __('radius.status.connected') }}
                                         </span>
                                     @elseif ($mikrotikStatus === 'failed')
                                         <span class="badge bg-danger text-white"
                                             title="{{ __('radius.status.mikrotik_error') }}">
-                                            <i class="fas fa-times-circle mr-1"></i> {{ __('radius.status.error') }}
+                                            <i class="fas fa-times-circle me-1"></i> {{ __('radius.status.error') }}
                                         </span>
                                     @else
                                         <span class="badge bg-secondary text-white">
-                                            <i class="fas fa-minus-circle mr-1"></i>
+                                            <i class="fas fa-minus-circle me-1"></i>
                                             {{ __('radius.status.unsynced') }}
                                         </span>
                                     @endif
@@ -198,7 +199,7 @@
                                                 @csrf
                                                 <a class="dropdown-item py-2" href="#"
                                                     onclick="event.preventDefault(); this.closest('form').submit();">
-                                                    <i class="fas fa-database text-primary mr-2"></i>
+                                                    <i class="fas fa-database text-primary me-2"></i>
                                                     {{ __('radius.action.sync_radius') }}
                                                 </a>
                                             </form>
@@ -209,7 +210,7 @@
                                                 @csrf
                                                 <a class="dropdown-item py-2" href="#"
                                                     onclick="event.preventDefault(); this.closest('form').submit();">
-                                                    <i class="fas fa-network-wired text-warning mr-2"></i>
+                                                    <i class="fas fa-network-wired text-warning me-2"></i>
                                                     {{ __('radius.action.sync_mikrotik') }}
                                                 </a>
                                             </form>
@@ -240,30 +241,30 @@
                     $packageName = $customer->activeSubscription->package->name ?? __('radius.index.no_package');
                     $mikrotikStatus = $state->mikrotik_status ?? 'synced';
                 @endphp
-                <div class="card mb-3 shadow-sm border text-left">
+                <div class="card mb-3 shadow-sm border text-start">
                     <div class="card-body p-2">
 
                         {{-- Baris 1: No & Dual Status Badges --}}
                         <div class="d-flex justify-content-between align-items-center mb-1 border-bottom pb-1">
-                            <span class="badge badge-pill badge-secondary px-2 py-1">
+                            <span class="badge rounded-pill bg-secondary px-2 py-1">
                                 #{{ $customers->firstItem() + $loop->index }}
                             </span>
                             <div class="d-flex gap-1">
                                 {{-- Badge RADIUS --}}
                                 @if ($state && $state->radius_status === 'synced')
-                                    <span class="badge text-white bg-success py-1 mr-1">
-                                        <i class="fas fa-database mr-1"></i> RADIUS: OK
+                                    <span class="badge text-white bg-success py-1 me-1">
+                                        <i class="fas fa-database me-1"></i> RADIUS: OK
                                     </span>
                                 @else
-                                    <span class="badge text-dark bg-warning py-1 mr-1">
-                                        <i class="fas fa-clock mr-1"></i> RADIUS: Pending
+                                    <span class="badge text-dark bg-warning py-1 me-1">
+                                        <i class="fas fa-clock me-1"></i> RADIUS: Pending
                                     </span>
                                 @endif
 
                                 {{-- Badge MikroTik --}}
                                 @if ($mikrotikStatus === 'synced')
                                     <span class="badge text-white bg-info py-1">
-                                        <i class="fas fa-network-wired mr-1"></i> MK: OK
+                                        <i class="fas fa-network-wired me-1"></i> MK: OK
                                     </span>
                                 @endif
                             </div>
@@ -271,11 +272,10 @@
 
                         {{-- Baris 2: Nama & Paket --}}
                         <div class="d-flex justify-content-between align-items-center mb-1 mt-2">
-                            <h6 class="mb-0 font-weight-bold" style="max-width: 60%">
+                            <h6 class="mb-0 fw-bold" style="max-width: 60%">
                                 <a href="{{ route('customers.show', $customer->slug) }}">{{ $customer->name }}</a>
                             </h6>
-                            <span
-                                class="badge badge-light border text-truncate px-2 py-1 text-primary font-weight-bold"
+                            <span class="badge bg-light text-dark border text-truncate px-2 py-1 text-primary fw-bold"
                                 style="max-width: 45%;">
                                 {{ $packageName }}
                             </span>
@@ -284,7 +284,7 @@
                         {{-- Baris 3: Username PPPoE & Last Sync --}}
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <small class="text-muted text-monospace">
-                                <i class="fas fa-user mr-1"></i> {{ $username }}
+                                <i class="fas fa-user me-1"></i> {{ $username }}
                             </small>
                             <small class="text-muted">
                                 {{ $state?->last_radius_sync_at ? $state->last_radius_sync_at->translatedFormat('d/m/y H:i') : '-' }}
@@ -297,22 +297,22 @@
                         <div
                             class="d-flex justify-content-between align-items-center bg-light px-2 py-1 rounded border">
                             <small class="text-muted font-weight-600">
-                                <i class="fas fa-sliders-h mr-1"></i> {{ __('radius.index.control') }}
+                                <i class="fas fa-sliders-h me-1"></i> {{ __('radius.index.control') }}
                             </small>
 
                             <div class="dropdown">
                                 <button class="btn btn-xs btn-outline-primary dropdown-toggle px-2" type="button"
-                                    id="mobileDropdown-{{ $customer->slug }}" data-toggle="dropdown"
+                                    id="mobileDropdown-{{ $customer->slug }}" data-bs-toggle="dropdown"
                                     aria-haspopup="true" aria-expanded="false">
                                     <i class="fas fa-cog"></i> {{ __('radius.index.btn_action') }}
                                 </button>
-                                <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in p-1">
+                                <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in p-1">
                                     <form method="POST"
                                         action="{{ route('radius.sync-single-radius', $customer->slug) }}">
                                         @csrf
                                         <a class="dropdown-item py-2" href="#"
                                             onclick="event.preventDefault(); this.closest('form').submit();">
-                                            <i class="fas fa-database text-primary mr-2"></i>
+                                            <i class="fas fa-database text-primary me-2"></i>
                                             {{ __('radius.action.sync_radius') }}
                                         </a>
                                     </form>
@@ -321,7 +321,7 @@
                                         @csrf
                                         <a class="dropdown-item py-2" href="#"
                                             onclick="event.preventDefault(); this.closest('form').submit();">
-                                            <i class="fas fa-network-wired text-warning mr-2"></i>
+                                            <i class="fas fa-network-wired text-warning me-2"></i>
                                             {{ __('radius.action.sync_mikrotik') }}
                                         </a>
                                     </form>

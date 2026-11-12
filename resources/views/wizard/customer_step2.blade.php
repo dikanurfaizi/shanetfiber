@@ -11,7 +11,7 @@
             <div class="card-body">
 
                 {{-- SERVER --}}
-                <div class="form-group mb-3">
+                <div class="mb-3 mb-3">
                     <label><strong>{{ __('customer.wizard.label.mikrotik_server') }}</strong> <span
                             class="text-danger">*</span></label>
                     <select name="mikrotik_id" id="server-dropdown" class="form-control">
@@ -26,7 +26,7 @@
                 </div>
 
                 {{-- INTERNET SERVICE --}}
-                <div class="form-group mb-3">
+                <div class="mb-3 mb-3">
                     <label><strong>{{ __('customer.wizard.label.internet_service') }}</strong> <span
                             class="text-danger">*</span></label>
                     <select name="internet_service" id="service-dropdown" class="form-control">
@@ -40,7 +40,7 @@
                 </div>
 
                 {{-- PPP TYPE --}}
-                <div id="input-ppp" class="form-group mb-3 d-none">
+                <div id="input-ppp" class="mb-3 mb-3 d-none">
                     <label><strong>{{ __('customer.wizard.label.ppp_type') }}</strong></label>
                     <select name="ppp_type_id" id="ppp_type_id" class="form-control">
                         <option value="">Select PPP Type</option>
@@ -57,7 +57,7 @@
                 <div id="input-ip-static" class="d-none">
 
                     {{-- Interface --}}
-                    <div class="form-group mb-3">
+                    <div class="mb-3 mb-3">
                         <label><strong>{{ __('customer.wizard.label.interface') }}</strong></label>
                         <select name="interface" id="interface-dropdown" class="form-control">
                             <option value="">{{ __('customer.wizard.label.select_interface') }}</option>
@@ -68,7 +68,7 @@
                     </div>
 
                     {{-- IP Address --}}
-                    <div class="form-group mb-3">
+                    <div class="mb-3 mb-3">
                         <label><strong>{{ __('customer.wizard.label.ip_static') }}</strong></label>
                         <input type="text" name="ip_static" class="form-control" placeholder="192.168.1.10">
                         @error('ip_static')
@@ -77,7 +77,7 @@
                     </div>
 
                     {{-- MAC Address --}}
-                    <div class="form-group mb-3">
+                    <div class="mb-3 mb-3">
                         <label><strong>{{ __('customer.wizard.label.mac_address') }}</strong></label>
                         <input type="text" name="mac_address" class="form-control" placeholder="AA:BB:CC:DD:EE:FF">
                         @error('mac_address')
@@ -89,7 +89,7 @@
 
             </div>
 
-            <div class="card-footer text-right">
+            <div class="card-footer text-end">
                 <a href="{{ route('wizard.step1') }}"
                     class="btn btn-secondary">{{ __('customer.wizard.button.back') }}</a>
                 <button class="btn btn-primary">{{ __('customer.wizard.button.next_step') }}</button>

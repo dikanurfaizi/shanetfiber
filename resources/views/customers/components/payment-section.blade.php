@@ -24,7 +24,7 @@
             <div class="detail-virt-number d-flex justify-content-center align-items-center">
                 <img src="{{ $order->qr_url }}" alt="QR Code Pembayaran"
                     style="width: 160px; height: 160px; object-fit: contain; cursor: pointer; transition: transform 0.2s;"
-                    data-toggle="modal" data-target="#qrModal" onmouseover="this.style.transform='scale(1.05)'"
+                    data-bs-toggle="modal" data-bs-target="#qrModal" onmouseover="this.style.transform='scale(1.05)'"
                     onmouseout="this.style.transform='scale(1)'">
             </div>
 

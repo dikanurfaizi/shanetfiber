@@ -1,8 +1,8 @@
 <x-layouts.cpanel.settings.app-layout title="Add Account Bank">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">
-            <i class="fas fa-university mr-2"></i> {{ __('bank.header.create') }}
+        <h5 class="m-0 fw-bold text-primary">
+            <i class="fas fa-university me-2"></i> {{ __('bank.header.create') }}
         </h5>
     </div>
 
@@ -40,26 +40,24 @@
                             <strong>{{ __('bank.label.type') }} <span class="text-danger">*</span></strong>
                         </label>
                         <div class="d-flex align-items-center mt-1">
-                            <div class="custom-control custom-radio mr-4">
+                            <div class="form-check me-4">
                                 {!! Form::radio('type', 'bank', true, [
-                                    'class' => 'custom-control-input',
+                                    'class' => 'form-check-input',
                                     'id' => 'type_bank',
                                     'required' => true,
                                 ]) !!}
-                                <label class="custom-control-label font-weight-bold text-dark cursor-pointer"
-                                    for="type_bank">
-                                    <i class="fas fa-university text-info mr-1"></i> {{ __('bank.label.bank-account') }}
+                                <label class="form-check-label fw-bold text-dark cursor-pointer" for="type_bank">
+                                    <i class="fas fa-university text-info me-1"></i> {{ __('bank.label.bank-account') }}
                                 </label>
                             </div>
-                            <div class="custom-control custom-radio">
+                            <div class="form-check">
                                 {!! Form::radio('type', 'ewallet', false, [
-                                    'class' => 'custom-control-input',
+                                    'class' => 'form-check-input',
                                     'id' => 'type_ewallet',
                                     'required' => true,
                                 ]) !!}
-                                <label class="custom-control-label font-weight-bold text-dark cursor-pointer"
-                                    for="type_ewallet">
-                                    <i class="fas fa-wallet text-warning mr-1"></i> {{ __('bank.label.ewallet') }}
+                                <label class="form-check-label fw-bold text-dark cursor-pointer" for="type_ewallet">
+                                    <i class="fas fa-wallet text-warning me-1"></i> {{ __('bank.label.ewallet') }}
                                 </label>
                             </div>
                         </div>
@@ -119,12 +117,12 @@
             </div>
 
             <div class="card-footer bg-light d-flex justify-content-start align-items-center">
-                <a href="{{ route('banks.index') }}" class="btn btn-sm btn-outline-secondary mr-2">
-                    <i class="fas fa-arrow-left mr-1"></i> {{ __('bank.button.back') }}
+                <a href="{{ route('banks.index') }}" class="btn btn-sm btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left me-1"></i> {{ __('bank.button.back') }}
                 </a>
 
                 <button type="submit" class="btn btn-sm btn-success">
-                    <i class="fa fa-save mr-1"></i> {{ __('bank.button.save') }}
+                    <i class="fa fa-save me-1"></i> {{ __('bank.button.save') }}
                 </button>
             </div>
             {!! Form::close() !!}

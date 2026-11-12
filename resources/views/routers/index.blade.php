@@ -1,7 +1,7 @@
 <x-layouts.cpanel.settings.app-layout title="Routers">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('router.header.index') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('router.header.index') }}</h5>
         <span><a class="btn btn-sm btn-success mt-2" href="{{ route('routers.create') }}"><i class="fa fa-plus"></i>
                 {{ __('router.button.create') }}</a></span>
     </div>

@@ -1,8 +1,8 @@
 <x-layouts.customers.mobile.app-layout title="Customers">
 
     <div class="card-header py-3 bg-gradient-primary rounded-top">
-        <h6 class="m-0 font-weight-bold text-white d-flex align-items-center">
-            <i class="fas fa-user-circle mr-2 fa-lg"></i>
+        <h6 class="m-0 fw-bold text-white d-flex align-items-center">
+            <i class="fas fa-user-circle me-2 fa-lg"></i>
             {{ __('customer.page.header.index') }} {{ auth()->guard('customer')->user()->name }}
         </h6>
     </div>
@@ -13,8 +13,8 @@
             <div class="col-12 mb-3">
                 <div class="card shadow-sm border-0">
                     <div class="card-header py-2 bg-light">
-                        <h6 class="m-0 font-weight-bold text-primary">
-                            <i class="fas fa-info-circle mr-2"></i>
+                        <h6 class="m-0 fw-bold text-primary">
+                            <i class="fas fa-info-circle me-2"></i>
                             {{ __('Customer Information') }}
                         </h6>
                     </div>
@@ -22,43 +22,40 @@
                         <div class="info-list">
                             {{-- ID Pelanggan --}}
                             <div class="info-item d-flex justify-content-between align-items-center py-2 border-bottom">
-                                <span class="text-muted font-weight-bold small">{{ __('customer.label.id') }}</span>
-                                <span class="font-weight-bold text-dark text-right text-break pl-2">
+                                <span class="text-muted fw-bold small">{{ __('customer.label.id') }}</span>
+                                <span class="fw-bold text-dark text-end text-break ps-2">
                                     {{ $customer->customer_id ?? 'No ID' }}
                                 </span>
                             </div>
 
                             {{-- Paket --}}
                             <div class="info-item d-flex justify-content-between align-items-center py-2 border-bottom">
-                                <span
-                                    class="text-muted font-weight-bold small">{{ __('customer.label.package') }}</span>
-                                <span class="font-weight-bold text-primary text-right text-break pl-2">
+                                <span class="text-muted fw-bold small">{{ __('customer.label.package') }}</span>
+                                <span class="fw-bold text-primary text-end text-break ps-2">
                                     {{ $packageName }}
                                 </span>
                             </div>
 
                             {{-- Harga Paket --}}
                             <div class="info-item d-flex justify-content-between align-items-center py-2 border-bottom">
-                                <span class="text-muted font-weight-bold small">{{ __('customer.label.price') }}</span>
-                                <span class="text-dark text-right pl-2">
+                                <span class="text-muted fw-bold small">{{ __('customer.label.price') }}</span>
+                                <span class="text-dark text-end ps-2">
                                     @moneyIDR($basePrice)
                                 </span>
                             </div>
 
                             {{-- Diskon --}}
                             <div class="info-item d-flex justify-content-between align-items-center py-2 border-bottom">
-                                <span
-                                    class="text-muted font-weight-bold small">{{ __('customer.label.discount') }}</span>
-                                <span class="text-dark text-right pl-2">
+                                <span class="text-muted fw-bold small">{{ __('customer.label.discount') }}</span>
+                                <span class="text-dark text-end ps-2">
                                     @moneyIDR($totalDiscount)
                                 </span>
                             </div>
 
                             {{-- Tipe Diskon --}}
                             <div class="info-item d-flex justify-content-between align-items-center py-2 border-bottom">
-                                <span
-                                    class="text-muted font-weight-bold small">{{ __('customer.label.discount-type') }}</span>
-                                <span class="text-dark text-right text-break pl-2">
+                                <span class="text-muted fw-bold small">{{ __('customer.label.discount-type') }}</span>
+                                <span class="text-dark text-end text-break ps-2">
                                     {{ $memberName }}
                                 </span>
                             </div>
@@ -67,8 +64,7 @@
                             @if (($websystem->enable_tax ?? false) === 'true' || ($websystem->enable_tax ?? false) === true)
                                 <div
                                     class="info-item d-flex justify-content-between align-items-center py-2 border-bottom">
-                                    <span
-                                        class="text-muted font-weight-bold small">{{ __('customer.label.tax-rate') }}</span>
+                                    <span class="text-muted fw-bold small">{{ __('customer.label.tax-rate') }}</span>
                                     <span class="badge bg-info text-white">@moneyIDR($taxPrice ?? 0)</span>
                                 </div>
                             @endif
@@ -76,28 +72,26 @@
                             {{-- Tagihan Bulanan --}}
                             <div
                                 class="info-item d-flex justify-content-between align-items-center py-2 border-bottom bg-light rounded px-2 my-1">
-                                <span class="text-dark font-weight-bold small">{{ __('customer.label.bill') }}</span>
-                                <span class="badge bg-primary text-white font-weight-bold p-2 text-wrap text-right">
+                                <span class="text-dark fw-bold small">{{ __('customer.label.bill') }}</span>
+                                <span class="badge bg-primary text-white fw-bold p-2 text-wrap text-end">
                                     @moneyIDR($priceAfterTax) / {{ $periodEn ?? 'bulan' }}
                                 </span>
                             </div>
 
                             {{-- Tanggal Jatuh Tempo --}}
                             <div class="info-item d-flex justify-content-between align-items-start py-2 border-bottom">
-                                <span
-                                    class="text-muted font-weight-bold small">{{ __('customer.page.label.due-date') }}</span>
-                                <span class="text-danger font-weight-bold text-right text-break pl-2">
+                                <span class="text-muted fw-bold small">{{ __('customer.page.label.due-date') }}</span>
+                                <span class="text-danger fw-bold text-end text-break ps-2">
                                     {{ $dueDateText }}
                                 </span>
                             </div>
 
                             {{-- Pembayaran Terakhir --}}
                             <div class="info-item d-flex justify-content-between align-items-start py-2">
-                                <span
-                                    class="text-muted font-weight-bold small">{{ __('customer.label.last-payment') }}</span>
-                                <span class="text-right text-break pl-2">
+                                <span class="text-muted fw-bold small">{{ __('customer.label.last-payment') }}</span>
+                                <span class="text-end text-break ps-2">
                                     @if ($lastPayment)
-                                        <span class="text-success font-weight-bold">
+                                        <span class="text-success fw-bold">
                                             {{ \Carbon\Carbon::parse($lastPayment->payment_time)->translatedFormat('d F Y, H:i') }}
                                             WIB
                                         </span>
@@ -115,14 +109,14 @@
             <div class="col-12">
                 <div class="card shadow-sm border-0">
                     <div class="card-header py-2 bg-light">
-                        <h6 class="m-0 font-weight-bold text-primary">
-                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                        <h6 class="m-0 fw-bold text-primary">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
                             {{ __('Unpaid Bills') }}
                         </h6>
                     </div>
                     <div class="card-body p-2 p-sm-3">
                         <div class="alert alert-warning p-2 small mb-3">
-                            <i class="fas fa-info-circle mr-1"></i>
+                            <i class="fas fa-info-circle me-1"></i>
                             <strong>{{ $billings->count() }} {{ __('customer.label.bill') }}</strong>
                             {{ __('customer.page.label.bill-not-payed') }}
                         </div>
@@ -133,7 +127,7 @@
                                     <tr>
                                         <th>{{ __('customer.table.no') }}</th>
                                         <th>{{ __('billing.table.periode') }}</th>
-                                        <th class="text-right">{{ __('billing.table.package-price') }}</th>
+                                        <th class="text-end">{{ __('billing.table.package-price') }}</th>
                                         @if ($websystem->payment_gateway === 'enable')
                                             <th class="text-center">{{ __('billing.table.action') }}</th>
                                         @endif
@@ -145,14 +139,14 @@
                                             <td>{{ $loop->iteration }}</td>
                                             <td class="text-nowrap">
                                                 {{ $billing->billingSubscription->billing_periode ?? '-' }}</td>
-                                            <td class="text-right font-weight-bold">
+                                            <td class="text-end fw-bold">
                                                 @moneyIDR($billing->total_amount)
                                             </td>
                                             @if ($websystem->payment_gateway === 'enable')
                                                 <td class="text-center">
                                                     <a href="{{ route('customer.payment.show', $billing->id) }}"
                                                         class="btn btn-xs btn-success px-2 py-1">
-                                                        <i class="fas fa-credit-card mr-1"></i> Bayar
+                                                        <i class="fas fa-credit-card me-1"></i> Bayar
                                                     </a>
                                                 </td>
                                             @endif
@@ -165,9 +159,9 @@
                                             </td>
                                         </tr>
                                     @endforelse
-                                    <tr class="bg-light font-weight-bold">
-                                        <td colspan="2" class="text-right">Total:</td>
-                                        <td class="text-right text-primary">@moneyIDR($billings->sum('total_amount'))</td>
+                                    <tr class="bg-light fw-bold">
+                                        <td colspan="2" class="text-end">Total:</td>
+                                        <td class="text-end text-primary">@moneyIDR($billings->sum('total_amount'))</td>
                                         @if ($websystem->payment_gateway === 'enable')
                                             <td></td>
                                         @endif
@@ -183,17 +177,17 @@
         {{-- METODE PEMBAYARAN & REKENING --}}
         <div class="card shadow-sm border-0 mt-3">
             <div class="card-header py-2 bg-light">
-                <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="fas fa-money-bill-wave mr-2"></i>
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fas fa-money-bill-wave me-2"></i>
                     {{ __('Metode Pembayaran') }}
                 </h6>
             </div>
             <div class="card-body p-3">
                 <div class="alert alert-info p-2 small mb-3">
-                    <h6 class="alert-heading font-weight-bold mb-2 small">
-                        <i class="fas fa-info-circle mr-1"></i> Pembayaran dapat dilakukan via:
+                    <h6 class="alert-heading fw-bold mb-2 small">
+                        <i class="fas fa-info-circle me-1"></i> Pembayaran dapat dilakukan via:
                     </h6>
-                    <ol class="pl-3 mb-0">
+                    <ol class="ps-3 mb-0">
                         <li>Cash/Tunai di Admin <span
                                 class="badge bg-secondary text-white">{{ $customer->user->name ?? 'Admin' }}</span>
                         </li>
@@ -203,8 +197,8 @@
                 </div>
 
                 <div class="alert alert-success p-2 mb-0">
-                    <h6 class="alert-heading font-weight-bold mb-2 small">
-                        <i class="fas fa-university mr-1"></i> Rekening Bank / E-Wallet:
+                    <h6 class="alert-heading fw-bold mb-2 small">
+                        <i class="fas fa-university me-1"></i> Rekening Bank / E-Wallet:
                     </h6>
                     <ul class="list-unstyled mb-0 small">
                         @forelse ($banks as $bank)
@@ -212,7 +206,7 @@
                                 <span class="badge bg-success text-white text-uppercase">
                                     {{ $bank->bank }}
                                 </span>
-                                <strong class="ml-1 text-dark d-inline-block" style="letter-spacing: 0.5px;">
+                                <strong class="ms-1 text-dark d-inline-block" style="letter-spacing: 0.5px;">
                                     {{ implode(' ', str_split($bank->account_number, 4)) }}
                                 </strong>
                                 <br>

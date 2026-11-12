@@ -4,7 +4,7 @@
         action="{{ route($websystem->payment_channel === 'tripays' ? 'customer.tripays.order.create' : 'customer.order.create', $billing->id) }}">
         @csrf
         <div class="card-header py-3">
-            <h5 class="m-0 font-weight-bold text-primary">{{ __('Bill Number #') }}{{ $billing->billing_number }}</h5>
+            <h5 class="m-0 fw-bold text-primary">{{ __('Bill Number #') }}{{ $billing->billing_number }}</h5>
         </div>
 
         <!-- Hidden input untuk payment_channel -->

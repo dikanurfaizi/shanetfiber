@@ -4,7 +4,7 @@
     HEADER
     ========================= --}}
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">
+        <h5 class="m-0 fw-bold text-primary">
             <i class="fas fa-receipt"></i> Receipt Detail
         </h5>
     </div>

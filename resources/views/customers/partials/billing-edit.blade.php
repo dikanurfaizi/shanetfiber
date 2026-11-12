@@ -14,7 +14,7 @@
             {{-- =======================
             SELECT PACKAGE
             ======================== --}}
-            <div class="form-group mb-3">
+            <div class="mb-3 mb-3">
                 <label><strong>{{ __('customer.wizard.label.package') }}</strong> <span
                         class="text-danger">*</span></label>
                 <select name="package_id" id="package-dropdown" class="form-control" required>
@@ -30,7 +30,7 @@
             {{-- =======================
             PACKAGE DURATION
             ======================== --}}
-            <div class="form-group mb-3 {{ $current_duration_id ? '' : 'd-none' }}" id="duration-wrapper">
+            <div class="mb-3 mb-3 {{ $current_duration_id ? '' : 'd-none' }}" id="duration-wrapper">
                 <label><strong>{{ __('customer.wizard.label.duration') }}</strong></label>
                 <select name="package_duration_id" id="duration-select" class="form-control">
                     @if ($current_duration)
@@ -44,7 +44,7 @@
             {{-- =======================
             MEMBERSHIP
             ======================== --}}
-            <div class="form-group mb-3">
+            <div class="mb-3 mb-3">
                 <label><strong>{{ __('customer.wizard.label.membership') }}</strong></label>
                 <select name="member_id" id="member-dropdown" class="form-control">
                     <option value="">{{ __('customer.wizard.placeholder.non_member') }}</option>
@@ -62,10 +62,10 @@
             {{-- =======================
             BILLING OPTION
             ======================== --}}
-            <div class="form-group mb-3">
+            <div class="mb-3 mb-3">
                 <label><strong>{{ __('customer.wizard.label.billing_option') }}</strong></label><br>
 
-                <label class="mr-3">
+                <label class="me-3">
                     <input type="radio" name="billing_option" value="monthly"
                         {{ $billing_option === 'monthly' ? 'checked' : '' }}>
                     {{ __('customer.wizard.label.monthly') }}
@@ -81,7 +81,7 @@
             {{-- =======================
             BILLING PERIODE
             ======================== --}}
-            <div id="periode-wrapper" class="form-group mb-3 {{ $billing_option === 'one_time' ? '' : 'd-none' }}">
+            <div id="periode-wrapper" class="mb-3 mb-3 {{ $billing_option === 'one_time' ? '' : 'd-none' }}">
                 <label><strong>{{ __('customer.wizard.label.select_billing_period') }}</strong></label>
                 <select name="billing_periode_name" class="form-control"
                     {{ $billing_option === 'one_time' ? '' : 'disabled' }}>
@@ -98,7 +98,7 @@
             {{-- =======================
                  DISCOUNT PREVIEW
             ======================== --}}
-            <div class="form-group mb-3">
+            <div class="mb-3 mb-3">
                 <label><strong>{{ __('customer.wizard.label.discount_applied') }}</strong></label>
 
                 <input type="text" id="discount_display" class="form-control" readonly
@@ -209,7 +209,7 @@
         <div class="card-footer bg-white border-top-0 pt-0 pb-4">
             <div class="action-group">
                 <button type="submit" class="btn-soft btn-green mb-2 mb-md-0">
-                    <i class="fa fa-save mr-1"></i> {{ __('billing.button.save_regenerate') }}
+                    <i class="fa fa-save me-1"></i> {{ __('billing.button.save_regenerate') }}
                 </button>
 
                 <a href="{{ route('customers.show', [$customer->slug, 'tab' => 'billing']) }}"

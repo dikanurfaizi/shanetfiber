@@ -42,7 +42,6 @@
     <script src="{{ asset('js/jquery.easing-1.4.1.min.js') }}"></script>
     <!-- Custom scripts for all pages-->
     <script src="{{ asset('js/sb-admin-2.min.js') }}"></script>
-    <script src="{{ asset('js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('assets/swiper/swiper-bundle.min.js') }}"></script>
 
     {{-- Memanggil skrip kustom dari halaman anak --}}

@@ -15,7 +15,7 @@
             <div class="card-body">
 
                 {{-- Admin --}}
-                <div class="form-group mb-3">
+                <div class="mb-3 mb-3">
                     <label><strong>{{ __('customer.wizard.label.pic') }}</strong> <span
                             class="text-danger">*</span></label>
                     <select name="user_id" class="form-control @error('user_id') is-invalid @enderror" required>
@@ -36,7 +36,7 @@
                 </div>
 
                 {{-- Name --}}
-                <div class="form-group mb-3">
+                <div class="mb-3 mb-3">
                     <label><strong>{{ __('customer.wizard.label.name') }}</strong> <span
                             class="text-danger">*</span></label>
                     <input type="text" class="form-control @error('name') is-invalid @enderror" name="name"
@@ -50,7 +50,7 @@
                 </div>
 
                 {{-- Email --}}
-                <div class="form-group mb-3">
+                <div class="mb-3 mb-3">
                     <label><strong>{{ __('customer.wizard.label.email') }}</strong> <span
                             class="text-danger">*</span></label>
                     <input type="email" class="form-control @error('email') is-invalid @enderror" name="email"
@@ -64,7 +64,7 @@
                 </div>
 
                 {{-- Contact --}}
-                <div class="form-group mb-3">
+                <div class="mb-3 mb-3">
                     <label><strong>{{ __('customer.wizard.label.contact') }}</strong> <span
                             class="text-danger">*</span></label>
 
@@ -81,7 +81,7 @@
                 </div>
 
                 {{-- Address --}}
-                <div class="form-group mb-3">
+                <div class="mb-3 mb-3">
                     <label><strong>{{ __('customer.wizard.label.address') }}</strong>
                         {{ __('customer.wizard.label.optional') }}</label>
                     <input type="text" class="form-control" name="address" id="address-input"
@@ -89,11 +89,11 @@
                 </div>
 
                 {{-- MAP PICKER SECTION --}}
-                <div class="form-group mb-3 p-3 bg-light rounded border">
+                <div class="mb-3 mb-3 p-3 bg-light rounded border">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <label class="mb-0"><strong>{{ __('customer.wizard.label.map_picker') }}</strong></label>
                         <button type="button" class="btn btn-sm btn-outline-primary" id="btn-current-location">
-                            <i class="fa fa-crosshairs mr-1"></i>
+                            <i class="fa fa-crosshairs me-1"></i>
                             {{ __('customer.wizard.button.use_current_location') }}
                         </button>
                     </div>
@@ -128,7 +128,7 @@
                 </div>
 
                 {{-- Password --}}
-                <div class="form-group mb-3">
+                <div class="mb-3 mb-3">
                     <label><strong>{{ __('customer.wizard.label.password') }}</strong>
                         {{ __('customer.wizard.label.optional') }}</label>
                     <input type="password" class="form-control" name="password">
@@ -139,14 +139,14 @@
                 </div>
 
                 {{-- Confirm Password --}}
-                <div class="form-group mb-3">
+                <div class="mb-3 mb-3">
                     <label><strong>{{ __('customer.wizard.label.confirm_password') }}</strong></label>
                     <input type="password" class="form-control" name="password_confirmation">
                 </div>
 
             </div>
 
-            <div class="card-footer text-right">
+            <div class="card-footer text-end">
                 <button class="btn btn-primary">{{ __('customer.wizard.button.next_step') }}</button>
             </div>
 
@@ -225,10 +225,10 @@
 
                             // Peta pesan error Geolocation berdasarkan error code
                             let errorMessage =
-                            "{{ __('customer.wizard.message.geolocation_failed') }}";
+                                "{{ __('customer.wizard.message.geolocation_failed') }}";
                             if (error.code === error.PERMISSION_DENIED) {
                                 errorMessage =
-                                "{{ __('customer.wizard.message.geolocation_denied') }}";
+                                    "{{ __('customer.wizard.message.geolocation_denied') }}";
                             }
 
                             Swal.fire({

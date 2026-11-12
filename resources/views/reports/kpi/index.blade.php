@@ -6,12 +6,12 @@
     @endphp
 
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <h5 class="m-0 font-weight-bold text-primary">
+        <h5 class="m-0 fw-bold text-primary">
             KPI Report {{ $year }}
         </h5>
 
         <form method="GET" action="{{ route('reports.kpi') }}" class="d-flex align-items-center">
-            <label for="year" class="me-2 mb-0 fw-bold mr-2">Year</label>
+            <label for="year" class="me-2 mb-0 fw-bold me-2">Year</label>
             <select name="year" id="year" class="form-control" onchange="this.form.submit()">
                 @foreach ($years as $y)
                     <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>
@@ -39,14 +39,14 @@
                 <div class="card mb-2">
                     <div class="card-header" id="heading{{ $idx }}">
                         <h6 class="mb-0">
-                            <button class="btn btn-link text-primary" data-toggle="collapse"
-                                data-target="#collapse{{ $idx }}">
+                            <button class="btn btn-link text-primary" data-bs-toggle="collapse"
+                                data-bs-target="#collapse{{ $idx }}">
                                 {{ $m['mikrotik_name'] }}
                             </button>
                         </h6>
                     </div>
 
-                    <div id="collapse{{ $idx }}" class="collapse" data-parent="#kpiAccordion">
+                    <div id="collapse{{ $idx }}" class="collapse" data-bs-parent="#kpiAccordion">
 
                         <div class="card-body p-0" style="overflow-x:auto">
                             <table class="table table-bordered table-striped table-hover">

@@ -6,12 +6,11 @@
         "build": "vite build"
     },
     "devDependencies": {
-        "@popperjs/core": "^2.11.6",
+        "@popperjs/core": "^2.11.8",
         "axios": "^1.1.2",
-        "bootstrap": "^4.6.2",
+        "bootstrap": "^5.3.3",
         "jquery": "^3.3.1",
         "laravel-vite-plugin": "^1.2.0",
-        "popper.js": "^1.14.3",
         "sass": "^1.56.1",
         "vite": "^5.0.0"
     },

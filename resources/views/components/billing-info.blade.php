@@ -110,6 +110,6 @@
 
 <div class="card-footer">
     <a href="{{ url()->previous() }}" class="btn btn-sm btn-secondary">
-        <i class="fas fa-arrow-left mr-1"></i> Back
+        <i class="fas fa-arrow-left me-1"></i> Back
     </a>
 </div>

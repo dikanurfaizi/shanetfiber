@@ -12,7 +12,7 @@
                 <!-- Contact Info -->
                 <div id="contact" class="d-none d-lg-flex align-items-center me-auto">
                     {{-- Telepon / WhatsApp --}}
-                    <div class="contact-item ml-2">
+                    <div class="contact-item ms-2">
                         <i class="fas fa-phone-alt text-primary me-2"></i>
                         <a href="https://wa.me/{{ $phoneNumber }}?text={{ $generalMessage }}" class="text-dark"
                             target="_blank" rel="noopener noreferrer">
@@ -20,7 +20,7 @@
                         </a>
                     </div>
 
-                    <div class="contact-item ml-2">
+                    <div class="contact-item ms-2">
                         <i class="fas fa-envelope text-primary me-2"></i>
                         <a href="mailto:{{ $websystem->email }}?subject={{ urlencode('Info Paket Internet Shanetfiber') }}&body={{ urlencode($generalMessage) }}"
                             class="text-dark d-none d-md-inline" title="Kirim via aplikasi email">
@@ -35,8 +35,9 @@
                 </div>
             </div>
 
-            <button class="btn btn-outline-primary" data-toggle="modal" data-target="#loginModal" data-bs-toggle="modal" data-bs-target="#loginModal">
-                <i class="fas fa-sign-in-alt mr-2"></i> {{ __('auth.login') }}
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#loginModal"
+                data-bs-toggle="modal" data-bs-target="#loginModal">
+                <i class="fas fa-sign-in-alt me-2"></i> {{ __('auth.login') }}
             </button>
         </div>
     </nav>
@@ -302,19 +303,19 @@
 
                 <form action="{{ route('customerLoginPost') }}" method="post">
                     @csrf
-                    <div class="form-group">
+                    <div class="mb-3">
                         <input type="text" name="email" value="{{ old('email') }}"
                             class="form-control form-control-user @error('email') is-invalid @enderror"
                             id="exampleInputEmail" placeholder="{{ __('Email Address or Phone Number') }}" required
                             autofocus>
                     </div>
                     @error('email')
-                        <div class="form-group custom-control">
+                        <div class="text-danger small mt-1">
                             <label class="text-danger">{{ $message }}</label>
                         </div>
                     @enderror
 
-                    <div class="form-group position-relative">
+                    <div class="mb-3 position-relative">
                         <input type="password" name="password"
                             class="form-control form-control-user @error('password') is-invalid @enderror"
                             id="passwordInput" placeholder="{{ __('Password') }}" required>
@@ -325,7 +326,7 @@
                         </span>
                     </div>
                     @error('password')
-                        <div class="form-group custom-control">
+                        <div class="text-danger small mt-1">
                             <label class="text-danger">{{ $message }}</label>
                         </div>
                     @enderror
@@ -333,8 +334,9 @@
                     <button type="submit" class="btn btn-primary w-100">Login</button>
 
                     <!-- Forgot Password trigger -->
-                    <div class="mt-2 text-right">
-                        <a href="javascript:void(0)" data-toggle="modal" data-target="#forgotPasswordModal" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
+                    <div class="mt-2 text-end">
+                        <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal"
+                            data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
                             {{ __('Forgot Your Password?') }}
                         </a>
                     </div>
@@ -349,7 +351,8 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Lupa Password</h5>
-                    <button type="button" class="close btn-close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close btn-close" data-bs-dismiss="modal" data-bs-dismiss="modal"
+                        aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>

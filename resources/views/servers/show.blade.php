@@ -1,7 +1,7 @@
 <x-layouts.mikrotiks.app-layout :title="__('server.title.show', ['name' => $mikrotik->name])">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('server.label.server_name') }}: {{ $mikrotik->name }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('server.label.server_name') }}: {{ $mikrotik->name }}</h5>
         <div class="small">
             <span class="fw-500 text-primary">{{ __('hotspot.date-time') }}</span>
             · <span id="tanggal"></span> · <span id="waktu"></span> · <span id="time-zone-name"></span> · <span
@@ -138,7 +138,7 @@
             <div class="col-lg-8 mb-4">
                 <div class="card mb-4 h-100">
                     <div class="card-header">
-                        <span class="font-weight-bold text-primary"><i class="fas fa-chart-line mr-1"></i>
+                        <span class="fw-bold text-primary"><i class="fas fa-chart-line me-1"></i>
                             {{ __('server.header.system_monitoring') }}</span>
                     </div>
                     <div class="card-body">

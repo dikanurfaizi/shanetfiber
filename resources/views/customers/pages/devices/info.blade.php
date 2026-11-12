@@ -1,9 +1,9 @@
 <x-layouts.customers.app-layout title="Device Information">
 
     <div class="card-header py-3 bg-gradient-primary">
-        <h5 class="m-0 font-weight-bold text-white d-flex align-items-center">
+        <h5 class="m-0 fw-bold text-white d-flex align-items-center">
             <i class="fas fa-desktop me-3" style="font-size: 1.1em"></i>
-            <span class="ml-2 text-wrap">{{ __('deviceInfo.title.device-info') }} -
+            <span class="ms-2 text-wrap">{{ __('deviceInfo.title.device-info') }} -
                 {{ auth()->guard('customer')->user()->name }}</span>
         </h5>
     </div>
@@ -14,8 +14,8 @@
             <div class="col-lg-6 d-flex">
                 <div class="card shadow mb-4 w-100 h-100">
                     <div class="card-header py-3 bg-light">
-                        <h6 class="m-0 font-weight-bold text-primary">
-                            <i class="fas fa-info-circle mr-2"></i>
+                        <h6 class="m-0 fw-bold text-primary">
+                            <i class="fas fa-info-circle me-2"></i>
                             {{ __('deviceInfo.header.device-info') }}
                         </h6>
                     </div>
@@ -26,11 +26,11 @@
                                 <td>
                                     :
                                     @if (!empty($secretActive['address']))
-                                        <span class="badge badge-success text-white">
+                                        <span class="badge bg-success text-white">
                                             {{ __('deviceInfo.label.online') }}
                                         </span>
                                     @else
-                                        <span class="badge badge-danger text-white">
+                                        <span class="badge bg-danger text-white">
                                             {{ __('deviceInfo.label.offline') }}
                                         </span>
                                     @endif
@@ -66,8 +66,8 @@
             <div class="col-lg-6 d-flex">
                 <div class="card shadow mb-4 w-100 h-100">
                     <div class="card-header py-3 bg-light">
-                        <h6 class="m-0 font-weight-bold text-primary">
-                            <i class="fas fa-wifi mr-2"></i>
+                        <h6 class="m-0 fw-bold text-primary">
+                            <i class="fas fa-wifi me-2"></i>
                             {{ __('deviceInfo.header.wlan-info') }}
                         </h6>
                     </div>
@@ -102,8 +102,8 @@
         @if ($secretActive)
             <div class="card shadow mt-4">
                 <div class="card-header py-3 bg-light">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-chart-line mr-2"></i>
+                    <h6 class="m-0 fw-bold text-primary">
+                        <i class="fas fa-chart-line me-2"></i>
                         {{ __('customer.header.traffic-monitoring') }}
                     </h6>
                 </div>
@@ -123,15 +123,15 @@
         @else
             <div class="card shadow mt-4">
                 <div class="card-header py-3 bg-light">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-chart-line mr-2"></i>
+                    <h6 class="m-0 fw-bold text-primary">
+                        <i class="fas fa-chart-line me-2"></i>
                         {{ __('deviceInfo.header.traffice-monitor') }}
                     </h6>
                 </div>
                 <div class="card-body">
                     <p>Traffic usage data will be displayed here.</p>
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle mr-2"></i>
+                        <i class="fas fa-info-circle me-2"></i>
                         Placeholder: Bandwidth graph integration (upload / download).
                     </div>
                 </div>

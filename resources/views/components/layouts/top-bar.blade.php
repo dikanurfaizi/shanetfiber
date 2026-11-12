@@ -1,5 +1,5 @@
 <nav class="navbar navbar-expand navbar-light topbar-premium mb-4 static-top">
-    <a class="nav-link pr-3 border-right" href="/cpanel/home">
+    <a class="nav-link pe-3 border-end" href="/cpanel/home">
         <img src="/images/donate.png" style="height:22px;">
 
         {{-- 🔔 Lonceng Notifikasi WhatsApp Chat --}}
@@ -19,7 +19,7 @@
         </a>
     </a>
 
-    <ul class="navbar-nav ml-auto align-items-center">
+    <ul class="navbar-nav ms-auto align-items-center">
         <li class="nav-item d-none d-md-block">
             <a class="nav-link" href="{{ route('billings.index', ['search_status' => '!LS-!VD']) }}">
                 <span class="badge text-white {{ $billingsToShow->count() > 0 ? 'bg-danger' : 'bg-success' }}">
@@ -30,16 +30,16 @@
 
         <li class="nav-item dropdown d-block d-md-none">
             <a class="nav-link dropdown-toggle" href="#" id="mobileMenuDropdown" role="button"
-                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                 <i class="fas fa-ellipsis-h"></i>
             </a>
-            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
+            <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in"
                 aria-labelledby="mobileMenuDropdown">
                 <a class="nav-link d-flex align-items-center"
                     href="{{ route('billings.index', ['search_status' => '!LS-!VD']) }}">
-                    <span class="mr-2 text-muted small">Outstanding</span>
+                    <span class="me-2 text-muted small">Outstanding</span>
                     <span
-                        class="badge badge-pill {{ $billingsToShow->count() > 0 ? 'badge-danger' : 'badge-success' }}">
+                        class="badge rounded-pill {{ $billingsToShow->count() > 0 ? 'bg-danger' : 'bg-success' }}">
                         {{ $billingsToShow->count() }}
                     </span>
                 </a>
@@ -47,30 +47,30 @@
         </li>
 
         <li class="nav-item dropdown no-arrow mx-2">
-            <a class="nav-link dropdown-toggle d-flex align-items-center pr-2" href="#" id="languageDropdown"
-                role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+            <a class="nav-link dropdown-toggle d-flex align-items-center pe-2" href="#" id="languageDropdown"
+                role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                 style="cursor: pointer; text-decoration: none;">
 
                 @if (app()->getLocale() == 'id')
-                    <span class="fi fi-id rounded flag-modern-size mr-2 border shadow-sm"></span>
-                    <span class="d-none d-sm-inline text-gray-600 small font-weight-bold">ID</span>
+                    <span class="fi fi-id rounded flag-modern-size me-2 border shadow-sm"></span>
+                    <span class="d-none d-sm-inline text-gray-600 small fw-bold">ID</span>
                 @else
-                    <span class="fi fi-gb rounded flag-modern-size mr-2 border shadow-sm"></span>
-                    <span class="d-none d-sm-inline text-gray-600 small font-weight-bold">EN</span>
+                    <span class="fi fi-gb rounded flag-modern-size me-2 border shadow-sm"></span>
+                    <span class="d-none d-sm-inline text-gray-600 small fw-bold">EN</span>
                 @endif
             </a>
 
-            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in p-1"
+            <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in p-1"
                 aria-labelledby="languageDropdown" style="min-width: 160px;">
                 <a class="dropdown-item d-flex align-items-center py-2 {{ app()->getLocale() == 'id' ? 'active text-white' : '' }}"
                     href="{{ route('lang.switch', 'id') }}">
-                    <span class="fi fi-id rounded mr-2 border shadow-xs" style="width: 20px; height: 15px;"></span>
+                    <span class="fi fi-id rounded me-2 border shadow-xs" style="width: 20px; height: 15px;"></span>
                     <span class="small font-weight-600">Indonesia</span>
                 </a>
 
                 <a class="dropdown-item d-flex align-items-center py-2 {{ app()->getLocale() == 'en' ? 'active text-white' : '' }}"
                     href="{{ route('lang.switch', 'en') }}">
-                    <span class="fi fi-gb rounded mr-2 border shadow-xs" style="width: 20px; height: 15px;"></span>
+                    <span class="fi fi-gb rounded me-2 border shadow-xs" style="width: 20px; height: 15px;"></span>
                     <span class="small font-weight-600">English</span>
                 </a>
             </div>
@@ -80,9 +80,9 @@
 
         <li class="nav-item dropdown no-arrow">
             <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown"
-                role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 
-                <div class="mr-3 text-right d-none d-lg-block">
+                <div class="me-3 text-end d-none d-lg-block">
                     <div class="font-weight-600 text-dark small">
                         {{ Auth::user()->name }}
                     </div>
@@ -93,14 +93,14 @@
 
                 <img class="img-profile rounded-circle" src="{{ asset('images/undraw_profile.svg') }}">
             </a>
-            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
+            <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in" aria-labelledby="userDropdown">
                 <a class="dropdown-item" href="{{ route('profile.show') }}">
-                    <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
+                    <i class="fas fa-user fa-sm fa-fw me-2 text-gray-400"></i>
                     {{ __('Profile') }}
                 </a>
                 <div class="dropdown-divider"></div>
-                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#logoutModal">
-                    <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
+                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                    <i class="fas fa-sign-out-alt fa-sm fa-fw me-2 text-gray-400"></i>
                     {{ __('Logout') }}
                 </a>
             </div>

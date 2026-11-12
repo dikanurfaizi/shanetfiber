@@ -260,7 +260,8 @@ class Customer extends Authenticatable
 
         $discountPercent = $this->discount ?? 0;
 
-        return $packagePrice * ((100 - $discountPercent) / 100);
+        // Perhitungan matematika yang benar: (Harga Paket * (100 - Diskon%)) / 100
+        return (float) ($packagePrice * ((100 - $discountPercent) / 100));
     }
 
     public function addons()

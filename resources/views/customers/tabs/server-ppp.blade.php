@@ -1,5 +1,5 @@
 <div class="card-header py-3">
-    <h5 class="m-0 font-weight-bold text-primary">{{ __('customer.header.show-server') }}</h5>
+    <h5 class="m-0 fw-bold text-primary">{{ __('customer.header.show-server') }}</h5>
 
     <span class="text-success">{{ $info_msg }}</span>
 
@@ -64,13 +64,13 @@
 
         {{-- REMOTE ADDRESS --}}
         <div class="col-12 col-md-6 mb-3">
-            <div class="font-weight-bold text-muted small">{{ __('customer.label.remote-address') }}</div>
+            <div class="fw-bold text-muted small">{{ __('customer.label.remote-address') }}</div>
             <div class="mt-1">
                 <span class="text-primary">{{ $remoteAddress ?? 'Offline' }}</span>
 
                 @if ($remoteAddress)
-                    <a href="http://{{ $remoteAddress }}:{{ $ont->port ?? 80 }}"
-                        class="badge badge-primary ml-2" target="_blank">
+                    <a href="http://{{ $remoteAddress }}:{{ $ont->port ?? 80 }}" class="badge bg-primary ms-2"
+                        target="_blank">
                         {{ __('customer.remote') }}
                     </a>
                 @endif
@@ -79,7 +79,7 @@
 
         {{-- SERVICE --}}
         <div class="col-12 col-md-6 mb-3">
-            <div class="font-weight-bold text-muted small">{{ __('customer.label.service') }}</div>
+            <div class="fw-bold text-muted small">{{ __('customer.label.service') }}</div>
             <div class="mt-1">
                 <span class="text-primary">{{ $customer->pppType->name ?? 'No Service' }}</span>
             </div>
@@ -137,9 +137,9 @@
             <div class="d-flex flex-column flex-md-row">
 
                 @can('secret-edit')
-                    <div class="d-block d-md-inline-block mb-2 mr-md-2">
+                    <div class="d-block d-md-inline-block mb-2 me-md-2">
                         <a href="{{ route('customers.edit.ppp', [$customer->slug, 'caller_id' => $pppsecret['last-caller-id'] ?? null]) }}"
-                            class="btn-soft btn-blue btn-block btn-md-inline text-center">
+                            class="btn-soft btn-blue w-100 btn-md-inline text-center">
                             <i class="fa fa-edit"></i> {{ __('customer.button.edit-ppp') }}
                         </a>
                     </div>
@@ -147,11 +147,11 @@
 
                 @canany('customer-edit', 'customer-create')
                     @if (!$customer->activation)
-                        <div class="d-block d-md-inline-block mb-2 mr-md-2">
+                        <div class="d-block d-md-inline-block mb-2 me-md-2">
                             <form method="POST" action="{{ route('customers.activation', $customer->slug) }}">
                                 @csrf @method('put')
-                                <button class="btn-soft btn-green btn-block btn-md-inline">
-                                    <i class="fa fa-check mr-2"></i> {{ __('customer.action.activation') }}
+                                <button class="btn-soft btn-green w-100 btn-md-inline">
+                                    <i class="fa fa-check me-2"></i> {{ __('customer.action.activation') }}
                                 </button>
                             </form>
                         </div>
@@ -161,27 +161,27 @@
                 @can('secret-disable')
                     @if ($customer->activation)
                         @if ($disabledState === \App\Enums\MikrotikStatus::PPPOE_DISABLE->value)
-                            <div class="d-block d-md-inline-block mb-2 mr-md-2">
+                            <div class="d-block d-md-inline-block mb-2 me-md-2">
                                 <form method="POST" action="{{ route('customers.enable', $customer->slug) }}">
                                     @csrf @method('put')
-                                    <button class="btn-soft btn-green btn-block btn-md-inline">
-                                        <i class="fa fa-check mr-2"></i> {{ __('pppoe.secret.enable') }}
+                                    <button class="btn-soft btn-green w-100 btn-md-inline">
+                                        <i class="fa fa-check me-2"></i> {{ __('pppoe.secret.enable') }}
                                     </button>
                                 </form>
                             </div>
                         @elseif ($disabledState === \App\Enums\MikrotikStatus::PPPOE_ENABLE->value)
-                            <div class="d-block d-md-inline-block mb-2 mr-md-2">
+                            <div class="d-block d-md-inline-block mb-2 me-md-2">
                                 <form method="POST" action="{{ route('customers.disable', $customer->slug) }}">
                                     @csrf @method('put')
-                                    <button class="btn-soft btn-red btn-block btn-md-inline">
-                                        <i class="fa fa-times mr-2"></i> {{ __('pppoe.secret.disable') }}
+                                    <button class="btn-soft btn-red w-100 btn-md-inline">
+                                        <i class="fa fa-times me-2"></i> {{ __('pppoe.secret.disable') }}
                                     </button>
                                 </form>
                             </div>
                         @else
-                            <div class="d-block d-md-inline-block mb-2 mr-md-2">
-                                <button class="btn-soft btn-gray btn-block btn-md-inline" disabled>
-                                    <i class="fa fa-ban mr-2"></i> {{ __('pppoe.secret.un-available') }}
+                            <div class="d-block d-md-inline-block mb-2 me-md-2">
+                                <button class="btn-soft btn-gray w-100 btn-md-inline" disabled>
+                                    <i class="fa fa-ban me-2"></i> {{ __('pppoe.secret.un-available') }}
                                 </button>
                             </div>
                         @endif

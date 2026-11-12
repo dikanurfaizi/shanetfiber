@@ -1,9 +1,10 @@
 <x-layouts.cpanel.settings.app-layout title="User Telegram Management">
 
     <div class="card-header py-3 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
-        <h5 class="m-0 font-weight-bold text-primary">User Telegram Management</h5>
+        <h5 class="m-0 fw-bold text-primary">User Telegram Management</h5>
         <div class="d-flex flex-wrap gap-2">
-            <button id="fetchTelegramBtn" class="btn btn-sm btn-info" data-toggle="modal" data-target="#telegramModal">
+            <button id="fetchTelegramBtn" class="btn btn-sm btn-info" data-bs-toggle="modal"
+                data-bs-target="#telegramModal">
                 <i class="fab fa-telegram"></i>
                 <span class="d-none d-md-inline">Fetch from Telegram API</span>
                 <span class="d-inline d-md-none">Fetch</span>
@@ -45,7 +46,7 @@
                         <tr>
                             <td>{{ $index + 1 }}</td>
                             <td>
-                                <div class="form-group mb-0">
+                                <div class="mb-3 mb-0">
                                     {!! Form::select("user_id_$chat->id", $users->pluck('name', 'id'), $chat->user_id, [
                                         'class' => 'form-control select2-user',
                                         'placeholder' => 'Select Admin',
@@ -135,7 +136,7 @@
 
                         <div class="mb-3">
                             <label class="small text-muted">Assign Admin</label>
-                            <div class="form-group mb-3">
+                            <div class="mb-3 mb-3">
                                 {!! Form::select("user_id_$chat->id", $users->pluck('name', 'id'), $chat->user_id, [
                                     'class' => 'form-control select2-user-mobile',
                                     'placeholder' => 'Select Admin',
@@ -176,15 +177,13 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="telegramModalLabel">Telegram API Results</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="telegramResults">
                     <!-- Results will be displayed here -->
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary d-none" id="saveTelegramBtn">Save</button>
                 </div>
             </div>

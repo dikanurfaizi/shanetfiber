@@ -1,7 +1,7 @@
 <x-layouts.app-layout title="Monthly Internet Report">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary mb-2">
+        <h5 class="m-0 fw-bold text-primary mb-2">
             Monthly Internet Report
         </h5>
 
@@ -41,7 +41,7 @@
         @foreach ($mikrotiks as $m)
             <div class="mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="font-weight-bold text-primary mb-0">
+                    <h6 class="fw-bold text-primary mb-0">
                         Mikrotik: {{ $m['mikrotik_name'] }}
                     </h6>
                 </div>

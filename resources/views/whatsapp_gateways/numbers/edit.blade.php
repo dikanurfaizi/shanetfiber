@@ -1,6 +1,6 @@
 <x-layouts.cpanel.settings.app-layout title="{{ __('whatsapp.number.page-title-edit', ['name' => $data->name]) }}">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">
+        <h5 class="m-0 fw-bold text-primary">
             {{ __('whatsapp.number.page-title-edit', ['name' => $data->name]) }}</h5>
     </div>
 

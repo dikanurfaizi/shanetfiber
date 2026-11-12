@@ -1,6 +1,6 @@
 <x-layouts.cpanel.settings.app-layout title="{{ __('whatsapp.number.page-title-add') }}">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary"> {{ __('whatsapp.number.page-title-add') }}</h5>
+        <h5 class="m-0 fw-bold text-primary"> {{ __('whatsapp.number.page-title-add') }}</h5>
     </div>
 
     <div class="row">
@@ -34,7 +34,7 @@
                     </div>
                 </div>
 
-                
+
 
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">

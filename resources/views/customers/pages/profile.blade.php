@@ -1,9 +1,9 @@
 <x-layouts.customers.app-layout title="Profile">
 
     <div class="card-header py-3 bg-gradient-primary">
-        <h5 class="m-0 font-weight-bold text-white d-flex align-items-center">
-            <i class="fas fa-user mr-3" style="font-size: 1.1em"></i>
-            <span class="ml-2 text-wrap">{{ __('customer.page.header.profile') }} -
+        <h5 class="m-0 fw-bold text-white d-flex align-items-center">
+            <i class="fas fa-user me-3" style="font-size: 1.1em"></i>
+            <span class="ms-2 text-wrap">{{ __('customer.page.header.profile') }} -
                 {{ auth()->guard('customer')->user()->name }}</span>
         </h5>
     </div>
@@ -14,9 +14,9 @@
             <div class="col-lg-6 d-flex">
                 <div class="card shadow mb-4 w-100">
                     <div class="card-header py-3 bg-light">
-                        <h6 class="m-0 font-weight-bold text-primary d-flex justify-content-between align-items-center">
+                        <h6 class="m-0 fw-bold text-primary d-flex justify-content-between align-items-center">
                             <span>
-                                <i class="fas fa-info-circle mr-2"></i>
+                                <i class="fas fa-info-circle me-2"></i>
                                 {{ __('customer.header.profile-info') }}
                             </span>
                             <button class="btn btn-sm btn-primary" id="editProfileBtn">
@@ -57,7 +57,7 @@
                                 @csrf
                                 @method('PUT')
 
-                                <div class="form-group row">
+                                <div class="mb-3 row">
                                     <label for="name" class="col-sm-3 col-form-label">
                                         <strong>{{ __('customer.label.name') }}</strong>
                                     </label>
@@ -67,7 +67,7 @@
                                     </div>
                                 </div>
 
-                                <div class="form-group row">
+                                <div class="mb-3 row">
                                     <label class="col-sm-3 col-form-label">
                                         <strong>{{ __('customer.label.username') }}</strong>
                                     </label>
@@ -77,7 +77,7 @@
                                     </div>
                                 </div>
 
-                                <div class="form-group row">
+                                <div class="mb-3 row">
                                     <label for="contact" class="col-sm-3 col-form-label">
                                         <strong>{{ __('customer.label.contact') }}</strong>
                                     </label>
@@ -87,7 +87,7 @@
                                     </div>
                                 </div>
 
-                                <div class="form-group row">
+                                <div class="mb-3 row">
                                     <label for="email" class="col-sm-3 col-form-label">
                                         <strong>{{ __('customer.label.email') }}</strong>
                                     </label>
@@ -97,7 +97,7 @@
                                     </div>
                                 </div>
 
-                                <div class="form-group row">
+                                <div class="mb-3 row">
                                     <label for="address" class="col-sm-3 col-form-label">
                                         <strong>{{ __('customer.label.address') }}</strong>
                                     </label>
@@ -106,9 +106,9 @@
                                     </div>
                                 </div>
 
-                                <div class="form-group row mt-4">
+                                <div class="mb-3 row mt-4">
                                     <div class="col-sm-9 offset-sm-3">
-                                        <button type="submit" class="btn btn-success mr-2">
+                                        <button type="submit" class="btn btn-success me-2">
                                             <i class="fas fa-save"></i> {{ __('customer.button.update-my-data') }}
                                         </button>
                                         <button type="button" id="cancelEditBtn" class="btn btn-secondary">
@@ -126,8 +126,8 @@
             <div class="col-lg-6 d-flex">
                 <div class="card shadow mb-4 w-100">
                     <div class="card-header py-3 bg-light">
-                        <h6 class="m-0 font-weight-bold text-primary">
-                            <i class="fas fa-lock mr-2"></i>
+                        <h6 class="m-0 fw-bold text-primary">
+                            <i class="fas fa-lock me-2"></i>
                             {{ __('customer.header.change-password') }}
                         </h6>
                     </div>
@@ -137,7 +137,7 @@
                             @method('PUT')
 
                             <!-- Current Password -->
-                            <div class="form-group row">
+                            <div class="mb-3 row">
                                 <label for="current_password" class="col-sm-4 col-form-label">
                                     <strong>{{ __('customer.label.current-password') }}</strong>
                                 </label>
@@ -147,7 +147,7 @@
                                             name="current_password" required>
                                         <div class="input-group-append">
                                             <span class="input-group-text toggle-password"
-                                                data-target="#current_password">
+                                                data-bs-target="#current_password">
                                                 <i class="fas fa-eye-slash"></i>
                                             </span>
                                         </div>
@@ -159,7 +159,7 @@
                             </div>
 
                             <!-- New Password -->
-                            <div class="form-group row mt-3">
+                            <div class="mb-3 row mt-3">
                                 <label for="new_password" class="col-sm-4 col-form-label">
                                     <strong>{{ __('customer.label.new-password') }}</strong>
                                 </label>
@@ -169,7 +169,7 @@
                                             name="new_password" required>
                                         <div class="input-group-append">
                                             <span class="input-group-text toggle-password"
-                                                data-target="#new_password">
+                                                data-bs-target="#new_password">
                                                 <i class="fas fa-eye-slash"></i>
                                             </span>
                                         </div>
@@ -188,15 +188,15 @@
                                         <small class="text-muted">{{ __('Password harus mengandung:') }}</small>
                                         <ul class="list-unstyled" id="password-rules">
                                             <li class="text-danger" id="rule-length"><i
-                                                    class="fas fa-times-circle mr-1"></i> Minimal 8 karakter</li>
+                                                    class="fas fa-times-circle me-1"></i> Minimal 8 karakter</li>
                                             <li class="text-danger" id="rule-uppercase"><i
-                                                    class="fas fa-times-circle mr-1"></i> 1 huruf besar (A-Z)</li>
+                                                    class="fas fa-times-circle me-1"></i> 1 huruf besar (A-Z)</li>
                                             <li class="text-danger" id="rule-lowercase"><i
-                                                    class="fas fa-times-circle mr-1"></i> 1 huruf kecil (a-z)</li>
+                                                    class="fas fa-times-circle me-1"></i> 1 huruf kecil (a-z)</li>
                                             <li class="text-danger" id="rule-number"><i
-                                                    class="fas fa-times-circle mr-1"></i> 1 angka (0-9)</li>
+                                                    class="fas fa-times-circle me-1"></i> 1 angka (0-9)</li>
                                             <li class="text-danger" id="rule-special"><i
-                                                    class="fas fa-times-circle mr-1"></i> 1 karakter khusus (@$!%*?&)
+                                                    class="fas fa-times-circle me-1"></i> 1 karakter khusus (@$!%*?&)
                                             </li>
                                         </ul>
                                     </div>
@@ -205,7 +205,7 @@
                             </div>
 
                             <!-- Confirm Password -->
-                            <div class="form-group row mt-3">
+                            <div class="mb-3 row mt-3">
                                 <label for="new_password_confirmation" class="col-sm-4 col-form-label">
                                     <strong>{{ __('customer.label.confirm-password') }}</strong>
                                 </label>
@@ -215,32 +215,32 @@
                                             name="new_password_confirmation" required>
                                         <div class="input-group-append">
                                             <span class="input-group-text toggle-password"
-                                                data-target="#new_password_confirmation">
+                                                data-bs-target="#new_password_confirmation">
                                                 <i class="fas fa-eye-slash"></i>
                                             </span>
                                         </div>
                                     </div>
                                     <div id="password-match-feedback" class="mt-1"
                                         style="font-size: 0.875em; display: none;">
-                                        <i class="fas mr-1"></i> <span></span>
+                                        <i class="fas me-1"></i> <span></span>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Forgot Password Link -->
-                            <div class="form-group row mt-2">
+                            <div class="mb-3 row mt-2">
                                 <div class="col-sm-8 offset-sm-4">
                                     <a href="{{ route('password.request') }}" class="text-primary">
-                                        <small><i class="fas fa-question-circle mr-1"></i> Lupa password?</small>
+                                        <small><i class="fas fa-question-circle me-1"></i> Lupa password?</small>
                                     </a>
                                 </div>
                             </div>
 
                             <!-- Submit Button -->
-                            <div class="form-group row mt-3">
+                            <div class="mb-3 row mt-3">
                                 <div class="col-sm-8 offset-sm-4">
                                     <button type="submit" class="btn btn-primary" id="submitBtn">
-                                        <i class="fas fa-key mr-1"></i> {{ __('customer.button.change-password') }}
+                                        <i class="fas fa-key me-1"></i> {{ __('customer.button.change-password') }}
                                     </button>
                                 </div>
                             </div>
@@ -510,7 +510,7 @@
                         const submitBtn = $('#submitBtn');
 
                         submitBtn.prop('disabled', true);
-                        submitBtn.html('<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...');
+                        submitBtn.html('<i class="fas fa-spinner fa-spin me-1"></i> Memproses...');
                         $('#loadingBarContainer').show(); // tampilkan progress bar
 
                         $.ajax({
@@ -558,7 +558,7 @@
                             complete: function() {
                                 submitBtn.prop('disabled', false);
                                 submitBtn.html(
-                                    '<i class="fas fa-key mr-1"></i> Ubah Password');
+                                    '<i class="fas fa-key me-1"></i> Ubah Password');
                                 $('#loadingBarContainer')
                                     .hide(); // sembunyikan progress bar
                             }

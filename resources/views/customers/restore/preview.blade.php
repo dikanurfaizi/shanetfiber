@@ -6,13 +6,13 @@
         HEADER
         ======================== --}}
         <div class="card-header py-3 d-flex justify-content-between align-items-center bg-white border-bottom-0">
-            <h5 class="m-0 font-weight-bold text-warning">
-                <i class="fas fa-undo-alt mr-1"></i>
+            <h5 class="m-0 fw-bold text-warning">
+                <i class="fas fa-undo-alt me-1"></i>
                 Restore & Billing Configuration
             </h5>
 
             <a href="{{ route('customers.trashed') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                <i class="fa fa-arrow-left mr-1"></i> Back
+                <i class="fa fa-arrow-left me-1"></i> Back
             </a>
         </div>
 
@@ -23,7 +23,7 @@
 
             {{-- WARNING --}}
             <div class="alert alert-warning d-flex align-items-start gap-2 mb-4">
-                <i class="fas fa-exclamation-triangle mt-1 mr-1"></i>
+                <i class="fas fa-exclamation-triangle mt-1 me-1"></i>
                 <div>
                     <strong>Restore Customer</strong><br>
                     Customer ini sedang dalam status <strong>deleted</strong>.
@@ -46,7 +46,7 @@
                     <div class="col-md-6">
 
                         {{-- PACKAGE --}}
-                        <div class="form-group mb-3">
+                        <div class="mb-3 mb-3">
                             <label class="fw-semibold">
                                 Package <span class="text-danger">*</span>
                             </label>
@@ -62,7 +62,7 @@
                         </div>
 
                         {{-- DURATION --}}
-                        <div id="duration-wrapper" class="form-group mb-3 {{ $current_duration_id ? '' : 'd-none' }}">
+                        <div id="duration-wrapper" class="mb-3 mb-3 {{ $current_duration_id ? '' : 'd-none' }}">
                             <label class="fw-semibold">Duration</label>
                             <select name="package_duration_id" id="duration-select" class="form-control">
                                 @if ($current_duration_id)
@@ -74,7 +74,7 @@
                         </div>
 
                         {{-- MEMBERSHIP --}}
-                        <div class="form-group mb-3">
+                        <div class="mb-3 mb-3">
                             <label class="fw-semibold">Membership</label>
                             <select name="member_id" id="member-dropdown" class="form-control">
                                 <option value="">Non Member</option>
@@ -94,10 +94,10 @@
                     <div class="col-md-6">
 
                         {{-- BILLING OPTION --}}
-                        <div class="form-group mb-3">
-                            <label class="font-weight-bold">Billing Option</label><br>
+                        <div class="mb-3 mb-3">
+                            <label class="fw-bold">Billing Option</label><br>
 
-                            <label class="mr-3">
+                            <label class="me-3">
                                 <input type="radio" name="billing_option" value="monthly"
                                     {{ $billing_option === 'monthly' ? 'checked' : '' }}>
                                 Monthly
@@ -112,7 +112,7 @@
 
                         {{-- BILLING PERIODE --}}
                         <div id="periode-wrapper"
-                            class="form-group mb-3 {{ $billing_option === 'one_time' ? '' : 'd-none' }}">
+                            class="mb-3 mb-3 {{ $billing_option === 'one_time' ? '' : 'd-none' }}">
                             <label class="fw-semibold">Billing Period</label>
                             <select name="billing_periode_name" class="form-control"
                                 {{ $billing_option === 'one_time' ? '' : 'disabled' }}>
@@ -126,7 +126,7 @@
                         </div>
 
                         {{-- DISCOUNT PREVIEW --}}
-                        <div class="form-group mb-3">
+                        <div class="mb-3 mb-3">
                             <label class="fw-semibold">Estimated Discount</label>
                             <input type="text" id="discount_display" class="form-control bg-light fw-bold" readonly
                                 value="{{ $discountEstimate
@@ -149,8 +149,8 @@
                 ======================== --}}
                 <hr class="my-4">
 
-                <h6 class="font-weight-bold text-secondary mb-3">
-                    <i class="fas fa-puzzle-piece mr-1"></i>
+                <h6 class="fw-bold text-secondary mb-3">
+                    <i class="fas fa-puzzle-piece me-1"></i>
                     Add-on Services
                 </h6>
 
@@ -249,8 +249,8 @@
 
                         {{-- PRIMARY ACTION --}}
                         <button type="submit"
-                            class="btn btn-success px-5 rounded-pill fw-semibold d-flex align-items-center gap-2 justify-content-center mr-1 mb-2">
-                            <i class="fa fa-undo mr-1"></i>
+                            class="btn btn-success px-5 rounded-pill fw-semibold d-flex align-items-center gap-2 justify-content-center me-1 mb-2">
+                            <i class="fa fa-undo me-1"></i>
                             Restore & Generate Billing
                         </button>
 
@@ -270,8 +270,8 @@
     @section('custom_styles')
         <style>
             /* ============================
-                RESTORE FOOTER ACTION
-                ============================ */
+                            RESTORE FOOTER ACTION
+                            ============================ */
             .restore-footer {
                 border-top: 1px solid #e5e7eb;
                 padding-top: 24px;

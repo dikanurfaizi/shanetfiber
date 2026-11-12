@@ -1,7 +1,7 @@
 <x-layouts.app-layout title="Networks">
 
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <h5 class="m-0 font-weight-bold text-primary mb-2">
+        <h5 class="m-0 fw-bold text-primary mb-2">
             {{ __('networks.header.add-olt') }}
         </h5>
     </div>

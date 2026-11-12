@@ -1,6 +1,6 @@
 <x-layouts.app-layout title="Create Package">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary"> {{ __('package.header.create') }}</h5>
+        <h5 class="m-0 fw-bold text-primary"> {{ __('package.header.create') }}</h5>
     </div>
 
     <div class="row">
@@ -138,7 +138,8 @@
 
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
-                        <label for="installation_fee"><strong>{{ __('package.label.installation_fee') }}</strong></label>
+                        <label
+                            for="installation_fee"><strong>{{ __('package.label.installation_fee') }}</strong></label>
                         <div class="input-group">
                             <span class="input-group-text">Rp</span>
                             {!! Form::text('installation_fee_formatted', old('installation_fee_formatted', 0), [
@@ -217,7 +218,8 @@
             <div class="card-footer">
                 <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> &nbsp
                     {{ __('package.button.save') }}</button>
-                <a class="btn btn-secondary" href="{{ route('packages.index') }}"><i class="fa fa-arrow-left"></i> &nbsp
+                <a class="btn btn-secondary" href="{{ route('packages.index') }}"><i class="fa fa-arrow-left"></i>
+                    &nbsp
                     {{ __('package.button.cancel') }}</a>
             </div>
             {!! Form::close() !!}

@@ -7,7 +7,7 @@
             <div class="d-flex align-items-center w-100 justify-content-between">
                 <div class="d-flex align-items-center">
                     <!-- Navbar Logo (Background Putih Padat Khusus Logo) -->
-                    <a class="navbar-brand mr-3 mr-lg-4" href="#">
+                    <a class="navbar-brand me-3 me-lg-4" href="#">
                         <div class="logo-white-box">
                             <img src="{{ asset('images/logo_top_customer.png') }}" alt="Shanum Network Fiber"
                                 class="logo-img-top">
@@ -15,10 +15,10 @@
                     </a>
 
                     <!-- Contact Info Header (Desktop) -->
-                    <div id="contact" class="d-none d-lg-flex align-items-center mr-auto text-white-50 small">
+                    <div id="contact" class="d-none d-lg-flex align-items-center me-auto text-white-50 small">
                         {{-- Telepon / WhatsApp --}}
-                        <div class="contact-item mr-3">
-                            <i class="fas fa-phone-alt text-success mr-2"></i>
+                        <div class="contact-item me-3">
+                            <i class="fas fa-phone-alt text-success me-2"></i>
                             <a href="https://wa.me/{{ $phoneNumber }}?text={{ $generalMessage }}"
                                 class="text-white text-decoration-none" target="_blank" rel="noopener noreferrer">
                                 {{ $whatsappCall }}
@@ -26,7 +26,7 @@
                         </div>
 
                         <div class="contact-item">
-                            <i class="fas fa-envelope text-info mr-2"></i>
+                            <i class="fas fa-envelope text-info me-2"></i>
                             <a href="mailto:{{ $websystem->email }}?subject={{ urlencode(__('customer.info.email_subject') ?? 'Info Paket Internet Shanetfiber') }}&body={{ urlencode($generalMessage) }}"
                                 class="text-white text-decoration-none d-none d-md-inline" title="Kirim via aplikasi email">
                                 {{ $websystem->email }}
@@ -40,8 +40,8 @@
                     </div>
                 </div>
 
-                <button class="btn btn-glass-primary px-3 px-lg-4 py-2" data-toggle="modal" data-target="#loginModal">
-                    <i class="fas fa-sign-in-alt mr-2"></i> {{ __('customer.button.login') ?? 'Masuk' }}
+                <button class="btn btn-glass-primary px-3 px-lg-4 py-2" data-bs-toggle="modal" data-bs-target="#loginModal">
+                    <i class="fas fa-sign-in-alt me-2"></i> {{ __('customer.button.login') ?? 'Masuk' }}
                 </button>
             </div>
         </div>
@@ -55,7 +55,7 @@
                 <div class="slider-image" style="background-image: url('/images/slider1.jpeg');">
                     <div class="slider-overlay-glass"></div>
                     <div class="container-fluid h-100 d-flex align-items-center px-4 px-lg-5 position-relative z-index-2">
-                        <div class="slider-content text-left text-white">
+                        <div class="slider-content text-start text-white">
                             <h1 class="display-5 display-lg-2 fw-bold mb-3">
                                 {{ __('customer.hero.slide1_title') ?? 'Solusi Internet Super Cepat' }}</h1>
                             <p class="lead mb-4 d-none d-sm-block text-white-50">
@@ -63,7 +63,7 @@
                             </p>
                             <div class="d-flex flex-column flex-sm-row">
                                 <a href="#packages"
-                                    class="btn btn-glass-primary btn-lg px-4 py-2 fs-6 mr-sm-2 mb-2 mb-sm-0">{{ __('customer.hero.view_packages') ?? 'Lihat Paket' }}</a>
+                                    class="btn btn-glass-primary btn-lg px-4 py-2 fs-6 me-sm-2 mb-2 mb-sm-0">{{ __('customer.hero.view_packages') ?? 'Lihat Paket' }}</a>
                             </div>
                         </div>
                     </div>
@@ -75,7 +75,7 @@
                 <div class="slider-image" style="background-image: url('/images/slider2.png');">
                     <div class="slider-overlay-glass"></div>
                     <div class="container-fluid h-100 d-flex align-items-center px-4 px-lg-5 position-relative z-index-2">
-                        <div class="slider-content text-left text-white">
+                        <div class="slider-content text-start text-white">
                             <h1 class="display-5 display-lg-2 fw-bold mb-3">
                                 {{ __('customer.hero.slide2_title') ?? 'Jaringan Fiber Optik Andal' }}</h1>
                             <p class="lead mb-4 d-none d-sm-block text-white-50">
@@ -83,7 +83,7 @@
                             </p>
                             <div class="d-flex flex-column flex-sm-row">
                                 <a href="#packages"
-                                    class="btn btn-glass-primary btn-lg px-4 py-2 fs-6 mr-sm-2 mb-2 mb-sm-0">{{ __('customer.hero.view_packages') ?? 'Lihat Paket' }}</a>
+                                    class="btn btn-glass-primary btn-lg px-4 py-2 fs-6 me-sm-2 mb-2 mb-sm-0">{{ __('customer.hero.view_packages') ?? 'Lihat Paket' }}</a>
                             </div>
                         </div>
                     </div>
@@ -95,7 +95,7 @@
                 <div class="slider-image" style="background-image: url('/images/slider3.jpeg');">
                     <div class="slider-overlay-glass"></div>
                     <div class="container-fluid h-100 d-flex align-items-center px-4 px-lg-5 position-relative z-index-2">
-                        <div class="slider-content text-left text-white">
+                        <div class="slider-content text-start text-white">
                             <h1 class="display-5 display-lg-2 fw-bold mb-3">
                                 {{ __('customer.hero.slide3_title') ?? 'Layanan Pelanggan 24/7' }}</h1>
                             <p class="lead mb-4 d-none d-sm-block text-white-50">
@@ -103,7 +103,7 @@
                             </p>
                             <div class="d-flex flex-column flex-sm-row">
                                 <a href="#packages"
-                                    class="btn btn-glass-primary btn-lg px-4 py-2 fs-6 mr-sm-2 mb-2 mb-sm-0">{{ __('customer.hero.view_packages') ?? 'Lihat Paket' }}</a>
+                                    class="btn btn-glass-primary btn-lg px-4 py-2 fs-6 me-sm-2 mb-2 mb-sm-0">{{ __('customer.hero.view_packages') ?? 'Lihat Paket' }}</a>
                             </div>
                         </div>
                     </div>
@@ -119,7 +119,7 @@
     <!-- Section Packages -->
     <div class="container-fluid py-5" id="packages" style="background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);">
         <div class="text-center mb-4">
-            <h2 class="text-white font-weight-bold mb-2">
+            <h2 class="text-white fw-bold mb-2">
                 {{ __('customer.package.choose_title') ?? 'Pilih Paket Internet Anda' }}</h2>
             <p class="text-white-50">
                 {{ __('customer.package.choose_subtitle') ?? 'Layanan internet cepat dan stabil sesuai kebutuhan Anda' }}
@@ -157,14 +157,14 @@
                                                         class="badge bg-glass-light text-white mb-2 px-3 py-1 font-monospace">
                                                         {{ __("customer.category.{$category}") ?? $category }}
                                                     </span>
-                                                    <h3 class="package-title text-white font-weight-bold h4 mb-0">
+                                                    <h3 class="package-title text-white fw-bold h4 mb-0">
                                                         {{ $package->formatted_name }}</h3>
                                                 </div>
 
                                                 <!-- Price Section -->
                                                 <div class="package-price text-center mb-3">
                                                     <div
-                                                        class="package-price-value h3 font-weight-bold text-white text-center d-block mb-1">
+                                                        class="package-price-value h3 fw-bold text-white text-center d-block mb-1">
                                                         {{ $package->formatted_price }}
                                                     </div>
                                                     <small class="text-white-50 text-center d-block">
@@ -177,26 +177,26 @@
                                                 <!-- Features List -->
                                                 <ul class="list-unstyled mb-4 text-white-50 small">
                                                     <li class="d-flex align-items-center mb-3">
-                                                        <div class="icon-circle mr-3"><i
+                                                        <div class="icon-circle me-3"><i
                                                                 class="fas fa-laptop text-info"></i></div>
                                                         <span>{{ __('customer.package.ideal_for') ?? 'Ideal untuk' }}
                                                             <strong>{{ $package->recommended_device_min }}-{{ $package->recommended_device_max }}</strong>
                                                             {{ __('customer.package.devices') ?? 'perangkat' }}</span>
                                                     </li>
                                                     <li class="d-flex align-items-center mb-3">
-                                                        <div class="icon-circle mr-3"><i
+                                                        <div class="icon-circle me-3"><i
                                                                 class="fas fa-database text-warning"></i></div>
                                                         <span><strong>{{ $package->quota ?? __('customer.package.unlimited') }}</strong>
                                                             {{ __('customer.package.quota') ?? 'kuota' }}</span>
                                                     </li>
                                                     <li class="d-flex align-items-center mb-3">
-                                                        <div class="icon-circle mr-3"><i
+                                                        <div class="icon-circle me-3"><i
                                                                 class="fas fa-wifi text-success"></i></div>
                                                         <span>{{ __('customer.package.modem') ?? 'Modem' }}
                                                             <strong>{{ $package->include_modem ? __('customer.package.included') ?? 'Termasuk' : __('customer.package.not_included') ?? 'Tidak termasuk' }}</strong></span>
                                                     </li>
                                                     <li class="d-flex align-items-center">
-                                                        <div class="icon-circle mr-3"><i
+                                                        <div class="icon-circle me-3"><i
                                                                 class="fas fa-tools text-primary"></i></div>
                                                         <span>{{ __('customer.package.installation') ?? 'Instalasi' }}
                                                             <strong
@@ -209,7 +209,7 @@
                                             <div class="cta-package-buttons mt-3">
                                                 <a href="https://wa.me/{{ $phoneNumber }}?text={{ $package->wa_message }}"
                                                     target="_blank" rel="noopener noreferrer"
-                                                    class="btn btn-glass-primary btn-block py-2 font-weight-bold">
+                                                    class="btn btn-glass-primary w-100 py-2 fw-bold">
                                                     {{ __('customer.button.subscribe') ?? 'Berlangganan' }}
                                                 </a>
                                             </div>
@@ -241,14 +241,14 @@
                     <p class="text-white-50 small mb-0 footer-address-text">
                         <a href="https://maps.app.goo.gl/zRT4QfXNmoJysKRQ8" target="_blank" rel="noopener noreferrer"
                             class="text-white-50 text-decoration-none hover-white d-inline-flex align-items-center">
-                            <i class="fas fa-map-marker-alt mr-2 text-danger"></i>
+                            <i class="fas fa-map-marker-alt me-2 text-danger"></i>
                             <span>{{ $websystem->address }}, {{ $websystem->city }}, {{ $websystem->postal_code }}</span>
                         </a>
                     </p>
                 </div>
 
                 <div class="col-lg-3 col-md-6 mb-4 mb-md-0">
-                    <h6 class="mb-3 font-weight-bold text-white text-uppercase tracking-wider">
+                    <h6 class="mb-3 fw-bold text-white text-uppercase tracking-wider">
                         {{ __('customer.footer.quick_links') ?? 'Tautan Cepat' }}</h6>
                     <ul class="list-unstyled small">
                         <li class="mb-2">
@@ -270,11 +270,11 @@
                 </div>
 
                 <div class="col-lg-3 col-md-6">
-                    <h6 class="mb-3 font-weight-bold text-white text-uppercase tracking-wider">
+                    <h6 class="mb-3 fw-bold text-white text-uppercase tracking-wider">
                         {{ __('customer.footer.contact') ?? 'Kontak' }}</h6>
                     <ul class="list-unstyled text-white-50 small">
                         <li class="mb-2">
-                            <i class="fas fa-phone-alt mr-2 text-success"></i>
+                            <i class="fas fa-phone-alt me-2 text-success"></i>
                             <a href="https://wa.me/{{ $phoneNumber }}?text={{ $generalMessage }}"
                                 class="text-white-50 text-decoration-none hover-white" target="_blank"
                                 rel="noopener noreferrer">
@@ -282,14 +282,14 @@
                             </a>
                         </li>
                         <li class="mb-2">
-                            <i class="fas fa-envelope mr-2 text-info"></i>
+                            <i class="fas fa-envelope me-2 text-info"></i>
                             <a href="mailto:{{ $websystem->email }}?subject={{ urlencode(__('customer.info.email_subject') ?? 'Info Paket Internet Shanetfiber') }}&body={{ urlencode($generalMessage) }}"
                                 class="text-white-50 text-decoration-none hover-white" title="Kirim via aplikasi email">
                                 {{ $websystem->email }}
                             </a>
                         </li>
                         <li>
-                            <i class="fas fa-map-marker-alt mr-2 text-danger"></i>
+                            <i class="fas fa-map-marker-alt me-2 text-danger"></i>
                             <a href="https://maps.app.goo.gl/zRT4QfXNmoJysKRQ8"
                                 class="text-white-50 text-decoration-none hover-white" target="_blank"
                                 rel="noopener noreferrer">
@@ -318,7 +318,7 @@
         <div class="modal-dialog modal-dialog-centered modal-md" role="document">
             <div class="modal-content glass-card p-3 p-sm-4">
                 <div class="modal-header border-0 pb-0 justify-content-end position-relative">
-                    <button type="button" class="close custom-modal-close" data-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close custom-modal-close" data-bs-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
@@ -328,7 +328,7 @@
                             <img src="{{ asset('images/logo-secondary.png') }}" alt="Logo"
                                 class="img-fluid glass-logo">
                         </div>
-                        <h5 class="text-white font-weight-bold mb-1">
+                        <h5 class="text-white fw-bold mb-1">
                             {{ __('customer.login.title') ?? 'Cek Tagihan Anda' }}</h5>
                         <small
                             class="text-white-50">{{ __('customer.login.subtitle') ?? 'Masuk untuk melihat detail tagihan' }}</small>
@@ -336,18 +336,18 @@
 
                     <form action="{{ route('customerLoginPost') }}" method="post">
                         @csrf
-                        <div class="form-group mb-3">
+                        <div class="mb-3 mb-3">
                             <input type="text" name="email" value="{{ old('email') }}"
                                 class="form-control form-control-glass @error('email') is-invalid @enderror"
                                 id="exampleInputEmail"
                                 placeholder="{{ __('customer.placeholder.email_or_phone') ?? 'Email atau Nomor HP' }}"
                                 required autofocus>
                             @error('email')
-                                <small class="text-danger mt-1 d-block font-weight-semibold pl-2">{{ $message }}</small>
+                                <small class="text-danger mt-1 d-block font-weight-semibold ps-2">{{ $message }}</small>
                             @enderror
                         </div>
 
-                        <div class="form-group mb-3 position-relative">
+                        <div class="mb-3 mb-3 position-relative">
                             <input type="password" name="password"
                                 class="form-control form-control-glass @error('password') is-invalid @enderror"
                                 id="passwordInput" placeholder="{{ __('customer.placeholder.password') ?? 'Password' }}"
@@ -356,12 +356,12 @@
                                 <i id="passwordIcon" class="fas fa-eye text-white-50"></i>
                             </span>
                             @error('password')
-                                <small class="text-danger mt-1 d-block font-weight-semibold pl-2">{{ $message }}</small>
+                                <small class="text-danger mt-1 d-block font-weight-semibold ps-2">{{ $message }}</small>
                             @enderror
                         </div>
 
                         <button type="submit"
-                            class="btn btn-glass-primary btn-block font-weight-bold py-2 shadow-sm">{{ __('customer.button.login') ?? 'Login' }}</button>
+                            class="btn btn-glass-primary w-100 fw-bold py-2 shadow-sm">{{ __('customer.button.login') ?? 'Login' }}</button>
 
                         <div class="mt-3 text-center">
                             <a href="javascript:void(0)" class="small text-white-50 hover-white text-decoration-none"
@@ -380,10 +380,10 @@
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content glass-card p-3 p-sm-4">
                 <div class="modal-header border-0 pb-0 justify-content-between align-items-center">
-                    <h5 class="modal-title text-white font-weight-bold">
+                    <h5 class="modal-title text-white fw-bold">
                         {{ __('customer.forgot.modal_title') ?? 'Lupa Password' }}
                     </h5>
-                    <button type="button" class="close custom-modal-close" data-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close custom-modal-close" data-bs-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
@@ -393,13 +393,13 @@
                     <div id="step-channel">
                         <p class="text-white-50 mb-3">
                             {{ __('customer.forgot.choose_method') ?? 'Pilih metode reset password:' }}</p>
-                        <button class="btn btn-glass-primary btn-block mb-2 py-2 font-weight-bold"
+                        <button class="btn btn-glass-primary w-100 mb-2 py-2 fw-bold"
                             onclick="showStep('step-confirm', 'email')">
-                            <i class="fas fa-envelope mr-2"></i>{{ __('customer.forgot.via_email') ?? 'Via Email' }}
+                            <i class="fas fa-envelope me-2"></i>{{ __('customer.forgot.via_email') ?? 'Via Email' }}
                         </button>
-                        <button class="btn btn-success btn-block mb-3 py-2 font-weight-bold"
+                        <button class="btn btn-success w-100 mb-3 py-2 fw-bold"
                             onclick="showStep('step-confirm', 'whatsapp')">
-                            <i class="fab fa-whatsapp mr-2"></i>{{ __('customer.forgot.via_whatsapp') ?? 'Via WhatsApp' }}
+                            <i class="fab fa-whatsapp me-2"></i>{{ __('customer.forgot.via_whatsapp') ?? 'Via WhatsApp' }}
                         </button>
                         <div class="text-center mt-3">
                             <button type="button"
@@ -415,12 +415,12 @@
                         <form id="form-confirm" method="POST" action="{{ route('password.channel.verify') }}">
                             @csrf
                             <input type="hidden" name="channel" id="channelInput">
-                            <div class="form-group mb-3">
+                            <div class="mb-3 mb-3">
                                 <label id="confirmLabel" class="form-label text-white-50 small mb-1"></label>
                                 <input type="text" name="login" class="form-control form-control-glass" required>
                             </div>
                             <button type="submit"
-                                class="btn btn-glass-primary btn-block py-2 font-weight-bold">{{ __('customer.forgot.send_otp') ?? 'Kirim OTP' }}</button>
+                                class="btn btn-glass-primary w-100 py-2 fw-bold">{{ __('customer.forgot.send_otp') ?? 'Kirim OTP' }}</button>
                         </form>
                         <div class="text-center mt-2">
                             <button type="button"
@@ -442,12 +442,12 @@
                     <div id="step-otp" class="d-none">
                         <form id="form-otp" method="POST" action="{{ route('password.otp.verify') }}">
                             @csrf
-                            <div class="form-group mb-3">
+                            <div class="mb-3 mb-3">
                                 <input type="text" name="otp" class="form-control form-control-glass"
                                     placeholder="{{ __('customer.forgot.otp_placeholder') ?? 'Masukkan OTP' }}" required>
                             </div>
                             <button type="submit"
-                                class="btn btn-glass-primary btn-block py-2 font-weight-bold">{{ __('customer.forgot.verify') ?? 'Verifikasi' }}</button>
+                                class="btn btn-glass-primary w-100 py-2 fw-bold">{{ __('customer.forgot.verify') ?? 'Verifikasi' }}</button>
                         </form>
                         <form method="POST" action="{{ route('password.otp.resend') }}" class="mt-2 text-center">
                             @csrf

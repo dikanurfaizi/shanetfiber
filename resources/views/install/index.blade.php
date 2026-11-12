@@ -16,7 +16,7 @@
                                 </div>
 
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     Selamat datang kawan,
                                     Kelola customer mikrotik pake Customer Management jadi lebih mudah.<br>
                                     Source code ini gratis ya dan dilarang diperjual belikan. Jika kamu menyukai Customer
@@ -56,10 +56,10 @@
 
                                     <div class="text-center">
                                         @if ($status === 'true')
-                                            <a class="btn  btn-primary btn-user btn-block"
+                                            <a class="btn  btn-primary btn-user w-100"
                                                 onclick="event.preventDefault(); this.closest('form').submit();">{{ __('Install') }}</a>
                                         @else
-                                            <a class="btn  btn-danger  btn-user btn-block"
+                                            <a class="btn  btn-danger  btn-user w-100"
                                                 onclick="event.preventDefault(); this.closest('form').submit();">{{ __('Gak papa bro lanjut install dan hapus database lamaku!') }}</a>
                                         @endif
                                     </div>

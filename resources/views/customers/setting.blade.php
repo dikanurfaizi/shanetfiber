@@ -1,7 +1,7 @@
 <x-layouts.cpanel.settings.app-layout title="Customers">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('customer.header.export') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('customer.header.export') }}</h5>
 
     </div>
 
@@ -35,7 +35,7 @@
     </div>
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('customer.header.activation-all') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('customer.header.activation-all') }}</h5>
 
     </div>
 

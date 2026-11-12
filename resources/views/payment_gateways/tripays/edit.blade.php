@@ -1,6 +1,6 @@
 <x-layouts.cpanel.settings.app-layout title="Tripays">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary"> {{ __('websystem.tripay.header-edit') }}</h5>
+        <h5 class="m-0 fw-bold text-primary"> {{ __('websystem.tripay.header-edit') }}</h5>
     </div>
 
     <div class="row">

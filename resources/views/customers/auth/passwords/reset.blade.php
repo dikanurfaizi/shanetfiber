@@ -1,7 +1,7 @@
 <x-layouts.customers.app-layout title="Verifikasi OTP">
 
     <div class="card-header py-3 bg-gradient-primary">
-        <h5 class="m-0 font-weight-bold text-white d-flex align-items-center">
+        <h5 class="m-0 fw-bold text-white d-flex align-items-center">
             <i class="fas fa-shield-alt me-3"></i>
             <span>Verifikasi OTP</span>
         </h5>
@@ -16,7 +16,7 @@
                             @csrf
                             <input type="hidden" name="token" value="{{ $token }}">
 
-                            <div class="form-group mb-4">
+                            <div class="mb-3 mb-4">
                                 <label for="otp" class="form-label">
                                     <strong>Kode OTP (6 digit)</strong>
                                 </label>
@@ -35,7 +35,7 @@
                                 @enderror
                             </div>
 
-                            <div class="form-group mb-4">
+                            <div class="mb-3 mb-4">
                                 <label for="password" class="form-label">
                                     <strong>Password Baru</strong>
                                 </label>
@@ -46,7 +46,7 @@
                                 @enderror
                             </div>
 
-                            <div class="form-group mb-4">
+                            <div class="mb-3 mb-4">
                                 <label for="password_confirmation" class="form-label">
                                     <strong>Konfirmasi Password</strong>
                                 </label>
@@ -54,7 +54,7 @@
                                     class="form-control" required>
                             </div>
 
-                            <div class="form-group row mb-0">
+                            <div class="mb-3 row mb-0">
                                 <div class="col-md-8 offset-md-4">
                                     <button type="submit" class="btn btn-primary">
                                         <i class="fas fa-sync-alt me-1"></i> Reset Password

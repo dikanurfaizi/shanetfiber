@@ -7,7 +7,7 @@
 <div class="col-12 mt-2">
     <div class="card shadow mb-2">
         <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
-            <h5 class="m-0 font-weight-bold">{{ $title }}</h5>
+            <h5 class="m-0 fw-bold">{{ $title }}</h5>
             <button class="btn btn-light btn-sm d-flex align-items-center toggle-button" type="button"
                 data-bs-toggle="collapse" data-bs-target="#{{ $collapseId }}" aria-expanded="false"
                 aria-controls="{{ $collapseId }}">
@@ -27,7 +27,7 @@
                                     style="width: 50px; height: 35px; object-fit: contain; margin-right: 10px;">
 
                                 <!-- Nama -->
-                                <div class="payment-name font-weight-bold">
+                                <div class="payment-name fw-bold">
                                     {{ $channel['name'] === 'Other Bank Virtual Account' ? 'Virtual Account Bank Lain' : $channel['name'] }}
                                 </div>
                             </div>
@@ -51,7 +51,7 @@
                         <!-- Radio Button dengan Data Attribute -->
                         <input type="radio" name="payment_method" value="{{ $channel['code'] }}"
                             data-icon="{{ $channel['icon_url'] }}" data-group="{{ $channel['group'] }}"
-                            class="ml-auto payment-radio">
+                            class="ms-auto payment-radio">
                     </li>
                 @endif
             @endforeach

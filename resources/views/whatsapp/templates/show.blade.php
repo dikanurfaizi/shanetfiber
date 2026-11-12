@@ -1,7 +1,7 @@
 <x-layouts.cpanel.settings.app-layout title="Template Preview">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">
+        <h5 class="m-0 fw-bold text-primary">
             Preview Template: {{ $template->name }}
         </h5>
     </div>

@@ -5,7 +5,7 @@
 
             {{-- Left: Title + Description --}}
             <div class="mb-2 mb-md-0">
-                <h5 class="m-0 font-weight-bold text-primary">
+                <h5 class="m-0 fw-bold text-primary">
                     {{ __('whatsapp.feature.title.index') }}
                 </h5>
 
@@ -18,7 +18,7 @@
             <div class="d-flex align-items-center mt-2 mt-md-0">
 
                 {{-- Search --}}
-                <form method="GET" action="{{ route('whatsappfeature.index') }}" class="mr-2">
+                <form method="GET" action="{{ route('whatsappfeature.index') }}" class="me-2">
                     <div class="input-group input-group-sm">
                         <input type="text" name="q" value="{{ request('q') }}" class="form-control"
                             placeholder="{{ __('whatsapp.feature.placeholder.search-feature') }}">
@@ -32,7 +32,7 @@
 
                 {{-- Create Button --}}
                 <a href="{{ route('whatsappfeature.create') }}" class="btn btn-sm btn-primary">
-                    <i class="fa fa-plus mr-1"></i>
+                    <i class="fa fa-plus me-1"></i>
                     {{ __('whatsapp.feature.button.create') }}
                 </a>
 
@@ -123,7 +123,7 @@
                                     <li>
                                         <a class="dropdown-item text-danger"
                                             href="{{ route('whatsappfeature.delete', $feature->slug) }}">
-                                            <i class="fa fa-trash mr-2"></i>
+                                            <i class="fa fa-trash me-2"></i>
                                             {{ __('whatsapp.feature.button.delete-feature') }}
                                         </a>
                                     </li>
@@ -163,19 +163,19 @@
 
                         <div class="d-flex justify-content-end">
                             <a href="{{ route('whatsappfeature.show', $feature->slug) }}"
-                                class="btn btn-sm btn-outline-success mr-2">
+                                class="btn btn-sm btn-outline-success me-2">
                                 <i class="far fa-eye"></i> {{ __('whatsapp.feature.button.detail') }}
                             </a>
 
                             <a href="{{ route('whatsappfeature.edit', $feature->slug) }}"
-                                class="btn btn-sm btn-outline-primary mr-2">
-                                <i class="fa fa-edit mr-1"></i> {{ __('whatsapp.feature.button.edit') }}
+                                class="btn btn-sm btn-outline-primary me-2">
+                                <i class="fa fa-edit me-1"></i> {{ __('whatsapp.feature.button.edit') }}
                             </a>
 
                             <form method="POST" action="{{ route('whatsappfeature.delete', $feature->slug) }}">
                                 @csrf
                                 <button class="btn btn-sm btn-outline-danger" type="submit">
-                                    <i class="fa fa-trash mr-1"></i> {{ __('whatsapp.feature.button.delete-feature') }}
+                                    <i class="fa fa-trash me-1"></i> {{ __('whatsapp.feature.button.delete-feature') }}
                                 </button>
                             </form>
                         </div>

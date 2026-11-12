@@ -1,7 +1,7 @@
 <x-layouts.app-layout title="PPP Profiles">
     <div class="card-header py-3">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
-            <h5 class="m-0 font-weight-bold text-primary mb-3 mb-md-0">
+            <h5 class="m-0 fw-bold text-primary mb-3 mb-md-0">
                 {{ __('package.profile.header.index') }}
             </h5>
             <div class="d-flex flex-wrap" style="gap: 0.75rem !important;">

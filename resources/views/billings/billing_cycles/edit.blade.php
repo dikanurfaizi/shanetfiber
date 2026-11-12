@@ -1,7 +1,7 @@
 <x-layouts.app-layout title="Edit Package">
 
     {{-- <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary"> {{ __('package.header.edit') }}</h5>
+        <h5 class="m-0 fw-bold text-primary"> {{ __('package.header.edit') }}</h5>
         <span>{{ $packet->name }} on server <span class="badge bg-success text-white">
                 <i class="fas fa-server"></i> {{$packet->mikrotik->name}}</span>
         </span>

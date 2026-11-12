@@ -1,7 +1,7 @@
 <x-layouts.cpanel.billings.app-layout title="{{ __('billing.title.create-one') }}">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('billing.header.create-one') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('billing.header.create-one') }}</h5>
     </div>
 
     <div class="row">

@@ -1,7 +1,7 @@
 <x-layouts.cpanel.billings.app-layout title="Pay Later">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('billing.header.billing-paylater') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('billing.header.billing-paylater') }}</h5>
     </div>
     {!! Form::model($billing, [
         'method' => 'PATCH',
@@ -10,37 +10,37 @@
     ]) !!}
     <div class="card-body col-lg-8">
         <div class="col-xs-12 col-sm-12 col-md-12">
-            <div class="form-group">
+            <div class="mb-3">
                 <strong>{{ __('billing.label.billing-number') }}:</strong>
                 {{ $billing->billing_number ?? 'no data' }}
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
-            <div class="form-group">
+            <div class="mb-3">
                 <strong>{{ __('billing.label.customer-name') }}:</strong>
                 {{ $billing->customer->name ?? 'no data' }}
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
-            <div class="form-group">
+            <div class="mb-3">
                 <strong>{{ __('billing.label.billing-period') }}:</strong>
                 {{ $billing->billingSubscription->billingPeriode->name }}
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
-            <div class="form-group">
+            <div class="mb-3">
                 <strong>{{ __('billing.label.package-name') }}:</strong>
                 {{ $billing->billingSubscription->customerSubscription->package->name ?? 'no data' }}
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
-            <div class="form-group">
+            <div class="mb-3">
                 <strong>{{ __('billing.label.package-price') }}:</strong>
                 @moneyIDR($billing->base_price ?? '0')
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
-            <div class="form-group">
+            <div class="mb-3">
                 <strong>{{ __('billing.label.user-created') }}:</strong>
                 <span class="badge bg-danger-soft text-danger">
                     <i class="fas fa-id-card-alt"></i> {{ $billing->createdByUser->name ?? 'no data' }}
@@ -48,7 +48,7 @@
             </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-12">
-            <div class="form-group">
+            <div class="mb-3">
                 <strong>{{ __('billing.label.state') }}:</strong>
                 @if ($billing->status === 'LS')
                     <span class="badge bg-success text-white">
@@ -70,7 +70,7 @@
         </div>
         @if ($billing->status === 'LS')
             <div class="col-xs-12 col-sm-12 col-md-12">
-                <div class="form-group">
+                <div class="mb-3">
                     <strong>{{ __('billing.label.teller-name') }}:</strong>
                     <span class="badge bg-danger-soft text-danger">
                         <i class="fas fa-id-card-alt"></i> {{ $billing->teller_name ?? 'No User' }}
@@ -79,7 +79,7 @@
             </div>
         @endif
         <div class="col-xs-6 col-sm-6 col-md-6">
-            <div class="form-group">
+            <div class="mb-3">
                 <strong>{{ __('billing.pay-later') }}</strong>
                 {{-- @php
                     dd([

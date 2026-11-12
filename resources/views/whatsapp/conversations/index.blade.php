@@ -90,7 +90,7 @@
                                         <button type="button" class="reply-btn position-absolute"
                                             @click="setReply(msg)">
                                             <div class="d-flex align-items-center">
-                                                <i class="fas fa-reply mr-2"></i>
+                                                <i class="fas fa-reply me-2"></i>
                                                 <span style="font-size: 0.75rem; font-weight: 600;">Reply</span>
                                             </div>
                                         </button>
@@ -136,7 +136,7 @@
                                             <span x-text="formatTime(msg.timestamp_wa)"></span>
 
                                             <template x-if="msg.direction === 'outgoing'">
-                                                <span class="ml-1" :class="statusClass(msg.status)"
+                                                <span class="ms-1" :class="statusClass(msg.status)"
                                                     style="font-size: 0.8rem;">
                                                     {{-- Centang 1 --}}
                                                     <template x-if="msg.status === 'sent'">
@@ -174,7 +174,7 @@
 
                         <form class="d-flex align-items-center p-2 bg-light" @submit.prevent="sendMessage">
                             {{-- Container Input --}}
-                            <div class="flex-grow-1 mr-3"> {{-- mr-3 memberikan jarak horizontal yang lebih pas --}}
+                            <div class="flex-grow-1 me-3"> {{-- me-3 memberikan jarak horizontal yang lebih pas --}}
                                 <input type="text" id="chatInput"
                                     class="form-control rounded-pill border-0 shadow-sm"
                                     placeholder="Type a message..." x-model="newMessage"

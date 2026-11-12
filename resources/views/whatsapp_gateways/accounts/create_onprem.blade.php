@@ -1,7 +1,7 @@
 <x-layouts.cpanel.settings.app-layout title="Add Gowa Account">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">Add Gowa Account</h5>
+        <h5 class="m-0 fw-bold text-primary">Add Gowa Account</h5>
     </div>
 
     <div class="card mt-4 shadow-sm p-4">
@@ -10,7 +10,7 @@
             @csrf
 
             {{-- General --}}
-            <h6 class="font-weight-bold text-muted mb-3">General Settings</h6>
+            <h6 class="fw-bold text-muted mb-3">General Settings</h6>
 
             <div class="mb-3 row">
                 <label class="col-md-3 col-form-label text-muted">Purpose</label>
@@ -31,14 +31,14 @@
             <div class="mb-3 row">
                 <label class="col-md-3 col-form-label text-muted">Active</label>
                 <div class="col-md-9">
-                    <input type="checkbox" name="is_active" value="1" class="form-check-input ml-1">
+                    <input type="checkbox" name="is_active" value="1" class="form-check-input ms-1">
                 </div>
             </div>
 
             <hr class="my-4">
 
             {{-- Number Settings --}}
-            <h6 class="font-weight-bold text-muted mb-3">WhatsApp Number</h6>
+            <h6 class="fw-bold text-muted mb-3">WhatsApp Number</h6>
 
             <div class="mb-3 row">
                 <label class="col-md-3 col-form-label text-muted">Phone Number</label>
@@ -71,7 +71,7 @@
 
 
             {{-- Gowa Settings --}}
-            <h6 class="font-weight-bold text-muted mb-3 mt-4">Gowa On-Prem Settings</h6>
+            <h6 class="fw-bold text-muted mb-3 mt-4">Gowa On-Prem Settings</h6>
 
             <div class="mb-3 row">
                 <label class="col-md-3 col-form-label text-muted">Base URL <span class="text-danger">*</span></label>
@@ -90,13 +90,13 @@
             </div>
 
             {{-- AUTH TOGGLE --}}
-            <h6 class="font-weight-bold text-muted mb-2">Basic Authentication</h6>
+            <h6 class="fw-bold text-muted mb-2">Basic Authentication</h6>
 
             <div class="mb-3 row">
                 <label class="col-md-3 col-form-label text-muted">Enable Auth</label>
                 <div class="col-md-9">
                     <input type="checkbox" id="auth_enabled" name="auth_enabled" value="1"
-                        class="form-check-input ml-1">
+                        class="form-check-input ms-1">
                 </div>
             </div>
 

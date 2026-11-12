@@ -1,4 +1,4 @@
-<div class="form-group row">
+<div class="mb-3 row">
     <div class="col-sm-6">
         <label for="comment"><strong>{{ __('Comment') }}</strong></label>
         {!! Form::text('comment', $pppProfile->comment ?? null, ['class' => 'form-control']) !!}

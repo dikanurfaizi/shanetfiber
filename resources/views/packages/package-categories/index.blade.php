@@ -1,7 +1,7 @@
 <x-layouts.app-layout title="Packages">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('package_categories.header.index') }} -
+        <h5 class="m-0 fw-bold text-primary">{{ __('package_categories.header.index') }} -
             {{ count($package_categories) }}
             Categories
         </h5>

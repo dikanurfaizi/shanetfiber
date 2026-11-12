@@ -1,7 +1,7 @@
 <x-layouts.customers.mobile.app-layout title="Order #{{ $order->number }}">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('Data Order #') }}{{ $order->number }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('Data Order #') }}{{ $order->number }}</h5>
     </div>
 
     <div class="table-responsive">
@@ -24,19 +24,19 @@
             </tr>
             <tr>
                 <td>Total Price</td>
-                <td><b>@moneyIDR( $order->billing->total_amount)</b></td>
+                <td><b>@moneyIDR($order->billing->total_amount)</b></td>
             </tr>
             <tr>
                 <td>Bill Status</td>
                 <td><b>
-                        @if ( $order->payment_status == '1')
-                        {{ __('billing.status.waiting-payment') }}
-                        @elseif ( $order->payment_status == 2)
-                        {{ __('billing.status.paid-off') }}
-                        @elseif ( $order->payment_status == 3)
-                        {{ __('billing.status.expired') }}
+                        @if ($order->payment_status == '1')
+                            {{ __('billing.status.waiting-payment') }}
+                        @elseif ($order->payment_status == 2)
+                            {{ __('billing.status.paid-off') }}
+                        @elseif ($order->payment_status == 3)
+                            {{ __('billing.status.expired') }}
                         @else
-                        {{ __('billing.status.cancelled') }}
+                            {{ __('billing.status.cancelled') }}
                         @endif
                     </b></td>
             </tr>
@@ -47,64 +47,66 @@
         </table>
     </div>
     <div class="card-footer">
-        @if ( $order->payment_status == 1)
-        <button class="btn btn-primary" id="pay-button"><i class="far fa-money-bill-alt"></i> Bayar Sekarang</button>
-        @elseif ( $order->payment_status == 2)
-        @elseif ( $order->payment_status == 3)
+        @if ($order->payment_status == 1)
+            <button class="btn btn-primary" id="pay-button"><i class="far fa-money-bill-alt"></i> Bayar Sekarang</button>
+        @elseif ($order->payment_status == 2)
+
+        @elseif ($order->payment_status == 3)
         @endif
     </div>
 
 
     @section('custom_scripts')
-    <script src="{{ $midtransJs }}" data-client-key="{{ $clientKey }}"></script>
-    // <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ $clientKey }}"></script>
+        <script src="{{ $midtransJs }}" data-client-key="{{ $clientKey }}"></script>
+        //
+        <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ $clientKey }}"></script>
 
-    <script>
-        const payButton = document.querySelector('#pay-button');
-        payButton.addEventListener('click', function(e) {
-            e.preventDefault();
+        <script>
+            const payButton = document.querySelector('#pay-button');
+            payButton.addEventListener('click', function(e) {
+                e.preventDefault();
 
-            snap.pay('{{ $snapToken }}', {
-                // Optional
-                onSuccess: function(result) {
-                    /* You may add your own js here, this is just example */
-                    // document.getElementById('result-json').innerHTML += JSON.stringify(result, null, 2);
-                    console.log(result);
-                    //send_response_to_form(result);
-                },
-                // Optional
-                onPending: function(result) {
-                    /* You may add your own js here, this is just example */
-                    // document.getElementById('result-json').innerHTML += JSON.stringify(result, null, 2);
-                    console.log(result);
-                    // send_response_to_form(result);
-                },
-                // Optional
-                onError: function(result) {
-                    /* You may add your own js here, this is just example */
-                    // document.getElementById('result-json').innerHTML += JSON.stringify(result, null, 2);
-                    console.log(result);
-                    //send_response_to_form(result);
-                },
+                snap.pay('{{ $snapToken }}', {
+                    // Optional
+                    onSuccess: function(result) {
+                        /* You may add your own js here, this is just example */
+                        // document.getElementById('result-json').innerHTML += JSON.stringify(result, null, 2);
+                        console.log(result);
+                        //send_response_to_form(result);
+                    },
+                    // Optional
+                    onPending: function(result) {
+                        /* You may add your own js here, this is just example */
+                        // document.getElementById('result-json').innerHTML += JSON.stringify(result, null, 2);
+                        console.log(result);
+                        // send_response_to_form(result);
+                    },
+                    // Optional
+                    onError: function(result) {
+                        /* You may add your own js here, this is just example */
+                        // document.getElementById('result-json').innerHTML += JSON.stringify(result, null, 2);
+                        console.log(result);
+                        //send_response_to_form(result);
+                    },
 
-                onClose: function(result) {
-                    console.log('customer closed the popup without finishing the payment');
-                    Swal.fire({
-                        icon: 'error',
-                        text: 'customer closed the popup without finishing the payment',
-                    })
-                }
+                    onClose: function(result) {
+                        console.log('customer closed the popup without finishing the payment');
+                        Swal.fire({
+                            icon: 'error',
+                            text: 'customer closed the popup without finishing the payment',
+                        })
+                    }
+                });
             });
-        });
-    </script>
+        </script>
 
-    @if ($message = Session::get('success'))
-    <script>
-        Swal.fire({
-            icon: 'success',
-            text: '{{ $message }}',
-        })
-    </script>
-    @endif
+        @if ($message = Session::get('success'))
+            <script>
+                Swal.fire({
+                    icon: 'success',
+                    text: '{{ $message }}',
+                })
+            </script>
+        @endif
     @endsection
 </x-layouts.customers.mobile.app-layout>

@@ -1,6 +1,6 @@
 <x-layouts.cpanel.settings.app-layout title="{{ __('autoisolir.title.edit-nat-proxy') }}">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary"> {{ __('autoisolir.header.edit-nat-proxy') }}</h5>
+        <h5 class="m-0 fw-bold text-primary"> {{ __('autoisolir.header.edit-nat-proxy') }}</h5>
     </div>
 
     <div class="row">
@@ -13,7 +13,7 @@
             <div class="card-body col-lg-8">
 
                 <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary"> {{ __('autoisolir.header.edit-nat') }}</h6>
+                    <h6 class="m-0 fw-bold text-primary"> {{ __('autoisolir.header.edit-nat') }}</h6>
                 </div>
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
@@ -78,7 +78,7 @@
                 </div>
 
                 <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary"> {{ __('autoisolir.header.edit-proxy') }}</h6>
+                    <h6 class="m-0 fw-bold text-primary"> {{ __('autoisolir.header.edit-proxy') }}</h6>
                 </div>
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">

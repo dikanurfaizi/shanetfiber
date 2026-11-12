@@ -5,7 +5,7 @@
     @endsection
 
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <h5 class="m-0 font-weight-bold text-primary mb-2">
+        <h5 class="m-0 fw-bold text-primary mb-2">
             {{ __('networks.header.olt-index') }}
         </h5>
         @canany('olt-create')
@@ -21,7 +21,7 @@
             <div class="dashboard-section-header">
                 <h2 class="h4 fw-bold text-gray-800">
                     <span
-                        class="bg-primary-light text-primary rounded p-2 mr-2 d-inline-flex align-items-center justify-content-center">
+                        class="bg-primary-light text-primary rounded p-2 me-2 d-inline-flex align-items-center justify-content-center">
                         <i class="fas fa-chart-line"></i>
                     </span>
                     {{ __('networks.title.olt-statistics') }}
@@ -44,8 +44,8 @@
                     @endcanany
                     <div
                         class="last-update-badge d-inline-flex align-items-center px-3 py-1 rounded-pill bg-primary-light text-primary small">
-                        <i class="fas fa-clock mr-1"></i>
-                        {{ __('networks.label.last-updated') }} <span id="current-time" class="ms-1 ml-1">
+                        <i class="fas fa-clock me-1"></i>
+                        {{ __('networks.label.last-updated') }} <span id="current-time" class="ms-1 ms-1">
                             {{ $lastUpdate }}</span>
                     </div>
                 </div>
@@ -202,7 +202,7 @@
                                         <i class="fas fa-filter me-2"></i> {{ __('networks.button.filter') }}
                                     </button>
                                     <a href="javascript:void(0)" id="rescan-olts"
-                                        class="btn btn-outline-secondary ml-1">
+                                        class="btn btn-outline-secondary ms-1">
                                         <i class="fas fa-sync-alt"></i>
                                     </a>
                                 </div>

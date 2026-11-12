@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Listeners\Mikrotik;
+namespace App\Listeners\Routerboard;
 
 use App\Events\Routerboard\MikrotikUnpaymentUpdateRequested;
 use App\Events\UnpaymentBillingEvent;

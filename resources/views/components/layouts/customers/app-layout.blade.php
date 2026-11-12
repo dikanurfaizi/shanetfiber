@@ -17,12 +17,12 @@
     <link href="{{ asset('css/fontawsome-free-all.min.css') }}" rel="stylesheet" type="text/css">
     <link href="{{ asset('assets/notify/notify.min.css') }}" rel="stylesheet">
     <link href="{{ asset('assets/sweet-alert/sweet-alert.min.css') }}" rel="stylesheet">
-    <link href="{{ asset('assets/vendor/datatables/datatables.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
     <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
     <link href="{{ asset('css/mobile.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css" />
     <!-- jQuery dulu -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    {{-- <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> --}}
     <!-- Custom styles for this template-->
     <link href="{{ asset('css/sb-admin-2.min.css') }}" rel="stylesheet">
     <!-- Custom styles for this Page-->
@@ -47,7 +47,7 @@
                         <div class="card shadow mb-4">
 
                             <div class="card-body">
-                                <div class="form-group mt-4 mb-4">
+                                <div class="mb-3 mt-4 mb-4">
                                     <div class="pull-right alert alert-danger">
                                         <strong>Whoops!</strong> There were some problems.<br><br>
                                         <ul>
@@ -92,17 +92,15 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
-                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">×</span>
-                    </button>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
                 <div class="modal-footer">
                     <form method="POST" action="{{ route('customerLogout') }}">
                         @csrf
-                        <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
                         <a class="btn btn-primary" onclick="event.preventDefault(); this.closest('form').submit();">
-                            <i class="mr-2 fas fa-sign-out-alt"></i>
+                            <i class="me-2 fas fa-sign-out-alt"></i>
                             {{ __('Log Out') }}
                         </a>
                     </form>
@@ -116,12 +114,11 @@
     <!-- Core plugin JavaScript-->
     <script src="{{ asset('assets/vendor/jquery/jquery.min.js') }}"></script>
     <script src="{{ asset('js/jquery.easing-1.4.1.min.js') }}"></script>
-    <script src="{{ asset('js/bootstrap.bundle.min.js') }}" crossorigin="anonymous"></script>
     <!-- Custom scripts for all pages-->
     <script src="{{ asset('js/sb-admin-2.min.js') }}"></script>
     <script src="{{ asset('assets/notify/notify.min.js') }}"></script>
     <script src="{{ asset('assets/sweet-alert/sweet-alert.min.js') }}"></script>
-    <script src="{{ asset('assets/vendor/datatables/datatables.min.js') }}"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
 
     <!-- Page level custom scripts -->
     @yield('custom_scripts')

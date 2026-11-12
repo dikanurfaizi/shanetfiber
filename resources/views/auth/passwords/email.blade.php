@@ -17,7 +17,7 @@
                                     <h1 class="h4 text-gray-900 mb-2">{{ __('Forgot Your Password?') }}</h1>
                                     <p class="mb-4">
                                         {{ __('We get it, stuff happens. Just enter your email address below
-                                                                                and we will send you a link to reset your password!') }}
+                                                                                                                        and we will send you a link to reset your password!') }}
                                     </p>
                                 </div>
                                 <form class="user" action="{{ route('password.email') }}" method="post">
@@ -41,19 +41,19 @@
                                             </ul>
                                         </div>
                                     @endif
-                                    <div class="form-group">
+                                    <div class="mb-3">
                                         <input type="email" name="email" value="{{ old('email') }}"
                                             class="form-control form-control-user @error('email') is-invalid @enderror"
                                             id="exampleInputEmail" aria-describedby="emailHelp"
                                             placeholder="{{ __('Enter Email Address...') }}">
                                     </div>
                                     @error('email')
-                                        <div class="form-group custom-control">
+                                        <div class="text-danger small mt-1">
                                             <label class="">{{ $message }}</label>
                                         </div>
                                     @enderror
 
-                                    <button type="submit" class="btn btn-primary btn-user btn-block">
+                                    <button type="submit" class="btn btn-primary btn-user w-100">
                                         {{ __('Reset My Password') }}
                                     </button>
                                 </form>

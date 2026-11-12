@@ -1,6 +1,6 @@
 <x-layouts.cpanel.settings.app-layout title="Payment Gateways">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">Payment Gateway</h5>
+        <h5 class="m-0 fw-bold text-primary">Payment Gateway</h5>
 
         <span><a class="btn btn-sm btn-success mt-2" href=""><i class="fa fa-plus"></i> Add</a></span>
 

@@ -1,6 +1,6 @@
 <x-layouts.cpanel.settings.app-layout :title="__('server.title.import')">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('server.title.import') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('server.title.import') }}</h5>
     </div>
     <div class="row">
         <div class="col-lg-12">
@@ -33,7 +33,7 @@
                 <div id="customer-info-box">
                     @if (isset($customers))
                         <div class="alert alert-info">
-                            <i class="fas fa-users mr-1"></i>
+                            <i class="fas fa-users me-1"></i>
                             {{ __('server.import.total_from', ['name' => $selectedMikrotik->name ?? '']) }}
                             <strong>{{ $customers->total() ?? count($customers) }}</strong>
                         </div>
@@ -43,11 +43,11 @@
                 {{-- Action Buttons --}}
                 <div>
                     <button type="button" id="btn-import" class="btn btn-success mt-4">
-                        <i class="fa fa-file-import mr-1"></i> {{ __('server.button.import') }}
+                        <i class="fa fa-file-import me-1"></i> {{ __('server.button.import') }}
                     </button>
 
                     <a class="btn btn-secondary mt-4" href="{{ route('servers.index') }}">
-                        <i class="fa fa-arrow-left mr-1"></i> {{ __('server.button.cancel') }}
+                        <i class="fa fa-arrow-left me-1"></i> {{ __('server.button.cancel') }}
                     </a>
                 </div>
             </div>
@@ -107,7 +107,7 @@
                             const infoText = trans.totalFrom.replace(':name', data.serverName);
                             infoBox.innerHTML = `
                             <div class="alert alert-info">
-                                <i class="fas fa-users mr-1"></i>
+                                <i class="fas fa-users me-1"></i>
                                 ${infoText} <strong>${data.total}</strong>
                             </div>
                         `;

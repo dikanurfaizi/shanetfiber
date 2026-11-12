@@ -1,23 +1,23 @@
 <x-layouts.cpanel.settings.app-layout title="Detail Akun Rekening Pusat">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">
-            <i class="fas fa-university mr-2"></i> {{ __('bank.header.show') }}
+        <h5 class="m-0 fw-bold text-primary">
+            <i class="fas fa-university me-2"></i> {{ __('bank.header.show') }}
         </h5>
     </div>
 
     <div class="card-body p-3 p-md-4">
         <div class="row">
             <div class="col-lg-5 border-lg-right mb-4 mb-lg-0 pb-3 pb-lg-0">
-                <h6 class="font-weight-bold text-secondary mb-3">
-                    <i class="fas fa-info-circle mr-1"></i> {{ __('bank.label.info') }}
+                <h6 class="fw-bold text-secondary mb-3">
+                    <i class="fas fa-info-circle me-1"></i> {{ __('bank.label.info') }}
                 </h6>
 
                 <div class="mb-3">
                     <label class="text-muted small mb-1"><strong>{{ __('bank.label.bank-name') }}</strong></label>
-                    <div class="h5 font-weight-bold text-dark">
-                        <span class="badge badge-pill badge-primary text-uppercase px-2 py-1">
-                            <i class="fas fa-university mr-1"></i> {{ $bank->bank }}
+                    <div class="h5 fw-bold text-dark">
+                        <span class="badge rounded-pill bg-primary text-uppercase px-2 py-1">
+                            <i class="fas fa-university me-1"></i> {{ $bank->bank }}
                         </span>
                     </div>
                 </div>
@@ -27,12 +27,12 @@
                     <label class="text-muted small mb-1"><strong>{{ __('bank.label.type') }}</strong></label>
                     <div>
                         @if ($bank->type === 'ewallet')
-                            <span class="badge badge-warning text-dark text-uppercase font-weight-bold px-2 py-1">
-                                <i class="fas fa-wallet mr-1"></i> {{ __('bank.label.ewallet') }}
+                            <span class="badge bg-warning text-dark text-uppercase fw-bold px-2 py-1">
+                                <i class="fas fa-wallet me-1"></i> {{ __('bank.label.ewallet') }}
                             </span>
                         @else
-                            <span class="badge badge-info text-white text-uppercase font-weight-bold px-2 py-1">
-                                <i class="fas fa-credit-card mr-1"></i> {{ __('bank.label.bank-account') }}
+                            <span class="badge bg-info text-white text-uppercase fw-bold px-2 py-1">
+                                <i class="fas fa-credit-card me-1"></i> {{ __('bank.label.bank-account') }}
                             </span>
                         @endif
                     </div>
@@ -40,16 +40,16 @@
 
                 <div class="mb-3">
                     <label class="text-muted small mb-1"><strong>{{ __('bank.label.account-number') }}</strong></label>
-                    <div class="h5 font-weight-bold text-dark text-monospace" style="letter-spacing: 0.5px;">
+                    <div class="h5 fw-bold text-dark text-monospace" style="letter-spacing: 0.5px;">
                         <i
-                            class="fas fa-hashtag text-muted mr-2"></i>{{ implode(' ', str_split($bank->account_number, 4)) }}
+                            class="fas fa-hashtag text-muted me-2"></i>{{ implode(' ', str_split($bank->account_number, 4)) }}
                     </div>
                 </div>
 
                 <div class="mb-3">
                     <label class="text-muted small mb-1"><strong>{{ __('bank.label.name') }}</strong></label>
-                    <div class="h6 text-dark font-weight-bold">
-                        <i class="fas fa-user text-muted mr-2"></i>{{ $bank->name }}
+                    <div class="h6 text-dark fw-bold">
+                        <i class="fas fa-user text-muted me-2"></i>{{ $bank->name }}
                     </div>
                 </div>
 
@@ -57,12 +57,12 @@
                     <label class="text-muted small mb-1"><strong>{{ __('bank.label.account-status') }}</strong></label>
                     <div>
                         @if ($bank->disabled === 'false')
-                            <span class="badge badge-pill badge-success px-2 py-1">
-                                <i class="fas fa-check-circle mr-1"></i> {{ __('bank.info.enabled') }}
+                            <span class="badge rounded-pill bg-success px-2 py-1">
+                                <i class="fas fa-check-circle me-1"></i> {{ __('bank.info.enabled') }}
                             </span>
                         @else
-                            <span class="badge badge-pill badge-danger px-2 py-1">
-                                <i class="fas fa-times-circle mr-1"></i> {{ __('bank.info.disabled') }}
+                            <span class="badge rounded-pill bg-danger px-2 py-1">
+                                <i class="fas fa-times-circle me-1"></i> {{ __('bank.info.disabled') }}
                             </span>
                         @endif
                     </div>
@@ -72,21 +72,21 @@
 
                 <div class="d-flex flex-wrap align-items-center justify-content-start style-gap-2">
                     <a href="{{ route('banks.index') }}" class="btn btn-sm btn-outline-secondary m-1">
-                        <i class="fas fa-arrow-left mr-1"></i> {{ __('bank.button.back') }}
+                        <i class="fas fa-arrow-left me-1"></i> {{ __('bank.button.back') }}
                     </a>
                     <a href="{{ route('banks.edit', $bank->slug) }}" class="btn btn-sm btn-primary m-1">
-                        <i class="fa fa-edit mr-1"></i> {{ __('bank.button.update') }}
+                        <i class="fa fa-edit me-1"></i> {{ __('bank.button.update') }}
                     </a>
                 </div>
             </div>
 
-            <div class="col-lg-7 pl-lg-4">
+            <div class="col-lg-7 ps-lg-4">
                 <div class="d-flex flex-row justify-content-between align-items-center mb-3">
-                    <h6 class="font-weight-bold text-secondary m-0">{{ __('bank.label.connected-admins') }}</h6>
+                    <h6 class="fw-bold text-secondary m-0">{{ __('bank.label.connected-admins') }}</h6>
 
-                    <button type="button" class="btn btn-sm btn-success flex-shrink-0 ml-2" data-toggle="modal"
-                        data-target="#assignAdminModal">
-                        <i class="fa fa-plus mr-1"></i>
+                    <button type="button" class="btn btn-sm btn-success flex-shrink-0 ms-2" data-bs-toggle="modal"
+                        data-bs-target="#assignAdminModal">
+                        <i class="fa fa-plus me-1"></i>
                         <span class="d-none d-sm-inline">{{ __('bank.button.assign-admin') }}</span>
                     </button>
                 </div>
@@ -108,7 +108,7 @@
                                         {{ ($connectedAdmins->currentPage() - 1) * $connectedAdmins->perPage() + $loop->iteration }}
                                     </td>
                                     <td data-label="{{ __('bank.table.admin-name') }}">
-                                        <span class="font-weight-bold text-dark">{{ $user->name }}</span>
+                                        <span class="fw-bold text-dark">{{ $user->name }}</span>
                                     </td>
                                     <td data-label="{{ __('bank.table.contact') }}">
                                         <span class="text-monospace text-muted">{{ $user->contact ?? '-' }}</span>
@@ -123,10 +123,10 @@
                                         {!! Form::hidden('user_id', $user->id) !!}
 
                                         <button type="button"
-                                            class="btn btn-xs btn-block btn-outline-danger js-unlink-btn toggle-width-btn"
+                                            class="btn btn-xs w-100 btn-outline-danger js-unlink-btn toggle-width-btn"
                                             data-id="{{ $user->id }}" data-name="{{ $user->name }}"
                                             title="{{ __('bank.button.unlink') }}">
-                                            <i class="fa fa-unlink mr-1"></i> {{ __('bank.button.unlink') }}
+                                            <i class="fa fa-unlink me-1"></i> {{ __('bank.button.unlink') }}
                                         </button>
                                         {!! Form::close() !!}
                                     </td>
@@ -160,14 +160,12 @@
                 {!! Form::open(['route' => ['banks.link-user', $bank], 'method' => 'POST']) !!}
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title" id="assignAdminModalLabel">
-                        <i class="fas fa-link mr-2"></i> {{ __('bank.button.assign-admin') }}
+                        <i class="fas fa-link me-2"></i> {{ __('bank.button.assign-admin') }}
                     </h5>
-                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="form-group">
+                    <div class="mb-3">
                         <label for="select_user_id"><strong>{{ __('bank.placeholder.select_admin') }} <span
                                     class="text-danger">*</span></strong></label>
                         {!! Form::select('user_id', $availableUsers, null, [
@@ -181,9 +179,9 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-sm btn-secondary"
-                        data-dismiss="modal">{{ __('bank.button.cancel') }}</button>
+                        data-bs-dismiss="modal">{{ __('bank.button.cancel') }}</button>
                     <button type="submit" class="btn btn-sm btn-success">
-                        <i class="fa fa-save mr-1"></i> {{ __('bank.button.assign-admin') }}
+                        <i class="fa fa-save me-1"></i> {{ __('bank.button.assign-admin') }}
                     </button>
                 </div>
                 {!! Form::close() !!}

@@ -100,7 +100,7 @@
             <div class="alert {{ $alertClass }} d-flex align-items-center gap-2">
                 <i class="fas {{ $icon }}"></i>
 
-                <span class="ml-2">
+                <span class="ms-2">
                     This customer has
                     <strong>{{ $totalUnpaidBill }}</strong>
                     outstanding payment{{ $totalUnpaidBill == 1 ? '' : 's' }}.
@@ -182,7 +182,7 @@
                                                 {!! Form::model($item, [
                                                     'method' => 'PATCH',
                                                     'route' => ['billings.payment', $item->slug],
-                                                    'class' => 'mr-2', // ⬅️ PENTING
+                                                    'class' => 'me-2', // ⬅️ PENTING
                                                 ]) !!}
                                                 <button type="submit" class="btn btn-success btn-sm btn-action-primary">
                                                     <i class="fas fa-money-bill-wave"></i>
@@ -204,7 +204,7 @@
                                                 {!! Form::model($billing, [
                                                     'method' => 'PATCH',
                                                     'route' => ['billings.unpayment', $billing->slug],
-                                                    'class' => 'mr-2',
+                                                    'class' => 'me-2',
                                                 ]) !!}
                                                 <button type="submit" class="btn btn-danger btn-sm btn-action-primary">
                                                     <i class="fas fa-money-bill-wave"></i>

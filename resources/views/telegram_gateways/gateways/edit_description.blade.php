@@ -1,6 +1,6 @@
 <x-layouts.cpanel.settings.app-layout title="{{ __('telegram.gateway.header-edit') }}">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">
+        <h5 class="m-0 fw-bold text-primary">
             {{ __('telegram.gateway.header-edit') }}</h5>
     </div>
 
@@ -9,7 +9,7 @@
             {!! Form::model($data, ['method' => 'PATCH', 'route' => ['telegramgateway.update_description', $data->slug]]) !!}
             <div class="card-body col-lg-8">
 
-                <div class="form-group has-feedback row mb-2" id="switch">
+                <div class="mb-3 has-feedback row mb-2" id="switch">
                     <div class="col-md-4">
                         <label for="gateway">{!! trans('telegram.gateway.page-title-index') !!}</label>
                     </div>
@@ -23,7 +23,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="form-group has-feedback row mb-2">
+                <div class="mb-3 has-feedback row mb-2">
                     <div class="col-md-4">
                         <label for="name">{!! trans('telegram.gateway.label.telegram-bot') !!}</label>
                     </div>
@@ -37,7 +37,7 @@
                         @endif
                     </div>
                 </div>
-                <div class="form-group has-feedback row mb-2">
+                <div class="mb-3 has-feedback row mb-2">
                     <div class="col-md-4">
                         <label for="description">{!! trans('telegram.gateway.label.description') !!}</label>
                     </div>

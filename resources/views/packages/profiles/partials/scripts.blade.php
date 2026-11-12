@@ -1,4 +1,4 @@
-<div class="form-group row">
+<div class="mb-3 row">
     <div class="col-sm-6">
         <label for="on_up"><strong>{{ __('Script On Up') }}</strong></label>
         {!! Form::text('on_up', $pppProfile->on_up ?? null, [

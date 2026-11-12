@@ -1,10 +1,10 @@
 <x-layouts.cpanel.settings.app-layout :title="__('server.title.index')">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('server.header.index') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('server.header.index') }}</h5>
         @can('server-create')
             <span>
                 <a class="btn btn-sm btn-primary mt-2" href="{{ route('servers.preview') }}">
-                    <i class="fa fa-file-import mr-1"></i> {{ __('server.button.import') }}
+                    <i class="fa fa-file-import me-1"></i> {{ __('server.button.import') }}
                 </a>
             </span>
         @endcan
@@ -28,18 +28,18 @@
                     @foreach ($mikrotiks as $mikrotik)
                         <tr>
                             <td><span class="fw-normal">{{ ++$i }}</span></td>
-                            <td><span class="mikrotik-name fw-normal font-weight-bold">{{ $mikrotik->name }}</span></td>
+                            <td><span class="mikrotik-name fw-normal fw-bold">{{ $mikrotik->name }}</span></td>
                             <td><span class="mikrotik-host fw-normal font-monospace">{{ $mikrotik->host }}</span></td>
                             <td><span class="mikrotik-port fw-normal font-monospace">{{ $mikrotik->port }}</span></td>
                             <td><span class="fw-normal font-monospace">{{ $mikrotik->coa_port ?? 3799 }}</span></td>
                             <td>
                                 @if (!empty($mikrotik->radius_secret))
                                     <span class="badge bg-success text-white">
-                                        <i class="fas fa-key mr-1"></i> Secret Set
+                                        <i class="fas fa-key me-1"></i> Secret Set
                                     </span>
                                 @else
                                     <span class="badge bg-warning text-dark">
-                                        <i class="fas fa-exclamation-circle mr-1"></i> No Secret
+                                        <i class="fas fa-exclamation-circle me-1"></i> No Secret
                                     </span>
                                 @endif
                             </td>

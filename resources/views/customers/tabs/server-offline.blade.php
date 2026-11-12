@@ -1,5 +1,5 @@
 <div class="card-header py-3">
-    <h5 class="m-0 font-weight-bold text-primary">{{ __('customer.header.show-server') }}</h5>
+    <h5 class="m-0 fw-bold text-primary">{{ __('customer.header.show-server') }}</h5>
     <span class="text-danger">{{ $info_msg }}</span>
 </div>
 
@@ -12,7 +12,7 @@
                 {{ __('customer.label.server') }}
             </div>
             <div class="mt-1">
-                <span class="badge badge-secondary">
+                <span class="badge bg-secondary">
                     <i class="fas fa-server"></i>
                     {{ $customer->mikrotik->name ?? '-' }}
                 </span>
@@ -73,7 +73,7 @@
                 {{ __('customer.label.state') }}
             </div>
             <div class="mt-1">
-                <span class="badge badge-danger">
+                <span class="badge bg-danger">
                     {{ __('customer.info.not-activation') }}
                 </span>
             </div>
@@ -90,7 +90,7 @@
                     @method('PUT')
 
                     <button type="submit" class="btn btn-success">
-                        <i class="fa fa-check mr-2"></i>
+                        <i class="fa fa-check me-2"></i>
                         {{ __('customer.action.activation') }}
                     </button>
                 </form>

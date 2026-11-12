@@ -2,13 +2,13 @@
 
     <div class="card shadow-sm border-0">
         <div class="card-header py-3 d-flex justify-content-between align-items-center bg-white border-bottom-0">
-            <h5 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-user-circle mr-1 text-secondary"></i>
+            <h5 class="m-0 fw-bold text-primary">
+                <i class="fas fa-user-circle me-1 text-secondary"></i>
                 {{ __('customer.title.show') }}
             </h5>
 
             <a href="{{ url()->previous() }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                <i class="fa fa-arrow-left mr-1"></i> {{ __('customer.button.back') }}
+                <i class="fa fa-arrow-left me-1"></i> {{ __('customer.button.back') }}
             </a>
         </div>
 
@@ -21,17 +21,17 @@
                             <strong>{{ ucfirst($key) }}:</strong>
 
                             @if ($item['status'] === 'SUCCESS')
-                                <span class="badge badge-success">{{ __('customer.info.success') }}</span>
+                                <span class="badge bg-success">{{ __('customer.info.success') }}</span>
                             @elseif($item['status'] === 'SKIPPED')
-                                <span class="badge badge-secondary">{{ __('customer.info.skipped') }}</span>
+                                <span class="badge bg-secondary">{{ __('customer.info.skipped') }}</span>
                             @elseif($item['status'] === 'BLOCKED')
-                                <span class="badge badge-warning text-dark">{{ __('customer.info.blocked') }}</span>
-                                <div class="small text-muted ml-2">
+                                <span class="badge bg-warning text-dark">{{ __('customer.info.blocked') }}</span>
+                                <div class="small text-muted ms-2">
                                     {{ $item['reason'] ?? '' }}
                                 </div>
                             @elseif($item['status'] === 'FAILED')
-                                <span class="badge badge-danger">{{ __('customer.info.failed') }}</span>
-                                <div class="small text-danger ml-2">
+                                <span class="badge bg-danger">{{ __('customer.info.failed') }}</span>
+                                <div class="small text-danger ms-2">
                                     {{ $item['reason'] ?? '' }}
                                 </div>
                             @endif
@@ -47,31 +47,31 @@
             <ul class="nav nav-tabs modern-tabs" id="customerTab">
                 <li class="nav-item">
                     <button class="nav-link active" data-tab="info">
-                        <i class="fas fa-id-card mr-1"></i> {{ __('customer.tabs.info') }}
+                        <i class="fas fa-id-card me-1"></i> {{ __('customer.tabs.info') }}
                     </button>
                 </li>
 
                 <li class="nav-item">
                     <button class="nav-link" data-tab="billing">
-                        <i class="fas fa-receipt mr-1"></i> {{ __('customer.tabs.billing') }}
+                        <i class="fas fa-receipt me-1"></i> {{ __('customer.tabs.billing') }}
                     </button>
                 </li>
 
                 <li class="nav-item">
                     <button class="nav-link" data-tab="server">
-                        <i class="fas fa-server mr-1"></i> {{ __('customer.tabs.server') }}
+                        <i class="fas fa-server me-1"></i> {{ __('customer.tabs.server') }}
                     </button>
                 </li>
 
                 <li class="nav-item">
                     <button class="nav-link" data-tab="ont">
-                        <i class="fas fa-network-wired mr-1"></i> {{ __('customer.tabs.ont') }}
+                        <i class="fas fa-network-wired me-1"></i> {{ __('customer.tabs.ont') }}
                     </button>
                 </li>
 
                 <li class="nav-item">
                     <button class="nav-link" data-tab="traffic">
-                        <i class="fas fa-chart-line mr-1"></i> {{ __('customer.tabs.traffic') }}
+                        <i class="fas fa-chart-line me-1"></i> {{ __('customer.tabs.traffic') }}
                     </button>
                 </li>
             </ul>

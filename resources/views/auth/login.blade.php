@@ -29,7 +29,7 @@
                         aria-describedby="emailHelp" placeholder="{{ __('customer.label.email') }}" required autofocus>
 
                     @error('email')
-                        <small class="text-danger mt-1 d-block fw-semibold pl-2">{{ $message }}</small>
+                        <small class="text-danger mt-1 d-block fw-semibold ps-2">{{ $message }}</small>
                     @enderror
                 </div>
 
@@ -44,15 +44,15 @@
                     </span>
 
                     @error('password')
-                        <small class="text-danger mt-1 d-block fw-semibold pl-2">{{ $message }}</small>
+                        <small class="text-danger mt-1 d-block fw-semibold ps-2">{{ $message }}</small>
                     @enderror
                 </div>
 
                 <!-- Remember Me Checkbox -->
                 <div class="mb-4">
-                    <div class="custom-control custom-checkbox small">
-                        <input type="checkbox" name="remember" class="custom-control-input" id="customCheck">
-                        <label class="custom-control-label text-white-50 cursor-pointer" for="customCheck">
+                    <div class="form-check small">
+                        <input type="checkbox" name="remember" class="form-check-input" id="customCheck">
+                        <label class="form-check-label text-white-50 cursor-pointer" for="customCheck">
                             {{ __('customer.table.remember_me') ?? 'Ingat Saya' }}
                         </label>
                     </div>

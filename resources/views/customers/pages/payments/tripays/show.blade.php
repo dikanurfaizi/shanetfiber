@@ -1,7 +1,7 @@
 <x-layouts.customers.app-layout title="Billing #{{ $billing->billing_number }}">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('Bill Number #') }}{{ $billing->billing_number }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('Bill Number #') }}{{ $billing->billing_number }}</h5>
     </div>
 
     <x-billing-info :billing="$billing" :websystem="$websystem" />

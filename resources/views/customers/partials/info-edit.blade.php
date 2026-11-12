@@ -110,15 +110,15 @@
     {{-- INTERACTIVE MAP PICKER CONTAINER (BOOTSTRAP 4) --}}
     <div class="customer-map-picker-wrapper mt-3">
         <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap">
-            <label class="font-weight-bold mb-1 mb-md-0">
-                <i class="fas fa-map-marker-alt text-danger mr-1"></i> {{ __('customer.wizard.label.map_picker') }}
+            <label class="fw-bold mb-1 mb-md-0">
+                <i class="fas fa-map-marker-alt text-danger me-1"></i> {{ __('customer.wizard.label.map_picker') }}
             </label>
             <div class="d-flex align-items-center">
-                <small class="text-muted d-none d-md-inline mr-2">
+                <small class="text-muted d-none d-md-inline me-2">
                     {{ __('customer.info.map_instruction') }}
                 </small>
                 <button type="button" id="btn-edit-current-location" class="btn btn-sm btn-outline-primary py-1 px-2">
-                    <i class="fas fa-crosshairs mr-1"></i> {{ __('customer.wizard.button.use_current_location') }}
+                    <i class="fas fa-crosshairs me-1"></i> {{ __('customer.wizard.button.use_current_location') }}
                 </button>
             </div>
         </div>
@@ -130,7 +130,7 @@
     {{-- ACTION BUTTONS --}}
     <div class="mt-4 action-group">
         <button type="submit" class="btn-soft btn-green">
-            <i class="fa fa-save mr-1"></i> {{ __('customer.button.save_changes') }}
+            <i class="fa fa-save me-1"></i> {{ __('customer.button.save_changes') }}
         </button>
 
         <a href="{{ route('customers.show', [$slug, 'tab' => 'info']) }}" class="btn-soft btn-gray">

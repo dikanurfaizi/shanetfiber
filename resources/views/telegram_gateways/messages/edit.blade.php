@@ -1,6 +1,6 @@
 <x-layouts.cpanel.settings.app-layout title="{{ __('telegram.message.page-title-edit') }}">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">
+        <h5 class="m-0 fw-bold text-primary">
             {{ __('telegram.message.title.edit-message-name', ['name' => $data->name]) }}</h5>
     </div>
 
@@ -9,7 +9,7 @@
             {!! Form::model($data, ['method' => 'PATCH', 'route' => ['telegrammessage.update', $data->slug]]) !!}
             <div class="card-body col-lg-8">
 
-                <div class="form-group has-feedback row mb-2">
+                <div class="mb-3 has-feedback row mb-2">
                     <div class="col-md-3">
                         <label for="name">{!! trans('telegram.message.label.name') !!}</label>
                     </div>
@@ -24,7 +24,7 @@
                     </div>
                 </div>
                 {{-- @if (!$data->default)
-                    <div class="form-group has-feedback row mb-2" id="input-default-number">
+                    <div class="mb-3 has-feedback row mb-2" id="input-default-number">
                         <div class="col-md-3">
                             <label for="default_number">{!! trans('telegram.message.label.gateway-number') !!}</label>
                         </div>
@@ -37,7 +37,7 @@
                     </div>
                 @endif --}}
                 @if (!$data->default)
-                    <div class="form-group has-feedback row mb-2" id="input-keyword">
+                    <div class="mb-3 has-feedback row mb-2" id="input-keyword">
                         <div class="col-md-3">
                             <label for="incoming_message">{!! trans('telegram.message.label.keyword') !!}</label>
                         </div>
@@ -52,7 +52,7 @@
                         </div>
                     </div>
                 @endif
-                <div class="form-group has-feedback row mb-2">
+                <div class="mb-3 has-feedback row mb-2">
                     <div class="col-md-3">
                         <label for="reply_message">{!! trans('telegram.message.label.reply_message') !!}</label>
                     </div>
@@ -67,7 +67,7 @@
                         @endif
                     </div>
                 </div>
-                <div class="form-group has-feedback row mb-2">
+                <div class="mb-3 has-feedback row mb-2">
                     <div class="col-md-3">
                         <label for="description">{!! trans('telegram.message.label.description') !!}</label>
                     </div>

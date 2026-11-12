@@ -115,7 +115,7 @@ class WhatsAppConversationController extends Controller
             LogHelper::logInfo(null, ['validated' => $validated], 200, "[ChatController] Initializing send message", $traceId);
 
             // 2. Resolve Gateway & Account
-            $resolved = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, 'meta_reply');
+            $resolved = $this->gatewayResolver->resolveActiveGatewayAndAccount('meta_reply', $traceId);
 
             if (!$resolved || empty($resolved[1])) {
                 throw new \RuntimeException("No active gateway or account found for meta_reply");

@@ -1,7 +1,7 @@
 <x-layouts.app-layout title="Create Addon">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">
+        <h5 class="m-0 fw-bold text-primary">
             {{ __('addon.header.create') }}
         </h5>
     </div>

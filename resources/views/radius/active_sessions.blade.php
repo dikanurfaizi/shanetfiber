@@ -1,14 +1,14 @@
 <x-layouts.cpanel.settings.app-layout :title="__('radius.active_sessions.title')">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary mb-2">
+        <h5 class="m-0 fw-bold text-primary mb-2">
             {{ __('radius.active_sessions.header') }}
         </h5>
 
         <span>
             @if (session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="fas fa-check-circle mr-1"></i> {{ session('success') }}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <i class="fas fa-check-circle me-1"></i> {{ session('success') }}
+                    <button type="button" class="close" data-bs-dismiss="alert" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
@@ -16,8 +16,8 @@
 
             @if ($errors->any())
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="fas fa-exclamation-triangle mr-1"></i> {{ $errors->first() }}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <i class="fas fa-exclamation-triangle me-1"></i> {{ $errors->first() }}
+                    <button type="button" class="close" data-bs-dismiss="alert" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
@@ -29,7 +29,7 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
             <div>
                 <span class="badge bg-primary text-white p-2">
-                    <i class="fas fa-users mr-1"></i> {{ __('radius.active_sessions.total_online') }}:
+                    <i class="fas fa-users me-1"></i> {{ __('radius.active_sessions.total_online') }}:
                     {{ $activeSessions->count() }}
                 </span>
             </div>
@@ -39,7 +39,7 @@
                 <a href="{{ route('radius.active-sessions') }}"
                     class="btn btn-secondary btn-sm d-flex align-items-center" style="height: 35px;"
                     title="{{ __('radius.index.btn_refresh_title') }}">
-                    <i class="fas fa-sync-alt mr-1"></i> {{ __('radius.index.btn_refresh') }}
+                    <i class="fas fa-sync-alt me-1"></i> {{ __('radius.index.btn_refresh') }}
                 </a>
             </div>
         </div>
@@ -84,7 +84,7 @@
                             @endphp
                             <tr class="text-center align-middle">
                                 <td><span class="badge bg-danger-soft">{{ $loop->iteration }}</span></td>
-                                <td class="font-weight-bold text-left">
+                                <td class="fw-bold text-start">
                                     <span
                                         class="badge bg-light text-dark font-monospace">{{ $session->username }}</span>
                                 </td>
@@ -100,7 +100,7 @@
                                         <button type="button" class="btn btn-sm btn-danger"
                                             onclick="confirmDisconnect('{{ $session->username }}', 'disconnectForm-{{ $loop->iteration }}')"
                                             title="{{ __('radius.action.disconnect') }}">
-                                            <i class="fas fa-power-off mr-1"></i> {{ __('radius.action.kick') }}
+                                            <i class="fas fa-power-off me-1"></i> {{ __('radius.action.kick') }}
                                         </button>
                                     </form>
                                 </td>
@@ -108,7 +108,7 @@
                         @empty
                             <tr>
                                 <td colspan="7" class="text-center py-4 text-muted">
-                                    <i class="fas fa-info-circle mr-1"></i>
+                                    <i class="fas fa-info-circle me-1"></i>
                                     {{ __('radius.active_sessions.no_active_sessions') }}
                                 </td>
                             </tr>
@@ -130,25 +130,25 @@
                     $minutes = floor(($seconds / 60) % 60);
                     $uptimeFormatted = "{$hours}h {$minutes}m";
                 @endphp
-                <div class="card mb-3 shadow-sm border text-left">
+                <div class="card mb-3 shadow-sm border text-start">
                     <div class="card-body p-2">
 
                         {{-- Baris 1: No & Status Active Badge --}}
                         <div class="d-flex justify-content-between align-items-center mb-1 border-bottom pb-1">
-                            <span class="badge badge-pill badge-secondary px-2 py-1">
+                            <span class="badge rounded-pill bg-secondary px-2 py-1">
                                 #{{ $loop->iteration }}
                             </span>
                             <span class="badge text-white bg-success py-1">
-                                <i class="fas fa-wifi mr-1"></i> ONLINE
+                                <i class="fas fa-wifi me-1"></i> ONLINE
                             </span>
                         </div>
 
                         {{-- Baris 2: Username & Usage --}}
                         <div class="d-flex justify-content-between align-items-center mb-1 mt-2">
-                            <h6 class="mb-0 font-weight-bold text-monospace">
-                                <i class="fas fa-user text-primary mr-1"></i> {{ $session->username }}
+                            <h6 class="mb-0 fw-bold text-monospace">
+                                <i class="fas fa-user text-primary me-1"></i> {{ $session->username }}
                             </h6>
-                            <span class="badge badge-light border px-2 py-1 text-primary font-weight-bold">
+                            <span class="badge bg-light text-dark border px-2 py-1 text-primary fw-bold">
                                 {{ $totalMb }} MB
                             </span>
                         </div>
@@ -156,10 +156,10 @@
                         {{-- Baris 3: NAS IP & Uptime --}}
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <small class="text-muted text-monospace">
-                                <i class="fas fa-server mr-1"></i> {{ $session->nasipaddress }}
+                                <i class="fas fa-server me-1"></i> {{ $session->nasipaddress }}
                             </small>
                             <small class="text-muted">
-                                <i class="fas fa-clock mr-1"></i> {{ $uptimeFormatted }}
+                                <i class="fas fa-clock me-1"></i> {{ $uptimeFormatted }}
                             </small>
                         </div>
 
@@ -172,7 +172,7 @@
                                 @csrf
                                 <button type="button" class="btn btn-xs btn-danger px-3 py-1"
                                     onclick="confirmDisconnect('{{ $session->username }}', 'mobileDisconnectForm-{{ $loop->iteration }}')">
-                                    <i class="fas fa-power-off mr-1"></i> {{ __('radius.action.kick') }}
+                                    <i class="fas fa-power-off me-1"></i> {{ __('radius.action.kick') }}
                                 </button>
                             </form>
                         </div>
@@ -181,7 +181,7 @@
                 </div>
             @empty
                 <div class="text-center py-4 text-muted">
-                    <i class="fas fa-info-circle mr-1"></i> {{ __('radius.active_sessions.no_active_sessions') }}
+                    <i class="fas fa-info-circle me-1"></i> {{ __('radius.active_sessions.no_active_sessions') }}
                 </div>
             @endforelse
         </div>

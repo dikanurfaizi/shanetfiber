@@ -1,7 +1,7 @@
 <x-layouts.cpanel.settings.app-layout title="Edit Gowa Account">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">Edit Gowa Account</h5>
+        <h5 class="m-0 fw-bold text-primary">Edit Gowa Account</h5>
     </div>
 
     <div class="card mt-4 shadow-sm p-4">
@@ -12,7 +12,7 @@
             @method('PUT')
 
             {{-- General Settings --}}
-            <h6 class="font-weight-bold text-muted mb-3">General Settings</h6>
+            <h6 class="fw-bold text-muted mb-3">General Settings</h6>
 
             <div class="mb-3 row">
                 <label class="col-md-3 col-form-label text-muted">Purpose</label>
@@ -43,7 +43,7 @@
 
             <hr class="my-4">
 
-            <h6 class="font-weight-bold text-muted mb-3">WhatsApp Number</h6>
+            <h6 class="fw-bold text-muted mb-3">WhatsApp Number</h6>
 
             <div class="mb-3 row">
                 <label class="col-md-3 col-form-label text-muted">
@@ -81,7 +81,7 @@
             <hr class="my-4">
 
             {{-- Gowa On-Prem Settings --}}
-            <h6 class="font-weight-bold text-muted mb-3">Gowa On-Prem Settings</h6>
+            <h6 class="fw-bold text-muted mb-3">Gowa On-Prem Settings</h6>
 
             <div class="mb-3 row">
                 <label class="col-md-3 col-form-label text-muted">Base URL</label>

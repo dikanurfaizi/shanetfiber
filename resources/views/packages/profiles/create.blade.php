@@ -1,6 +1,6 @@
 <x-layouts.app-layout title="Create PPP Profile">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('package.profile.header.create') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('package.profile.header.create') }}</h5>
     </div>
 
     <div class="row">

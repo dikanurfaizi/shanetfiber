@@ -1,6 +1,6 @@
 <x-layouts.cpanel.settings.app-layout title="Users">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">Users</h5>
+        <h5 class="m-0 fw-bold text-primary">Users</h5>
         <span><a class="btn btn-sm btn-success mt-2" href="{{ route('users.create') }}"><i class="fas fa-user-plus"></i>
                 Add User</a></span>
     </div>

@@ -4,7 +4,7 @@
             {{-- UNPAID --}}
             <div class="w-100 mb-3">
                 <p class="head-section">Selesaikan pembayaran dalam</p>
-                <p class="timer text-danger font-weight-bold" id="countdown"></p>
+                <p class="timer text-danger fw-bold" id="countdown"></p>
                 <p class="end-payment">Batas Akhir Pembayaran</p>
                 <p class="end-date">
                     {{ \Carbon\Carbon::createFromTimestamp($order->expired_time)->translatedFormat('d F Y, H:i') }} WIB
@@ -19,7 +19,7 @@
                     style="width: 64px; height: 64px;">
                     <i class="fas fa-check-circle fa-2x text-white"></i>
                 </div>
-                <p class="h5 text-success font-weight-bold mt-2">Pembayaran Berhasil</p>
+                <p class="h5 text-success fw-bold mt-2">Pembayaran Berhasil</p>
             </div>
         @break
 
@@ -30,7 +30,7 @@
                     style="width: 64px; height: 64px;">
                     <i class="fas fa-clock fa-2x text-dark"></i>
                 </div>
-                <p class="h5 text-secondary font-weight-bold mt-2">Pembayaran Kadaluarsa</p>
+                <p class="h5 text-secondary fw-bold mt-2">Pembayaran Kadaluarsa</p>
             </div>
         @break
 
@@ -41,7 +41,7 @@
                     style="width: 64px; height: 64px;">
                     <i class="fas fa-ban fa-2x text-white"></i>
                 </div>
-                <p class="h5 text-danger font-weight-bold mt-2">Pembayaran Dibatalkan</p>
+                <p class="h5 text-danger fw-bold mt-2">Pembayaran Dibatalkan</p>
             </div>
         @break
 

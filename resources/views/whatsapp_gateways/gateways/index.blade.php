@@ -1,7 +1,7 @@
 <x-layouts.cpanel.settings.app-layout title="WhatsApp Gateway Providers">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">WhatsApp Gateway Providers</h5>
+        <h5 class="m-0 fw-bold text-primary">WhatsApp Gateway Providers</h5>
     </div>
 
     <div class="row mt-3">
@@ -11,7 +11,7 @@
                 <div class="card shadow-sm border-left-primary h-100">
                     <div class="card-body">
 
-                        <h5 class="font-weight-bold">{{ $gw->name }}</h5>
+                        <h5 class="fw-bold">{{ $gw->name }}</h5>
                         <p class="text-muted mb-1">Type: {{ $gw->type }}</p>
 
                         <p class="mb-2">

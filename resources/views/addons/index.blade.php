@@ -1,17 +1,17 @@
 <x-layouts.app-layout title="Addons">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary mb-2">Addon Management</h5>
+        <h5 class="m-0 fw-bold text-primary mb-2">Addon Management</h5>
 
         <span>
             @if (isset($message))
                 <div class="alert alert-danger">
-                    <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                    <a href="#" class="close" data-bs-dismiss="alert" aria-label="close">&times;</a>
                     {{ $message }}
                 </div>
             @else
                 <div class="alert alert-success">
-                    <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                    <a href="#" class="close" data-bs-dismiss="alert" aria-label="close">&times;</a>
                     {{ $addons->total() }} addons found
                 </div>
             @endif

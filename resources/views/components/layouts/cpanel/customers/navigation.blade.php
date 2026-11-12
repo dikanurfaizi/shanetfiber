@@ -12,12 +12,12 @@
 <!-- Customers -->
 @canany(['customer-list', 'customer-create', 'customer-edit', 'customer-delete', 'customer-trashed'])
     <li class="nav-item @if (request()->routeIs('customers*')) active @endif">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseCustomer">
+        <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseCustomer">
             <i class="fas fa-users"></i>
             <span>{{ __('navigation.customers.nav-item') }}</span>
         </a>
         <div id="collapseCustomer" class="collapse @if (request()->routeIs('customers*')) show @endif"
-            data-parent="#accordionSidebar">
+            data-bs-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 @can('customer-create')
                     <a class="collapse-item @if (request()->routeIs('customers.create')) active @endif"
@@ -45,12 +45,12 @@
 <!-- Memberships -->
 @canany(['member-list', 'member-create'])
     <li class="nav-item @if (request()->routeIs('members*')) active @endif">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseMembership">
+        <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseMembership">
             <i class="fas fa-id-card"></i>
             <span>{{ __('navigation.membership.nav-item') }}</span>
         </a>
         <div id="collapseMembership" class="collapse @if (request()->routeIs('members*')) show @endif"
-            data-parent="#accordionSidebar">
+            data-bs-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 @can('member-create')
                     <a class="collapse-item @if (request()->routeIs('members.create')) active @endif"
@@ -72,12 +72,12 @@
 <!-- Packages -->
 @canany(['package-list', 'package-create', 'package-edit'])
     <li class="nav-item @if (request()->routeIs('packages*') || request()->routeIs('categories*')) active @endif">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePackages">
+        <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapsePackages">
             <i class="fas fa-box"></i>
             <span>{{ __('navigation.packages.nav-item') }}</span>
         </a>
         <div id="collapsePackages" class="collapse @if (request()->routeIs('packages*') || request()->routeIs('categories*')) show @endif"
-            data-parent="#accordionSidebar">
+            data-bs-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 @can('package-create')
                     <a class="collapse-item @if (request()->routeIs('packages.create')) active @endif"
@@ -105,12 +105,12 @@
 <!-- Addons -->
 @canany(['addon-view', 'addon-create', 'addon-edit', 'addon-enable', 'addon-disable'])
     <li class="nav-item @if (request()->routeIs('addons*')) active @endif">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseAddons">
+        <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseAddons">
             <i class="fas fa-puzzle-piece"></i>
             <span>{{ __('navigation.addons.nav-item') }}</span>
         </a>
         <div id="collapseAddons" class="collapse @if (request()->routeIs('addons*')) show @endif"
-            data-parent="#accordionSidebar">
+            data-bs-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 @can('addon-create')
                     <a class="collapse-item @if (request()->routeIs('addons.create')) active @endif"
@@ -133,12 +133,12 @@
 
 @canany(['billing-list', 'billing-create', 'billing-edit'])
     <li class="nav-item @if (request()->routeIs('billings*') || request()->routeIs('billingHistory*')) active @endif">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBilling">
+        <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseBilling">
             <i class="fas fa-layer-group"></i>
             <span>{{ __('navigation.billings.nav-item') }}</span>
         </a>
         <div id="collapseBilling" class="collapse @if (request()->routeIs('billings*') || request()->routeIs('billingHistory*')) show @endif"
-            data-parent="#accordionSidebar">
+            data-bs-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 @can('billing-create')
                     <a class="collapse-item @if (request()->routeIs('billings.create')) active @endif"
@@ -164,12 +164,12 @@
 <!-- Reports -->
 @canany(['report-view'])
     <li class="nav-item @if (request()->routeIs('reports*')) active @endif">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseReports">
+        <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseReports">
             <i class="fas fa-chart-bar"></i>
             <span>{{ __('navigation.reports.nav-item') }}</span>
         </a>
         <div id="collapseReports" class="collapse @if (request()->routeIs('reports*')) show @endif"
-            data-parent="#accordionSidebar">
+            data-bs-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 <a class="collapse-item @if (request()->routeIs('reports.kpi')) active @endif"
                     href="{{ route('reports.kpi') }}">
@@ -193,12 +193,12 @@
 <!-- Networks -->
 @canany(['olt-list', 'ont-list'])
     <li class="nav-item @if (request()->routeIs('olts*') || request()->routeIs('onts*')) active @endif">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseNetworks">
+        <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseNetworks">
             <i class="fas fa-server"></i>
             <span>{{ __('navigation.network.nav-item') }}</span>
         </a>
         <div id="collapseNetworks" class="collapse @if (request()->routeIs('olts*') || request()->routeIs('onts*')) show @endif"
-            data-parent="#accordionSidebar">
+            data-bs-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 <a class="collapse-item @if (request()->routeIs('olts.index')) active @endif"
                     href="{{ route('olts.index') }}">

@@ -6,7 +6,7 @@
 
     <!-- Page Header -->
     <div class="card-header py-3 d-flex align-items-center">
-        <h5 class="m-0 font-weight-bold text-primary mb-2">
+        <h5 class="m-0 fw-bold text-primary mb-2">
             {{ __('networks.header.ont-index') }}
         </h5>
     </div>
@@ -69,7 +69,7 @@
 
                             <!-- Buttons -->
                             <div class="col-md-3 d-flex gap-2 mb-3">
-                                <button type="submit" class="btn btn-primary flex-fill mr-2">
+                                <button type="submit" class="btn btn-primary flex-fill me-2">
                                     <i class="fas fa-filter me-2"></i> Apply Filters
                                 </button>
                                 <a href="{{ route('onts.index') }}" class="btn btn-outline-secondary flex-fill">

@@ -13,7 +13,7 @@
                 {{-- =======================
                 SELECT PACKAGE
                 ======================== --}}
-                <div class="form-group mb-3">
+                <div class="mb-3 mb-3">
                     <label><strong>{{ __('customer.wizard.label.package') }}</strong> <span
                             class="text-danger">*</span></label>
                     <select name="package_id" id="package-dropdown" class="form-control">
@@ -33,7 +33,7 @@
                 {{-- =======================
                 PACKAGE DURATION
                 ======================== --}}
-                <div class="form-group mb-3 d-none" id="duration-wrapper">
+                <div class="mb-3 mb-3 d-none" id="duration-wrapper">
                     <label><strong>{{ __('customer.wizard.label.duration') }}</strong></label>
                     <select name="package_duration_id" id="duration-select" class="form-control">
                         <option value="">{{ __('customer.wizard.placeholder.select_duration') }}</option>
@@ -46,7 +46,7 @@
                 {{-- =======================
                 MEMBERSHIP
                 ======================== --}}
-                <div class="form-group mb-3">
+                <div class="mb-3 mb-3">
                     <label><strong>{{ __('customer.wizard.label.membership') }}</strong></label>
                     <select name="member_id" id="member-dropdown" class="form-control">
                         <option value="">{{ __('customer.wizard.placeholder.non_member') }}</option>
@@ -65,7 +65,7 @@
                 {{-- =======================
                 BILLING OPTION (💡 Ditambahkan id="billing-option-wrapper" & d-none)
                 ======================== --}}
-                <div class="form-group mb-3 d-none" id="billing-option-wrapper">
+                <div class="mb-3 mb-3 d-none" id="billing-option-wrapper">
                     <label><strong>{{ __('customer.wizard.label.billing_option') }}</strong></label><br>
 
                     <div class="form-check form-check-inline">
@@ -86,7 +86,7 @@
                 {{-- =======================
                 SELECT BILLING PERIODE (IF ONE TIME)
                 ======================== --}}
-                <div id="periode-wrapper" class="form-group mb-3 d-none">
+                <div id="periode-wrapper" class="mb-3 mb-3 d-none">
                     <label><strong>{{ __('customer.wizard.label.select_billing_period') }}</strong></label>
                     <select name="billing_periode_name" id="periode-select" class="form-control">
                         <option value="">-- {{ __('customer.wizard.placeholder.select_billing_period') }} --
@@ -103,7 +103,7 @@
                 {{-- =======================
                 DISCOUNT RESULT
                 ======================== --}}
-                <div class="form-group mb-3">
+                <div class="mb-3 mb-3">
                     <label><strong>{{ __('customer.wizard.label.discount_applied') }}</strong></label>
                     <input type="text" id="discount_display" class="form-control" readonly>
                 </div>
@@ -111,7 +111,7 @@
                 {{-- =======================
                 CALCULATION OPTION (💡 Ditambahkan d-none di awal akses halaman)
                 ======================== --}}
-                <div class="form-group mb-3 d-none" id="prorate-wrapper">
+                <div class="mb-3 mb-3 d-none" id="prorate-wrapper">
                     <label><strong>{{ __('customer.wizard.label.calculation') }}:</strong></label><br>
 
                     <div class="form-check form-check-inline">
@@ -136,7 +136,7 @@
 
             </div>
 
-            <div class="card-footer text-right">
+            <div class="card-footer text-end">
                 <a href="{{ route('wizard.step2') }}"
                     class="btn btn-secondary">{{ __('customer.wizard.button.back') }}</a>
                 <button class="btn btn-primary">{{ __('customer.wizard.button.next_step') }}</button>

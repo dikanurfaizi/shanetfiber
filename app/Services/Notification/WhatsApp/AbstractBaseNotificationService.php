@@ -20,7 +20,8 @@ abstract class AbstractBaseNotificationService
     {
         $lap = $timer ? $timer->lap() : null;
 
-        [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($traceId, $alias)
+        // Pastikan urutan argumen ($alias, $traceId)
+        [$gateway, $account, $number] = $this->gatewayResolver->resolveActiveGatewayAndAccount($alias, $traceId)
             ?? [null, null, null];
 
         if (!$gateway || !$account || !$number) {

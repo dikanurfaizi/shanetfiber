@@ -1,7 +1,7 @@
 <x-layouts.cpanel.settings.app-layout title="{{ __('telegram.message.page-title-index') }}">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('telegram.message.page-title-index') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('telegram.message.page-title-index') }}</h5>
         <span><a class="btn btn-sm btn-success mt-2" href="{{ route('telegrammessage.create') }}"><i
                     class="fa fa-plus"></i>
                 {{ __('telegram.message.button.create') }}</a></span>

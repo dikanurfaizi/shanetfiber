@@ -2,7 +2,7 @@
 
     {{-- HEADER --}}
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">
+        <h5 class="m-0 fw-bold text-primary">
             {{ __('whatsapp.feature.title.show-feature') }}
         </h5>
 
@@ -35,7 +35,7 @@
                                 <tr>
                                     <th>{{ __('whatsapp.feature.label.alias') }}</th>
                                     <td>
-                                        <span class="badge badge-secondary">
+                                        <span class="badge bg-secondary">
                                             {{ $whatsappfeature->alias }}
                                         </span>
                                     </td>
@@ -43,7 +43,7 @@
                                 <tr>
                                     <th>{{ __('whatsapp.feature.label.gateway') }}</th>
                                     <td>
-                                        <span class="badge badge-info">
+                                        <span class="badge bg-info">
                                             {{ $whatsappfeature->gateway_label }}
                                         </span>
                                     </td>
@@ -86,7 +86,7 @@
                             {{-- NAME --}}
                             <div class="mb-3">
                                 <small class="text-muted">{{ __('whatsapp.feature.label.name') }}</small>
-                                <div class="font-weight-bold">
+                                <div class="fw-bold">
                                     {{ $whatsappfeature->name }}
                                 </div>
                             </div>
@@ -94,7 +94,7 @@
                             {{-- ALIAS --}}
                             <div class="mb-3">
                                 <small class="text-muted">{{ __('whatsapp.feature.label.alias') }}</small><br>
-                                <span class="badge badge-secondary">
+                                <span class="badge bg-secondary">
                                     {{ $whatsappfeature->alias }}
                                 </span>
                             </div>
@@ -102,7 +102,7 @@
                             {{-- GATEWAY --}}
                             <div class="mb-3">
                                 <small class="text-muted">{{ __('whatsapp.feature.label.gateway') }}</small><br>
-                                <span class="badge badge-info">
+                                <span class="badge bg-info">
                                     {{ $whatsappfeature->gateway_label }}
                                 </span>
                             </div>
@@ -167,13 +167,13 @@
 
                         @if ($whatsappfeature->is_scheduled && !empty($whatsappfeature->schedule))
                             <div class="alert alert-info py-2 small">
-                                <i class="fa fa-clock mr-1"></i>
+                                <i class="fa fa-clock me-1"></i>
                                 {{ __('whatsapp.feature.message.schedule-active') }}
                             </div>
 
                             <div class="mb-3">
                                 <small class="text-muted">{{ __('whatsapp.feature.label.timezone') }}</small>
-                                <div class="font-weight-bold">
+                                <div class="fw-bold">
                                     {{ data_get($whatsappfeature->schedule, 'timezone', '-') }}
                                 </div>
                             </div>
@@ -181,7 +181,7 @@
                             <div class="mb-3">
                                 <small class="text-muted">{{ __('whatsapp.feature.label.schedule-days') }}</small>
                                 <div>
-                                    <span class="badge badge-light">
+                                    <span class="badge bg-light text-dark">
                                         {{ implode(', ', data_get($whatsappfeature->schedule, 'days', [])) }}
                                     </span>
                                 </div>
@@ -190,7 +190,7 @@
                             <div class="mb-0">
                                 <small
                                     class="text-muted">{{ __('whatsapp.feature.label.schedule-time-window') }}</small>
-                                <div class="font-weight-bold">
+                                <div class="fw-bold">
                                     {{ data_get($whatsappfeature->schedule, 'time_window.start') }}
                                     –
                                     {{ data_get($whatsappfeature->schedule, 'time_window.end') }}
@@ -198,7 +198,7 @@
                             </div>
                         @else
                             <div class="alert alert-secondary small mb-0">
-                                <i class="fa fa-info-circle mr-1"></i>
+                                <i class="fa fa-info-circle me-1"></i>
                                 {{ __('whatsapp.feature.message.schedule-inactive') }}
                             </div>
                         @endif
@@ -214,13 +214,13 @@
     {{-- FOOTER --}}
     <div class="card-footer d-flex flex-column flex-md-row justify-content-end">
 
-        <a href="{{ route('whatsappfeature.index') }}" class="btn btn-secondary btn-sm mb-2 mb-md-0 mr-md-2">
-            <i class="fa fa-arrow-left mr-1"></i>
+        <a href="{{ route('whatsappfeature.index') }}" class="btn btn-secondary btn-sm mb-2 mb-md-0 me-md-2">
+            <i class="fa fa-arrow-left me-1"></i>
             {{ __('whatsapp.feature.button.back') }}
         </a>
 
         <a href="{{ route('whatsappfeature.edit', $whatsappfeature->slug) }}" class="btn btn-primary btn-sm">
-            <i class="fa fa-edit mr-1"></i>
+            <i class="fa fa-edit me-1"></i>
             {{ __('whatsapp.feature.button.edit') }}
         </a>
 

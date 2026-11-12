@@ -100,6 +100,11 @@ class CustomerFormService
             $router = Mikrotik::find($customer->mikrotik_id);
             $serverDisconnect = $this->checkServerStatus($router, $traceId);
 
+            // Ambil harga paket aktif/terbaru dari subscription
+            $packagePrice = $customer->activeSubscription?->package?->price
+                ?? $customer->currentSubscription()?->package?->price
+                ?? 0;
+
             $data = [
                 'customer' => $customer,
                 'customer_number' => $formatter->formatReceiver($customer->contact, null, false),
@@ -107,7 +112,8 @@ class CustomerFormService
                 'packages' => Package::where('disabled', 'false')->orderBy('price', 'ASC')->get(),
                 'members' => Membership::all(),
                 'serverDisconnect' => $serverDisconnect,
-                'availablePeriodes' => $this->getAvailableBillingPeriodes($traceId)
+                'availablePeriodes' => $this->availableBillingPeriodes($traceId),
+                'package_price' => $packagePrice, // Disertakan untuk dikirim ke view Blade
             ];
 
             LogHelper::logInfo(
@@ -117,7 +123,8 @@ class CustomerFormService
                     'users_count' => $data['users']->count(),
                     'packages_count' => $data['packages']->count(),
                     'members_count' => $data['members']->count(),
-                    'periodes_count' => $data['availablePeriodes']->count()
+                    'periodes_count' => $data['availablePeriodes']->count(),
+                    'package_price' => $packagePrice
                 ],
                 200,
                 'Successfully retrieved edit form data',
@@ -217,6 +224,38 @@ class CustomerFormService
                 $periodes->push([
                     'name' => $current->copy()->addMonths($i)->format('F Y'),
                 ]);
+            }
+
+            return $periodes;
+        } catch (\Throwable $e) {
+            LogHelper::logError(
+                null,
+                ['error' => $e->getMessage()],
+                500,
+                'Failed to generate periodes',
+                $traceId
+            );
+            return collect();
+        }
+    }
+
+    private function availableBillingPeriodes(string $traceId): Collection
+    {
+        try {
+            $last = BillingPeriode::orderByDesc('id')->first();
+
+            if (!$last) {
+                return collect();
+            }
+
+            // Parse dari name, contoh: "December 2025"
+            $current = Carbon::createFromFormat('F Y', $last->name);
+
+            // Generate 3 bulan sebagai array string sederhana
+            $periodes = collect();
+
+            for ($i = 0; $i < 3; $i++) {
+                $periodes->push($current->copy()->addMonths($i)->format('F Y'));
             }
 
             return $periodes;

@@ -1,7 +1,7 @@
 <x-layouts.app-layout title="Delete Package">
 
     <div class="card-header py-3 alert-danger">
-        <h5 class="m-0 font-weight-bold"> {{ __('package.header.delete') }}</h5>
+        <h5 class="m-0 fw-bold"> {{ __('package.header.delete') }}</h5>
         <span>{{ $packet->name }}</span>
     </div>
 

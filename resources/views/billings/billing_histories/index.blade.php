@@ -2,27 +2,28 @@
 
     <div class="card-header py-3">
 
-        <h5 class="mb-2 font-weight-bold text-primary">{{ __('billing.header.history-index') }}</h5>
+        <h5 class="mb-2 fw-bold text-primary">{{ __('billing.header.history-index') }}</h5>
         @if (isset($message))
             <div class="alert alert-danger mt-2">
-                <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                <a href="#" class="close" data-bs-dismiss="alert" aria-label="close">&times;</a>
                 {{ $message }}
             </div>
         @else
             <div class="alert alert-success mt-2">
-                <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                <a href="#" class="close" data-bs-dismiss="alert" aria-label="close">&times;</a>
                 {{ __('billing.info.billing-history-found', ['count' => $data->total()]) }}
             </div>
         @endif
         @if (session('warning'))
             <div class="alert alert-warning mt-2">
-                <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                <a href="#" class="close" data-bs-dismiss="alert" aria-label="close">&times;</a>
                 {{ session('warning') }}
             </div>
         @endif
         <span>
-            <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSearchCustomer"
-                aria-expanded="false" aria-controls="collapseSearchCustomer" style="padding-top: inherit;">
+            <a class="nav-link collapsed" href="#" data-bs-toggle="collapse"
+                data-bs-target="#collapseSearchCustomer" aria-expanded="false" aria-controls="collapseSearchCustomer"
+                style="padding-top: inherit;">
                 <i class="fas fa-search"></i>
                 <span>{{ __('billing.header.search') }}</span>
             </a>
@@ -91,9 +92,9 @@
                     @can('billing-export-selected')
                         {{-- Form Filter Periode --}}
                         <form action="{{ route('billingHistory.index') }}" method="GET" id="periodeForm"
-                            class="form-inline mb-2 mr-3">
+                            class="form-inline mb-2 me-3">
 
-                            <label for="periode_id" class="font-weight-bold text-primary mb-0 mr-2">Periode</label>
+                            <label for="periode_id" class="fw-bold text-primary mb-0 me-2">Periode</label>
 
                             {!! Form::select('periode_id', $periode, request('periode_id'), [
                                 'placeholder' => __('billing.placeholder.all-period'),
@@ -104,7 +105,7 @@
                         </form>
 
                         {{-- Form Export Selected --}}
-                        <form action="{{ route('billingHistory.export.selected') }}" method="GET" class="mb-2 mr-3">
+                        <form action="{{ route('billingHistory.export.selected') }}" method="GET" class="mb-2 me-3">
                             <input type="hidden" name="status" value="{{ request('status') }}">
                             <input type="hidden" name="periode_id" value="{{ request('periode_id') }}">
                             <button type="submit" class="btn btn-sm btn-success text-nowrap">
@@ -118,10 +119,10 @@
                         <form action="{{ route('billingHistory.export.year') }}" method="GET"
                             class="form-inline mb-2 align-items-center">
                             <label for="export_year"
-                                class="font-weight-bold text-dark mb-0 mr-2">{{ __('billing.label.export-year') }}</label>
+                                class="fw-bold text-dark mb-0 me-2">{{ __('billing.label.export-year') }}</label>
 
                             {!! Form::select('export_year', $years, request('export_year', now()->year), [
-                                'class' => 'form-control form-control-sm w-auto mr-2',
+                                'class' => 'form-control form-control-sm w-auto me-2',
                                 'id' => 'export_year',
                             ]) !!}
 
@@ -249,7 +250,7 @@
             {{-- Show per page --}}
             <form method="GET" id="paginationForm" class="d-inline-flex align-items-center mb-3">
                 <label for="perPage"
-                    class="fw-bold text-primary me-2 mb-0 mr-1">{{ __('billing.label.show') }}</label>
+                    class="fw-bold text-primary me-2 mb-0 me-1">{{ __('billing.label.show') }}</label>
                 {!! Form::select('perPage', [25 => 25, 50 => 50, 100 => 100], request('perPage'), [
                     'class' => 'form-control form-control-sm w-auto',
                     'onchange' => 'this.form.submit()',

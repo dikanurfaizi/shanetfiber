@@ -90,20 +90,20 @@
     @endsection
 
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <h5 class="m-0 font-weight-bold text-primary">@lang('message_event.header.technical_log_detail')</h5>
+        <h5 class="m-0 fw-bold text-primary">@lang('message_event.header.technical_log_detail')</h5>
 
         <div class="d-flex align-items-center" style="gap: 8px;">
             @if ($event->status === 'failed')
                 <form action="{{ route('messageevents.resend', $event->id) }}" method="POST" class="d-inline">
                     @csrf
                     <button type="submit" class="btn btn-danger btn-sm">
-                        <i class="fas fa-redo-alt mr-1"></i> @lang('message_event.button.btn_retry')
+                        <i class="fas fa-redo-alt me-1"></i> @lang('message_event.button.btn_retry')
                     </button>
                 </form>
             @endif
 
             <a href="{{ route('messageevents.index') }}" class="btn btn-sm btn-outline-secondary">
-                <i class="fa fa-arrow-left mr-1"></i> @lang('message_event.button.back')
+                <i class="fa fa-arrow-left me-1"></i> @lang('message_event.button.back')
             </a>
         </div>
     </div>
@@ -112,18 +112,18 @@
         {{-- METADATA PANEL --}}
         <div class="col-12 col-lg-4 mb-3">
             <div class="card shadow-sm h-100">
-                <div class="card-header bg-white font-weight-bold">
-                    <i class="fas fa-info-circle text-primary mr-1"></i> @lang('message_event.sub_title.event_metada')
+                <div class="card-header bg-white fw-bold">
+                    <i class="fas fa-info-circle text-primary me-1"></i> @lang('message_event.sub_title.event_metada')
                 </div>
                 <div class="card-body p-0">
                     <table class="table table-sm table-striped mb-0">
                         <tbody>
                             <tr>
-                                <th class="pl-3 text-muted w-40">@lang('message_event.label.channel')</th>
-                                <td><span class="badge badge-info">{{ strtoupper($event->channel) }}</span></td>
+                                <th class="ps-3 text-muted w-40">@lang('message_event.label.channel')</th>
+                                <td><span class="badge bg-info">{{ strtoupper($event->channel) }}</span></td>
                             </tr>
                             <tr>
-                                <th class="pl-3 text-muted">@lang('message_event.label.status')</th>
+                                <th class="ps-3 text-muted">@lang('message_event.label.status')</th>
                                 <td>
                                     @php
                                         $colorMap = [
@@ -138,28 +138,28 @@
                                 </td>
                             </tr>
                             <tr>
-                                <th class="pl-3 text-muted">@lang('message_event.label.message_type')</th>
+                                <th class="ps-3 text-muted">@lang('message_event.label.message_type')</th>
                                 <td><code>{{ $event->message_type }}</code></td>
                             </tr>
                             <tr>
-                                <th class="pl-3 text-muted">@lang('message_event.label.customer')</th>
+                                <th class="ps-3 text-muted">@lang('message_event.label.customer')</th>
                                 <td><strong>{{ $event->customer->name ?? __('message_event.label.unknown_customer') }}</strong>
                                 </td>
                             </tr>
                             <tr>
-                                <th class="pl-3 text-muted">@lang('message_event.label.contact')</th>
+                                <th class="ps-3 text-muted">@lang('message_event.label.contact')</th>
                                 <td>{{ $event->customer->contact ?? '-' }}</td>
                             </tr>
                             <tr>
-                                <th class="pl-3 text-muted">@lang('message_event.label.sent_at')</th>
+                                <th class="ps-3 text-muted">@lang('message_event.label.sent_at')</th>
                                 <td>{{ $event->sent_at ? $event->sent_at->translatedFormat('d M Y H:i:s') : '-' }}</td>
                             </tr>
                             <tr>
-                                <th class="pl-3 text-muted">@lang('message_event.label.trace_id')</th>
+                                <th class="ps-3 text-muted">@lang('message_event.label.trace_id')</th>
                                 <td><small><code class="text-break">{{ $event->trace_id ?? '-' }}</code></small></td>
                             </tr>
                             <tr>
-                                <th class="pl-3 text-muted">@lang('message_event.label.message_id')</th>
+                                <th class="ps-3 text-muted">@lang('message_event.label.message_id')</th>
                                 <td><small><code class="text-break">{{ $event->message_id ?? '-' }}</code></small></td>
                             </tr>
                         </tbody>
@@ -179,11 +179,11 @@
 
             {{-- CHAT BUBBLE PREVIEW --}}
             <div class="card shadow-sm mb-3">
-                <div class="card-header bg-white font-weight-bold">
+                <div class="card-header bg-white fw-bold">
                     @if ($isTelegram)
-                        <i class="fab fa-telegram text-info mr-1"></i> @lang('message_event.sub_title.telegram_preview')
+                        <i class="fab fa-telegram text-info me-1"></i> @lang('message_event.sub_title.telegram_preview')
                     @else
-                        <i class="fab fa-whatsapp text-success mr-1"></i> @lang('message_event.sub_title.whatsapp_preview')
+                        <i class="fab fa-whatsapp text-success me-1"></i> @lang('message_event.sub_title.whatsapp_preview')
                     @endif
                 </div>
 
@@ -211,17 +211,17 @@
 
             {{-- TECHNICAL LOG (JSON) --}}
             <div class="card shadow-sm">
-                <div class="card-header bg-white font-weight-bold">
-                    <i class="fas fa-code text-dark mr-1"></i> @lang('message_event.sub_title.technical_log_json')
+                <div class="card-header bg-white fw-bold">
+                    <i class="fas fa-code text-dark me-1"></i> @lang('message_event.sub_title.technical_log_json')
                 </div>
                 <div class="card-body">
-                    <div class="form-group mb-3">
-                        <label class="small font-weight-bold text-muted">Request Payload:</label>
+                    <div class="mb-3 mb-3">
+                        <label class="small fw-bold text-muted">Request Payload:</label>
                         <pre class="bg-dark text-light p-3 rounded" style="max-height: 200px; overflow-y: auto; font-size: 12px;"><code>{{ $event->formatted_request }}</code></pre>
                     </div>
 
-                    <div class="form-group mb-0">
-                        <label class="small font-weight-bold text-muted">Response Message:</label>
+                    <div class="mb-3 mb-0">
+                        <label class="small fw-bold text-muted">Response Message:</label>
                         <pre class="bg-dark text-light p-3 rounded" style="max-height: 200px; overflow-y: auto; font-size: 12px;"><code>{{ $event->formatted_response }}</code></pre>
                     </div>
                 </div>

@@ -11,13 +11,15 @@ use App\Models\WhatsApp\WhatsAppNumber;
 
 class WhatsAppGatewayResolver
 {
-    public function resolveActiveGatewayAndAccount(string $traceId, string $alias): ?array
+    public function resolveActiveGatewayAndAccount(string $alias, string $traceId): ?array
     {
         $timer = new ExecutionTimer();
         $feature = WhatsAppFeature::where('alias', $alias)->where('is_active', true)->first();
 
         if (!$feature) {
-            LogHelper::logWarning(null, [], 400, 'No active WhatsApp feature found for alias: ' . $alias, $traceId, $timer->lap());
+            LogHelper::logWarning('WhatsAppGatewayResolver', [
+                'alias' => $alias,
+            ], 400, 'No active WhatsApp feature found for alias: ' . $alias, $traceId, $timer->lap());
 
             return null;
         }
@@ -25,7 +27,10 @@ class WhatsAppGatewayResolver
         $gateway = WhatsAppGateway::where('is_active', true)->where('type', $feature->type)->first();
 
         if (!$gateway) {
-            LogHelper::logWarning(null, [], 400, 'No active WhatsApp gateway found.', $traceId, $timer->lap());
+            LogHelper::logWarning('WhatsAppGatewayResolver', [
+                'alias' => $alias,
+                'feature_type' => $feature->type,
+            ], 400, 'No active WhatsApp gateway found.', $traceId, $timer->lap());
 
             return null;
         }
@@ -34,8 +39,10 @@ class WhatsAppGatewayResolver
             ->where('is_active', true)
             ->first();
 
-        if (! $account) {
-            LogHelper::logWarning(null, [], 400, 'No active WhatsApp gateway account found.', $traceId, $timer->lap());
+        if (!$account) {
+            LogHelper::logWarning('WhatsAppGatewayResolver', [
+                'gateway_id' => $gateway->id,
+            ], 400, 'No active WhatsApp gateway account found.', $traceId, $timer->lap());
 
             return null;
         }
@@ -45,13 +52,20 @@ class WhatsAppGatewayResolver
             ->where('is_default', true)
             ->first();
 
-        if (! $number) {
-            LogHelper::logWarning(null, [], 400, 'No active WhatsApp number found.', $traceId, $timer->lap());
+        if (!$number) {
+            LogHelper::logWarning('WhatsAppGatewayResolver', [
+                'account_id' => $account->id,
+            ], 400, 'No active WhatsApp number found.', $traceId, $timer->lap());
 
             return null;
         }
 
-        LogHelper::logInfo(null, [], 200, 'WhatsApp gateway and account resolved successfully.', $traceId, $timer->lap());
+        LogHelper::logInfo('WhatsAppGatewayResolver', [
+            'alias'      => $alias,
+            'gateway_id' => $gateway->id,
+            'account_id' => $account->id,
+            'number_id'  => $number->id,
+        ], 200, 'WhatsApp gateway and account resolved successfully.', $traceId, $timer->lap());
 
         return [$gateway, $account, $number];
     }

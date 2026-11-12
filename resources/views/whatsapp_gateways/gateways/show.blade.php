@@ -2,7 +2,7 @@
 
     {{-- Header --}}
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <h5 class="m-0 font-weight-bold text-primary">Provider: {{ $gateway->name }}</h5>
+        <h5 class="m-0 fw-bold text-primary">Provider: {{ $gateway->name }}</h5>
 
         <a href="{{ route('whatsappgateway.index') }}" class="btn btn-sm btn-outline-secondary">
             <i class="fa fa-arrow-left"></i> Back
@@ -15,7 +15,7 @@
         <div class="col-md-12 mb-4">
             <div class="card shadow-sm p-4">
                 {!! Form::open(['route' => ['whatsappgateway.edit', $gateway], 'method' => 'GET']) !!}
-                <h6 class="font-weight-bold mb-3 text-muted">Provider Information</h6>
+                <h6 class="fw-bold mb-3 text-muted">Provider Information</h6>
 
                 <div class="row mb-3">
                     <div class="col-md-3 text-muted">Type</div>
@@ -48,7 +48,7 @@
             <div class="card shadow-sm p-4">
 
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="font-weight-bold text-muted">Accounts under this Provider</h6>
+                    <h6 class="fw-bold text-muted">Accounts under this Provider</h6>
 
                     <a href="{{ route('whatsappgateway.accounts.create', $gateway->slug) }}"
                         class="btn btn-sm btn-success">
@@ -138,7 +138,7 @@
                     @csrf
 
                     <div class="mb-3">
-                        <label class="font-weight-bold text-muted">Connection Test</label>
+                        <label class="fw-bold text-muted">Connection Test</label>
                         <input type="text" name="receive_number" class="form-control" placeholder="628xxxxxxx"
                             required>
                     </div>

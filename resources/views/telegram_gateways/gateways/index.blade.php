@@ -1,7 +1,7 @@
 <x-layouts.cpanel.settings.app-layout title="{{ __('telegram.gateway.page-title-index') }}">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('telegram.gateway.page-title-index') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('telegram.gateway.page-title-index') }}</h5>
     </div>
 
     <div class="row mx-0">
@@ -9,7 +9,7 @@
             <!-- Gateway Information Section -->
             <div class="mb-4 bg-white rounded p-4">
                 <div class="row align-items-center mb-3">
-                    <div class="col-5 col-md-3 font-weight-bold text-muted">
+                    <div class="col-5 col-md-3 fw-bold text-muted">
                         {!! trans('telegram.gateway.label.status') !!}
                     </div>
                     <div class="col-7 col-md-9">
@@ -24,7 +24,7 @@
                 </div>
 
                 <div class="row align-items-center mb-3">
-                    <div class="col-5 col-md-3 font-weight-bold text-muted">
+                    <div class="col-5 col-md-3 fw-bold text-muted">
                         {!! trans('telegram.gateway.label.telegram-bot') !!}
                     </div>
                     <div class="col-7 col-md-9">
@@ -39,7 +39,7 @@
                 </div>
 
                 <div class="row align-items-center mb-3">
-                    <div class="col-5 col-md-3 font-weight-bold text-muted">
+                    <div class="col-5 col-md-3 fw-bold text-muted">
                         {!! trans('telegram.gateway.label.description') !!}
                     </div>
                     <div class="col-7 col-md-9">
@@ -65,12 +65,12 @@
 
             <!-- Gateway Settings Section -->
             <div class="mb-4 bg-white rounded p-4">
-                <h6 class="font-weight-bold mb-3 text-muted">
+                <h6 class="fw-bold mb-3 text-muted">
                     {!! trans('telegram.gateway.label.setting-gateway') !!}
                 </h6>
 
                 <div class="row align-items-center mb-3">
-                    <div class="col-5 col-md-3 font-weight-bold text-muted">
+                    <div class="col-5 col-md-3 fw-bold text-muted">
                         {!! trans('telegram.gateway.label.token') !!}
                     </div>
                     <div class="col-7 col-md-9">
@@ -85,7 +85,7 @@
                 </div>
 
                 <div class="row align-items-center mb-3">
-                    <div class="col-5 col-md-3 font-weight-bold text-muted">
+                    <div class="col-5 col-md-3 fw-bold text-muted">
                         {!! trans('telegram.gateway.label.url-callback') !!}
                     </div>
                     <div class="col-7 col-md-9">
@@ -100,7 +100,7 @@
                 </div>
 
                 <div class="row align-items-center mb-3">
-                    <div class="col-5 col-md-3 font-weight-bold text-muted">
+                    <div class="col-5 col-md-3 fw-bold text-muted">
                         {!! trans('telegram.gateway.label.cert-file') !!}
                     </div>
                     <div class="col-7 col-md-9">
@@ -115,7 +115,7 @@
                 </div>
 
                 <div class="row align-items-center mb-3">
-                    <div class="col-5 col-md-3 font-weight-bold text-muted">
+                    <div class="col-5 col-md-3 fw-bold text-muted">
                         {!! trans('whatsapp.gateway.label.auth-username') !!}
                     </div>
                     <div class="col-7 col-md-9">
@@ -130,7 +130,7 @@
                 </div>
 
                 <div class="row align-items-center mb-3">
-                    <div class="col-5 col-md-3 font-weight-bold text-muted">
+                    <div class="col-5 col-md-3 fw-bold text-muted">
                         {!! trans('whatsapp.gateway.label.auth-password') !!}
                     </div>
                     <div class="col-7 col-md-9">
@@ -156,13 +156,13 @@
 
             <!-- Test Gateway Section -->
             <div class="mb-4 bg-white rounded p-4">
-                <h6 class="font-weight-bold mb-3 text-muted">
+                <h6 class="fw-bold mb-3 text-muted">
                     {!! trans('telegram.gateway.label.send-bot-to-wa') !!}
                 </h6>
 
                 {!! Form::model($gateway, ['method' => 'PATCH', 'route' => ['telegramgateway.test_gateway', $gateway->slug]]) !!}
                 <div class="row align-items-center mb-3">
-                    <label for="test-number" class="col-5 col-md-3 col-form-label font-weight-bold text-muted">
+                    <label for="test-number" class="col-5 col-md-3 col-form-label fw-bold text-muted">
                         {!! trans('telegram.gateway.label.test-number') !!}
                     </label>
                     <div class="col-7 col-md-6">
@@ -178,7 +178,7 @@
                 <div class="row mt-4">
                     <div class="col-12 offset-md-3 col-md-9">
                         <div class="d-flex flex-wrap gap-2">
-                            <button type="submit" class="btn btn-sm btn-outline-success mr-1 mt-1" name="action"
+                            <button type="submit" class="btn btn-sm btn-outline-success me-1 mt-1" name="action"
                                 value="send" title="{{ trans('telegram.gateway.tooltips.send') }}"
                                 data-bs-toggle="tooltip">
                                 <i class="fab fa-whatsapp me-1"></i>

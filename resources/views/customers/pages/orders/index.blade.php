@@ -1,7 +1,7 @@
 <x-layouts.customers.app-layout title="Orders {{ auth()->guard('customer')->user()->name }}">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('Orders') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('Orders') }}</h5>
         <span><a class="btn btn-sm @if (request()->routeIs('customer.order.index')) btn-success @else btn-secondary @endif  mt-2"
                 href="{{ route('customer.order.index') }}"><i class="fas fa-star"></i>
                 {{ __('billing.button.all-payment') }}</a></span>

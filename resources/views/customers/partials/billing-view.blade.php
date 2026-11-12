@@ -90,7 +90,7 @@
 
 <hr class="my-4">
 
-<h5 class="mb-3 ml-1">
+<h5 class="mb-3 ms-1">
     <i class="ti ti-list-details"></i> {{ __('billing.title.breakdown', ['period' => $periodes]) }}
 </h5>
 
@@ -108,7 +108,7 @@
                             <strong>{{ $item->item_name }}</strong>
                             <div class="text-muted small">{{ __('customer.wizard.label.package') }}</div>
                         </div>
-                        <div class="text-right">
+                        <div class="text-end">
                             <div class="currency small">Rp</div>
                             <div class="amount">{{ number_format($item->subtotal, 2, ',', '.') }}</div>
                         </div>
@@ -124,7 +124,7 @@
                             <div class="text-muted small">{{ __('customer.wizard.label.addon_name') }} ×
                                 {{ $item->qty }}</div>
                         </div>
-                        <div class="text-right">
+                        <div class="text-end">
                             <div class="currency small">Rp</div>
                             <div class="amount">{{ number_format($item->subtotal, 2, ',', '.') }}</div>
                         </div>
@@ -139,7 +139,7 @@
                             {{ $item->item_name }}
                             <div class="small text-danger">{{ __('customer.wizard.label.discount') }}</div>
                         </div>
-                        <div class="text-right text-danger">
+                        <div class="text-end text-danger">
                             <div class="currency small">Rp</div>
                             <div class="amount">{{ number_format($item->subtotal, 2, ',', '.') }}</div>
                         </div>
@@ -150,7 +150,7 @@
             <div class="mobile-total-box">
                 <div class="d-flex justify-content-between align-items-center">
                     <strong>Total</strong>
-                    <div class="text-right">
+                    <div class="text-end">
                         <div class="currency small"><strong>Rp</strong></div>
                         <div class="amount"><strong>{{ number_format($totalAmount, 2, ',', '.') }}</strong></div>
                     </div>
@@ -210,10 +210,10 @@
 {{-- ACTION: EDIT BILLING --}}
 @can('billing-edit', $customer)
     @if (!$isEdit)
-        <div class="mt-3 text-right">
+        <div class="mt-3 text-end">
             <a href="{{ route('customers.show', [$customer->slug, 'tab' => 'billing', 'edit' => 1]) }}"
                 class="btn-soft btn-blue">
-                <i class="fa fa-edit mr-1"></i> {{ __('billing.button.edit') }}
+                <i class="fa fa-edit me-1"></i> {{ __('billing.button.edit') }}
             </a>
         </div>
     @endif

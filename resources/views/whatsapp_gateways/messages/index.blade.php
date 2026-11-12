@@ -1,7 +1,7 @@
 <x-layouts.cpanel.settings.app-layout title="{{ __('whatsapp.message.page-title-index') }}">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('whatsapp.message.page-title-index') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('whatsapp.message.page-title-index') }}</h5>
         <span><a class="btn btn-sm btn-success mt-2" href="{{ route('whatsappmessage.create') }}"><i
                     class="fa fa-plus"></i>
                 {{ __('whatsapp.message.button.create') }}</a></span>

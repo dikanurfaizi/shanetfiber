@@ -22,13 +22,13 @@
 
     <!-- Nav Item - Pages Collapse Menu -->
     <li class="nav-item {{ Request::is('customer/billings*') ? 'active' : '' }}">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePayment"
+        <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapsePayment"
             aria-expanded="true" aria-controls="collapsePayment" style="padding-top: inherit;">
             <i class="fas fa-stream"></i>
             <span>{{ __('navigation.individual.details') }}</span>
         </a>
         <div id="collapsePayment" class="collapse {{ Request::is('customer/billings*') ?: '' }}"
-            aria-labelledby="headingPayment" data-parent="#accordionSidebar">
+            aria-labelledby="headingPayment" data-bs-parent="#accordionSidebar">
 
             <div class="bg-white py-2 collapse-inner rounded">
                 <a class="collapse-item @if (Request::is('customer/billings/payments*')) active @endif "

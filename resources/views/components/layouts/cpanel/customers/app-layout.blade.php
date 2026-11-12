@@ -22,7 +22,7 @@
     <link href="{{ asset('css/fontawsome-free-all.min.css') }}" rel="stylesheet" type="text/css">
     <link href="{{ asset('assets/notify/notify.min.css') }}" rel="stylesheet">
     <link href="{{ asset('assets/sweet-alert/sweet-alert.min.css') }}" rel="stylesheet">
-    <link href="{{ asset('assets/vendor/datatables/datatables.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
     <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
     <link href="{{ asset('assets/select2/select2.min.css') }}" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css" rel="stylesheet" />
@@ -32,7 +32,11 @@
 
     {{-- Standard Leaflet CSS & JS --}}
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- CSS Select2 & Tema Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
+        rel="stylesheet" />
 
     <!-- Custom styles for this Page-->
     @yield('custom_styles')
@@ -60,7 +64,7 @@
                         <div class="card shadow mb-4">
 
                             <div class="card-body">
-                                <div class="form-group mt-4 mb-4">
+                                <div class="mb-3 mt-4 mb-4">
                                     <div class="pull-right alert alert-danger">
                                         <strong>Whoops!</strong> There were some problems.<br><br>
                                         <ul>
@@ -105,42 +109,17 @@
     <!-- Core plugin JavaScript-->
     <script src="{{ asset('assets/vendor/jquery/jquery.min.js') }}"></script>
     <script src="{{ asset('js/jquery.easing-1.4.1.min.js') }}"></script>
-    <script src="{{ asset('js/bootstrap.bundle.min.js') }}" crossorigin="anonymous"></script>
     <!-- Custom scripts for all pages-->
     <script src="{{ asset('js/sb-admin-2.min.js') }}"></script>
     <script src="{{ asset('assets/notify/notify.min.js') }}"></script>
     <script src="{{ asset('assets/sweet-alert/sweet-alert.min.js') }}"></script>
-    <script src="{{ asset('assets/vendor/datatables/datatables.min.js') }}"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
     <script src="{{ @asset('vendor/larapex-charts/apexcharts.js') }}"></script>
     <script src="{{ asset('js/customers/billing-edit.js') }}"></script>
     <script src="{{ asset('js/customers/traffic-chart.js') }}"></script>
     <script src="{{ asset('assets/select2/select2.min.jssss') }}"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Page level custom scripts -->
-    <script>
-        // Polyfill: Bridge Bootstrap 5 data-bs-* attributes for Bootstrap 4
-        $(function() {
-            if (typeof $ !== 'undefined') {
-                $('[data-bs-toggle="tooltip"]').tooltip();
-                $('[data-bs-toggle="popover"]').popover();
-                $(document).on('click', '[data-bs-toggle="modal"]', function(e) {
-                    e.preventDefault();
-                    var target = $(this).attr('data-bs-target') || $(this).attr('href');
-                    if (target) $(target).modal('show');
-                });
-                $(document).on('click', '[data-bs-dismiss="modal"]', function(e) {
-                    e.preventDefault();
-                    $(this).closest('.modal').modal('hide');
-                });
-                $(document).on('click', '[data-bs-toggle="dropdown"]', function(e) {
-                    $(this).dropdown('toggle');
-                });
-                $(document).on('click', '[data-bs-toggle="collapse"]', function(e) {
-                    var target = $(this).attr('data-bs-target') || $(this).attr('href');
-                    if (target) $(target).collapse('toggle');
-                });
-            }
-        });
-    </script>
     @yield('custom_scripts')
     @stack('scripts')
     @if ($message = Session::get('success'))

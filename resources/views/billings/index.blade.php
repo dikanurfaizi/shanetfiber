@@ -2,27 +2,28 @@
 
     <div class="card-header py-3">
 
-        <h5 class="mb-2 font-weight-bold text-primary">{{ __('billing.header.index') }}</h5>
+        <h5 class="mb-2 fw-bold text-primary">{{ __('billing.header.index') }}</h5>
         @if (isset($message))
             <div class="alert alert-danger mt-2">
-                <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                <a href="#" class="close" data-bs-dismiss="alert" aria-label="close">&times;</a>
                 {{ $message }}
             </div>
         @else
             <div class="alert alert-success mt-2">
-                <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                <a href="#" class="close" data-bs-dismiss="alert" aria-label="close">&times;</a>
                 {{ __('billing.info.billing.count.singular', ['count' => $data->total()]) }}
             </div>
         @endif
         @if (session('warning'))
             <div class="alert alert-warning mt-2">
-                <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                <a href="#" class="close" data-bs-dismiss="alert" aria-label="close">&times;</a>
                 {{ session('warning') }}
             </div>
         @endif
         <span>
-            <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSearchCustomer"
-                aria-expanded="false" aria-controls="collapseSearchCustomer" style="padding-top: inherit;">
+            <a class="nav-link collapsed" href="#" data-bs-toggle="collapse"
+                data-bs-target="#collapseSearchCustomer" aria-expanded="false" aria-controls="collapseSearchCustomer"
+                style="padding-top: inherit;">
                 <i class="fas fa-search"></i>
                 <span>{{ __('billing.header.search') }}</span>
             </a>
@@ -248,7 +249,7 @@
             {{-- Dropdown perPage kanan --}}
             <form method="GET" id="paginationForm" class="d-flex align-items-center mb-3">
                 <label for="perPage"
-                    class="fw-bold text-primary me-2 mb-0 mr-1">{{ __('billing.label.show') }}</label>
+                    class="fw-bold text-primary me-2 mb-0 me-1">{{ __('billing.label.show') }}</label>
                 {!! Form::select('perPage', [25 => 25, 50 => 50, 100 => 100], request('perPage'), [
                     'class' => 'form-control form-control-sm w-auto',
                     'onchange' => 'this.form.submit()',

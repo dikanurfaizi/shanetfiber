@@ -1,7 +1,7 @@
 <x-layouts.cpanel.settings.app-layout :title="__('server.title.edit')">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('server.header.edit') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('server.header.edit') }}</h5>
     </div>
 
     <div class="row">
@@ -138,13 +138,13 @@
                 <div class="row align-items-center mb-3">
                     <div class="col-md-12">
                         <button type="button" id="btn-test-api" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-plug mr-1"></i> {{ __('server.label.test_connection') }}
+                            <i class="fas fa-plug me-1"></i> {{ __('server.label.test_connection') }}
                         </button>
-                        <span id="api-test-spinner" class="spinner-border spinner-border-sm text-primary ml-2 d-none"
+                        <span id="api-test-spinner" class="spinner-border spinner-border-sm text-primary ms-2 d-none"
                             role="status"></span>
                         <input type="hidden" id="is_connected" name="is_connected"
                             value="{{ $server->is_connected ?? 0 }}">
-                        <span id="badge-connected" class="ml-2">
+                        <span id="badge-connected" class="ms-2">
                             @if ($server->is_connected)
                                 <span
                                     class="badge text-white bg-success font-size-12 align-middle">{{ __('server.label.connected') }}</span>
@@ -158,8 +158,8 @@
 
                 {{-- ==================== FREERADIUS & COA SETTINGS ==================== --}}
                 <hr class="my-4">
-                <h6 class="font-weight-bold text-secondary mb-3">
-                    <i class="fas fa-network-wired mr-1"></i> {{ __('server.header.radius_section') }}
+                <h6 class="fw-bold text-secondary mb-3">
+                    <i class="fas fa-network-wired me-1"></i> {{ __('server.header.radius_section') }}
                 </h6>
 
                 {{-- RADIUS Shared Secret --}}
@@ -208,9 +208,9 @@
                 <div class="row align-items-center mb-3">
                     <div class="col-md-12">
                         <button type="button" id="btn-test-radius" class="btn btn-outline-info btn-sm">
-                            <i class="fas fa-bolt mr-1"></i> {{ __('server.button.test_radius') }}
+                            <i class="fas fa-bolt me-1"></i> {{ __('server.button.test_radius') }}
                         </button>
-                        <span id="radius-test-spinner" class="spinner-border spinner-border-sm text-info ml-2 d-none"
+                        <span id="radius-test-spinner" class="spinner-border spinner-border-sm text-info ms-2 d-none"
                             role="status"></span>
                         <div id="radius-test-result" class="mt-2 d-none"></div>
                     </div>
@@ -220,10 +220,10 @@
 
             <div class="card-footer">
                 <a class="btn btn-primary" href="{{ route('servers.index') }}">
-                    <i class="fa fa-arrow-left mr-1"></i> {{ __('server.button.back') }}
+                    <i class="fa fa-arrow-left me-1"></i> {{ __('server.button.back') }}
                 </a>
                 <button type="submit" class="btn btn-success" id="button-save">
-                    <i class="fa fa-save mr-1"></i> {{ __('server.button.update') }}
+                    <i class="fa fa-save me-1"></i> {{ __('server.button.update') }}
                 </button>
             </div>
             {!! Form::close() !!}
@@ -407,7 +407,7 @@
                         if (response.success) {
                             resultDiv.removeClass('d-none')
                                 .addClass('alert alert-success')
-                                .html('<i class="fas fa-check-circle mr-1"></i> ' + response.message);
+                                .html('<i class="fas fa-check-circle me-1"></i> ' + response.message);
 
                             Swal.fire({
                                 icon: 'success',
@@ -417,7 +417,7 @@
                         } else {
                             resultDiv.removeClass('d-none')
                                 .addClass('alert alert-danger')
-                                .html('<i class="fas fa-times-circle mr-1"></i> ' + response.message);
+                                .html('<i class="fas fa-times-circle me-1"></i> ' + response.message);
 
                             Swal.fire({
                                 icon: 'error',
@@ -436,7 +436,7 @@
 
                         resultDiv.removeClass('d-none')
                             .addClass('alert alert-danger')
-                            .html('<i class="fas fa-times-circle mr-1"></i> ' + errMsg);
+                            .html('<i class="fas fa-times-circle me-1"></i> ' + errMsg);
 
                         Swal.fire({
                             icon: 'error',

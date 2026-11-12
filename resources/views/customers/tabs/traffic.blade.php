@@ -1,7 +1,7 @@
 @if ($secretActive)
     <div class="card">
         <div class="card-header py-3">
-            <h5 class="m-0 font-weight-bold text-primary">Traffic Monitoring</h5>
+            <h5 class="m-0 fw-bold text-primary">Traffic Monitoring</h5>
             <div class="text-muted">
                 Interface: pppoe-{{ $customer->username }}
             </div>

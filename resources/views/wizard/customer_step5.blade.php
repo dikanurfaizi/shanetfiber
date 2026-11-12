@@ -56,26 +56,26 @@
             {!! renderReviewSection(
                 'customer.wizard.step.customer_profile',
                 "
-                            <table class='table table-sm table-bordered mb-0'>
-                                <tr><th width='30%'>" .
+                                        <table class='table table-sm table-bordered mb-0'>
+                                            <tr><th width='30%'>" .
                     __('customer.wizard.label.pic') .
                     "</th> <td>{$step1['user_name']}</td></tr>
-                                <tr><th>" .
+                                            <tr><th>" .
                     __('customer.wizard.label.name') .
                     "</th> <td>{$step1['name']}</td></tr>
-                                <tr><th>" .
+                                            <tr><th>" .
                     __('customer.wizard.label.email') .
                     "</th> <td>{$step1['email']}</td></tr>
-                                <tr><th>" .
+                                            <tr><th>" .
                     __('customer.wizard.label.contact') .
                     "</th> <td>{$step1['contact']}</td></tr>
-                                <tr><th>" .
+                                            <tr><th>" .
                     __('customer.wizard.label.address') .
                     '</th> <td>' .
                     ($step1['address'] ?? '-') .
                     "</td></tr>
-                                {$mapPreviewRow}
-                            </table>",
+                                            {$mapPreviewRow}
+                                        </table>",
             ) !!}
 
             {{-- ========== 2. SERVER & INTERNET SERVICE ========== --}}
@@ -99,17 +99,17 @@
             {!! renderReviewSection(
                 'customer.wizard.step.server_configuration',
                 "
-                            <table class='table table-sm table-bordered mb-0'>
-                                <tr><th width='30%'>" .
+                                        <table class='table table-sm table-bordered mb-0'>
+                                            <tr><th width='30%'>" .
                     __('customer.wizard.label.server') .
                     "</th> <td>{$step2['mikrotik_name']}</td></tr>
-                                <tr><th>" .
+                                            <tr><th>" .
                     __('customer.wizard.label.service_type') .
                     '</th> <td>' .
                     strtoupper($step2['internet_service']) .
                     "</td></tr>
-                                $serviceRows
-                            </table>",
+                                            $serviceRows
+                                        </table>",
             ) !!}
 
             {{-- ========== 3. PACKAGE & MEMBERSHIP ========== --}}
@@ -167,74 +167,74 @@ x Rp " .
             {!! renderReviewSection(
                 'customer.wizard.step.package_and_membership',
                 "
-                            <table class='table table-sm table-bordered mb-0'>
-                                <tr>
-                                    <th width='35%'>" .
+                                        <table class='table table-sm table-bordered mb-0'>
+                                            <tr>
+                                                <th width='35%'>" .
                     __('customer.wizard.label.package') .
                     "</th>  
-                                    <td>{$step3['package_name']}</td>
-                                </tr>
-                                <tr>
-                                    <th>" .
+                                                <td>{$step3['package_name']}</td>
+                                            </tr>
+                                            <tr>
+                                                <th>" .
                     __('customer.wizard.label.basic_price') .
                     "</th>        
-                                    <td>Rp " .
+                                                <td>Rp " .
                     number_format($catalogPrice) .
                     ' / ' .
                     __('customer.wizard.label.month') .
                     "</td>
-                                </tr>
-                                <tr>
-                                    <th>" .
+                                            </tr>
+                                            <tr>
+                                                <th>" .
                     __('customer.wizard.label.duration') .
                     "</th>             
-                                    <td>{$step3['duration_label']}</td>
-                                </tr>
-                                <tr>
-                                    <th>" .
+                                                <td>{$step3['duration_label']}</td>
+                                            </tr>
+                                            <tr>
+                                                <th>" .
                     __('customer.wizard.label.calculation') .
                     "</th>
-                                    <td><span class='badge bg-light text-dark border'>" .
+                                                <td><span class='badge bg-light text-dark border'>" .
                     $step3['calculation_type_label'] .
                     "</span></td>
-                                </tr>
-                                
-                                {$prorateCalculationRows}
-                                
-                                <tr>
-                                    <th>" .
+                                            </tr>
+                                            
+                                            {$prorateCalculationRows}
+                                            
+                                            <tr>
+                                                <th>" .
                     __('customer.wizard.label.membership') .
                     "</th>           
-                                    <td>{$step3['member_label']}</td>
-                                </tr>
-                                <tr>
-                                    <th>" .
+                                                <td>{$step3['member_label']}</td>
+                                            </tr>
+                                            <tr>
+                                                <th>" .
                     __('customer.wizard.label.discount') .
                     "</th>
-                                    <td class='text-danger'>- Rp " .
+                                                <td class='text-danger'>- Rp " .
                     number_format($step3['discount_nominal']) .
                     " ({$step3['discount_percent']}%)</td>
-                                </tr>
-                                
-                                <tr class='table-success fw-bold'>
-                                    <th>" .
+                                            </tr>
+                                            
+                                            <tr class='table-success fw-bold'>
+                                                <th>" .
                     __('customer.wizard.label.grand_total_billing') .
                     "</th>
-                                    <td>
-                                        <span class='fs-6 text-success'>Rp " .
+                                                <td>
+                                                    <span class='fs-6 text-success'>Rp " .
                     number_format($step3['final_bill_price']) .
                     "</span>
-                                        <br>
-                                        <small class='text-muted fw-normal'>
-                                            (Rp " .
+                                                    <br>
+                                                    <small class='text-muted fw-normal'>
+                                                        (Rp " .
                     number_format($step3['price_before_discount'] ?? $catalogPrice) .
                     ' - Rp ' .
                     number_format($step3['discount_nominal']) .
                     ")
-                                        </small>
-                                    </td>
-                                </tr>
-                            </table>",
+                                                    </small>
+                                                </td>
+                                            </tr>
+                                        </table>",
             ) !!}
 
             {{-- ========== 4. ADDONS ========== --}}
@@ -308,7 +308,7 @@ x Rp " .
 
         </div>
 
-        <div class="card-footer text-right mt-3">
+        <div class="card-footer text-end mt-3">
             <a href="{{ route('wizard.step4') }}" class="btn btn-secondary">{{ __('customer.wizard.button.back') }}</a>
 
             <form class="d-inline" method="POST" action="{{ route('wizard.process') }}">

@@ -1,6 +1,6 @@
 <x-layouts.cpanel.settings.app-layout title="{{ __('telegram.gateway.header-edit') }}">
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">
+        <h5 class="m-0 fw-bold text-primary">
             {{ __('telegram.gateway.header-edit') }}</h5>
     </div>
 
@@ -9,7 +9,7 @@
             {!! Form::model($data, ['method' => 'PATCH', 'route' => ['telegramgateway.update_gateway', $data->slug]]) !!}
             <div class="card-body col-lg-8">
 
-                <div class="form-group has-feedback row mb-2">
+                <div class="mb-3 has-feedback row mb-2">
                     <div class="col-md-4">
                         <label for="token">{!! trans('telegram.gateway.label.token') !!}</label>
                     </div>
@@ -25,7 +25,7 @@
 
                     </div>
                 </div>
-                <div class="form-group has-feedback row mb-2">
+                <div class="mb-3 has-feedback row mb-2">
                     <div class="col-md-4">
                         <label for="url_callback">{!! trans('telegram.gateway.label.url-callback') !!}</label>
                     </div>
@@ -41,7 +41,7 @@
 
                     </div>
                 </div>
-                <div class="form-group has-feedback row mb-2">
+                <div class="mb-3 has-feedback row mb-2">
                     <div class="col-md-4">
                         <label for="cert_file">{!! trans('telegram.gateway.label.cert-file') !!}</label>
                     </div>
@@ -56,7 +56,7 @@
 
                     </div>
                 </div>
-                <div class="form-group has-feedback row mb-2">
+                <div class="mb-3 has-feedback row mb-2">
                     <div class="col-md-4">
                         <label for="auth_username">{!! trans('telegram.gateway.label.auth-username') !!}</label>
                     </div>
@@ -71,7 +71,7 @@
 
                     </div>
                 </div>
-                <div class="form-group has-feedback row mb-2">
+                <div class="mb-3 has-feedback row mb-2">
                     <div class="col-md-4">
                         <label for="auth_password">{!! trans('telegram.gateway.label.auth-password') !!}</label>
                     </div>
@@ -91,7 +91,7 @@
                         @endif
                     </div>
                 </div>
-                <div class="form-group row mb-2">
+                <div class="mb-3 row mb-2">
                     <div class="col-md-4">
                         <label for="auth_disabled">{!! trans('telegram.gateway.label.auth-disabled') !!}</label>
                     </div>
@@ -105,7 +105,7 @@
                             <span class="slider round"></span>
                         </label>
                         <span id="auth_disabled_label"
-                            class="ml-2 text-center">{{ old('auth_disabled', Form::getModel()?->auth_disabled) === 'true' ? 'Enable' : 'Disable' }}</span>
+                            class="ms-2 text-center">{{ old('auth_disabled', Form::getModel()?->auth_disabled) === 'true' ? 'Enable' : 'Disable' }}</span>
                     </div>
                 </div>
 

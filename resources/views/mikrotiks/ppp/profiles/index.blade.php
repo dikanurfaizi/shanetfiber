@@ -1,12 +1,12 @@
 <x-layouts.mikrotiks.app-layout title="PPP Profiles">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">PPP Profiles</h5>
+        <h5 class="m-0 fw-bold text-primary">PPP Profiles</h5>
     </div>
 
     <div class="card-body col-lg-6">
         @if ($errors->any())
-            <div class="form-group mt-4 mb-4">
+            <div class="mb-3 mt-4 mb-4">
                 <div class="pull-right alert alert-danger">
                     <strong>Whoops!</strong> There were some problems with your input.<br><br>
                     <ul>
@@ -51,21 +51,22 @@
             </table>
         </div>
         <div class="card-footer">
-            {!! Form::open(array('route' => ['ppp.profiles.clone', 'mikrotik' => $mikrotik],'method'=>'POST')) !!}
-            <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-clone"></i> &nbsp {{ __('pppoe.profile.button.copy') }}</button>
+            {!! Form::open(['route' => ['ppp.profiles.clone', 'mikrotik' => $mikrotik], 'method' => 'POST']) !!}
+            <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-clone"></i> &nbsp
+                {{ __('pppoe.profile.button.copy') }}</button>
             {!! Form::close() !!}
         </div>
     </div>
 
 
     @section('custom_scripts')
-    <script>
-        $(document).ready(function() {
-            $('#secretsTable').DataTable({
+        <script>
+            $(document).ready(function() {
+                $('#secretsTable').DataTable({
+
+                });
 
             });
-
-        });
-    </script>
+        </script>
     @endsection
 </x-layouts.mikrotiks.app-layout>

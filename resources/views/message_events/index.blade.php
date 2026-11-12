@@ -3,19 +3,19 @@
     @section('custom_styles')
         {{-- STYLE TAMBAHAN: Untuk menyulap checkbox menjadi tombol pill yang ciamik --}}
         <style>
-            .message-type-badge-group .custom-control {
+            .message-type-badge-group .form-check {
                 padding-left: 0;
             }
 
             /* Efek saat checkbox terpilih (Checked) */
-            .message-type-badge-group .custom-control-input:checked~.custom-control-label {
+            .message-type-badge-group .form-check-input:checked~.form-check-label {
                 background-color: #007bff !important;
                 color: #fff !important;
                 border-color: #007bff !important;
             }
 
             /* Style default tombol pill */
-            .message-type-badge-group .custom-control-label {
+            .message-type-badge-group .form-check-label {
                 cursor: pointer;
                 padding: 0.375rem 0.75rem;
                 border: 1px solid #ced4da;
@@ -28,15 +28,13 @@
             }
 
             /* Efek hover ketika mouse berada di atas tombol */
-            .message-type-badge-group .custom-control-label:hover {
+            .message-type-badge-group .form-check-label:hover {
                 background-color: #f8f9fa;
                 border-color: #b5bbc1;
             }
 
-            /* Hilangkan indikator kotak bawaan bootstrap/browser */
-            .message-type-badge-group .custom-control-label::before,
-            .message-type-badge-group .custom-control-label::after {
-                display: none !important;
+            .message-type-badge-group .form-check-input {
+                display: none;
             }
         </style>
     @endsection
@@ -50,18 +48,18 @@
             <form method="GET" action="{{ route('messageevents.index') }}">
 
                 {{-- BASIC FILTER --}}
-                <div class="form-row">
+                <div class="row g-2">
 
                     <div class="col-12 col-md-6 mb-2">
                         <label
-                            class="small font-weight-bold text-muted mb-1">{{ __('message_event.label.find_customer') }}</label>
+                            class="small fw-bold text-muted mb-1">{{ __('message_event.label.find_customer') }}</label>
                         <input type="text" name="q" class="form-control"
                             placeholder="{{ __('message_event.placeholder.placeholder_search') }}"
                             value="{{ request('q') }}">
                     </div>
 
                     <div class="col-12 col-md-6 mb-2">
-                        <label class="small font-weight-bold text-muted mb-1">Channel</label>
+                        <label class="small fw-bold text-muted mb-1">Channel</label>
                         <select name="channel" class="form-control">
                             <option value="">@lang('message_event.label.all_channel')</option>
                             @foreach ($channels as $channel)
@@ -75,21 +73,20 @@
                 </div>
 
                 {{-- DESIGN BARU: Tipe Pesan dalam bentuk Badge/Button Selectable --}}
-                <div class="form-group mb-2">
+                <div class="mb-3 mb-2">
                     <label
-                        class="small font-weight-bold text-muted mb-1 d-block">{{ __('message_event.label.message_types') }}</label>
+                        class="small fw-bold text-muted mb-1 d-block">{{ __('message_event.label.message_types') }}</label>
                     <div class="d-flex flex-wrap align-items-center message-type-badge-group" style="gap: 8px;">
                         @foreach ($messageTypes as $index => $type)
                             @php
                                 $isChecked =
                                     is_array(request('message_type')) && in_array($type, request('message_type'));
                             @endphp
-                            <div class="custom-control custom-checkbox">
+                            <div class="form-check">
                                 <input type="checkbox" name="message_type[]" value="{{ $type }}"
-                                    class="custom-control-input" id="msg_type_{{ $index }}"
+                                    class="form-check-input" id="msg_type_{{ $index }}"
                                     @checked($isChecked)>
-                                {{-- Di sini letak perbaikannya, teks pengganggu sudah dibersihkan --}}
-                                <label class="custom-control-label small shadow-sm" for="msg_type_{{ $index }}">
+                                <label class="form-check-label small shadow-sm" for="msg_type_{{ $index }}">
                                     {{ $type }}
                                 </label>
                             </div>
@@ -98,12 +95,12 @@
                 </div>
 
                 <div class="mb-2">
-                    <a class="text-decoration-none" data-toggle="collapse" href="#advancedFilter" role="button"
+                    <a class="text-decoration-none" data-bs-toggle="collapse" href="#advancedFilter" role="button"
                         aria-expanded="{{ request()->filled('date') || request()->filled('time_from') || request()->filled('time_to') ? 'true' : 'false' }}"
                         aria-controls="advancedFilter">
 
                         <small>
-                            <i class="fas fa-sliders-h mr-1"></i>
+                            <i class="fas fa-sliders-h me-1"></i>
                             @lang('message_event.button.advanced_filter')
                         </small>
                     </a>
@@ -112,7 +109,7 @@
                 <div class="collapse {{ request()->filled('date') || request()->filled('time_from') || request()->filled('time_to') ? 'show' : '' }}"
                     id="advancedFilter">
 
-                    <div class="form-row">
+                    <div class="row g-2">
 
                         <div class="col-12 col-md-4 mb-2">
                             <input type="date" name="date" class="form-control" value="{{ request('date') }}">
@@ -131,12 +128,12 @@
                 </div>
 
                 {{-- ROW 3: BUTTON --}}
-                <div class="form-row mt-2">
-                    <div class="col-12 text-left">
+                <div class="row g-2 mt-2">
+                    <div class="col-12 text-start">
 
                         {{-- Desktop & Tablet --}}
                         <div class="d-none d-md-inline-block">
-                            <button class="btn btn-primary mr-2">
+                            <button class="btn btn-primary me-2">
                                 @lang('message_event.button.filter')
                             </button>
                             <a href="{{ route('messageevents.index') }}" class="btn btn-outline-secondary">
@@ -146,10 +143,10 @@
 
                         {{-- Mobile --}}
                         <div class="d-block d-md-none">
-                            <button class="btn btn-primary btn-block mb-2">
+                            <button class="btn btn-primary w-100 mb-2">
                                 @lang('message_event.button.filter')
                             </button>
-                            <a href="{{ route('messageevents.index') }}" class="btn btn-outline-secondary btn-block">
+                            <a href="{{ route('messageevents.index') }}" class="btn btn-outline-secondary w-100">
                                 @lang('message_event.button.reset')
                             </a>
                         </div>
@@ -164,20 +161,20 @@
             {{-- QUICK FILTER --}}
             <div class="mb-3">
 
-                <span class="text-muted small mr-2">@lang('message_event.label.quick_filter')</span>
+                <span class="text-muted small me-2">@lang('message_event.label.quick_filter')</span>
 
                 <a href="{{ route('messageevents.index', array_merge(request()->except('status'), ['status' => 'failed'])) }}"
-                    class="btn btn-sm btn-outline-danger mr-1 {{ request('status') === 'failed' ? 'active' : '' }}">
+                    class="btn btn-sm btn-outline-danger me-1 {{ request('status') === 'failed' ? 'active' : '' }}">
                     ❌ @lang('message_event.state.status_failed')
                 </a>
 
                 <a href="{{ route('messageevents.index', array_merge(request()->except('status'), ['status' => 'pending'])) }}"
-                    class="btn btn-sm btn-outline-warning mr-1 {{ request('status') === 'pending' ? 'active' : '' }}">
+                    class="btn btn-sm btn-outline-warning me-1 {{ request('status') === 'pending' ? 'active' : '' }}">
                     ⏳ @lang('message_event.state.status_pending')
                 </a>
 
                 <a href="{{ route('messageevents.index', array_merge(request()->except('status'), ['status' => 'success'])) }}"
-                    class="btn btn-sm btn-outline-success mr-1 {{ request('status') === 'success' ? 'active' : '' }}">
+                    class="btn btn-sm btn-outline-success me-1 {{ request('status') === 'success' ? 'active' : '' }}">
                     ✅ @lang('message_event.state.status_success')
                 </a>
 
@@ -211,7 +208,7 @@
                         @forelse ($events as $i => $event)
                             <tr>
                                 <td>{{ $events->firstItem() + $i }}</td>
-                                <td><span class="badge badge-info">{{ strtoupper($event->channel) }}</span></td>
+                                <td><span class="badge bg-info">{{ strtoupper($event->channel) }}</span></td>
                                 <td>{{ $event->customer->name ?? '-' }}</td>
                                 <td>
                                     @if ($event->customer && $event->customer->contact)
@@ -247,12 +244,12 @@
                                     @if ($event->scheduled_at)
                                         {{ $event->scheduled_at->translatedFormat('d M Y H:i:s') }}
                                     @else
-                                        <span class="badge badge-secondary shadow-sm">⚡ @lang('message_event.label.realtime')</span>
+                                        <span class="badge bg-secondary shadow-sm">⚡ @lang('message_event.label.realtime')</span>
                                     @endif
                                 </td>
                                 <td>
-                                    {{-- <button class="btn btn-sm btn-outline-primary" data-toggle="collapse"
-                                        data-target="#detail-{{ $event->id }}">
+                                    {{-- <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse"
+                                        data-bs-target="#detail-{{ $event->id }}">
                                         <i class="fas fa-eye"></i> @lang('message_event.button.btn_detail')
                                     </button> --}}
 
@@ -311,7 +308,7 @@
                     <div class="card-body p-2">
 
                         <div class="d-flex justify-content-between mb-1">
-                            <span class="badge badge-info">
+                            <span class="badge bg-info">
                                 {{ strtoupper($event->channel) }}
                             </span>
 
@@ -348,25 +345,25 @@
                         </span>
 
                         <div class="mt-2 d-flex flex-wrap align-items-center" style="gap: 6px;">
-                            <span class="badge badge-light text-wrap text-break border text-left"
+                            <span class="badge bg-light text-dark text-wrap text-break border text-start"
                                 style="max-width: 100%;">
                                 {{ $event->message_type }}
                             </span>
 
                             @if ($event->scheduled_at)
-                                <span class="badge badge-light text-muted border">
+                                <span class="badge bg-light text-dark text-muted border">
                                     📅 {{ $event->scheduled_at->translatedFormat('d M Y H:i') }}
                                 </span>
                             @else
-                                <span class="badge badge-secondary">
+                                <span class="badge bg-secondary">
                                     ⚡ @lang('message_event.label.realtime')
                                 </span>
                             @endif
                         </div>
 
                         <div class="mt-2 d-flex" style="gap: 6px;">
-                            {{-- <button class="btn btn-sm btn-outline-primary flex-grow-1" data-toggle="collapse"
-                                data-target="#detail-mobile-{{ $event->id }}">
+                            {{-- <button class="btn btn-sm btn-outline-primary flex-grow-1" data-bs-toggle="collapse"
+                                data-bs-target="#detail-mobile-{{ $event->id }}">
                                 @lang('message_event.button.btn_view_detail')
                             </button> --}}
 

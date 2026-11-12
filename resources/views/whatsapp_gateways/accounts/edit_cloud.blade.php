@@ -1,7 +1,7 @@
 <x-layouts.cpanel.settings.app-layout title="Edit Cloud API Account">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">
+        <h5 class="m-0 fw-bold text-primary">
             Edit Cloud API Account ({{ $whatsappgateway->name }})
         </h5>
     </div>
@@ -13,7 +13,7 @@
             @method('PUT')
 
             {{-- GENERAL --}}
-            <h6 class="font-weight-bold text-muted mb-3">General Settings</h6>
+            <h6 class="fw-bold text-muted mb-3">General Settings</h6>
 
             <div class="mb-3">
                 <label class="text-muted">Purpose</label>
@@ -34,7 +34,7 @@
             <hr class="my-4">
 
             {{-- CLOUD FIELDS --}}
-            <h6 class="font-weight-bold text-muted mb-3">Cloud API Settings</h6>
+            <h6 class="fw-bold text-muted mb-3">Cloud API Settings</h6>
 
             <div class="mb-3">
                 <label class="text-muted">WABA ID</label>
@@ -69,7 +69,7 @@
             <hr class="my-4">
 
             {{-- PHONE NUMBERS --}}
-            <h6 class="font-weight-bold text-muted mb-3">Phone Numbers (Cloud API)</h6>
+            <h6 class="fw-bold text-muted mb-3">Phone Numbers (Cloud API)</h6>
 
             <div id="phone_numbers_container">
 

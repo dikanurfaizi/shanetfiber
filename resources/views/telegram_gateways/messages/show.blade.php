@@ -380,7 +380,7 @@
         }
     </style>
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('whatsapp.message.title.show') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('whatsapp.message.title.show') }}</h5>
     </div>
 
     <div class="card-body col-lg-8">

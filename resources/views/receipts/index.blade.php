@@ -1,15 +1,15 @@
 <x-layouts.cpanel.billings.app-layout title="Receipts">
 
     <div class="card-header py-3">
-        <h5 class="mb-2 font-weight-bold text-primary">{{ __('receipts.header.receipt_list') }}</h5>
+        <h5 class="mb-2 fw-bold text-primary">{{ __('receipts.header.receipt_list') }}</h5>
         @if (isset($message))
             <div class="alert alert-danger mt-2">
-                <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                <a href="#" class="close" data-bs-dismiss="alert" aria-label="close">&times;</a>
                 {{ $message }}
             </div>
         @else
             <div class="alert alert-success mt-2">
-                <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                <a href="#" class="close" data-bs-dismiss="alert" aria-label="close">&times;</a>
                 {{ __('receipts.message.total_receipts', ['count' => $receipts->total()]) }}
             </div>
         @endif
@@ -31,7 +31,7 @@
                 {!! Form::open([
                     'url' => url()->current(),
                     'method' => 'GET',
-                    'class' => 'form-inline mr-2 my-1',
+                    'class' => 'form-inline me-2 my-1',
                     'id' => 'advancedFilterForm',
                 ]) !!}
 
@@ -46,7 +46,7 @@
                     @endif
                 @endforeach
 
-                <div class="form-group mr-2 my-1">
+                <div class="mb-3 me-2 my-1">
                     {!! Form::select('filter_payment_method', $paymentMethods, request('filter_payment_method'), [
                         'placeholder' => __('receipts.placeholder.select_payment_method'),
                         'id' => 'filterPaymentMethod',
@@ -55,7 +55,7 @@
                     ]) !!}
                 </div>
 
-                <div class="form-group mr-2 my-1">
+                <div class="mb-3 me-2 my-1">
                     {!! Form::select('filter_teller', $tellers, request('filter_teller'), [
                         'placeholder' => __('receipts.placeholder.select_teller'),
                         'id' => 'filterTeller',
@@ -64,15 +64,15 @@
                     ]) !!}
                 </div>
 
-                <div class="form-group mr-2 my-1">
+                <div class="mb-3 me-2 my-1">
                     <input type="text" name="filter_date" id="filterDate"
                         class="form-control form-control-sm datetimepicker"
                         placeholder="{{ __('receipts.placeholder.select_date') }}" value="{{ request('filter_date') }}"
                         autocomplete="off" style="width: 150px;">
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-sm my-1 mr-1">
-                    <i class="fas fa-search mr-1"></i> {{ __('receipts.button.filter') }}
+                <button type="submit" class="btn btn-primary btn-sm my-1 me-1">
+                    <i class="fas fa-search me-1"></i> {{ __('receipts.button.filter') }}
                 </button>
 
                 @if (request('filter_payment_method') || request('filter_teller') || request('filter_date'))
@@ -87,7 +87,7 @@
 
                     @can('receipt-export-selected-period')
                         {{-- Export per bulan --}}
-                        <form action="{{ route('receipts.export.selected') }}" method="GET" class="form-inline mr-2 my-1">
+                        <form action="{{ route('receipts.export.selected') }}" method="GET" class="form-inline me-2 my-1">
                             {!! Form::select('period', $periods, request('period'), [
                                 'placeholder' => __('receipts.placeholder.periode'),
                                 'class' => 'form-control form-control-sm',
@@ -103,7 +103,7 @@
                             <input type="hidden" name="all" value="1">
                             <button type="submit" class="btn btn-primary btn-sm d-flex align-items-center"
                                 style="height: 31px;">
-                                <i class="fas fa-file-excel mr-2"></i>{{ __('receipts.button.export_all') }}
+                                <i class="fas fa-file-excel me-2"></i>{{ __('receipts.button.export_all') }}
                             </button>
                         </form>
                     @endcan
@@ -203,7 +203,7 @@
 
                                 {{-- 1. Badge Status Utama (Hijau hanya untuk indikator sukses & metode) --}}
                                 <span class="badge bg-success text-white">
-                                    <i class="fas fa-check-circle mr-1"></i> {{ $method }}
+                                    <i class="fas fa-check-circle me-1"></i> {{ $method }}
                                 </span>
 
                                 {{-- 2. Detail Waktu & Informasi Bank --}}
@@ -261,13 +261,12 @@
                             {{-- Header Card: No & Nama Pelanggan --}}
                             <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
                                 <div>
-                                    <span class="badge badge-primary mr-1">#{{ $receipts->firstItem() + $key }}</span>
-                                    <a href="{{ route('receipts.show', $data->slug) }}"
-                                        class="font-weight-bold text-primary">
+                                    <span class="badge bg-primary me-1">#{{ $receipts->firstItem() + $key }}</span>
+                                    <a href="{{ route('receipts.show', $data->slug) }}" class="fw-bold text-primary">
                                         {{ $data->customer_name ?? __('receipts.label.no_name') }}
                                     </a>
                                 </div>
-                                <span class="badge bg-blue-soft text-primary font-weight-bold">
+                                <span class="badge bg-blue-soft text-primary fw-bold">
                                     @if ($data->package_price === 0)
                                         {{ __('receipts.label.free') }}
                                     @else
@@ -295,7 +294,7 @@
                                         {{-- 1. Badge Status Utama --}}
                                         <span class="badge bg-success text-white text-uppercase"
                                             style="padding: 0.4rem 0.6rem;">
-                                            <i class="fas fa-check-circle mr-1"></i> {{ $method }}
+                                            <i class="fas fa-check-circle me-1"></i> {{ $method }}
                                         </span>
 
                                         @php
@@ -337,16 +336,16 @@
                                 </div>
 
                                 <div class="col-6"><strong>{{ __('receipts.table.teller_name') }}:</strong></div>
-                                <div class="col-6 text-dark text-right"><span>{{ $data->teller_name ?? '-' }}</span>
+                                <div class="col-6 text-dark text-end"><span>{{ $data->teller_name ?? '-' }}</span>
                                 </div>
                             </div>
 
                             {{-- Tombol Aksi Mobile --}}
                             @can('billing-edit')
-                                <div class="border-top pt-2 mt-2 text-right">
-                                    <a class="btn btn-success btn-sm btn-block shadow-sm"
+                                <div class="border-top pt-2 mt-2 text-end">
+                                    <a class="btn btn-success btn-sm w-100 shadow-sm"
                                         href="{{ route('receipts.print', $data->slug) }}" target="_blank">
-                                        <i class="fa fa-print mr-1"></i> {{ __('receipts.button.print') }}
+                                        <i class="fa fa-print me-1"></i> {{ __('receipts.button.print') }}
                                     </a>
                                 </div>
                             @endcan

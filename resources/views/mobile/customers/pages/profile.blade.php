@@ -1,7 +1,7 @@
 <x-layouts.customers.mobile.app-layout title="Customers">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary">{{ __('customer.page.header.profile') }}</h5>
+        <h5 class="m-0 fw-bold text-primary">{{ __('customer.page.header.profile') }}</h5>
 
     </div>
 

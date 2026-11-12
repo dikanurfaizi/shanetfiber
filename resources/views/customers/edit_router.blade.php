@@ -1,7 +1,7 @@
 <x-layouts.cpanel.customers.app-layout title="Edit Router">
 
     <div class="card-header py-3">
-        <h5 class="m-0 font-weight-bold text-primary"> {{ __('customer.header.edit-router') }} -
+        <h5 class="m-0 fw-bold text-primary"> {{ __('customer.header.edit-router') }} -
             {{ $customer->name ?? 'Customer Not Found' }}
         </h5>
     </div>

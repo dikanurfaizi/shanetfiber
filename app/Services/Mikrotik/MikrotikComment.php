@@ -7,10 +7,12 @@ use App\Helpers\LogHelper;
 use App\Models\AutoIsolir;
 use App\Models\Billings\Billing;
 use App\Models\Customers\Customer;
-use Illuminate\Support\Carbon;
 
 class MikrotikComment
 {
+    private string $fallbackPaymentComment = 'payment';
+    private string $fallbackUnpaymentComment = 'unpayment';
+
     /**
      * Konteks 1: Komentar saat Aktivasi Pelanggan Pertama Kali
      */
@@ -19,25 +21,29 @@ class MikrotikComment
         $timer = new ExecutionTimer();
 
         try {
-            $autoIsolir = AutoIsolir::where('mikrotik_id', $customer->mikrotik_id)->first();
+            $autoIsolir = $this->getAutoIsolir($customer->mikrotik_id, ['customer_id' => $customer->id], 'activation', $traceId, $timer);
 
             if (!$autoIsolir) {
-                return 'create_from_customer_management';
+                return $this->fallbackUnpaymentComment;
             }
 
-            $activationDay = $customer->activation_date
-                ? Carbon::parse($customer->activation_date)->format('d')
-                : now()->format('d');
+            $isActivation = $autoIsolir->activation_date ?? false;
 
-            return $this->buildCommentString(
-                $autoIsolir,
-                $activationDay,
-                now()->addMonth()->format('m_Y')
-            );
+            $comment = $this->buildCommentString($autoIsolir, $isActivation);
+
+            LogHelper::logInfo('MikrotikComment', [
+                'customer_id' => $customer->id,
+                'comment'     => $comment,
+            ], 200, 'Activation comment generated successfully', $traceId, $timer->lap());
+
+            return $comment;
         } catch (\Throwable $e) {
-            LogHelper::logError(null, ['customer_id' => $customer->id, 'error' => $e->getMessage()], 500, '[MikrotikComment] Failed activation comment', $traceId, $timer->lap());
+            LogHelper::logError('MikrotikComment', [
+                'customer_id' => $customer->id,
+                'error'       => $e->getMessage()
+            ], 500, 'Failed activation comment', $traceId, $timer->lap());
 
-            return 'create_from_customer_management';
+            return $this->fallbackUnpaymentComment;
         }
     }
 
@@ -50,29 +56,34 @@ class MikrotikComment
 
         try {
             $customer = $billing->customer;
-            $autoIsolir = AutoIsolir::where('mikrotik_id', $customer->mikrotik_id)->first();
+            $autoIsolir = $this->getAutoIsolir(
+                $customer?->mikrotik_id,
+                ['billing_id' => $billing->id, 'customer_id' => $customer?->id],
+                'payment',
+                $traceId,
+                $timer
+            );
 
             if (!$autoIsolir) {
-                return 'create_from_customer_management';
+                return $this->fallbackPaymentComment;
             }
 
-            $billingSubPeriode = $billing->billingSubscriptionPeriode;
-            $periodeName = $billingSubPeriode?->billingPeriode?->name;
+            $comment = $this->buildCommentString($autoIsolir, true);
 
-            $baseDate = $periodeName ? Carbon::parse($periodeName) : now();
-            $activationDay = $customer->activation_date
-                ? Carbon::parse($customer->activation_date)->format('d')
-                : $baseDate->format('d');
+            LogHelper::logInfo('MikrotikComment', [
+                'billing_id'  => $billing->id,
+                'customer_id' => $customer?->id,
+                'comment'     => $comment,
+            ], 200, 'Payment comment generated successfully', $traceId, $timer->lap());
 
-            return $this->buildCommentString(
-                $autoIsolir,
-                $activationDay,
-                $baseDate->copy()->addMonth()->format('m_Y')
-            );
+            return $comment;
         } catch (\Throwable $e) {
-            LogHelper::logError(null, ['billing_id' => $billing->id, 'error' => $e->getMessage()], 500, '[MikrotikComment] Failed payment comment', $traceId, $timer->lap());
+            LogHelper::logError('MikrotikComment', [
+                'billing_id' => $billing->id,
+                'error'      => $e->getMessage()
+            ], 500, 'Failed payment comment', $traceId, $timer->lap());
 
-            return 'create_from_customer_management';
+            return $this->fallbackPaymentComment;
         }
     }
 
@@ -85,49 +96,73 @@ class MikrotikComment
 
         try {
             $customer->loadMissing('mikrotik');
-            $autoIsolir = AutoIsolir::where('mikrotik_id', $customer->mikrotik_id)->first();
+            $autoIsolir = $this->getAutoIsolir($customer->mikrotik_id, ['customer_id' => $customer->id], 'expired', $traceId, $timer);
 
             if (!$autoIsolir) {
-                return 'create_from_customer_management';
+                return $this->fallbackUnpaymentComment;
             }
 
-            $activationDay = $customer->activation_date
-                ? Carbon::parse($customer->activation_date)->format('d')
-                : now()->format('d');
+            $comment = $this->buildCommentString($autoIsolir, false);
 
-            return $this->buildCommentString(
-                $autoIsolir,
-                $activationDay,
-                now()->addMonth()->format('m_Y')
-            );
+            LogHelper::logInfo('MikrotikComment', [
+                'customer_id' => $customer->id,
+                'comment'     => $comment,
+            ], 200, 'Expired comment generated successfully', $traceId, $timer->lap());
+
+            return $comment;
         } catch (\Throwable $e) {
-            LogHelper::logError(null, ['customer_id' => $customer->id, 'error' => $e->getMessage()], 500, '[MikrotikComment] Failed expired comment', $traceId, $timer->lap());
+            LogHelper::logError('MikrotikComment', [
+                'customer_id' => $customer->id,
+                'error'       => $e->getMessage()
+            ], 500, 'Failed expired comment', $traceId, $timer->lap());
 
-            return 'create_from_customer_management';
+            return $this->fallbackUnpaymentComment;
         }
     }
 
     /**
-     * Helper terpusat untuk menyusun string format komentar
+     * Helper terpusat untuk mengambil data AutoIsolir & mencatat Warning jika null
      */
-    private function buildCommentString(AutoIsolir $autoIsolir, string $day, string $nextMonthFormatted): string
+    private function getAutoIsolir(?int $mikrotikId, array $logPayload, string $context, string $traceId, ExecutionTimer $timer): ?AutoIsolir
     {
-        $isActivationDateActive = filter_var($autoIsolir->activation_date, FILTER_VALIDATE_BOOLEAN);
+        if (!$mikrotikId) {
+            LogHelper::logWarning(
+                'MikrotikComment',
+                array_merge($logPayload, ['mikrotik_id' => null]),
+                404,
+                "AutoIsolir configuration skipped: mikrotik_id is empty for {$context} comment",
+                $traceId,
+                $timer->lap()
+            );
 
-        if ($isActivationDateActive) {
-            $nextMonthDate = Carbon::createFromFormat('m_Y', $nextMonthFormatted);
-            $maxDays = $nextMonthDate->daysInMonth;
-            $numericDay = (int) $day;
-
-            if ($numericDay > $maxDays) {
-                $numericDay = $maxDays;
-            }
-
-            $formattedDay = str_pad((string) $numericDay, 2, '0', STR_PAD_LEFT);
-
-            return $autoIsolir->comment_unpayment . '_' . $formattedDay . '_' . $nextMonthFormatted;
+            return null;
         }
 
-        return $autoIsolir->comment_payment ?? 'create_from_customer_management';
+        $autoIsolir = AutoIsolir::where('mikrotik_id', $mikrotikId)->first();
+
+        if (!$autoIsolir) {
+            LogHelper::logWarning(
+                'MikrotikComment',
+                array_merge($logPayload, ['mikrotik_id' => $mikrotikId]),
+                404,
+                "AutoIsolir configuration not found for {$context} comment",
+                $traceId,
+                $timer->lap()
+            );
+        }
+
+        return $autoIsolir;
+    }
+
+    /**
+     * Helper terpusat untuk menyusun string format komentar berdasarkan flag $isPayment
+     */
+    private function buildCommentString(AutoIsolir $autoIsolir, bool $isPayment = false): string
+    {
+        if ($isPayment) {
+            return $autoIsolir->comment_payment ?? $this->fallbackPaymentComment;
+        }
+
+        return $autoIsolir->comment_unpayment ?? $this->fallbackUnpaymentComment;
     }
 }
