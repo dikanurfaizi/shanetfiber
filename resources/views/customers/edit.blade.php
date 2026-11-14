@@ -8,17 +8,15 @@
 
     <div class="row">
         <div class="col-lg-12">
-            {!! Form::model($customer, ['method' => 'PATCH', 'route' => ['customers.update', $customer->slug]]) !!}
+            <form action="{{ route('customers.update', $customer->slug) }}" method="POST">
+                @csrf
+                @method('PATCH')
             <div class="card-body col-lg-8">
 
                 {{-- Input Nama --}}
                 <div class="mb-3">
                     <label for="name" class="form-label fw-bold">{{ __('customer.label.name') }}</label>
-                    {!! Form::text('name', null, [
-                        'placeholder' => __('customer.placeholder.name'),
-                        'class' => 'form-control',
-                        'id' => 'name',
-                    ]) !!}
+                    <input type="text" name="name" id="name" class="form-control" placeholder="{{ __('customer.placeholder.name') }}" value="{{ old('name', $customer->name) }}">
                     @if ($errors->has('name'))
                         <div class="invalid-feedback d-block">{{ $errors->first('name') }}</div>
                     @endif
@@ -129,22 +127,12 @@
                         <div class="col-md-6">
                             <div class="input-group">
                                 <span class="input-group-text">Rp</span>
-                                {!! Form::text('discount_nominal', null, [
-                                    'placeholder' => __('customer.placeholder.discount_nominal'),
-                                    'class' => 'form-control',
-                                    'id' => 'discount_nominal',
-                                    'oninput' => 'formatRupiah(this); calculateDiscount();',
-                                ]) !!}
+                                <input type="text" name="discount_nominal" id="discount_nominal" class="form-control" placeholder="{{ __('customer.placeholder.discount_nominal') }}" value="{{ old('discount_nominal', $customer->customerSubscription->discount_nominal ?? '') }}" oninput="formatRupiah(this); calculateDiscount();">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="input-group">
-                                {!! Form::text('discount', null, [
-                                    'placeholder' => __('customer.placeholder.discount'),
-                                    'class' => 'form-control',
-                                    'id' => 'discount',
-                                    'readonly' => true,
-                                ]) !!}
+                                <input type="text" name="discount" id="discount" class="form-control" placeholder="{{ __('customer.placeholder.discount') }}" value="{{ old('discount', $customer->customerSubscription->discount ?? '') }}" readonly>
                                 <span class="input-group-text">%</span>
                             </div>
                         </div>
@@ -157,11 +145,7 @@
                 {{-- Email --}}
                 <div class="mb-3">
                     <label for="email" class="form-label fw-bold">{{ __('customer.label.email') }}</label>
-                    {!! Form::text('email', null, [
-                        'placeholder' => __('customer.placeholder.email'),
-                        'class' => 'form-control',
-                        'id' => 'email',
-                    ]) !!}
+                    <input type="text" name="email" id="email" class="form-control" placeholder="{{ __('customer.placeholder.email') }}" value="{{ old('email', $customer->email) }}">
                     @if ($errors->has('email'))
                         <div class="invalid-feedback d-block">{{ $errors->first('email') }}</div>
                     @endif
@@ -170,11 +154,7 @@
                 {{-- Password --}}
                 <div class="mb-3">
                     <label for="password" class="form-label fw-bold">{{ __('customer.label.password') }}</label>
-                    {!! Form::password('password', [
-                        'placeholder' => __('customer.placeholder.password'),
-                        'class' => 'form-control',
-                        'id' => 'password',
-                    ]) !!}
+                    <input type="password" name="password" id="password" class="form-control" placeholder="{{ __('customer.placeholder.password') }}">
                     @if ($errors->has('password'))
                         <div class="invalid-feedback d-block">{{ $errors->first('password') }}</div>
                     @endif
@@ -184,11 +164,7 @@
                 <div class="mb-3">
                     <label for="password_confirmation"
                         class="form-label fw-bold">{{ __('customer.label.confirm-password') }}</label>
-                    {!! Form::password('password_confirmation', [
-                        'placeholder' => __('customer.placeholder.confirm-password'),
-                        'class' => 'form-control',
-                        'id' => 'password_confirmation',
-                    ]) !!}
+                    <input type="password" name="password_confirmation" id="password_confirmation" class="form-control" placeholder="{{ __('customer.placeholder.confirm-password') }}">
                     @if ($errors->has('password_confirmation'))
                         <div class="invalid-feedback d-block">{{ $errors->first('password_confirmation') }}</div>
                     @endif
@@ -197,11 +173,7 @@
                 {{-- Address --}}
                 <div class="mb-3">
                     <label for="address" class="form-label fw-bold">{{ __('customer.label.address') }}</label>
-                    {!! Form::text('address', null, [
-                        'placeholder' => __('customer.placeholder.address'),
-                        'class' => 'form-control',
-                        'id' => 'address',
-                    ]) !!}
+                    <input type="text" name="address" id="address" class="form-control" placeholder="{{ __('customer.placeholder.address') }}" value="{{ old('address', $customer->address) }}">
                     @if ($errors->has('address'))
                         <div class="invalid-feedback d-block">{{ $errors->first('address') }}</div>
                     @endif
@@ -289,7 +261,7 @@
                     <i class="fa fa-arrow-left me-1"></i>{{ __('customer.button.back') }}
                 </a>
             </div>
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
 

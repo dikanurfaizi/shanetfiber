@@ -1,93 +1,90 @@
 <x-layouts.cpanel.settings.app-layout title="{{ __('whatsapp.message.page-title-edit') }}">
     <div class="card-header py-3">
         <h5 class="m-0 fw-bold text-primary">
-            {{ __('whatsapp.message.title.edit-message-name', ['name' => $data->name]) }}</h5>
+            {{ __('whatsapp.message.title.edit-message-name', ['name' => $data->name]) }}
+        </h5>
     </div>
 
     <div class="row">
         <div class="col-lg-12">
-            {!! Form::model($data, ['method' => 'PATCH', 'route' => ['whatsappmessage.update', $data->slug]]) !!}
-            <div class="card-body col-lg-8">
+            <form action="{{ route('whatsappmessage.update', $data->slug) }}" method="POST">
+                @csrf
+                @method('PATCH')
 
-                <div class="mb-3 has-feedback row mb-2">
-                    <div class="col-md-3">
-                        <label for="name">{!! trans('whatsapp.message.label.name') !!}</label>
-                    </div>
-                    <div class="col-md-8">
-                        <div class="input-group">
-                            {!! Form::text('name', null, ['placeholder' => __('whatsapp.number.ph.name'), 'class' => 'form-control']) !!}
-                        </div>
-                        @if ($errors->has('name'))
-                            <span class="text-danger">{{ $errors->first('name') }}</span>
-                        @endif
-
-                    </div>
-                </div>
-                {{-- @if (!$data->default)
-                    <div class="mb-3 has-feedback row mb-2" id="input-default-number">
+                <div class="card-body col-lg-8">
+                    {{-- Name --}}
+                    <div class="mb-3 has-feedback row mb-2">
                         <div class="col-md-3">
-                            <label for="default_number">{!! trans('whatsapp.message.label.gateway-number') !!}</label>
+                            <label for="name" class="col-form-label">{!! trans('whatsapp.message.label.name') !!}</label>
                         </div>
                         <div class="col-md-8">
-                            <select id="default_number" name="default_number" class="form-control">
-                                <option value="">{!! trans('whatsapp.message.ph.select-number') !!}</option>
-                            </select>
-                            <div id="error_default_number" class="invalid-feedback"></div>
+                            <div class="input-group">
+                                <input type="text" name="name" id="name"
+                                    value="{{ old('name', $data->name) }}"
+                                    placeholder="{{ __('whatsapp.number.ph.name') }}"
+                                    class="form-control @error('name') is-invalid @enderror">
+                            </div>
+                            @error('name')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
-                @endif --}}
-                @if (!$data->default)
-                    <div class="mb-3 has-feedback row mb-2" id="input-keyword">
+
+                    {{-- Keyword --}}
+                    @if (!$data->default)
+                        <div class="mb-3 has-feedback row mb-2" id="input-keyword">
+                            <div class="col-md-3">
+                                <label for="incoming_message" class="col-form-label">{!! trans('whatsapp.message.label.keyword') !!}</label>
+                            </div>
+                            <div class="col-md-8">
+                                <input type="text" name="incoming_message" id="incoming_message"
+                                    value="{{ old('incoming_message', $data->incoming_message) }}"
+                                    placeholder="{{ __('whatsapp.message.ph.incoming_message') }}"
+                                    class="form-control @error('incoming_message') is-invalid @enderror">
+                                @error('incoming_message')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Reply Message --}}
+                    <div class="mb-3 has-feedback row mb-2">
                         <div class="col-md-3">
-                            <label for="incoming_message">{!! trans('whatsapp.message.label.keyword') !!}</label>
+                            <label for="reply_message" class="col-form-label">{!! trans('whatsapp.message.label.reply_message') !!}</label>
                         </div>
                         <div class="col-md-8">
-                            {!! Form::text('incoming_message', null, [
-                                'placeholder' => __('whatsapp.message.ph.incoming_message'),
-                                'class' => 'form-control',
-                            ]) !!}
-                            @if ($errors->has('incoming_message'))
-                                <span class="text-danger">{{ $errors->first('incoming_message') }}</span>
-                            @endif
+                            <textarea name="reply_message" id="reply_message" placeholder="{{ __('whatsapp.message.ph.reply_message') }}"
+                                class="form-control @error('reply_message') is-invalid @enderror" rows="4">{{ old('reply_message', $data->reply_message) }}</textarea>
+                            @error('reply_message')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
-                @endif
-                <div class="mb-3 has-feedback row mb-2">
-                    <div class="col-md-3">
-                        <label for="reply_message">{!! trans('whatsapp.message.label.reply_message') !!}</label>
-                    </div>
-                    <div class="col-md-8">
 
-                        {!! Form::textarea('reply_message', null, [
-                            'placeholder' => __('whatsapp.message.ph.reply_message'),
-                            'class' => 'form-control',
-                        ]) !!}
-                        @if ($errors->has('reply_message'))
-                            <span class="text-danger">{{ $errors->first('reply_message') }}</span>
-                        @endif
-                    </div>
-                </div>
-                <div class="mb-3 has-feedback row mb-2">
-                    <div class="col-md-3">
-                        <label for="description">{!! trans('whatsapp.message.label.description') !!}</label>
-                    </div>
-                    <div class="col-md-8">
-                        {!! Form::text('description', null, [
-                            'placeholder' => __('whatsapp.number.ph.description'),
-                            'class' => 'form-control',
-                        ]) !!}
-                        @if ($errors->has('description'))
-                            <span class="text-danger">{{ $errors->first('description') }}</span>
-                        @endif
+                    {{-- Description --}}
+                    <div class="mb-3 has-feedback row mb-2">
+                        <div class="col-md-3">
+                            <label for="description" class="col-form-label">{!! trans('whatsapp.message.label.description') !!}</label>
+                        </div>
+                        <div class="col-md-8">
+                            <input type="text" name="description" id="description"
+                                value="{{ old('description', $data->description) }}"
+                                placeholder="{{ __('whatsapp.number.ph.description') }}"
+                                class="form-control @error('description') is-invalid @enderror">
+                            @error('description')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
                     </div>
                 </div>
 
-            </div>
-            <div class="card-footer">
-                <button type="submit" class="btn btn-sm btn-success"><i class="fa fa-save"></i> &nbsp
-                    {{ __('whatsapp.message.button.update-message') }}</button>
-            </div>
-            {!! Form::close() !!}
+                <div class="card-footer">
+                    <button type="submit" class="btn btn-sm btn-success">
+                        <i class="fa fa-save"></i> &nbsp {{ __('whatsapp.message.button.update-message') }}
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 

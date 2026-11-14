@@ -5,80 +5,88 @@
     </div>
 
     <div class="card-body col-lg-8">
-        <div class="row">
+        <div class="row mb-2">
             <div class="col-sm-5 col-6 text-larger">
                 <strong>
                     {{ trans('whatsapp.number.label.name') }}
                 </strong>
             </div>
-            <div class="col-sm-7 ">
+            <div class="col-sm-7">
                 : {{ $data->name }}
             </div>
         </div>
-        <div class="row">
+
+        <div class="row mb-2">
             <div class="col-sm-5 col-6 text-larger">
                 <strong>
                     {{ trans('whatsapp.number.label.number') }}
                 </strong>
             </div>
             <div class="col-sm-7">
-                : {{ $data->number }}
+                : <code>{{ $data->number }}</code>
             </div>
         </div>
-        <div class="row">
+
+        <div class="row mb-2">
             <div class="col-sm-5 col-6 text-larger">
                 <strong>
                     {{ trans('whatsapp.number.label.status') }}
                 </strong>
             </div>
-            <div class="col-sm-7 ">
+            <div class="col-sm-7">
                 : @if ($data->disabled == false)
                     <span class="badge text-white bg-success">
-                        <i class="fas fa-lock-open"></i> {{ __('package.info.enabled') }}
+                        <i class="fas fa-lock-open me-1"></i> {{ __('package.info.enabled') }}
                     </span>
                 @else
                     <span class="badge text-white bg-secondary">
-                        <i class="fas fa-lock"></i> {{ __('package.info.disabled') }}
+                        <i class="fas fa-lock me-1"></i> {{ __('package.info.disabled') }}
                     </span>
                 @endif
             </div>
         </div>
-        <div class="row mb-2">
+
+        <div class="row mb-3">
             <div class="col-sm-5 col-6 text-larger">
                 <strong>
                     {{ trans('whatsapp.number.label.description') }}
                 </strong>
             </div>
             <div class="col-sm-7">
-                : {{ $data->description }}
+                : {{ $data->description ?? '-' }}
             </div>
         </div>
+
         <div class="clearfix"></div>
-        <div class="border-bottom"></div>
-        <div class="mb-3 row">
+        <div class="border-bottom my-3"></div>
+
+        <div class="mb-2 row">
             <div class="col-md-5">
                 <strong>
                     {!! trans('whatsapp.number.label.your-secret') !!}
                 </strong>
             </div>
         </div>
-        <div class="mb-3 row mb-1">
+
+        <div class="mb-3 row">
             <div class="col-md-12">
-                <textarea class="form-control your-secret bg-warning" style="--bs-bg-opacity: .25;" id="your-secret" name="your-secret"
-                    type="text" placeholder="{{ trans('whatsapp.number.ph.your-secret') }}"readonly>{{ $secret }}</textarea>
+                <textarea class="form-control your-secret bg-warning bg-opacity-25" id="your-secret" name="your-secret" rows="3"
+                    placeholder="{{ trans('whatsapp.number.ph.your-secret') }}" readonly>{{ $secret }}</textarea>
             </div>
         </div>
+
         <div class="clearfix"></div>
-        <div class="border-bottom"></div>
-
+        <div class="border-bottom my-3"></div>
     </div>
-    <div class="card-footer">
-        <a class="btn btn-sm btn-success" href="{{ route('whatsappnumber.edit', $data->slug) }}"><i
-                class="fa fa-edit"></i>
-            Edit</a>
 
-        <a class="btn btn-sm btn-primary" href="{{ route('whatsappnumber.index') }}"><i class="fa fa-arrow-left"></i>
-            Back</a>
+    <div class="card-footer">
+        <a class="btn btn-sm btn-success" href="{{ route('whatsappnumber.edit', ['whatsappnumber' => $data->slug]) }}">
+            <i class="fa fa-edit me-1"></i> Edit
+        </a>
+
+        <a class="btn btn-sm btn-primary" href="{{ route('whatsappnumber.index') }}">
+            <i class="fa fa-arrow-left me-1"></i> Back
+        </a>
     </div>
 
 </x-layouts.cpanel.settings.app-layout>

@@ -5,10 +5,9 @@
 
     <div class="row">
         <div class="col-lg-12">
-            {!! Form::model($autoisolir, [
-                'method' => 'PATCH',
-                'route' => ['autoisolir.updateNat.setting', $autoisolir->id],
-            ]) !!}
+            <form action="{{ route('autoisolir.updateNat.setting', $autoisolir->id) }}" method="POST">
+                @csrf
+                @method('PATCH')
 
             <div class="card-body col-lg-8">
 
@@ -44,10 +43,7 @@
                         <label for="nat_dst_address"><strong>{{ __('autoisolir.label.nat_dst_address') }} [ !
                                 ]</strong></label>
                         <div class="input-group">
-                            {!! Form::text('nat_dst_address', null, [
-                                'placeholder' => __('autoisolir.placeholder.nat_dst_address'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="nat_dst_address" class="form-control" placeholder="{{ __('autoisolir.placeholder.nat_dst_address') }}" value="{{ old('nat_dst_address', $autoisolir->nat_dst_address) }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="far fa-address-book"></span>
@@ -66,10 +62,7 @@
                         <label
                             for="nat_dst_address_list"><strong>{{ __('autoisolir.label.nat_dst_address_list') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('nat_dst_address_list', null, [
-                                'placeholder' => __('Insert address list'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="nat_dst_address_list" class="form-control" placeholder="{{ __('Insert address list') }}" value="{{ old('nat_dst_address_list', $autoisolir->nat_dst_address_list) }}">
                         </div>
                         @if ($errors->has('nat_dst_address_list'))
                             <span class="text-danger">{{ $errors->first('nat_dst_address_list') }}</span>
@@ -85,10 +78,7 @@
                         <label
                             for="proxy_access_src_address"><strong>{{ __('autoisolir.label.proxy_access_src_address') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('proxy_access_src_address', null, [
-                                'placeholder' => __('autoisolir.placeholder.proxy_access_src_address'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="proxy_access_src_address" class="form-control" placeholder="{{ __('autoisolir.placeholder.proxy_access_src_address') }}" value="{{ old('proxy_access_src_address', $autoisolir->proxy_access_src_address) }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="far fa-address-book"></span>
@@ -130,6 +120,7 @@
                             class="fa fa-arrow-left"></i> &nbsp {{ __('autoisolir.button.back') }}</a>
                 </div>
             </div>
+            </form>
         </div>
     </div>
 

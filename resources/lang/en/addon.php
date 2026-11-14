@@ -14,8 +14,8 @@ return [
     'table' => [
         'no' => 'No',
         'name' => 'Addon Name',
-        'price' => 'Price (Rp)',
-        'is_recurring' => 'Recurring',
+        'price' => 'Price (IDR)',
+        'is_recurring' => 'Is Recurring',
         'status' => 'Status',
         'action' => 'Action',
     ],
@@ -25,9 +25,9 @@ return [
         'enable' => 'Enable',
     ],
     'placeholder' => [
-        'name' => 'Insert addon name',
-        'price' => 'Insert addon price',
-        'is_recurring' => 'Select if recurring or not',
+        'name' => 'Enter Name',
+        'price' => 'Enter Price',
+        'is_recurring' => 'Select Recurring Type',
     ],
     'button' => [
         'create' => 'Create a Addon',

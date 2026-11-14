@@ -179,16 +179,14 @@
                                             PAY / PRINT
                                             ===================== --}}
                                             @if ($item->status === 'BL' || $item->status === 'PL' || $item->status === 'VD')
-                                                {!! Form::model($item, [
-                                                    'method' => 'PATCH',
-                                                    'route' => ['billings.payment', $item->slug],
-                                                    'class' => 'me-2', // ⬅️ PENTING
-                                                ]) !!}
-                                                <button type="submit" class="btn btn-success btn-sm btn-action-primary">
-                                                    <i class="fas fa-money-bill-wave"></i>
-                                                    {{ __('billing.button.pay') }}
-                                                </button>
-                                                {!! Form::close() !!}
+                                                <form action="{{ route('billings.payment', $item->slug) }}" method="POST" class="me-2">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit" class="btn btn-success btn-sm btn-action-primary">
+                                                        <i class="fas fa-money-bill-wave"></i>
+                                                        {{ __('billing.button.pay') }}
+                                                    </button>
+                                                </form>
 
                                                 <a class="btn btn-outline-primary btn-sm btn-action-secondary"
                                                     target="_blank"
@@ -201,16 +199,14 @@
                                                 UNPAY / RECEIPT
                                                 ===================== --}}
                                             @elseif ($item->status === 'LS' && $item->total_amount > 0)
-                                                {!! Form::model($billing, [
-                                                    'method' => 'PATCH',
-                                                    'route' => ['billings.unpayment', $billing->slug],
-                                                    'class' => 'me-2',
-                                                ]) !!}
-                                                <button type="submit" class="btn btn-danger btn-sm btn-action-primary">
-                                                    <i class="fas fa-money-bill-wave"></i>
-                                                    {{ __('billing.button.unpay') }}
-                                                </button>
-                                                {!! Form::close() !!}
+                                                <form action="{{ route('billings.unpayment', $billing->slug) }}" method="POST" class="me-2">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit" class="btn btn-danger btn-sm btn-action-primary">
+                                                        <i class="fas fa-money-bill-wave"></i>
+                                                        {{ __('billing.button.unpay') }}
+                                                    </button>
+                                                </form>
 
                                                 @if (!empty($item->formatted['receipt_slug']))
                                                     <a href="{{ route('receipts.show', $item->formatted['receipt_slug']) }}"

@@ -9,21 +9,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // 🩵 Tambahkan baris ini
-        Schema::getConnection()->getDoctrineSchemaManager()
-            ->getDatabasePlatform()
-            ->registerDoctrineTypeMapping('enum', 'string');
-
         // ---- Step 1: Rename main tables ----
-        if (Schema::hasTable('paket_categories')) {
+        if (Schema::hasTable('paket_categories') && !Schema::hasTable('package_categories')) {
             Schema::rename('paket_categories', 'package_categories');
         }
 
-        if (Schema::hasTable('pakets')) {
+        if (Schema::hasTable('pakets') && !Schema::hasTable('packages')) {
             Schema::rename('pakets', 'packages');
         }
 
-        // ---- Step 2: Adjust foreign keys ----
+        // ---- Step 2: Adjust foreign keys & columns ----
         $tablesToUpdate = [
             'packages',
             'customers',
@@ -33,37 +28,42 @@ return new class extends Migration
 
         foreach ($tablesToUpdate as $tblName) {
             if (Schema::hasTable($tblName)) {
-                // Drop foreign key lama & rename kolom
+                // 1. Drop foreign keys secara aman menggunakan SQL statement
+                try {
+                    DB::statement("ALTER TABLE `{$tblName}` DROP FOREIGN KEY `{$tblName}_paket_id_foreign`");
+                } catch (\Throwable $e) {
+                }
+
+                try {
+                    DB::statement("ALTER TABLE `{$tblName}` DROP FOREIGN KEY `{$tblName}_paket_category_id_foreign`");
+                } catch (\Throwable $e) {
+                }
+
+                try {
+                    DB::statement("ALTER TABLE `{$tblName}` DROP FOREIGN KEY `{$tblName}_package_id_foreign`");
+                } catch (\Throwable $e) {
+                }
+
+                try {
+                    DB::statement("ALTER TABLE `{$tblName}` DROP FOREIGN KEY `{$tblName}_package_category_id_foreign`");
+                } catch (\Throwable $e) {
+                }
+
+                // 2. Rename kolom menggunakan Schema builder bawaan Laravel
                 Schema::table($tblName, function (Blueprint $table) use ($tblName) {
-                    // Drop foreign key lama
-                    $sm = Schema::getConnection()->getDoctrineSchemaManager();
-                    $doctrineTable = $sm->listTableDetails($tblName);
-
-                    if ($doctrineTable->hasForeignKey("{$tblName}_paket_id_foreign")) {
-                        $table->dropForeign("{$tblName}_paket_id_foreign");
-                    }
-
-                    if ($doctrineTable->hasForeignKey("{$tblName}_paket_category_id_foreign")) {
-                        $table->dropForeign("{$tblName}_paket_category_id_foreign");
-                    }
-
-                    // Rename kolom
-                    if (Schema::hasColumn($tblName, 'paket_id')) {
+                    if (Schema::hasColumn($tblName, 'paket_id') && !Schema::hasColumn($tblName, 'package_id')) {
                         $table->renameColumn('paket_id', 'package_id');
                     }
 
-                    if (Schema::hasColumn($tblName, 'paket_category_id')) {
+                    if (Schema::hasColumn($tblName, 'paket_category_id') && !Schema::hasColumn($tblName, 'package_category_id')) {
                         $table->renameColumn('paket_category_id', 'package_category_id');
                     }
                 });
 
-                // Tambahkan kembali foreign key baru
+                // 3. Modifikasi tipe kolom dan pasang kembali foreign key baru
                 Schema::table($tblName, function (Blueprint $table) use ($tblName) {
                     if (Schema::hasColumn($tblName, 'package_id')) {
-                        DB::statement("ALTER TABLE `$tblName` MODIFY COLUMN `package_id` BIGINT UNSIGNED NULL");
-                    }
-
-                    if (Schema::hasColumn($tblName, 'package_id')) {
+                        $table->unsignedBigInteger('package_id')->nullable()->change();
                         $table->foreign('package_id')
                             ->references('id')
                             ->on('packages')
@@ -72,6 +72,7 @@ return new class extends Migration
                     }
 
                     if (Schema::hasColumn($tblName, 'package_category_id')) {
+                        $table->unsignedBigInteger('package_category_id')->nullable()->change();
                         $table->foreign('package_category_id')
                             ->references('id')
                             ->on('package_categories')
@@ -85,20 +86,16 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::getConnection()->getDoctrineSchemaManager()
-            ->getDatabasePlatform()
-            ->registerDoctrineTypeMapping('enum', 'string');
-
         // ---- Step 1: Revert table names ----
-        if (Schema::hasTable('package_categories')) {
+        if (Schema::hasTable('package_categories') && !Schema::hasTable('paket_categories')) {
             Schema::rename('package_categories', 'paket_categories');
         }
 
-        if (Schema::hasTable('packages')) {
+        if (Schema::hasTable('packages') && !Schema::hasTable('pakets')) {
             Schema::rename('packages', 'pakets');
         }
 
-        // ---- Step 2: Revert foreign keys ----
+        // ---- Step 2: Revert foreign keys & columns ----
         $tablesToUpdate = [
             'pakets',
             'customers',
@@ -108,30 +105,29 @@ return new class extends Migration
 
         foreach ($tablesToUpdate as $tblName) {
             if (Schema::hasTable($tblName)) {
-                // Drop FK baru dan rename balik
+                // Drop FK baru
+                try {
+                    DB::statement("ALTER TABLE `{$tblName}` DROP FOREIGN KEY `{$tblName}_package_id_foreign`");
+                } catch (\Throwable $e) {
+                }
+
+                try {
+                    DB::statement("ALTER TABLE `{$tblName}` DROP FOREIGN KEY `{$tblName}_package_category_id_foreign`");
+                } catch (\Throwable $e) {
+                }
+
+                // Rename balik kolom
                 Schema::table($tblName, function (Blueprint $table) use ($tblName) {
-                    $sm = Schema::getConnection()->getDoctrineSchemaManager();
-                    $doctrineTable = $sm->listTableDetails($tblName);
-
-                    if ($doctrineTable->hasForeignKey("{$tblName}_package_id_foreign")) {
-                        $table->dropForeign("{$tblName}_package_id_foreign");
-                    }
-
-                    if ($doctrineTable->hasForeignKey("{$tblName}_package_category_id_foreign")) {
-                        $table->dropForeign("{$tblName}_package_category_id_foreign");
-                    }
-
-                    // Rename balik kolom
-                    if (Schema::hasColumn($tblName, 'package_id')) {
+                    if (Schema::hasColumn($tblName, 'package_id') && !Schema::hasColumn($tblName, 'paket_id')) {
                         $table->renameColumn('package_id', 'paket_id');
                     }
 
-                    if (Schema::hasColumn($tblName, 'package_category_id')) {
+                    if (Schema::hasColumn($tblName, 'package_category_id') && !Schema::hasColumn($tblName, 'paket_category_id')) {
                         $table->renameColumn('package_category_id', 'paket_category_id');
                     }
                 });
 
-                // Tambah lagi FK lama
+                // Pasang kembali FK lama
                 Schema::table($tblName, function (Blueprint $table) use ($tblName) {
                     if (Schema::hasColumn($tblName, 'paket_id')) {
                         $table->foreign('paket_id')

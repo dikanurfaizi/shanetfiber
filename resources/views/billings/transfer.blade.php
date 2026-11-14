@@ -1,9 +1,8 @@
 <x-layouts.cpanel.billings.app-layout title="Billing Transfer">
 
-    {!! Form::model($billing, [
-        'method' => 'PATCH',
-        'route' => ['billings.payment', $billing->slug],
-    ]) !!}
+    <form action="{{ route('billings.payment', $billing->slug) }}" method="POST">
+        @csrf
+        @method('PATCH')
 
     <div class="card-header py-3">
 
@@ -162,40 +161,28 @@
                                 <div class="col-md-6 mb-3">
                                     <div class="info-item">
                                         <label class="info-label">{{ __('billing.label.deposit-bank') }}</label>
-                                        {!! Form::text('deposit_bank_name', null, [
-                                            'class' => 'form-control',
-                                            'placeholder' => __('billing.placeholder.deposit-bank'),
-                                        ]) !!}
+                                        <input type="text" name="deposit_bank_name" class="form-control" placeholder="{{ __('billing.placeholder.deposit-bank') }}" value="{{ old('deposit_bank_name', $billing->deposit_bank_name) }}">
                                     </div>
                                 </div>
 
                                 <div class="col-md-6 mb-3">
                                     <div class="info-item">
                                         <label class="info-label">{{ __('billing.label.account-holder') }}</label>
-                                        {!! Form::text('deposit_account_name', null, [
-                                            'class' => 'form-control',
-                                            'placeholder' => __('billing.placeholder.account-holder'),
-                                        ]) !!}
+                                        <input type="text" name="deposit_account_name" class="form-control" placeholder="{{ __('billing.placeholder.account-holder') }}" value="{{ old('deposit_account_name', $billing->deposit_account_name) }}">
                                     </div>
                                 </div>
 
                                 <div class="col-md-6 mb-3">
                                     <div class="info-item">
                                         <label class="info-label">{{ __('billing.label.account-number') }}</label>
-                                        {!! Form::text('deposit_account_number', null, [
-                                            'class' => 'form-control',
-                                            'placeholder' => __('billing.placeholder.account-number'),
-                                        ]) !!}
+                                        <input type="text" name="deposit_account_number" class="form-control" placeholder="{{ __('billing.placeholder.account-number') }}" value="{{ old('deposit_account_number', $billing->deposit_account_number) }}">
                                     </div>
                                 </div>
 
                                 <div class="col-md-6 mb-3">
                                     <div class="info-item">
                                         <label class="info-label">{{ __('billing.label.reference-id') }}</label>
-                                        {!! Form::text('reference_id', null, [
-                                            'class' => 'form-control',
-                                            'placeholder' => __('billing.placeholder.reference-id'),
-                                        ]) !!}
+                                        <input type="text" name="reference_id" class="form-control" placeholder="{{ __('billing.placeholder.reference-id') }}" value="{{ old('reference_id', $billing->reference_id) }}">
                                     </div>
                                 </div>
 
@@ -215,7 +202,7 @@
 
         <input type="hidden" name="transfer_payment" value="transfer_payment">
 
-        {!! Form::close() !!}
+        </form>
 
         @section('custom-styles')
             <style>

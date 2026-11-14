@@ -8,18 +8,15 @@
 
     <div class="row">
         <div class="col-lg-12">
-            {!! Form::open(['route' => 'addons.store', 'method' => 'POST', 'id' => 'addon-form']) !!}
+            <form action="{{ route('addons.store') }}" method="POST" id="addon-form">
+                @csrf
 
             <div class="card-body col-lg-8">
 
                 {{-- NAME --}}
                 <div class="mb-3">
                     <label><strong>{{ __('addon.label.name') }}</strong></label>
-                    {!! Form::text('name', old('name'), [
-                        'placeholder' => __('addon.placeholder.name'),
-                        'class' => 'form-control',
-                        'required',
-                    ]) !!}
+                    <input type="text" name="name" class="form-control" placeholder="{{ __('addon.placeholder.name') }}" value="{{ old('name') }}" required>
                     @error('name')
                         <span class="text-danger">{{ $message }}</span>
                     @enderror
@@ -30,13 +27,7 @@
                     <label><strong>{{ __('addon.label.price') }}</strong></label>
                     <div class="input-group">
                         <span class="input-group-text">Rp</span>
-                        {!! Form::text('price', old('price'), [
-                            'class' => 'form-control',
-                            'id' => 'price',
-                            'oninput' => 'formatNumber(this)',
-                            'placeholder' => __('addon.placeholder.price'),
-                            'required',
-                        ]) !!}
+                        <input type="text" name="price" id="price" class="form-control" oninput="formatNumber(this)" placeholder="{{ __('addon.placeholder.price') }}" value="{{ old('price') }}" required>
                     </div>
                     @error('price')
                         <span class="text-danger">{{ $message }}</span>
@@ -46,9 +37,10 @@
                 {{-- RECURRING --}}
                 <div class="mb-3">
                     <label><strong>{{ __('addon.label.is_recurring') }}</strong></label>
-                    {!! Form::select('is_recurring', [0 => __('No'), 1 => __('Yes')], old('is_recurring', 0), [
-                        'class' => 'form-control',
-                    ]) !!}
+                    <select name="is_recurring" class="form-control">
+                        <option value="0" {{ old('is_recurring', 0) == 0 ? 'selected' : '' }}>{{ __('No') }}</option>
+                        <option value="1" {{ old('is_recurring', 0) == 1 ? 'selected' : '' }}>{{ __('Yes') }}</option>
+                    </select>
                     @error('is_recurring')
                         <span class="text-danger">{{ $message }}</span>
                     @enderror
@@ -82,7 +74,7 @@
                 </a>
             </div>
 
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
 

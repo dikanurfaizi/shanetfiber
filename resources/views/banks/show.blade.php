@@ -114,13 +114,10 @@
                                         <span class="text-monospace text-muted">{{ $user->contact ?? '-' }}</span>
                                     </td>
                                     <td data-label="{{ __('bank.table.action') }}" class="text-center-md">
-                                        {!! Form::open([
-                                            'route' => ['banks.unlink-user', $bank],
-                                            'method' => 'DELETE',
-                                            'id' => 'unlink-form-' . $user->id,
-                                            'class' => 'd-inline',
-                                        ]) !!}
-                                        {!! Form::hidden('user_id', $user->id) !!}
+                                        <form action="{{ route('banks.unlink-user', $bank) }}" method="POST" id="unlink-form-{{ $user->id }}" class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <input type="hidden" name="user_id" value="{{ $user->id }}">
 
                                         <button type="button"
                                             class="btn btn-xs w-100 btn-outline-danger js-unlink-btn toggle-width-btn"
@@ -128,7 +125,7 @@
                                             title="{{ __('bank.button.unlink') }}">
                                             <i class="fa fa-unlink me-1"></i> {{ __('bank.button.unlink') }}
                                         </button>
-                                        {!! Form::close() !!}
+                                        </form>
                                     </td>
                                 </tr>
                             @empty
@@ -157,7 +154,8 @@
         aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-md" role="document">
             <div class="modal-content">
-                {!! Form::open(['route' => ['banks.link-user', $bank], 'method' => 'POST']) !!}
+                <form action="{{ route('banks.link-user', $bank) }}" method="POST">
+                    @csrf
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title" id="assignAdminModalLabel">
                         <i class="fas fa-link me-2"></i> {{ __('bank.button.assign-admin') }}
@@ -168,13 +166,12 @@
                     <div class="mb-3">
                         <label for="select_user_id"><strong>{{ __('bank.placeholder.select_admin') }} <span
                                     class="text-danger">*</span></strong></label>
-                        {!! Form::select('user_id', $availableUsers, null, [
-                            'placeholder' => '-- ' . __('bank.placeholder.select_admin') . ' --',
-                            'class' => 'form-control select2-modal',
-                            'id' => 'select_user_id',
-                            'required' => true,
-                            'style' => 'width: 100%',
-                        ]) !!}
+                        <select name="user_id" id="select_user_id" class="form-control select2-modal" style="width: 100%" required>
+                            <option value="">-- {{ __('bank.placeholder.select_admin') }} --</option>
+                            @foreach ($availableUsers as $id => $name)
+                                <option value="{{ $id }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -184,7 +181,7 @@
                         <i class="fa fa-save me-1"></i> {{ __('bank.button.assign-admin') }}
                     </button>
                 </div>
-                {!! Form::close() !!}
+                </form>
             </div>
         </div>
     </div>

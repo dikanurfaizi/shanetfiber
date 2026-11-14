@@ -138,7 +138,7 @@ class HomeController extends Controller
         $movementData = $this->calculateCustomerRegistrationChurnData($request, $traceId);
         extract($movementData);
 
-        $isMobile = (new \Jenssegers\Agent\Agent)->isMobile();
+        $isMobile = request()->header('User-Agent');
 
         // Pastikan $isSuperAdmin terdefinisi dengan aman
         $isSuperAdmin = $isSuperAdmin ?? $user->can('view-customers-widget-total');
@@ -173,7 +173,7 @@ class HomeController extends Controller
 
         // Filter scope data berdasarkan role user yang login
         if (!$isSuperAdmin) {
-            $query->where('customers.user_id', auth()->id());
+            $query->where('customers.user_id', $userId);
         }
 
         $unpaid3MonthsCustomers = $query->select($selectColumns)
@@ -384,15 +384,23 @@ class HomeController extends Controller
         $user = $auth['user'];
         $userId = $auth['userId'];
 
+        // Ambil periode billing terakhir, pastikan memiliki nama/tanggal yang valid
         $billingPeriode = BillingPeriode::orderBy('created_at', 'desc')->first();
 
-        if (!$billingPeriode) {
+        // Fallback safe object jika periode belum ada sama sekali
+        if (!$billingPeriode || empty($billingPeriode->name)) {
             LogHelper::logInfo(null, [
                 'billingPeriode' => $billingPeriode,
                 'lastBillings' => collect(),
-            ], 200, 'Details getLastBillingData (no billing period found)', $traceId, $timer->lap());
+            ], 200, 'Details getLastBillingData (no valid billing period found)', $traceId, $timer->lap());
 
-            return [null, collect()];
+            // Buat objek dummy/fallback agar pemanggilan property di Blade tidak error
+            $dummyPeriode = new BillingPeriode([
+                'name' => now()->format('F Y') // Default ke bulan dan tahun sekarang
+            ]);
+            $dummyPeriode->id = 0;
+
+            return [$dummyPeriode, collect()];
         }
 
         // Subquery ambil ID billing terbaru per customer di periode terakhir
@@ -403,9 +411,9 @@ class HomeController extends Controller
 
         $billingQuery = Billing::whereIn('id', $subQuery);
 
-        if ($user->can('view-billings-widget-total') || $user->can('view-billings-widget-customer-count')) {
+        if ($user && $user->can('view-billings-widget-total') || $user && $user->can('view-billings-widget-customer-count')) {
             // akses luas, tanpa filter tambahan
-        } elseif ($user->can('investor-billing-widget')) {
+        } elseif ($user && $user->can('investor-billing-widget')) {
             // akses investor: hanya billings terkait admin yang berelasi
             $linkedAdminIds = InvestorAdmin::where('investor_id', $userId)->pluck('admin_id')->toArray();
             $visibleUserIds = array_merge([$userId], $linkedAdminIds);

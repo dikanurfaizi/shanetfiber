@@ -49,7 +49,7 @@ return new class extends Migration
                 $table->string('name_id');
                 $table->unsignedTinyInteger('duration_months');
                 $table->enum('discount_type', ['none', 'percent', 'amount'])->default('none');
-                $table->unsignedDecimal('discount_value', 10, 2)->default(0);
+                $table->decimal('discount_value', 10, 2)->default(0);
                 $table->boolean('is_active')->default(true);
                 $table->timestamps();
             });
@@ -65,9 +65,9 @@ return new class extends Migration
                 $table->enum('status', ['active', 'paused', 'cancelled', 'terminated'])->default('active');
                 $table->date('start_date');
                 $table->date('end_date');
-                $table->unsignedDecimal('price_final', 12, 2);
+                $table->decimal('price_final', 12, 2);
                 $table->enum('discount_type_final', ['none', 'percent', 'amount'])->default('none');
-                $table->unsignedDecimal('discount_value_final', 10, 2)->default(0);
+                $table->decimal('discount_value_final', 10, 2)->default(0);
                 $table->timestamps();
             });
         }

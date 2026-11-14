@@ -70,20 +70,22 @@
                             <!-- Kolom Admin -->
                             @canany(['view-customers-widget-total'])
                                 <div class="col-md-2 col-12">
-                                    {!! Form::select('search_admin', ['NULL' => 'Not Linked User'] + $allAdmin->toArray(), request('search_admin'), [
-                                        'placeholder' => __('customer.placeholder.all-responsibility') ?? 'All Admin',
-                                        'class' => 'form-select',
-                                        'id' => 'admin-dropdown',
-                                    ]) !!}
+                                    <select name="search_admin" class="form-select" id="admin-dropdown">
+                                        <option value="">{{ __('customer.placeholder.all-responsibility') ?? 'All Admin' }}</option>
+                                        @foreach (['NULL' => 'Not Linked User'] + $allAdmin->toArray() as $k => $v)
+                                            <option value="{{ $k }}" {{ request('search_admin') == $k ? 'selected' : '' }}>{{ $v }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
                             @endcanany
                             <!-- Kolom Server -->
                             <div class="col-md-2 col-12">
-                                {!! Form::select('server_search', $allServers, request('server_search'), [
-                                    'placeholder' => __('customer.placeholder.all-server') ?? 'All Server',
-                                    'class' => 'form-select',
-                                    'id' => 'server-dropdown',
-                                ]) !!}
+                                <select name="server_search" class="form-select" id="server-dropdown">
+                                    <option value="">{{ __('customer.placeholder.all-server') ?? 'All Server' }}</option>
+                                    @foreach ($allServers as $k => $v)
+                                        <option value="{{ $k }}" {{ request('server_search') == $k ? 'selected' : '' }}>{{ $v }}</option>
+                                    @endforeach
+                                </select>
                             </div>
                             <!-- Kolom Package -->
                             <div class="col-md-2 col-12">

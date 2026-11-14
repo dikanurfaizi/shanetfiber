@@ -8,7 +8,8 @@
 
     <div class="row">
         <div class="col-lg-12">
-            {!! Form::open(['route' => 'banks.store', 'method' => 'POST', 'id' => 'bankForm']) !!}
+            <form action="{{ route('banks.store') }}" method="POST" id="bankForm">
+                @csrf
             <div class="card-body col-lg-8">
 
                 <div class="row align-items-center">
@@ -20,12 +21,7 @@
                             <div class="input-group-prepend">
                                 <span class="input-group-text"><i class="fas fa-user"></i></span>
                             </div>
-                            {!! Form::text('name', null, [
-                                'placeholder' => __('bank.placeholder.name'),
-                                'class' => 'form-control',
-                                'id' => 'accountName',
-                                'required' => true,
-                            ]) !!}
+                            <input type="text" name="name" id="accountName" class="form-control" placeholder="{{ __('bank.placeholder.name') }}" value="{{ old('name') }}" required>
                         </div>
                         @if ($errors->has('name'))
                             <span class="text-danger small mt-1 d-block">{{ $errors->first('name') }}</span>
@@ -41,21 +37,13 @@
                         </label>
                         <div class="d-flex align-items-center mt-1">
                             <div class="form-check me-4">
-                                {!! Form::radio('type', 'bank', true, [
-                                    'class' => 'form-check-input',
-                                    'id' => 'type_bank',
-                                    'required' => true,
-                                ]) !!}
+                                <input type="radio" name="type" id="type_bank" value="bank" class="form-check-input" {{ old('type', 'bank') === 'bank' ? 'checked' : '' }} required>
                                 <label class="form-check-label fw-bold text-dark cursor-pointer" for="type_bank">
                                     <i class="fas fa-university text-info me-1"></i> {{ __('bank.label.bank-account') }}
                                 </label>
                             </div>
                             <div class="form-check">
-                                {!! Form::radio('type', 'ewallet', false, [
-                                    'class' => 'form-check-input',
-                                    'id' => 'type_ewallet',
-                                    'required' => true,
-                                ]) !!}
+                                <input type="radio" name="type" id="type_ewallet" value="ewallet" class="form-check-input" {{ old('type') === 'ewallet' ? 'checked' : '' }} required>
                                 <label class="form-check-label fw-bold text-dark cursor-pointer" for="type_ewallet">
                                     <i class="fas fa-wallet text-warning me-1"></i> {{ __('bank.label.ewallet') }}
                                 </label>
@@ -101,12 +89,7 @@
                             <div class="input-group-prepend">
                                 <span class="input-group-text"><i class="fas fa-credit-card"></i></span>
                             </div>
-                            {!! Form::text('account_number', null, [
-                                'placeholder' => __('bank.placeholder.account_number'),
-                                'class' => 'form-control text-monospace',
-                                'id' => 'account_number',
-                                'required' => true,
-                            ]) !!}
+                            <input type="text" name="account_number" id="account_number" class="form-control text-monospace" placeholder="{{ __('bank.placeholder.account_number') }}" value="{{ old('account_number') }}" required>
                         </div>
                         @if ($errors->has('account_number'))
                             <span class="text-danger small mt-1 d-block">{{ $errors->first('account_number') }}</span>
@@ -125,7 +108,7 @@
                     <i class="fa fa-save me-1"></i> {{ __('bank.button.save') }}
                 </button>
             </div>
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
 

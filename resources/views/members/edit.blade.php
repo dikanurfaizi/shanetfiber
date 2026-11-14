@@ -9,16 +9,14 @@
 
     <div class="row">
         <div class="col-lg-12">
-            {!! Form::model($member, [
-                'method' => 'PATCH',
-                'route' => ['members.update', $member->slug],
-                'id' => 'member-form',
-            ]) !!}
+            <form action="{{ route('members.update', $member->slug) }}" method="POST" id="member-form">
+                @csrf
+                @method('PATCH')
             <div class="card-body col-lg-8">
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="type"><strong>{{ __('member.label.name') }}</strong></label>
-                        {!! Form::text('name', null, ['placeholder' => __('member.placeholder.name'), 'class' => 'form-control']) !!}
+                        <input type="text" name="name" class="form-control" placeholder="{{ __('member.placeholder.name') }}" value="{{ old('name', $member->name) }}">
                         @if ($errors->has('name'))
                             <span class="text-danger">{{ $errors->first('name') }}</span>
                         @endif
@@ -27,19 +25,11 @@
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="discount_type"><strong>{{ __('member.label.type') }}</strong></label>
-                        {!! Form::select(
-                            'discount_type',
-                            [
-                                'none' => 'None',
-                                'percent' => 'Percent (%)',
-                                'amount' => 'Amount (Rp)',
-                            ],
-                            $member->discount_type ?? 'none',
-                            [
-                                'class' => 'form-control',
-                                'id' => 'discount_type',
-                            ],
-                        ) !!}
+                        <select name="discount_type" id="discount_type" class="form-control">
+                            @foreach (['none' => 'None', 'percent' => 'Percent (%)', 'amount' => 'Amount (Rp)'] as $val => $lbl)
+                                <option value="{{ $val }}" {{ old('discount_type', $member->discount_type ?? 'none') == $val ? 'selected' : '' }}>{{ $lbl }}</option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
                 <div class="row align-items-center">
@@ -49,23 +39,13 @@
                         <div id="discount_amount_group" class="d-none">
                             <div class="input-group">
                                 <span class="input-group-text">Rp</span>
-                                {!! Form::text('discount_value', $member->discount_value, [
-                                    'class' => 'form-control',
-                                    'id' => 'discount_amount',
-                                    'oninput' => 'formatNumber(this)',
-                                ]) !!}
+                                <input type="text" name="discount_value" id="discount_amount" class="form-control" oninput="formatNumber(this)" value="{{ old('discount_value', $member->discount_value) }}">
                             </div>
                         </div>
 
                         <div id="discount_percent_group" class="d-none">
                             <div class="input-group">
-                                {!! Form::number('discount_percent', $member->discount_value, [
-                                    'class' => 'form-control',
-                                    'id' => 'discount_percent',
-                                    'step' => '0.01',
-                                    'min' => 0,
-                                    'max' => 100,
-                                ]) !!}
+                                <input type="number" name="discount_percent" id="discount_percent" class="form-control" step="0.01" min="0" max="100" value="{{ old('discount_percent', $member->discount_value) }}">
                                 <span class="input-group-text">%</span>
                             </div>
                         </div>
@@ -98,7 +78,7 @@
                 <a class="btn btn-sm btn-secondary" href="{{ route('members.index') }}"><i
                         class="fa fa-arrow-left"></i>&nbsp{{ __('member.button.back') }}</a>
             </div>
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
     @section('custom_styles')

@@ -54,10 +54,11 @@
                         class="text-danger">*</span></label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="fas fa-server"></i></span>
-                    {!! Form::select('olt_type', ['' => 'OLT Types'] + $oidMappings->toArray(), $olt->vendor ?? null, [
-                        'class' => 'form-control',
-                        'id' => 'olt_type',
-                    ]) !!}
+                    <select name="olt_type" class="form-control" id="olt_type">
+                        @foreach (['' => 'OLT Types'] + $oidMappings->toArray() as $k => $v)
+                            <option value="{{ $k }}" {{ old('olt_type', $olt->vendor ?? '') == $k ? 'selected' : '' }}>{{ $v }}</option>
+                        @endforeach
+                    </select>
                 </div>
             </div>
 

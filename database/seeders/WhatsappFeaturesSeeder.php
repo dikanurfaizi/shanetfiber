@@ -114,7 +114,7 @@ class WhatsappFeaturesSeeder extends Seeder
             [
                 'slug' => '26e518c9-ed67-4624-8fff-0a61debb0876',
                 'name' => 'Pembatalan Pembayaran',
-                'alias' => 'cancellation',
+                'alias' => 'unpayment',
                 'type' => 'onprem',
                 'is_active' => 1,
                 'is_scheduled' => 0,

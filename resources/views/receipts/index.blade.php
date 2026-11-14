@@ -28,12 +28,7 @@
             <div class="d-flex align-items-center flex-wrap" style="margin-bottom: 15px !important;">
 
                 {{-- === 📑 1. Form Filter Spesifik (Lokal Data via Select2) === --}}
-                {!! Form::open([
-                    'url' => url()->current(),
-                    'method' => 'GET',
-                    'class' => 'form-inline me-2 my-1',
-                    'id' => 'advancedFilterForm',
-                ]) !!}
+                <form action="{{ url()->current() }}" method="GET" class="form-inline me-2 my-1" id="advancedFilterForm">
 
                 {{-- Pertahankan parameter search/pagination lain --}}
                 @foreach (request()->except(['filter_payment_method', 'filter_teller', 'filter_date', 'page']) as $key => $value)
@@ -47,21 +42,21 @@
                 @endforeach
 
                 <div class="mb-3 me-2 my-1">
-                    {!! Form::select('filter_payment_method', $paymentMethods, request('filter_payment_method'), [
-                        'placeholder' => __('receipts.placeholder.select_payment_method'),
-                        'id' => 'filterPaymentMethod',
-                        'class' => 'form-control form-control-sm' /* Bersih tanpa select2-local */,
-                        'style' => 'width: 220px;' /* Panjang statis mengunci data terpanjang */,
-                    ]) !!}
+                    <select name="filter_payment_method" id="filterPaymentMethod" class="form-control form-control-sm" style="width: 220px;">
+                        <option value="">{{ __('receipts.placeholder.select_payment_method') }}</option>
+                        @foreach ($paymentMethods as $k => $v)
+                            <option value="{{ $k }}" {{ request('filter_payment_method') == $k ? 'selected' : '' }}>{{ $v }}</option>
+                        @endforeach
+                    </select>
                 </div>
 
                 <div class="mb-3 me-2 my-1">
-                    {!! Form::select('filter_teller', $tellers, request('filter_teller'), [
-                        'placeholder' => __('receipts.placeholder.select_teller'),
-                        'id' => 'filterTeller',
-                        'class' => 'form-control form-control-sm' /* Bersih tanpa select2-local */,
-                        'style' => 'width: 180px;' /* Panjang statis mengunci data terpanjang */,
-                    ]) !!}
+                    <select name="filter_teller" id="filterTeller" class="form-control form-control-sm" style="width: 180px;">
+                        <option value="">{{ __('receipts.placeholder.select_teller') }}</option>
+                        @foreach ($tellers as $k => $v)
+                            <option value="{{ $k }}" {{ request('filter_teller') == $k ? 'selected' : '' }}>{{ $v }}</option>
+                        @endforeach
+                    </select>
                 </div>
 
                 <div class="mb-3 me-2 my-1">
@@ -80,7 +75,7 @@
                         class="btn btn-secondary btn-sm my-1">{{ __('receipts.button.reset') }}</a>
                 @endif
 
-                {!! Form::close() !!}
+                </form>
 
                 {{-- === 📤 2. Fitur Kelompok Tombol Export === --}}
                 @canany(['receipt-export-all', 'receipt-export-selected-period'])
@@ -88,12 +83,12 @@
                     @can('receipt-export-selected-period')
                         {{-- Export per bulan --}}
                         <form action="{{ route('receipts.export.selected') }}" method="GET" class="form-inline me-2 my-1">
-                            {!! Form::select('period', $periods, request('period'), [
-                                'placeholder' => __('receipts.placeholder.periode'),
-                                'class' => 'form-control form-control-sm',
-                                'style' => 'width:auto;',
-                                'onchange' => 'this.form.submit()',
-                            ]) !!}
+                            <select name="period" class="form-control form-control-sm" style="width:auto;" onchange="this.form.submit()">
+                                <option value="">{{ __('receipts.placeholder.periode') }}</option>
+                                @foreach ($periods as $k => $v)
+                                    <option value="{{ $k }}" {{ request('period') == $k ? 'selected' : '' }}>{{ $v }}</option>
+                                @endforeach
+                            </select>
                         </form>
                     @endcan
 

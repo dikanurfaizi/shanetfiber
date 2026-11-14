@@ -1,7 +1,8 @@
 <x-layouts.app-layout :title="__('dashboard.title')">
-    @section('custom_styles')
+
+    @push('custom_styles')
         <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
-    @endsection
+    @endpush
 
     <div class="container-fluid px-4 py-4 bg-light">
         <!-- Header -->
@@ -318,106 +319,107 @@
                                         @endif
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Admin Breakdown -->
-                            @if ($adminBillingSummary && $adminBillingSummary->count() > 0)
-                                <div class="mt-4 pt-3 border-top">
-                                    <h6 class="text-muted fw-bold mb-3 small text-uppercase tracking-wider">
-                                        {{ __('dashboard.cards.details_per_admin') }}
-                                    </h6>
-                                    <div class="row">
-                                        @foreach ($adminBillingSummary as $adminData)
-                                            <div class="col-md-6 col-lg-3 mb-3">
-                                                <div class="card border shadow-none rounded-3 h-100">
-                                                    <div class="card-body p-3">
-                                                        <div
-                                                            class="d-flex justify-content-between align-items-center mb-2">
-                                                            <h6 class="mb-0 fw-bold text-dark">
-                                                                {{ $adminData->admin_name }}
-                                                            </h6>
-                                                            <span class="badge bg-light text-primary border fw-bold">
-                                                                @moneyIDR($adminData->total_billing)
-                                                            </span>
-                                                        </div>
-
-                                                        <div class="d-flex flex-column mt-3 small">
-                                                            <div
-                                                                class="d-flex justify-content-between text-muted pb-2 mb-2 border-bottom">
-                                                                <span>{{ __('dashboard.cards.customers_label') }}</span>
-                                                                <a href="{{ route('billings.index', ['admin_name' => $adminData->admin_name, 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}"
-                                                                    class="text-dark fw-bold text-decoration-none">
-                                                                    {{ number_format($adminData->total_customers, 0, ',', '.') }}
-                                                                </a>
-                                                            </div>
-
+                                <!-- Admin Breakdown -->
+                                @if ($adminBillingSummary && $adminBillingSummary->count() > 0)
+                                    <div class="mt-4 pt-3 border-top">
+                                        <h6 class="text-muted fw-bold mb-3 small text-uppercase tracking-wider">
+                                            {{ __('dashboard.cards.details_per_admin') }}
+                                        </h6>
+                                        <div class="row">
+                                            @foreach ($adminBillingSummary as $adminData)
+                                                <div class="col-md-6 col-lg-3 mb-3">
+                                                    <div class="card border shadow-none rounded-3 h-100">
+                                                        <div class="card-body p-3">
                                                             <div
                                                                 class="d-flex justify-content-between align-items-center mb-2">
+                                                                <h6 class="mb-0 fw-bold text-dark">
+                                                                    {{ $adminData->admin_name }}
+                                                                </h6>
                                                                 <span
-                                                                    class="text-success fw-bold">{{ __('dashboard.cards.paid') }}:</span>
-                                                                <div class="text-end">
-                                                                    <a href="{{ route('billings.index', ['admin_name' => $adminData->admin_name, 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'), 'search_status' => 'LS']) }}"
-                                                                        class="text-success fw-bold text-decoration-none">
-                                                                        {{ number_format($adminData->total_paid_customers, 0, ',', '.') }}
-                                                                    </a>
-                                                                    <div class="text-muted small">Rp
-                                                                        {{ number_format($adminData->total_paid, 0, ',', '.') }}
-                                                                    </div>
-                                                                </div>
+                                                                    class="badge bg-light text-primary border fw-bold">
+                                                                    @moneyIDR($adminData->total_billing)
+                                                                </span>
                                                             </div>
 
-                                                            <div
-                                                                class="d-flex justify-content-between align-items-center mb-2">
-                                                                <span
-                                                                    class="text-warning fw-bold">{{ __('dashboard.cards.pay_later') }}:</span>
-                                                                <div class="text-end">
-                                                                    <a href="{{ route('billings.index', ['admin_name' => $adminData->admin_name, 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'), 'search_status' => 'PL']) }}"
-                                                                        class="text-warning fw-bold text-decoration-none">
-                                                                        {{ number_format($adminData->total_paylater_customers, 0, ',', '.') }}
+                                                            <div class="d-flex flex-column mt-3 small">
+                                                                <div
+                                                                    class="d-flex justify-content-between text-muted pb-2 mb-2 border-bottom">
+                                                                    <span>{{ __('dashboard.cards.customers_label') }}</span>
+                                                                    <a href="{{ route('billings.index', ['admin_name' => $adminData->admin_name, 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y')]) }}"
+                                                                        class="text-dark fw-bold text-decoration-none">
+                                                                        {{ number_format($adminData->total_customers, 0, ',', '.') }}
                                                                     </a>
-                                                                    <div class="text-muted small">Rp
-                                                                        {{ number_format($adminData->total_paylater, 0, ',', '.') }}
+                                                                </div>
+
+                                                                <div
+                                                                    class="d-flex justify-content-between align-items-center mb-2">
+                                                                    <span
+                                                                        class="text-success fw-bold">{{ __('dashboard.cards.paid') }}:</span>
+                                                                    <div class="text-end">
+                                                                        <a href="{{ route('billings.index', ['admin_name' => $adminData->admin_name, 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'), 'search_status' => 'LS']) }}"
+                                                                            class="text-success fw-bold text-decoration-none">
+                                                                            {{ number_format($adminData->total_paid_customers, 0, ',', '.') }}
+                                                                        </a>
+                                                                        <div class="text-muted small">Rp
+                                                                            {{ number_format($adminData->total_paid, 0, ',', '.') }}
+                                                                        </div>
                                                                     </div>
                                                                 </div>
-                                                            </div>
 
-                                                            <div
-                                                                class="d-flex justify-content-between align-items-center mb-2">
-                                                                <span
-                                                                    class="text-danger fw-bold">{{ __('dashboard.cards.unpaid') }}:</span>
-                                                                <div class="text-end">
-                                                                    <a href="{{ route('billings.index', ['admin_name' => $adminData->admin_name, 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'), 'search_status' => 'BL']) }}"
-                                                                        class="text-danger fw-bold text-decoration-none">
-                                                                        {{ number_format($adminData->total_unpaid_customers, 0, ',', '.') }}
-                                                                    </a>
-                                                                    <div class="text-muted small">Rp
-                                                                        {{ number_format($adminData->total_unpaid, 0, ',', '.') }}
+                                                                <div
+                                                                    class="d-flex justify-content-between align-items-center mb-2">
+                                                                    <span
+                                                                        class="text-warning fw-bold">{{ __('dashboard.cards.pay_later') }}:</span>
+                                                                    <div class="text-end">
+                                                                        <a href="{{ route('billings.index', ['admin_name' => $adminData->admin_name, 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'), 'search_status' => 'PL']) }}"
+                                                                            class="text-warning fw-bold text-decoration-none">
+                                                                            {{ number_format($adminData->total_paylater_customers, 0, ',', '.') }}
+                                                                        </a>
+                                                                        <div class="text-muted small">Rp
+                                                                            {{ number_format($adminData->total_paylater, 0, ',', '.') }}
+                                                                        </div>
                                                                     </div>
                                                                 </div>
-                                                            </div>
 
-                                                            <div
-                                                                class="d-flex justify-content-between align-items-center">
-                                                                <span
-                                                                    class="text-secondary fw-bold">{{ __('dashboard.cards.void') }}:</span>
-                                                                <div class="text-end">
-                                                                    <a href="{{ route('billings.index', ['admin_name' => $adminData->admin_name, 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'), 'search_status' => 'VD']) }}"
-                                                                        class="text-secondary fw-bold text-decoration-none">
-                                                                        {{ number_format($adminData->total_void_customers, 0, ',', '.') }}
-                                                                    </a>
-                                                                    <div class="text-muted small">Rp
-                                                                        {{ number_format($adminData->total_void, 0, ',', '.') }}
+                                                                <div
+                                                                    class="d-flex justify-content-between align-items-center mb-2">
+                                                                    <span
+                                                                        class="text-danger fw-bold">{{ __('dashboard.cards.unpaid') }}:</span>
+                                                                    <div class="text-end">
+                                                                        <a href="{{ route('billings.index', ['admin_name' => $adminData->admin_name, 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'), 'search_status' => 'BL']) }}"
+                                                                            class="text-danger fw-bold text-decoration-none">
+                                                                            {{ number_format($adminData->total_unpaid_customers, 0, ',', '.') }}
+                                                                        </a>
+                                                                        <div class="text-muted small">Rp
+                                                                            {{ number_format($adminData->total_unpaid, 0, ',', '.') }}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div
+                                                                    class="d-flex justify-content-between align-items-center">
+                                                                    <span
+                                                                        class="text-secondary fw-bold">{{ __('dashboard.cards.void') }}:</span>
+                                                                    <div class="text-end">
+                                                                        <a href="{{ route('billings.index', ['admin_name' => $adminData->admin_name, 'search_month' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('F'), 'search_year' => Carbon\Carbon::parse($lastBillingPeriode->name)->format('Y'), 'search_status' => 'VD']) }}"
+                                                                            class="text-secondary fw-bold text-decoration-none">
+                                                                            {{ number_format($adminData->total_void_customers, 0, ',', '.') }}
+                                                                        </a>
+                                                                        <div class="text-muted small">Rp
+                                                                            {{ number_format($adminData->total_void, 0, ',', '.') }}
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        @endforeach
+                                            @endforeach
+                                        </div>
                                     </div>
-                                </div>
-                            @endif
+                                @endif
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -756,7 +758,7 @@
         </div>
     </div>
 
-    @section('custom_scripts')
+    @push('custom_scripts')
         <script>
             @if (app()->environment('local'))
                 window.mikrotiks = [];
@@ -777,5 +779,6 @@
         </script>
         <script src="{{ asset('assets/apexcharts/apexcharts.js') }}"></script>
         <script src="{{ asset('js/dashboard.js') }}"></script>
-    @endsection
+    @endpush
+
 </x-layouts.app-layout>

@@ -6,17 +6,15 @@
 
     <div class="row">
         <div class="col-lg-12">
-            {!! Form::open(['route' => 'members.store', 'method' => 'POST', 'id' => 'member-form']) !!}
+            <form action="{{ route('members.store') }}" method="POST" id="member-form">
+                @csrf
 
             <div class="card-body col-lg-8">
 
                 {{-- NAME --}}
                 <div class="mb-3">
                     <label><strong>{{ __('member.label.name') }}</strong></label>
-                    {!! Form::text('name', old('name'), [
-                        'placeholder' => __('member.placeholder.name'),
-                        'class' => 'form-control',
-                    ]) !!}
+                    <input type="text" name="name" class="form-control" placeholder="{{ __('member.placeholder.name') }}" value="{{ old('name') }}">
                     @error('name')
                         <span class="text-danger">{{ $message }}</span>
                     @enderror
@@ -25,15 +23,11 @@
                 {{-- DISCOUNT TYPE --}}
                 <div class="mb-3">
                     <label><strong>{{ __('member.label.type') }}</strong></label>
-                    {!! Form::select(
-                        'discount_type',
-                        ['none' => 'None', 'percent' => 'Percent (%)', 'amount' => 'Amount (Rp)'],
-                        old('discount_type', 'none'),
-                        [
-                            'class' => 'form-control',
-                            'id' => 'discount_type',
-                        ],
-                    ) !!}
+                    <select name="discount_type" id="discount_type" class="form-control">
+                        @foreach (['none' => 'None', 'percent' => 'Percent (%)', 'amount' => 'Amount (Rp)'] as $val => $lbl)
+                            <option value="{{ $val }}" {{ old('discount_type', 'none') == $val ? 'selected' : '' }}>{{ $lbl }}</option>
+                        @endforeach
+                    </select>
                     @error('discount_type')
                         <span class="text-danger">{{ $message }}</span>
                     @enderror
@@ -47,11 +41,7 @@
                     <div id="discount_amount_group" class="d-none">
                         <div class="input-group">
                             <span class="input-group-text">Rp</span>
-                            {!! Form::text('discount_value', old('discount_value'), [
-                                'class' => 'form-control',
-                                'id' => 'discount_amount',
-                                'oninput' => 'formatNumber(this)',
-                            ]) !!}
+                            <input type="text" name="discount_value" id="discount_amount" class="form-control" oninput="formatNumber(this)" value="{{ old('discount_value') }}">
                         </div>
                         @error('discount_value')
                             <span class="text-danger">{{ $message }}</span>
@@ -61,13 +51,7 @@
                     {{-- PERCENT --}}
                     <div id="discount_percent_group" class="d-none">
                         <div class="input-group">
-                            {!! Form::number('discount_percent', old('discount_percent'), [
-                                'class' => 'form-control',
-                                'id' => 'discount_percent',
-                                'step' => '0.01',
-                                'min' => 0,
-                                'max' => 100,
-                            ]) !!}
+                            <input type="number" name="discount_percent" id="discount_percent" class="form-control" step="0.01" min="0" max="100" value="{{ old('discount_percent') }}">
                             <span class="input-group-text">%</span>
                         </div>
                         @error('discount_percent')
@@ -103,7 +87,7 @@
                 </a>
             </div>
 
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
 

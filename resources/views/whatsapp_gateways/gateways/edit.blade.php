@@ -26,7 +26,7 @@
             <div class="mb-3 row">
                 <label class="col-md-3 col-form-label text-muted">Type</label>
                 <div class="col-md-9">
-                    <select name="type" class="form-control" required>
+                    <select name="type" class="form-select" required>
                         <option value="onprem" @selected($gateway->type === 'onprem')>On-Premise</option>
                         <option value="cloud" @selected($gateway->type === 'cloud')>Meta Cloud API</option>
                     </select>
@@ -45,10 +45,11 @@
             <div class="mb-3 row">
                 <label class="col-md-3 col-form-label text-muted">Status</label>
                 <div class="col-md-9">
-                    <div class="form-switch">
-                        <input type="checkbox" name="is_active" value="1" class="form-check-input"
-                            @checked($gateway->is_active)>
-                        <label class="ms-2">Active</label>
+                    <div class="form-check form-switch">
+                        <input type="hidden" name="is_active" value="0">
+                        <input type="checkbox" name="is_active" value="1" class="form-check-input" id="is_active"
+                            @checked(old('is_active', $gateway->is_active))>
+                        <label class="form-check-label" for="is_active">Active</label>
                     </div>
                 </div>
             </div>

@@ -1,62 +1,45 @@
 @extends('layouts.guest')
 
 @section('content')
-    <!-- Outer Row -->
-    <div class="row justify-content-center">
-        <div class="col-xl-10 col-lg-12 col-md-9">
-            <div class="card o-hidden border-0 shadow-lg my-5">
-                <div class="card-body p-0">
-                    <!-- Nested Row within Card Body -->
-                    <div class="row">
-
-                        <div class="col-lg-12">
-                            <div class="p-5">
-                                <div class="text-center">
-                                    <h1 class="h4 text-gray-900 mb-4">{{ __('Install Customer Management') }}</h1>
-                                </div>
-
-
-                                <div class="mb-3">
-                                    @if ($status === 'true')
-                                        Database <b class="text-success"> {{ $dbName }} </b> sudah berhasil dibuat.
-                                    @else
-                                        Upss... maaf, saya tidak dapat menemukan database dengan nama <b
-                                            class="text-danger">{{ $dbName }}</b>. Mungkin saat instalasi awal tadi
-                                        kami mengalami masalah saat membuat database <b
-                                            class="text-danger">{{ $dbName }}</b>. Silahkan ulangi dari awal lagi
-                                        ya...
-                                    @endif
-
-
-                                    <br><br>
-
-                                </div>
-                                @if ($status === 'true')
-                                    <form action="{{ route('installCreateSeeder') }}" method="GET">
-                                        <div class="text-center">
-                                            <a class="btn  btn-primary btn-user w-100"
-                                                onclick="event.preventDefault(); this.closest('form').submit();">{{ __('Lanjutkan') }}</a>
-
-                                        </div>
-                                    </form>
-                                @else
-                                    <form action="{{ route('install') }}" method="GET">
-                                        <div class="text-center">
-                                            <a class="btn  btn-primary btn-user w-100"
-                                                onclick="event.preventDefault(); this.closest('form').submit();">{{ __('Mulai dari awal') }}</a>
-
-                                        </div>
-                                    </form>
-                                @endif
-
-
-                            </div>
-                        </div>
+    <div class="row justify-content-center align-items-center min-vh-100">
+        <div class="col-xl-6 col-lg-8 col-md-9">
+            <div class="card border-0 shadow-lg my-5"
+                style="background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-radius: 1rem; border: 1px solid rgba(255, 255, 255, 0.1);">
+                <div class="card-body p-5 text-white">
+                    <div class="text-center mb-4">
+                        <h1 class="h4 font-weight-bold mb-3" style="color: #f8fafc;">{{ __('install.title.primary') }}</h1>
                     </div>
+
+                    <div class="mb-4 text-center" style="font-size: 0.95rem; line-height: 1.6; color: #cbd5e1;">
+                        @if ($status === 'true')
+                            {!! __('install.db.success', ['db' => $dbName]) !!}
+                        @else
+                            {!! __('install.db.error', ['db' => $dbName]) !!}
+                        @endif
+                    </div>
+
+                    @if ($status === 'true')
+                        <form action="{{ route('installCreateSeeder') }}" method="GET">
+                            <div class="text-center">
+                                <button type="submit"
+                                    class="btn btn-primary btn-user w-100 py-2 font-weight-bold shadow-sm"
+                                    style="background-color: #2563eb; border: none; border-radius: 0.5rem;">
+                                    {{ __('install.button.continue') }}
+                                </button>
+                            </div>
+                        </form>
+                    @else
+                        <form action="{{ route('install') }}" method="GET">
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-danger btn-user w-100 py-2 font-weight-bold shadow-sm"
+                                    style="border-radius: 0.5rem;">
+                                    {{ __('install.button.restart') }}
+                                </button>
+                            </div>
+                        </form>
+                    @endif
                 </div>
             </div>
-
         </div>
-
     </div>
 @endsection

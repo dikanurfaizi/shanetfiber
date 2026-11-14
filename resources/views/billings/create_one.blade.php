@@ -6,7 +6,8 @@
 
     <div class="row">
         <div class="col-lg-12">
-            {!! Form::open(['route' => 'billings.store.one', 'method' => 'POST']) !!}
+            <form action="{{ route('billings.store.one') }}" method="POST">
+                @csrf
             <div class="card-body col-lg-8">
 
                 <div class="row align-items-center">
@@ -36,7 +37,7 @@
                         &nbsp {{ __('billing.button.cancel') }}</a>
                 </div>
 
-                {!! Form::close() !!}
+                </form>
             </div>
         </div>
 </x-layouts.cpanel.billings.app-layout>

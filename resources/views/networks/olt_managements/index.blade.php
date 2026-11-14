@@ -167,10 +167,11 @@
 
                             <!-- Filter by OLT Type -->
                             <div class="col-md-2 mb-3">
-                                {!! Form::select('olt_type', ['' => 'OLT Types'] + $oidMappings->toArray(), null, [
-                                    'class' => 'form-control',
-                                    'id' => 'type-filter',
-                                ]) !!}
+                                <select name="olt_type" class="form-control" id="type-filter">
+                                    @foreach (['' => 'OLT Types'] + $oidMappings->toArray() as $k => $v)
+                                        <option value="{{ $k }}">{{ $v }}</option>
+                                    @endforeach
+                                </select>
                             </div>
 
                             <!-- Filter by Status -->

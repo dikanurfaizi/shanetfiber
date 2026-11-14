@@ -42,14 +42,14 @@
                             <td class="d-flex items-center justify-content-center">
                                 @can('user-list')
                                     <a href="{{ route('users.show', $user->id) }}" data-bs-toggle="tooltip"
-                                        title="{{ __('users.action.view') }}"
+                                        title="{{ __('user.action.view') }}"
                                         class="btn btn-datatable btn-icon btn-transparent-dark me-2 user-show">
                                         <i class="text-primary fas fa-external-link-alt"></i>
                                     </a>
                                 @endcan
                                 @can('user-edit')
                                     <a href="{{ route('users.edit', $user->id) }}" data-bs-toggle="tooltip"
-                                        title="{{ __('roles.action.edit') }}"
+                                        title="{{ __('user.action.edit') }}"
                                         class="btn btn-datatable btn-icon btn-transparent-dark me-2 user-edit">
                                         <i class="text-primary fas fa-edit"></i>
                                     </a>
@@ -71,7 +71,7 @@
                                             @csrf
                                             @method('put')
                                             <a data-bs-toggle="tooltip" data-bs-placement="top"
-                                                title="{{ __('roles.action.disable') }}" class="btn"
+                                                title="{{ __('user.action.disable') }}" class="btn"
                                                 onclick="event.preventDefault(); this.closest('form').submit();">
                                                 <i class=" fa fa-times text-danger me-2"></i>
                                             </a>
@@ -81,7 +81,7 @@
 
                                 @can('user-delete')
                                     <a href="{{ route('users.delete', $user->id) }}" data-bs-toggle="tooltip"
-                                        title="{{ __('roles.action.delete') }}"
+                                        title="{{ __('user.action.delete') }}"
                                         class="btn btn-datatable btn-icon btn-transparent-dark me-2 user-delete">
                                         <i class="far fa-trash-alt text-danger"></i>
                                     </a>

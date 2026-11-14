@@ -9,7 +9,9 @@
         </div>
 
         <div class="card-body p-3 p-md-4">
-            {!! Form::open(['method' => 'DELETE', 'route' => ['customers.destroy', $customer->slug]]) !!}
+            <form action="{{ route('customers.destroy', $customer->slug) }}" method="POST">
+                @csrf
+                @method('DELETE')
 
             {{-- Ringkasan Informasi Customer --}}
             <div class="bg-light p-3 rounded mb-4 border">
@@ -77,7 +79,7 @@
                 </a>
             </div>
 
-            {!! Form::close() !!}
+            </form>
         </div>
 
     </div>

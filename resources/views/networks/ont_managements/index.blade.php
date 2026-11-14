@@ -35,36 +35,32 @@
                             <!-- Status -->
                             <div class="col-md-3 mb-3">
                                 <label for="status-filter" class="form-label fw-semibold text-muted mb-1">Status</label>
-                                {!! Form::select(
-                                    'status',
-                                    [
-                                        '' => 'All Statuses',
-                                        'online' => 'Online',
-                                        'offline' => 'Offline',
-                                        'other' => 'Other',
-                                    ],
-                                    request('status'),
-                                    ['class' => 'form-control', 'id' => 'status-filter'],
-                                ) !!}
+                                <select name="status" class="form-control" id="status-filter">
+                                    @foreach (['' => 'All Statuses', 'online' => 'Online', 'offline' => 'Offline', 'other' => 'Other'] as $k => $v)
+                                        <option value="{{ $k }}" {{ request('status') == $k ? 'selected' : '' }}>{{ $v }}</option>
+                                    @endforeach
+                                </select>
                             </div>
 
                             <!-- OLT -->
                             <div class="col-md-3 mb-3">
                                 <label for="olt-filter" class="form-label fw-semibold text-muted mb-1">OLT</label>
-                                {!! Form::select('olt_id', ['' => 'All OLTs'] + $olts->toArray(), request('olt_id'), [
-                                    'class' => 'form-control',
-                                    'id' => 'olt-filter',
-                                ]) !!}
+                                <select name="olt_id" class="form-control" id="olt-filter">
+                                    @foreach (['' => 'All OLTs'] + $olts->toArray() as $k => $v)
+                                        <option value="{{ $k }}" {{ request('olt_id') == $k ? 'selected' : '' }}>{{ $v }}</option>
+                                    @endforeach
+                                </select>
                             </div>
 
                             <!-- Rx Power -->
                             <div class="col-md-3 mb-3">
                                 <label for="rxpower-filter" class="form-label fw-semibold text-muted mb-1">Rx
                                     Power</label>
-                                {!! Form::select('signal_id', ['' => 'All Rx Power'] + $signal->toArray(), request('signal_id'), [
-                                    'class' => 'form-control',
-                                    'id' => 'rxpower-filter',
-                                ]) !!}
+                                <select name="signal_id" class="form-control" id="rxpower-filter">
+                                    @foreach (['' => 'All Rx Power'] + $signal->toArray() as $k => $v)
+                                        <option value="{{ $k }}" {{ request('signal_id') == $k ? 'selected' : '' }}>{{ $v }}</option>
+                                    @endforeach
+                                </select>
                             </div>
 
                             <!-- Buttons -->

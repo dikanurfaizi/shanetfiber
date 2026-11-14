@@ -127,10 +127,11 @@
             </tbody>
         </table>
         <div class="card-footer">
-            {!! Form::open(['route' => ['ppp.secret.clone', 'mikrotik' => $mikrotik], 'method' => 'POST']) !!}
+            <form action="{{ route('ppp.secret.clone', ['mikrotik' => $mikrotik]) }}" method="POST">
+                @csrf
             <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-clone"></i> &nbsp
                 {{ __('pppoe.secret.button.copy') }}</button>
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
 

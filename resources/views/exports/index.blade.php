@@ -9,16 +9,18 @@
         <div class="col-lg-12">
             <div class="card-body col-lg-8">
 
-                {!! Form::open(['route' => 'export.post', 'method' => 'POST', 'id' => 'export-form']) !!}
+                <form action="{{ route('export.post') }}" method="POST" id="export-form">
+                    @csrf
 
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="source-server"><strong>{{ __('export.label.source_server') }}</strong></label>
-                        {!! Form::select('source_server', $mikrotiks, null, [
-                            'placeholder' => __('export.placeholder.select_source_server'),
-                            'class' => 'form-control',
-                            'id' => 'source-server',
-                        ]) !!}
+                        <select name="source_server" class="form-control" id="source-server">
+                            <option value="">{{ __('export.placeholder.select_source_server') }}</option>
+                            @foreach ($mikrotiks as $id => $name)
+                                <option value="{{ $id }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
                         <span id="source-server-error" class="text-danger"></span>
                         @if ($errors->has('source_server'))
                             <span class="text-danger">{{ $errors->first('source_server') }}</span>
@@ -30,11 +32,12 @@
                     <div class="col-md-12 mb-3">
                         <label
                             for="destination-server"><strong>{{ __('export.label.destination_server') }}</strong></label>
-                        {!! Form::select('destination_server', $mikrotiks, null, [
-                            'placeholder' => __('export.placeholder.select_destination_server'),
-                            'class' => 'form-control',
-                            'id' => 'destination-server',
-                        ]) !!}
+                        <select name="destination_server" class="form-control" id="destination-server">
+                            <option value="">{{ __('export.placeholder.select_destination_server') }}</option>
+                            @foreach ($mikrotiks as $id => $name)
+                                <option value="{{ $id }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
                         <span id="destination-server-error" class="text-danger"></span>
                         @if ($errors->has('destination_server'))
                             <span class="text-danger">{{ $errors->first('destination_server') }}</span>
@@ -49,12 +52,13 @@
                     </button>
                 </div>
 
-                {!! Form::close() !!}
+                </form>
 
                 <hr class="my-4">
 
                 <!-- AKSI BARU: FORM UNTUK UPDATE/SYNC COMMENT DENGAN PILIHAN SERVER TARGET -->
-                {!! Form::open(['route' => 'export.sync.comment', 'method' => 'POST', 'id' => 'sync-comment-form']) !!}
+                <form action="{{ route('export.sync.comment') }}" method="POST" id="sync-comment-form">
+                    @csrf
                 <div class="card-body px-0 py-2">
                     <h5 class="fw-bold text-primary">{{ __('export.title.comment') }}</h5>
                     <p class="text-muted small">{{ __('export.message.comment') }}</p>
@@ -63,11 +67,12 @@
                         <div class="col-md-12 mb-3">
                             <label
                                 for="sync-target-server"><strong>{{ __('export.label.target_server') }}</strong></label>
-                            {!! Form::select('mikrotik_id', $mikrotiks, null, [
-                                'placeholder' => __('export.placeholder.select_target_server'),
-                                'class' => 'form-control',
-                                'id' => 'sync-target-server',
-                            ]) !!}
+                            <select name="mikrotik_id" class="form-control" id="sync-target-server">
+                                <option value="">{{ __('export.placeholder.select_target_server') }}</option>
+                                @foreach ($mikrotiks as $id => $name)
+                                    <option value="{{ $id }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
                             <span id="sync-target-error" class="text-danger"></span>
                             @if ($errors->has('mikrotik_id'))
                                 <span class="text-danger">{{ $errors->first('mikrotik_id') }}</span>
@@ -79,7 +84,7 @@
                         <i class="fas fa-sync-alt"></i> &nbsp; {{ __('export.button.export_comment_data') }}
                     </button>
                 </div>
-                {!! Form::close() !!}
+                </form>
 
             </div>
         </div>

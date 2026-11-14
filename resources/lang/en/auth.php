@@ -20,7 +20,6 @@ return [
     'login' => 'Login',
     'remember-me' => 'Remember me',
     'email' => 'Email',
-    'password' => 'Password',
     'confirm-password' => 'Confirm Password',
     'already-registered' => 'Already registered?',
     'register' => 'Register',

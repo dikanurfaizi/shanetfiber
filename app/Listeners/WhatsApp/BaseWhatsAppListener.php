@@ -34,9 +34,7 @@ abstract class BaseWhatsAppListener implements ShouldQueue
         return $delayService->calculation(
             $this->action->value,
             $event->traceId ?? null,
-            0,
-            $this->queue,
-            $timer->lap()
+            0
         );
     }
 }

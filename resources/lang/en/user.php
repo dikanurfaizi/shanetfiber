@@ -52,6 +52,8 @@ return [
         'view' => 'View this user',
         'edit' => 'Edit this user',
         'delete' => 'Delete this user',
+        'enable' => 'Enable this user',
+        'disable' => 'Disable this user'
     ],
 
     'info' => [

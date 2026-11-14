@@ -51,10 +51,11 @@
             </table>
         </div>
         <div class="card-footer">
-            {!! Form::open(['route' => ['ppp.profiles.clone', 'mikrotik' => $mikrotik], 'method' => 'POST']) !!}
+            <form action="{{ route('ppp.profiles.clone', ['mikrotik' => $mikrotik]) }}" method="POST">
+                @csrf
             <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-clone"></i> &nbsp
                 {{ __('pppoe.profile.button.copy') }}</button>
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
 

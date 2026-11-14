@@ -11,16 +11,16 @@ return new class extends Migration
         if (Schema::hasTable('billings')) {
             Schema::table('billings', function (Blueprint $table) {
                 if (!Schema::hasColumn('billings', 'subtotal')) {
-                    $table->unsignedDecimal('subtotal', 12, 2)->default(0)->after('paket_price');
+                    $table->decimal('subtotal', 12, 2)->default(0)->after('paket_price');
                 }
                 if (!Schema::hasColumn('billings', 'discount_amount')) {
-                    $table->unsignedDecimal('discount_amount', 12, 2)->default(0)->after('subtotal');
+                    $table->decimal('discount_amount', 12, 2)->default(0)->after('subtotal');
                 }
                 if (!Schema::hasColumn('billings', 'tax_amount')) {
-                    $table->unsignedDecimal('tax_amount', 12, 2)->default(0)->after('discount_amount');
+                    $table->decimal('tax_amount', 12, 2)->default(0)->after('discount_amount');
                 }
                 if (!Schema::hasColumn('billings', 'total_amount')) {
-                    $table->unsignedDecimal('total_amount', 12, 2)->default(0)->after('tax_amount');
+                    $table->decimal('total_amount', 12, 2)->default(0)->after('tax_amount');
                 }
             });
         }

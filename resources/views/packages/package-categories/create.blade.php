@@ -6,7 +6,8 @@
     <div class="row">
         <div class="col-lg-12">
 
-            {!! Form::open(['route' => 'categories.store', 'method' => 'POST']) !!}
+            <form action="{{ route('categories.store') }}" method="POST">
+                @csrf
 
             <div class="card-body col-lg-8">
 
@@ -14,10 +15,7 @@
                     <div class="col-md-12 mb-3">
                         <label for="name"><strong>{{ __('package_categories.label.name') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('name', null, [
-                                'placeholder' => __('package_categories.placeholder.name'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="name" class="form-control" placeholder="{{ __('package_categories.placeholder.name') }}" value="{{ old('name') }}">
                         </div>
                         @if ($errors->has('name'))
                             <span class="text-danger">{{ $errors->first('name') }}</span>
@@ -30,10 +28,7 @@
                         <label
                             for="description"><strong>{{ __('package_categories.label.description') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('description', null, [
-                                'placeholder' => __('package_categories.placeholder.description'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="description" class="form-control" placeholder="{{ __('package_categories.placeholder.description') }}" value="{{ old('description') }}">
                         </div>
                         @if ($errors->has('description'))
                             <span class="text-danger">{{ $errors->first('description') }}</span>
@@ -45,7 +40,7 @@
                 <button type="submit" class="btn btn-sm btn-success"><i class="fa fa-save"></i> &nbsp
                     {{ __('package_categories.button.save') }}</button>
             </div>
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
 </x-layouts.app-layout>

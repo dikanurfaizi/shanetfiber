@@ -8,14 +8,9 @@
 
     <div class="row">
         <div class="col-lg-12">
-            @if ($customerRouter)
-                {!! Form::model($customerRouter, [
-                    'method' => 'PATCH',
-                    'route' => ['customers.update.router', $customer->slug ?? ''],
-                ]) !!}
-            @else
-                {!! Form::open(['method' => 'PATCH', 'route' => ['customers.update.router', $customer->slug ?? '']]) !!}
-            @endif
+            <form action="{{ route('customers.update.router', $customer->slug ?? '') }}" method="POST">
+                @csrf
+                @method('PATCH')
 
             <div class="card-body col-lg-8">
                 <div class="row align-items-center">
@@ -63,10 +58,7 @@
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="address"><strong>{{ __('customer.label.username-router') }}</strong></label>
-                        {!! Form::text('username', $customerRouter->username ?? null, [
-                            'placeholder' => __('customer.placeholder.username-router'),
-                            'class' => 'form-control',
-                        ]) !!}
+                        <input type="text" name="username" class="form-control" placeholder="{{ __('customer.placeholder.username-router') }}" value="{{ old('username', $customerRouter->username ?? '') }}">
                         @if ($errors->has('username'))
                             <span class="text-danger">{{ $errors->first('username') }}</span>
                         @endif
@@ -76,12 +68,7 @@
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="password"><strong>{{ __('customer.label.password-router') }}</strong></label>
-
-                        {!! Form::text('password', null, [
-                            'placeholder' => __('customer.placeholder.password-router'),
-                            'class' => 'form-control',
-                        ]) !!}
-
+                        <input type="text" name="password" class="form-control" placeholder="{{ __('customer.placeholder.password-router') }}" value="{{ old('password', $customerRouter->password ?? '') }}">
                         @if ($errors->has('password'))
                             <span class="text-danger">{{ $errors->first('password') }}</span>
                         @endif
@@ -91,12 +78,7 @@
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="port"><strong>{{ __('customer.label.port-router') }}</strong></label>
-
-                        {!! Form::text('port', null, [
-                            'placeholder' => __('customer.placeholder.port-router'),
-                            'class' => 'form-control',
-                        ]) !!}
-
+                        <input type="text" name="port" class="form-control" placeholder="{{ __('customer.placeholder.port-router') }}" value="{{ old('port', $customerRouter->port ?? '') }}">
                         @if ($errors->has('port'))
                             <span class="text-danger">{{ $errors->first('port') }}</span>
                         @endif
@@ -106,12 +88,7 @@
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="mac_address"><strong>{{ __('customer.label.mac-address') }}</strong></label>
-
-                        {!! Form::text('mac_address', null, [
-                            'placeholder' => __('customer.placeholder.mac-address'),
-                            'class' => 'form-control',
-                        ]) !!}
-
+                        <input type="text" name="mac_address" class="form-control" placeholder="{{ __('customer.placeholder.mac-address') }}" value="{{ old('mac_address', $customerRouter->mac_address ?? '') }}">
                         @if ($errors->has('mac_address'))
                             <span class="text-danger">{{ $errors->first('mac_address') }}</span>
                         @endif
@@ -120,12 +97,7 @@
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="description"><strong>{{ __('customer.label.description') }}</strong></label>
-
-                        {!! Form::text('description', null, [
-                            'placeholder' => __('customer.placeholder.description'),
-                            'class' => 'form-control',
-                        ]) !!}
-
+                        <input type="text" name="description" class="form-control" placeholder="{{ __('customer.placeholder.description') }}" value="{{ old('description', $customerRouter->description ?? '') }}">
                         @if ($errors->has('description'))
                             <span class="text-danger">{{ $errors->first('description') }}</span>
                         @endif
@@ -134,14 +106,7 @@
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="vlanId"><strong>{{ __('customer.label.vlan_id') }}</strong></label>
-
-                        {!! Form::number('vlan_id', null, [
-                            'placeholder' => __('customer.placeholder.vlan_id'),
-                            'class' => 'form-control',
-                            'min' => '1',
-                            'max' => '9999',
-                        ]) !!}
-
+                        <input type="number" name="vlan_id" class="form-control" placeholder="{{ __('customer.placeholder.vlan_id') }}" min="1" max="9999" value="{{ old('vlan_id', $customerRouter->vlan_id ?? '') }}">
                         @if ($errors->has('vlanId'))
                             <span class="text-danger">{{ $errors->first('vlanId') }}</span>
                         @endif
@@ -164,7 +129,7 @@
                 @endcan
             </div>
 
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
 

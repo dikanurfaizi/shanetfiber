@@ -103,18 +103,15 @@
                                         @endif
                                     </li>
                                     <li>
-                                        {!! Form::open([
-                                            'method' => 'DELETE',
-                                            'route' => ['banks.destroy', $bank],
-                                            'style' => 'display:inline',
-                                            'id' => 'delete-form-desktop-' . $bank->slug,
-                                        ]) !!}
-                                        <a href="#" class="dropdown-item js-delete-btn" data-type="desktop"
-                                            data-slug="{{ $bank->slug }}"
-                                            data-info="{{ $bank->name }} ({{ $bank->bank }})">
-                                            <i class="fa fa-trash me-2 text-danger"></i> {{ __('bank.action.delete') }}
-                                        </a>
-                                        {!! Form::close() !!}
+                                        <form action="{{ route('banks.destroy', $bank) }}" method="POST" style="display:inline" id="delete-form-desktop-{{ $bank->slug }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <a href="#" class="dropdown-item js-delete-btn" data-type="desktop"
+                                                data-slug="{{ $bank->slug }}"
+                                                data-info="{{ $bank->name }} ({{ $bank->bank }})">
+                                                <i class="fa fa-trash me-2 text-danger"></i> {{ __('bank.action.delete') }}
+                                            </a>
+                                        </form>
                                     </li>
                                 </x-drop-down-action>
                             </td>
@@ -209,18 +206,15 @@
                                 @endif
                             </li>
                             <li>
-                                {!! Form::open([
-                                    'method' => 'DELETE',
-                                    'route' => ['banks.destroy', $bank],
-                                    'style' => 'display:inline',
-                                    'id' => 'delete-form-mobile-' . $bank->slug,
-                                ]) !!}
+                                <form action="{{ route('banks.destroy', $bank) }}" method="POST" style="display:inline" id="delete-form-mobile-{{ $bank->slug }}">
+                                    @csrf
+                                    @method('DELETE')
                                 <a href="#" class="dropdown-item py-2 js-delete-btn" data-type="mobile"
                                     data-slug="{{ $bank->slug }}"
                                     data-info="{{ $bank->name }} ({{ $bank->bank }})">
                                     <i class="fa fa-trash me-2 text-danger"></i> {{ __('bank.action.delete') }}
                                 </a>
-                                {!! Form::close() !!}
+                                </form>
                             </li>
                         </x-drop-down-action>
                     </div>

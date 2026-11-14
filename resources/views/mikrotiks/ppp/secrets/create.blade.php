@@ -6,7 +6,8 @@
     <div class="row">
         <div class="col-lg-12">
 
-            {!! Form::open(['route' => ['ppp.secret.store', 'mikrotik' => $mikrotik], 'method' => 'POST']) !!}
+            <form action="{{ route('ppp.secret.store', ['mikrotik' => $mikrotik]) }}" method="POST">
+                @csrf
             <div class="card-body col-lg-8">
                 @if (count($errors) > 0)
                     <div class="col-md-12 mb-3">
@@ -26,7 +27,7 @@
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="name">{{ __('pppoe.secret.name') }}</label>
-                        {!! Form::text('name', null, ['placeholder' => __('pppoe.secret.name'), 'class' => 'form-control']) !!}
+                        <input type="text" name="name" class="form-control" placeholder="{{ __('pppoe.secret.name') }}" value="{{ old('name') }}">
                         @if ($errors->has('name'))
                             <span class="text-danger">{{ $errors->first('name') }}</span>
                         @endif
@@ -36,7 +37,7 @@
                     <div class="col-md-12 mb-3">
                         <label for="password">{{ __('pppoe.secret.password') }}</label>
                         <div class="input-group">
-                            {!! Form::password('password', ['placeholder' => __('user.placeholder.password'), 'class' => 'form-control']) !!}
+                            <input type="password" name="password" class="form-control" placeholder="{{ __('user.placeholder.password') }}">
                         </div>
                         @if ($errors->has('password'))
                             <span class="text-danger">{{ $errors->first('password') }}</span>
@@ -88,7 +89,7 @@
                     href="{{ route('ppp.secrets.index', ['mikrotik' => $mikrotik]) }}"><i class="fa fa-arrow-left"></i>
                     &nbsp {{ __('pppoe.secret.button.cancel') }}</a>
             </div>
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
 </x-layouts.mikrotiks.app-layout>

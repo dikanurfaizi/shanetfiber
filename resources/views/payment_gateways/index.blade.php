@@ -3,11 +3,9 @@
         <h5 class="m-0 fw-bold text-primary">Payment Gateway</h5>
 
         <span><a class="btn btn-sm btn-success mt-2" href=""><i class="fa fa-plus"></i> Add</a></span>
-
     </div>
 
     <div class="card-body">
-
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
@@ -49,29 +47,29 @@
             </table>
             {!! $paymentGateways->links() !!}
         </div>
+
         <div class="row align-items-center">
             <div class="col-md-12 mb-3">
+                <form action="{{ route('websystem.updatepaymentgateway', $webSystem->slug) }}" method="POST">
+                    @csrf
+                    @method('PATCH')
 
-                {!! Form::model($webSystem, [
-                    'method' => 'PATCH',
-                    'route' => ['websystem.updatepaymentgateway', $webSystem->slug],
-                ]) !!}
-                <div class="card-footer">
-                    @if ($webSystem->payment_gateway === 'disable')
-                        <button type="submit" class="btn btn-success" id="button-save">
-                            <i class="fa fa-check me-2"></i> Enable Payment Gateway
-                        </button>
-                    @else
-                        <button type="submit" class="btn btn-danger" id="button-save">
-                            <i class="fa fa-times"></i> Disable Payment Gateway
-                        </button>
-                    @endif
-
-                </div>
-                {!! Form::close() !!}
+                    <div class="card-footer">
+                        @if ($webSystem->payment_gateway === 'disable')
+                            <button type="submit" class="btn btn-success" id="button-save">
+                                <i class="fa fa-check me-2"></i> Enable Payment Gateway
+                            </button>
+                        @else
+                            <button type="submit" class="btn btn-danger" id="button-save">
+                                <i class="fa fa-times"></i> Disable Payment Gateway
+                            </button>
+                        @endif
+                    </div>
+                </form>
             </div>
         </div>
     </div>
+
     @section('custom_scripts')
     @endsection
 </x-layouts.cpanel.settings.app-layout>

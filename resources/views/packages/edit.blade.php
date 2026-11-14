@@ -3,13 +3,15 @@
     <div class="row">
         <div class="col-lg-12">
 
-            {!! Form::model($package, ['method' => 'PATCH', 'route' => ['packages.update', $package->slug]]) !!}
+            <form action="{{ route('packages.update', $package->slug) }}" method="POST">
+                @csrf
+                @method('PATCH')
             <div class="card-body col-lg-8">
 
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="name"><strong>{{ __('package.label.name') }}</strong></label>
-                        {!! Form::text('name', null, ['placeholder' => __('package.placeholder.name'), 'class' => 'form-control']) !!}
+                        <input type="text" name="name" class="form-control" placeholder="{{ __('package.placeholder.name') }}" value="{{ old('name', $package->name) }}">
                         @if ($errors->has('name'))
                             <span class="text-danger">{{ $errors->first('name') }}</span>
                         @endif
@@ -37,11 +39,7 @@
                 <div class="row align-items-center">
                     <div class="col-md-6 mb-3">
                         <label for="speed_up_to"><strong>{{ __('package.label.speed_up_to') }}</strong></label>
-                        {!! Form::number('speed_up_to', null, [
-                            'placeholder' => 'Enter speed number',
-                            'class' => 'form-control',
-                            'min' => 0,
-                        ]) !!}
+                        <input type="number" name="speed_up_to" class="form-control" placeholder="Enter speed number" min="0" value="{{ old('speed_up_to', $package->speed_up_to) }}">
                         @if ($errors->has('speed_up_to'))
                             <span class="text-danger">{{ $errors->first('speed_up_to') }}</span>
                         @endif
@@ -62,11 +60,7 @@
                     <div class="col-md-6 mb-3">
                         <label
                             for="recommended_device_min"><strong>{{ __('package.label.recommended_device_min') }}</strong></label>
-                        {!! Form::number('recommended_device_min', null, [
-                            'placeholder' => 'Enter minimum device number',
-                            'class' => 'form-control',
-                            'min' => 0,
-                        ]) !!}
+                        <input type="number" name="recommended_device_min" class="form-control" placeholder="Enter minimum device number" min="0" value="{{ old('recommended_device_min', $package->recommended_device_min) }}">
                         @if ($errors->has('recommended_device_min'))
                             <span class="text-danger">{{ $errors->first('recommended_device_min') }}</span>
                         @endif
@@ -74,11 +68,7 @@
                     <div class="col-md-6 mb-3">
                         <label
                             for="recommended_device_max"><strong>{{ __('package.label.recommended_device_max') }}</strong></label>
-                        {!! Form::number('recommended_device_max', null, [
-                            'placeholder' => 'Enter maximum device number',
-                            'class' => 'form-control',
-                            'min' => 0,
-                        ]) !!}
+                        <input type="number" name="recommended_device_max" class="form-control" placeholder="Enter maximum device number" min="0" value="{{ old('recommended_device_max', $package->recommended_device_max) }}">
                         @if ($errors->has('recommended_device_max'))
                             <span class="text-danger">{{ $errors->first('recommended_device_max') }}</span>
                         @endif
@@ -88,12 +78,7 @@
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="quota"><strong>{{ __('package.label.quota') }}</strong></label>
-                        {!! Form::text('quota', null, [
-                            'placeholder' => 'Enter quota',
-                            'class' => 'form-control',
-                            'pattern' => '[a-zA-Z0-9\s]+',
-                            'title' => 'No special characters allowed',
-                        ]) !!}
+                        <input type="text" name="quota" class="form-control" placeholder="Enter quota" pattern="[a-zA-Z0-9\s]+" title="No special characters allowed" value="{{ old('quota', $package->quota) }}">
                         @if ($errors->has('quota'))
                             <span class="text-danger">{{ $errors->first('quota') }}</span>
                         @endif
@@ -105,10 +90,7 @@
                         <label for="include_modem"><strong>{{ __('package.label.incl_modem') }}</strong></label><br>
                         <div class="d-flex align-items-center">
                             <label class="switch me-2">
-                                {!! Form::checkbox('include_modem', 1, $package->include_modem, [
-                                    'class' => 'form-check-input toggle-switch',
-                                    'id' => 'include_modem_toggle',
-                                ]) !!}
+                                <input type="checkbox" name="include_modem" id="include_modem_toggle" class="form-check-input toggle-switch" value="1" {{ old('include_modem', $package->include_modem) ? 'checked' : '' }}>
                                 <span class="slider round"></span>
                             </label>
                             <span id="include_modem_label" class="toggle-label">
@@ -124,10 +106,7 @@
                             for="is_installation_free"><strong>{{ __('package.label.installation_free') }}</strong></label><br>
                         <div class="d-flex align-items-center">
                             <label class="switch me-2">
-                                {!! Form::checkbox('is_installation_free', 1, $package->is_installation_free, [
-                                    'class' => 'form-check-input toggle-switch',
-                                    'id' => 'is_installation_free_toggle',
-                                ]) !!}
+                                <input type="checkbox" name="is_installation_free" id="is_installation_free_toggle" class="form-check-input toggle-switch" value="1" {{ old('is_installation_free', $package->is_installation_free) ? 'checked' : '' }}>
                                 <span class="slider round"></span>
                             </label>
                             <span id="is_installation_free_label" class="toggle-label">
@@ -146,16 +125,8 @@
                             for="installation_fee"><strong>{{ __('package.label.installation_fee') }}</strong></label>
                         <div class="input-group">
                             <span class="input-group-text">Rp</span>
-                            {!! Form::text(
-                                'installation_fee_formatted',
-                                $package->installation_fee ? number_format($package->installation_fee, 0, ',', '.') : '0',
-                                [
-                                    'placeholder' => 'Enter installation fee',
-                                    'class' => 'form-control currency-input',
-                                    'id' => 'installation_fee_formatted',
-                                ],
-                            ) !!}
-                            {!! Form::hidden('installation_fee', $package->installation_fee ?? 0, ['id' => 'installation_fee']) !!}
+                            <input type="text" name="installation_fee_formatted" id="installation_fee_formatted" class="form-control currency-input" placeholder="Enter installation fee" value="{{ old('installation_fee_formatted', $package->installation_fee ? number_format($package->installation_fee, 0, ',', '.') : '0') }}">
+                            <input type="hidden" name="installation_fee" id="installation_fee" value="{{ old('installation_fee', $package->installation_fee ?? 0) }}">
                         </div>
                         @if ($errors->has('installation_fee'))
                             <span class="text-danger">{{ $errors->first('installation_fee') }}</span>
@@ -168,12 +139,8 @@
                         <label for="price"><strong>{{ __('package.label.price') }}</strong></label>
                         <div class="input-group">
                             <span class="input-group-text">Rp</span>
-                            {!! Form::text('price_formatted', $package->price ? number_format($package->price, 0, ',', '.') : null, [
-                                'placeholder' => __('package.placeholder.price'),
-                                'class' => 'form-control currency-input',
-                                'id' => 'price_formatted',
-                            ]) !!}
-                            {!! Form::hidden('price', $package->price, ['id' => 'price']) !!}
+                            <input type="text" name="price_formatted" id="price_formatted" class="form-control currency-input" placeholder="{{ __('package.placeholder.price') }}" value="{{ old('price_formatted', $package->price ? number_format($package->price, 0, ',', '.') : null) }}">
+                            <input type="hidden" name="price" id="price" value="{{ old('price', $package->price) }}">
                         </div>
                         @if ($errors->has('price'))
                             <span class="text-danger">{{ $errors->first('price') }}</span>
@@ -213,10 +180,7 @@
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="description"><strong>{{ __('package.label.description') }}</strong></label>
-                        {!! Form::text('description', null, [
-                            'placeholder' => __('package.placeholder.description'),
-                            'class' => 'form-control',
-                        ]) !!}
+                        <input type="text" name="description" class="form-control" placeholder="{{ __('package.placeholder.description') }}" value="{{ old('description', $package->description) }}">
                         @if ($errors->has('description'))
                             <span class="text-danger">{{ $errors->first('description') }}</span>
                         @endif
@@ -238,7 +202,7 @@
                 </a>
             </div>
 
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
 

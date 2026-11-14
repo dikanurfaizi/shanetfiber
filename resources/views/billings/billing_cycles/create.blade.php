@@ -6,7 +6,8 @@
     <div class="row">
         <div class="col-lg-12">
 
-            {!! Form::open(['route' => 'packets.store', 'method' => 'POST']) !!}
+            <form action="{{ route('packets.store') }}" method="POST">
+                @csrf
 
             <div class="card-body col-lg-8">
 
@@ -14,45 +15,13 @@
                     <div class="col-md-12 mb-3">
                         <label for="name"><strong>{{ __('package.label.name') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('name', null, ['placeholder' => __('package.placeholder.name'), 'class' => 'form-control']) !!}
+                            <input type="text" name="name" class="form-control" placeholder="{{ __('package.placeholder.name') }}" value="{{ old('name') }}">
                         </div>
                         @if ($errors->has('name'))
                             <span class="text-danger">{{ $errors->first('name') }}</span>
                         @endif
                     </div>
                 </div>
-
-                {{-- <div class="row align-items-center">
-                    <div class="col-md-12 mb-3">
-                        <label for="server"><strong>{{ __('customer.label.server') }}</strong></label>
-
-                        {!! Form::select('mikrotik_id', $mikrotiks, null, [
-                            'placeholder' => 'Select Server',
-                            'class' => 'form-control',
-                            'id' => 'server-dropdown',
-                        ]) !!}
-
-                        @if ($errors->has('mikrotik_id'))
-                            <span class="text-danger">{{ $errors->first('mikrotik_id') }}</span>
-                        @endif
-                    </div>
-                </div> --}}
-
-                {{-- <div class="row align-items-center">
-                    <div class="col-md-12 mb-3">
-                        <label for="profile"><strong>{{ __('package.label.profile') }}</strong></label>
-                        <div class="input-group">
-                            <select id="profile-dropdown" name="profile" class="form-control">
-                                <option value="">Select Profile</option>
-                                </option>
-
-                            </select>
-                        </div>
-                        @if ($errors->has('profile'))
-                            <span class="text-danger">{{ $errors->first('profile') }}</span>
-                        @endif
-                    </div>
-                </div> --}}
 
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
@@ -75,7 +44,7 @@
                     <div class="col-md-12 mb-3">
                         <label for="price"><strong>{{ __('package.label.price') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('price', null, ['placeholder' => __('package.placeholder.price'), 'class' => 'form-control']) !!}
+                            <input type="text" name="price" class="form-control" placeholder="{{ __('package.placeholder.price') }}" value="{{ old('price') }}">
                         </div>
                         @if ($errors->has('price'))
                             <span class="text-danger">{{ $errors->first('price') }}</span>
@@ -87,10 +56,7 @@
                     <div class="col-md-12 mb-3">
                         <label for="description"><strong>{{ __('package.label.description') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('description', null, [
-                                'placeholder' => __('package.placeholder.description'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="description" class="form-control" placeholder="{{ __('package.placeholder.description') }}" value="{{ old('description') }}">
                         </div>
                         @if ($errors->has('mikrotik_id'))
                             <span class="text-danger">{{ $errors->first('mikrotik_id') }}</span>
@@ -102,7 +68,7 @@
                 <button type="submit" class="btn btn-sm btn-success"><i class="fa fa-save"></i> &nbsp
                     {{ __('package.button.save') }}</button>
             </div>
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
 

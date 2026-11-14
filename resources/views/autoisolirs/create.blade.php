@@ -6,7 +6,8 @@
     <div class="row">
         <div class="col-lg-12">
 
-            {!! Form::open(['route' => 'autoisolir.store', 'method' => 'POST']) !!}
+            <form action="{{ route('autoisolir.store') }}" method="POST">
+                @csrf
 
             <div class="card-body col-lg-8">
 
@@ -14,11 +15,12 @@
                     <div class="col-md-12 mb-3">
                         <label for="server"><strong>{{ __('autoisolir.label.server') }}</strong></label>
 
-                        {!! Form::select('mikrotik_id', $mikrotiks, null, [
-                            'placeholder' => __('autoisolir.placeholder.select-server'),
-                            'class' => 'form-control',
-                            'id' => 'server-dropdown',
-                        ]) !!}
+                        <select name="mikrotik_id" class="form-control" id="server-dropdown">
+                            <option value="">{{ __('autoisolir.placeholder.select-server') }}</option>
+                            @foreach ($mikrotiks as $id => $name)
+                                <option value="{{ $id }}" {{ old('mikrotik_id') == $id ? 'selected' : '' }}>{{ $name }}</option>
+                            @endforeach
+                        </select>
 
                         @if ($errors->has('mikrotik_id'))
                             <span class="text-danger">{{ $errors->first('mikrotik_id') }}</span>
@@ -48,12 +50,7 @@
                         <label
                             for="address_list_isolir"><strong>{{ __('autoisolir.label.address_list_isolir') }}</strong></label>
                         <div class="input-group">
-
-                            {!! Form::text('address_list_isolir', null, [
-                                'placeholder' => __('autoisolir.placeholder.addresslist'),
-                                'class' => 'form-control',
-                            ]) !!}
-
+                            <input type="text" name="address_list_isolir" class="form-control" placeholder="{{ __('autoisolir.placeholder.addresslist') }}" value="{{ old('address_list_isolir') }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="fas fa-plus"></span>
@@ -69,8 +66,7 @@
                     <div class="col-md-12 mb-3">
                         <label for="script"><strong>{{ __('autoisolir.label.name') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('name', null, ['placeholder' => __('autoisolir.placeholder.name'), 'class' => 'form-control']) !!}
-
+                            <input type="text" name="name" class="form-control" placeholder="{{ __('autoisolir.placeholder.name') }}" value="{{ old('name') }}">
                         </div>
                         @if ($errors->has('name'))
                             <span class="text-danger">{{ $errors->first('name') }}</span>
@@ -101,12 +97,7 @@
                     <div class="col-md-12 mb-3">
                         <label for="due_date"><strong>{{ __('autoisolir.label.due-date') }}</strong></label>
                         <div class="input-group mb-3">
-                            {!! Form::text('due_date', null, [
-                                'placeholder' => __('autoisolir.placeholder.due-date'),
-                                'class' => 'form-control',
-                                'id' => 'due_date',
-                                'readonly',
-                            ]) !!}
+                            <input type="text" name="due_date" id="due_date" class="form-control" placeholder="{{ __('autoisolir.placeholder.due-date') }}" value="{{ old('due_date') }}" readonly>
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="far fa-calendar-alt"></span>
@@ -123,10 +114,7 @@
                         <label
                             for="comment_payment"><strong>{{ __('autoisolir.label.comment-payment') }}</strong></label>
                         <div class="input-group mb-3">
-                            {!! Form::text('comment_payment', null, [
-                                'placeholder' => __('autoisolir.placeholder.comment-payment'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="comment_payment" class="form-control" placeholder="{{ __('autoisolir.placeholder.comment-payment') }}" value="{{ old('comment_payment') }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="far fa-comment-alt"></span>
@@ -143,10 +131,7 @@
                         <label
                             for="comment_unpayment"><strong>{{ __('autoisolir.label.comment-unpayment') }}</strong></label>
                         <div class="input-group mb-3">
-                            {!! Form::text('comment_unpayment', null, [
-                                'placeholder' => __('autoisolir.placeholder.comment-unpayment'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="comment_unpayment" class="form-control" placeholder="{{ __('autoisolir.placeholder.comment-unpayment') }}" value="{{ old('comment_unpayment') }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="fas fa-comment-alt"></span>
@@ -167,6 +152,7 @@
                             class="fa fa-arrow-left"></i> &nbsp {{ __('autoisolir.button.back') }}</a>
                 </div>
             </div>
+            </form>
         </div>
     </div>
 

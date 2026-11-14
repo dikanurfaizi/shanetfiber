@@ -8,7 +8,9 @@
     <div class="row">
         <div class="col-lg-12">
 
-            {!! Form::open(['method' => 'DELETE', 'route' => ['packets.destroy', ['packet' => $packet->slug]]]) !!}
+            <form action="{{ route('packets.destroy', ['packet' => $packet->slug]) }}" method="POST">
+                @csrf
+                @method('DELETE')
             <div class="card-body col-lg-10">
                 <div class="col-md-12 mb-3">
                     <div class="alert alert-danger">
@@ -34,7 +36,7 @@
 
                 </div>
             </div>
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
 </x-layouts.app-layout>

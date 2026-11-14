@@ -33,17 +33,16 @@
                         <div class="row gx-3 gy-2">
                             <!-- Search Customer Name -->
                             <div class="col-md-4 col-lg-3">
-                                {!! Form::input('search', 'search_name', null, [
-                                    'placeholder' => __('billing.placeholder.search-customer-name'),
-                                    'class' => 'form-control',
-                                ]) !!}
+                                <input type="search" name="search_name" class="form-control" placeholder="{{ __('billing.placeholder.search-customer-name') }}" value="{{ request('search_name') }}">
                             </div>
                             @canany(['view-customers-widget-total'])
                                 <div class="col-md-4 col-lg-3">
-                                    {!! Form::select('admin_name', $userAdmin, null, [
-                                        'placeholder' => __('billing.placeholder.search-admin'),
-                                        'class' => 'form-control',
-                                    ]) !!}
+                                    <select name="admin_name" class="form-control">
+                                        <option value="">{{ __('billing.placeholder.search-admin') }}</option>
+                                        @foreach ($userAdmin as $id => $name)
+                                            <option value="{{ $id }}" {{ request('admin_name') == $id ? 'selected' : '' }}>{{ $name }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
                             @endcanany
                         </div>
@@ -90,13 +89,12 @@
                     <label for="status" class="fw-bold text-primary" style="margin-right:8px; margin-bottom:0;">
                         Status
                     </label>
-                    {!! Form::select('status', $statuses, request('status'), [
-                        'placeholder' => __('All Status'),
-                        'class' => 'form-control form-control-sm w-auto',
-                        'onchange' => 'this.form.submit()',
-                        'id' => 'status',
-                        'style' => 'margin-right:10px;',
-                    ]) !!}
+                    <select name="status" class="form-control form-control-sm w-auto" onchange="this.form.submit()" id="status" style="margin-right:10px;">
+                        <option value="">{{ __('All Status') }}</option>
+                        @foreach ($statuses as $id => $name)
+                            <option value="{{ $id }}" {{ request('status') == $id ? 'selected' : '' }}>{{ $name }}</option>
+                        @endforeach
+                    </select>
                 </form>
 
                 @can('billing-export')
@@ -250,11 +248,11 @@
             <form method="GET" id="paginationForm" class="d-flex align-items-center mb-3">
                 <label for="perPage"
                     class="fw-bold text-primary me-2 mb-0 me-1">{{ __('billing.label.show') }}</label>
-                {!! Form::select('perPage', [25 => 25, 50 => 50, 100 => 100], request('perPage'), [
-                    'class' => 'form-control form-control-sm w-auto',
-                    'onchange' => 'this.form.submit()',
-                    'id' => 'perPage',
-                ]) !!}
+                <select name="perPage" class="form-control form-control-sm w-auto" onchange="this.form.submit()" id="perPage">
+                    @foreach ([25 => 25, 50 => 50, 100 => 100] as $val => $lbl)
+                        <option value="{{ $val }}" {{ request('perPage') == $val ? 'selected' : '' }}>{{ $lbl }}</option>
+                    @endforeach
+                </select>
             </form>
         </div>
     </div>

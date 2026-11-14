@@ -14,32 +14,32 @@
         {{-- Provider Info --}}
         <div class="col-md-12 mb-4">
             <div class="card shadow-sm p-4">
-                {!! Form::open(['route' => ['whatsappgateway.edit', $gateway], 'method' => 'GET']) !!}
-                <h6 class="fw-bold mb-3 text-muted">Provider Information</h6>
+                <form action="{{ route('whatsappgateway.edit', $gateway) }}" method="GET">
+                    <h6 class="fw-bold mb-3 text-muted">Provider Information</h6>
 
-                <div class="row mb-3">
-                    <div class="col-md-3 text-muted">Type</div>
-                    <div class="col-md-9">{{ ucfirst($gateway->type) }} Provider</div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-3 text-muted">Status</div>
-                    <div class="col-md-9">
-                        <span
-                            class="badge @if ($gateway->is_active == true) bg-success @else bg-secondary @endif text-white">
-                            @if ($gateway->is_active == true)
-                                Active
-                            @else
-                                Inactive
-                            @endif
-                        </span>
+                    <div class="row mb-3">
+                        <div class="col-md-3 text-muted">Type</div>
+                        <div class="col-md-9">{{ ucfirst($gateway->type) }} Provider</div>
                     </div>
-                </div>
 
-                <button class="btn btn-sm btn-secondary mt-2">
-                    <i class="fa fa-edit"></i> Edit Provider
-                </button>
-                {!! Form::close() !!}
+                    <div class="row mb-3">
+                        <div class="col-md-3 text-muted">Status</div>
+                        <div class="col-md-9">
+                            <span
+                                class="badge @if ($gateway->is_active == true) bg-success @else bg-secondary @endif text-white">
+                                @if ($gateway->is_active == true)
+                                    Active
+                                @else
+                                    Inactive
+                                @endif
+                            </span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-sm btn-secondary mt-2">
+                        <i class="fa fa-edit"></i> Edit Provider
+                    </button>
+                </form>
             </div>
         </div>
 
@@ -93,9 +93,7 @@
 
                                         <td>
                                             <span
-                                                class="badge 
-                    @if ($account->is_active) bg-success 
-                    @else bg-secondary @endif text-white">
+                                                class="badge @if ($account->is_active) bg-success @else bg-secondary @endif text-white">
                                                 {{ $account->is_active ? 'Active' : 'Inactive' }}
                                             </span>
                                         </td>
@@ -110,7 +108,7 @@
 
                                                 <form
                                                     action="{{ route('whatsappgateway.accounts.destroy', [$gateway->slug, $account->id]) }}"
-                                                    method="POST" id="deleteForm" class="m-0 p-0">
+                                                    method="POST" class="m-0 p-0 deleteForm">
                                                     @csrf
                                                     @method('DELETE')
 
@@ -130,7 +128,6 @@
             </div>
         </div>
 
-        {{-- @if ($gateway->type === 'onprem') --}}
         {{-- Test Gowa REST --}}
         <div class="col-md-12">
             <div class="card shadow-sm p-4">
@@ -143,43 +140,42 @@
                             required>
                     </div>
 
-                    <button class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary">
                         <i class="fa fa-paper-plane"></i> Test Send Message
                     </button>
                 </form>
             </div>
         </div>
-        {{-- @endif --}}
 
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.btnDelete').forEach(btn => {
+    @section('custom_scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('.btnDelete').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
 
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault(); // Mencegah submit otomatis
+                        const form = this.closest('form');
 
-                    const form = this.closest('form');
-
-                    Swal.fire({
-                        title: 'Hapus Akun Ini?',
-                        text: "Aksi ini tidak dapat dibatalkan. Semua nomor telepon juga akan terhapus permanen.",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#d33',
-                        cancelButtonColor: '#3085d6',
-                        confirmButtonText: 'Ya, hapus',
-                        cancelButtonText: 'Batal'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            form.submit();
-                        }
+                        Swal.fire({
+                            title: 'Hapus Akun Ini?',
+                            text: "Aksi ini tidak dapat dibatalkan. Semua nomor telepon juga akan terhapus permanen.",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#d33',
+                            cancelButtonColor: '#3085d6',
+                            confirmButtonText: 'Ya, hapus',
+                            cancelButtonText: 'Batal'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                form.submit();
+                            }
+                        });
                     });
                 });
-
             });
-        });
-    </script>
+        </script>
+    @endsection
 
 </x-layouts.cpanel.settings.app-layout>

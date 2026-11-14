@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\AutoIsolir;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\Mikrotik;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;

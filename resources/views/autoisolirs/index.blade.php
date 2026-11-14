@@ -131,17 +131,15 @@
 
                                 @can('server-delete')
                                     <li>
-                                        {!! Form::open([
-                                            'method' => 'DELETE',
-                                            'route' => ['autoisolir.destroy', $autoisolir->id],
-                                            'style' => 'display:inline',
-                                        ]) !!}
-                                        <a href="#" class="dropdown-item"
-                                            onclick="event.preventDefault(); this.closest('form').submit();">
-                                            <i class="fa fa-trash me-2 text-danger"></i>
-                                            {{ __('autoisolir.action.delete') }}
-                                        </a>
-                                        {!! Form::close() !!}
+                                        <form action="{{ route('autoisolir.destroy', $autoisolir->id) }}" method="POST" style="display:inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <a href="#" class="dropdown-item"
+                                                onclick="event.preventDefault(); this.closest('form').submit();">
+                                                <i class="fa fa-trash me-2 text-danger"></i>
+                                                {{ __('autoisolir.action.delete') }}
+                                            </a>
+                                        </form>
                                     </li>
                                 @endcan
 

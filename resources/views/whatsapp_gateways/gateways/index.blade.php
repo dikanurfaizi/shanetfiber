@@ -12,7 +12,7 @@
                     <div class="card-body">
 
                         <h5 class="fw-bold">{{ $gw->name }}</h5>
-                        <p class="text-muted mb-1">Type: {{ $gw->type }}</p>
+                        <p class="text-muted mb-1">Type: {{ ucfirst($gw->type) }}</p>
 
                         <p class="mb-2">
                             {{-- Menggunakan accounts_count dari withCount() agar tidak N+1 --}}
@@ -25,7 +25,7 @@
                         </span>
 
                         <div class="mt-3">
-                            {{-- Parameter disesuaikan menggunakan array ber-key eksplisit --}}
+                            {{-- Parameter rute didefinisikan secara eksplisit sesuai standar routing modern --}}
                             <a href="{{ route('whatsappgateway.show', ['whatsappgateway' => $gw->slug]) }}"
                                 class="btn btn-sm btn-primary">
                                 <i class="fa fa-cog"></i> Manage

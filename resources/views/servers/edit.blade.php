@@ -6,227 +6,226 @@
 
     <div class="row">
         <div class="col-lg-12">
-            {!! Form::model($server, ['method' => 'PATCH', 'route' => ['servers.update', $server->slug]]) !!}
-            <div class="card-body col-lg-8">
+            <form action="{{ route('servers.update', $server->slug) }}" method="POST">
+                @csrf
+                @method('PATCH')
 
-                {{-- Nama Server --}}
-                <div class="row align-items-center">
-                    <div class="col-md-12 mb-3">
-                        <label for="name"><strong>{{ __('server.label.name') }}</strong></label>
-                        {!! Form::text('name', null, [
-                            'placeholder' => __('server.placeholder.name'),
-                            'class' => 'form-control',
-                            'id' => 'name',
-                        ]) !!}
-                        <span id="error_name" class="text-danger">
-                            @if ($errors->has('name'))
-                                {{ $errors->first('name') }}
-                            @endif
-                        </span>
-                    </div>
-                </div>
+                <div class="card-body col-lg-8">
 
-                {{-- Host / IP Router --}}
-                <div class="row align-items-center">
-                    <div class="col-md-12 mb-3">
-                        <label for="host"><strong>{{ __('server.label.host') }}</strong></label>
-                        {!! Form::text('host', null, [
-                            'placeholder' => __('server.placeholder.host'),
-                            'class' => 'form-control',
-                            'id' => 'host',
-                        ]) !!}
-                        <span id="error_host" class="text-danger">
-                            @if ($errors->has('host'))
-                                {{ $errors->first('host') }}
-                            @endif
-                        </span>
-                    </div>
-                </div>
-
-                {{-- Username API --}}
-                <div class="row align-items-center">
-                    <div class="col-md-12 mb-3">
-                        <label for="username"><strong>{{ __('server.label.username') }}</strong></label>
-                        {!! Form::text('username', null, [
-                            'placeholder' => __('server.placeholder.username'),
-                            'class' => 'form-control',
-                            'id' => 'username',
-                        ]) !!}
-                        <span id="error_username" class="text-danger">
-                            @if ($errors->has('username'))
-                                {{ $errors->first('username') }}
-                            @endif
-                        </span>
-                    </div>
-                </div>
-
-                {{-- Password API --}}
-                <div class="row align-items-center">
-                    <div class="col-md-12 mb-3">
-                        <label for="password"><strong>{{ __('server.label.password') }}</strong></label>
-                        <div class="input-group">
-                            <input type="password" name="password"
-                                class="form-control @error('password') is-invalid @enderror" id="password"
-                                value="{{ old('password', $server->password) }}"
-                                placeholder="{{ __('server.placeholder.password') }}">
-                            <div class="input-group-append">
-                                <button class="btn btn-outline-secondary" type="button" id="togglePassword">
-                                    <i class="fas fa-eye" id="toggleIcon"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <span id="error_password" class="text-danger">
-                            @if ($errors->has('password'))
-                                {{ $errors->first('password') }}
-                            @endif
-                        </span>
-                    </div>
-                </div>
-
-                {{-- Port API --}}
-                <div class="row align-items-center">
-                    <div class="col-md-12 mb-3">
-                        <label for="port"><strong>{{ __('server.label.port') }}</strong></label>
-                        {!! Form::text('port', null, [
-                            'placeholder' => __('server.placeholder.port'),
-                            'class' => 'form-control',
-                            'id' => 'port',
-                        ]) !!}
-                        <span id="error_port" class="text-danger">
-                            @if ($errors->has('port'))
-                                {{ $errors->first('port') }}
-                            @endif
-                        </span>
-                    </div>
-                </div>
-
-                {{-- Versi RouterOS --}}
-                @if ($server->ros_version_id)
+                    {{-- Nama Server --}}
                     <div class="row align-items-center">
                         <div class="col-md-12 mb-3">
-                            <label for="ros_version_id"><strong>{{ __('server.label.ros_version') }}</strong></label>
-                            @if ($server->ros_version_id == 1)
-                                {{ __('autoisolir.placeholder.select-version-67') }}
-                            @elseif ($server->ros_version_id == 2)
-                                {{ __('autoisolir.placeholder.select-version-710') }}
-                            @endif
+                            <label for="name"><strong>{{ __('server.label.name') }}</strong></label>
+                            <input type="text" name="name" id="name"
+                                class="form-control @error('name') is-invalid @enderror"
+                                placeholder="{{ __('server.placeholder.name') }}"
+                                value="{{ old('name', $server->name ?? '') }}">
+                            <span id="error_name" class="text-danger">
+                                @error('name')
+                                    {{ $message }}
+                                @enderror
+                            </span>
                         </div>
                     </div>
-                @else
+
+                    {{-- Host / IP Router --}}
                     <div class="row align-items-center">
                         <div class="col-md-12 mb-3">
-                            <label
-                                for="ros_version_id"><strong>{{ __('autoisolir.label.select-version-ros') }}</strong></label>
+                            <label for="host"><strong>{{ __('server.label.host') }}</strong></label>
+                            <input type="text" name="host" id="host"
+                                class="form-control @error('host') is-invalid @enderror"
+                                placeholder="{{ __('server.placeholder.host') }}"
+                                value="{{ old('host', $server->host ?? '') }}">
+                            <span id="error_host" class="text-danger">
+                                @error('host')
+                                    {{ $message }}
+                                @enderror
+                            </span>
+                        </div>
+                    </div>
+
+                    {{-- Username API --}}
+                    <div class="row align-items-center">
+                        <div class="col-md-12 mb-3">
+                            <label for="username"><strong>{{ __('server.label.username') }}</strong></label>
+                            <input type="text" name="username" id="username"
+                                class="form-control @error('username') is-invalid @enderror"
+                                placeholder="{{ __('server.placeholder.username') }}"
+                                value="{{ old('username', $server->username ?? '') }}">
+                            <span id="error_username" class="text-danger">
+                                @error('username')
+                                    {{ $message }}
+                                @enderror
+                            </span>
+                        </div>
+                    </div>
+
+                    {{-- Password API --}}
+                    <div class="row align-items-center">
+                        <div class="col-md-12 mb-3">
+                            <label for="password"><strong>{{ __('server.label.password') }}</strong></label>
                             <div class="input-group">
-                                <select name="ros_version_id" class="form-control">
-                                    <option value="">{{ __('autoisolir.placeholder.select-version-ros') }}
-                                    </option>
-                                    <option value="1">{{ __('autoisolir.placeholder.select-version-67') }}
-                                    </option>
-                                    <option value="2">{{ __('autoisolir.placeholder.select-version-710') }}
-                                    </option>
-                                </select>
+                                <input type="password" name="password"
+                                    class="form-control @error('password') is-invalid @enderror" id="password"
+                                    value="{{ old('password', $server->password) }}"
+                                    placeholder="{{ __('server.placeholder.password') }}">
+                                <div class="input-group-append">
+                                    <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                        <i class="fas fa-eye" id="toggleIcon"></i>
+                                    </button>
+                                </div>
                             </div>
-                            @if ($errors->has('ros_version_id'))
-                                <span class="text-danger">{{ $errors->first('ros_version_id') }}</span>
-                            @endif
+                            <span id="error_password" class="text-danger">
+                                @error('password')
+                                    {{ $message }}
+                                @enderror
+                            </span>
                         </div>
                     </div>
-                @endif
 
-                {{-- Tombol Uji Koneksi API MikroTik --}}
-                <div class="row align-items-center mb-3">
-                    <div class="col-md-12">
-                        <button type="button" id="btn-test-api" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-plug me-1"></i> {{ __('server.label.test_connection') }}
-                        </button>
-                        <span id="api-test-spinner" class="spinner-border spinner-border-sm text-primary ms-2 d-none"
-                            role="status"></span>
-                        <input type="hidden" id="is_connected" name="is_connected"
-                            value="{{ $server->is_connected ?? 0 }}">
-                        <span id="badge-connected" class="ms-2">
-                            @if ($server->is_connected)
-                                <span
-                                    class="badge text-white bg-success font-size-12 align-middle">{{ __('server.label.connected') }}</span>
-                            @else
-                                <span
-                                    class="badge bg-red text-white font-size-12 align-middle">{{ __('server.label.disconnected') }}</span>
-                            @endif
-                        </span>
+                    {{-- Port API --}}
+                    <div class="row align-items-center">
+                        <div class="col-md-12 mb-3">
+                            <label for="port"><strong>{{ __('server.label.port') }}</strong></label>
+                            <input type="text" name="port" id="port"
+                                class="form-control @error('port') is-invalid @enderror"
+                                placeholder="{{ __('server.placeholder.port') }}"
+                                value="{{ old('port', $server->port ?? '') }}">
+                            <span id="error_port" class="text-danger">
+                                @error('port')
+                                    {{ $message }}
+                                @enderror
+                            </span>
+                        </div>
                     </div>
-                </div>
 
-                {{-- ==================== FREERADIUS & COA SETTINGS ==================== --}}
-                <hr class="my-4">
-                <h6 class="fw-bold text-secondary mb-3">
-                    <i class="fas fa-network-wired me-1"></i> {{ __('server.header.radius_section') }}
-                </h6>
-
-                {{-- RADIUS Shared Secret --}}
-                <div class="row align-items-center">
-                    <div class="col-md-12 mb-3">
-                        <label for="radius_secret"><strong>{{ __('server.label.radius_secret') }}</strong></label>
-                        <div class="input-group">
-                            <input type="password" name="radius_secret"
-                                class="form-control @error('radius_secret') is-invalid @enderror" id="radius_secret"
-                                value="{{ old('radius_secret', $server->radius_secret) }}"
-                                placeholder="{{ __('server.placeholder.radius_secret') }}">
-                            <div class="input-group-append">
-                                <button class="btn btn-outline-secondary" type="button" id="toggleRadiusSecret">
-                                    <i class="fas fa-eye" id="toggleRadiusIcon"></i>
-                                </button>
+                    {{-- Versi RouterOS --}}
+                    @if ($server->ros_version_id)
+                        <div class="row align-items-center">
+                            <div class="col-md-12 mb-3">
+                                <label><strong>{{ __('server.label.ros_version') }}</strong></label>
+                                @if ($server->ros_version_id == 1)
+                                    {{ __('autoisolir.placeholder.select-version-67') }}
+                                @elseif ($server->ros_version_id == 2)
+                                    {{ __('autoisolir.placeholder.select-version-710') }}
+                                @endif
                             </div>
                         </div>
-                        <small class="form-text text-muted">{{ __('server.help.radius_secret') }}</small>
-                        <span id="error_radius_secret" class="text-danger">
-                            @if ($errors->has('radius_secret'))
-                                {{ $errors->first('radius_secret') }}
-                            @endif
-                        </span>
+                    @else
+                        <div class="row align-items-center">
+                            <div class="col-md-12 mb-3">
+                                <label
+                                    for="ros_version_id"><strong>{{ __('autoisolir.label.select-version-ros') }}</strong></label>
+                                <div class="input-group">
+                                    <select name="ros_version_id" id="ros_version_id"
+                                        class="form-control @error('ros_version_id') is-invalid @enderror">
+                                        <option value="">{{ __('autoisolir.placeholder.select-version-ros') }}
+                                        </option>
+                                        <option value="1" @selected(old('ros_version_id') == '1')>
+                                            {{ __('autoisolir.placeholder.select-version-67') }}</option>
+                                        <option value="2" @selected(old('ros_version_id') == '2')>
+                                            {{ __('autoisolir.placeholder.select-version-710') }}</option>
+                                    </select>
+                                </div>
+                                @error('ros_version_id')
+                                    <span class="text-danger">{{ $message }}</span>
+                                @enderror
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Tombol Uji Koneksi API MikroTik --}}
+                    <div class="row align-items-center mb-3">
+                        <div class="col-md-12">
+                            <button type="button" id="btn-test-api" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-plug me-1"></i> {{ __('server.label.test_connection') }}
+                            </button>
+                            <span id="api-test-spinner"
+                                class="spinner-border spinner-border-sm text-primary ms-2 d-none" role="status"></span>
+                            <input type="hidden" id="is_connected" name="is_connected"
+                                value="{{ old('is_connected', $server->is_connected ?? 0) }}">
+                            <span id="badge-connected" class="ms-2">
+                                @if ($server->is_connected)
+                                    <span
+                                        class="badge text-white bg-success font-size-12 align-middle">{{ __('server.label.connected') }}</span>
+                                @else
+                                    <span
+                                        class="badge bg-red text-white font-size-12 align-middle">{{ __('server.label.disconnected') }}</span>
+                                @endif
+                            </span>
+                        </div>
                     </div>
+
+                    {{-- ==================== FREERADIUS & COA SETTINGS ==================== --}}
+                    <hr class="my-4">
+                    <h6 class="fw-bold text-secondary mb-3">
+                        <i class="fas fa-network-wired me-1"></i> {{ __('server.header.radius_section') }}
+                    </h6>
+
+                    {{-- RADIUS Shared Secret --}}
+                    <div class="row align-items-center">
+                        <div class="col-md-12 mb-3">
+                            <label for="radius_secret"><strong>{{ __('server.label.radius_secret') }}</strong></label>
+                            <div class="input-group">
+                                <input type="password" name="radius_secret"
+                                    class="form-control @error('radius_secret') is-invalid @enderror"
+                                    id="radius_secret" value="{{ old('radius_secret', $server->radius_secret) }}"
+                                    placeholder="{{ __('server.placeholder.radius_secret') }}">
+                                <div class="input-group-append">
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleRadiusSecret">
+                                        <i class="fas fa-eye" id="toggleRadiusIcon"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <small class="form-text text-muted">{{ __('server.help.radius_secret') }}</small>
+                            <span id="error_radius_secret" class="text-danger">
+                                @error('radius_secret')
+                                    {{ $message }}
+                                @enderror
+                            </span>
+                        </div>
+                    </div>
+
+                    {{-- RADIUS CoA/PoD Port --}}
+                    <div class="row align-items-center">
+                        <div class="col-md-12 mb-3">
+                            <label for="coa_port"><strong>{{ __('server.label.coa_port') }}</strong></label>
+                            <input type="number" name="coa_port" id="coa_port"
+                                class="form-control @error('coa_port') is-invalid @enderror"
+                                placeholder="{{ __('server.placeholder.coa_port') }}"
+                                value="{{ old('coa_port', $server->coa_port ?? '') }}">
+                            <small class="form-text text-muted">{{ __('server.help.coa_port') }}</small>
+                            <span id="error_coa_port" class="text-danger">
+                                @error('coa_port')
+                                    {{ $message }}
+                                @enderror
+                            </span>
+                        </div>
+                    </div>
+
+                    {{-- Tombol AJAX Test RADIUS & CoA --}}
+                    <div class="row align-items-center mb-3">
+                        <div class="col-md-12">
+                            <button type="button" id="btn-test-radius" class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-bolt me-1"></i> {{ __('server.button.test_radius') }}
+                            </button>
+                            <span id="radius-test-spinner"
+                                class="spinner-border spinner-border-sm text-info ms-2 d-none" role="status"></span>
+                            <div id="radius-test-result" class="mt-2 d-none"></div>
+                        </div>
+                    </div>
+                    {{-- ==================== END FREERADIUS SETTINGS ==================== --}}
                 </div>
 
-                {{-- RADIUS CoA/PoD Port --}}
-                <div class="row align-items-center">
-                    <div class="col-md-12 mb-3">
-                        <label for="coa_port"><strong>{{ __('server.label.coa_port') }}</strong></label>
-                        {!! Form::number('coa_port', null, [
-                            'placeholder' => __('server.placeholder.coa_port'),
-                            'class' => 'form-control',
-                            'id' => 'coa_port',
-                        ]) !!}
-                        <small class="form-text text-muted">{{ __('server.help.coa_port') }}</small>
-                        <span id="error_coa_port" class="text-danger">
-                            @if ($errors->has('coa_port'))
-                                {{ $errors->first('coa_port') }}
-                            @endif
-                        </span>
-                    </div>
+                <div class="card-footer">
+                    <a class="btn btn-primary" href="{{ route('servers.index') }}">
+                        <i class="fa fa-arrow-left me-1"></i> {{ __('server.button.back') }}
+                    </a>
+                    <button type="submit" class="btn btn-success" id="button-save">
+                        <i class="fa fa-save me-1"></i> {{ __('server.button.update') }}
+                    </button>
                 </div>
-
-                {{-- Tombol AJAX Test RADIUS & CoA --}}
-                <div class="row align-items-center mb-3">
-                    <div class="col-md-12">
-                        <button type="button" id="btn-test-radius" class="btn btn-outline-info btn-sm">
-                            <i class="fas fa-bolt me-1"></i> {{ __('server.button.test_radius') }}
-                        </button>
-                        <span id="radius-test-spinner" class="spinner-border spinner-border-sm text-info ms-2 d-none"
-                            role="status"></span>
-                        <div id="radius-test-result" class="mt-2 d-none"></div>
-                    </div>
-                </div>
-                {{-- ==================== END FREERADIUS SETTINGS ==================== --}}
-            </div>
-
-            <div class="card-footer">
-                <a class="btn btn-primary" href="{{ route('servers.index') }}">
-                    <i class="fa fa-arrow-left me-1"></i> {{ __('server.button.back') }}
-                </a>
-                <button type="submit" class="btn btn-success" id="button-save">
-                    <i class="fa fa-save me-1"></i> {{ __('server.button.update') }}
-                </button>
-            </div>
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
 

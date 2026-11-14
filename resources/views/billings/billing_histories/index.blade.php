@@ -33,17 +33,16 @@
                         <div class="row gx-3 gy-2">
                             <!-- Search Customer Name -->
                             <div class="col-md-4 col-lg-3">
-                                {!! Form::input('search', 'search_name', null, [
-                                    'placeholder' => __('billing.placeholder.search-customer-name'),
-                                    'class' => 'form-control',
-                                ]) !!}
+                                <input type="search" name="search_name" class="form-control" placeholder="{{ __('billing.placeholder.search-customer-name') }}" value="{{ request('search_name') }}">
                             </div>
                             @canany(['view-customers-widget-total'])
                                 <div class="col-md-4 col-lg-3">
-                                    {!! Form::select('admin_name', $userAdmin, null, [
-                                        'placeholder' => __('billing.placeholder.search-admin'),
-                                        'class' => 'form-control',
-                                    ]) !!}
+                                    <select name="admin_name" class="form-control">
+                                        <option value="">{{ __('billing.placeholder.search-admin') }}</option>
+                                        @foreach ($userAdmin as $id => $name)
+                                            <option value="{{ $id }}" {{ request('admin_name') == $id ? 'selected' : '' }}>{{ $name }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
                             @endcanany
                         </div>
@@ -96,12 +95,12 @@
 
                             <label for="periode_id" class="fw-bold text-primary mb-0 me-2">Periode</label>
 
-                            {!! Form::select('periode_id', $periode, request('periode_id'), [
-                                'placeholder' => __('billing.placeholder.all-period'),
-                                'class' => 'form-control form-control-sm w-auto',
-                                'onchange' => 'this.form.submit()',
-                                'id' => 'periode_id',
-                            ]) !!}
+                            <select name="periode_id" class="form-control form-control-sm w-auto" onchange="this.form.submit()" id="periode_id">
+                                <option value="">{{ __('billing.placeholder.all-period') }}</option>
+                                @foreach ($periode as $id => $name)
+                                    <option value="{{ $id }}" {{ request('periode_id') == $id ? 'selected' : '' }}>{{ $name }}</option>
+                                @endforeach
+                            </select>
                         </form>
 
                         {{-- Form Export Selected --}}
@@ -121,10 +120,11 @@
                             <label for="export_year"
                                 class="fw-bold text-dark mb-0 me-2">{{ __('billing.label.export-year') }}</label>
 
-                            {!! Form::select('export_year', $years, request('export_year', now()->year), [
-                                'class' => 'form-control form-control-sm w-auto me-2',
-                                'id' => 'export_year',
-                            ]) !!}
+                            <select name="export_year" class="form-control form-control-sm w-auto me-2" id="export_year">
+                                @foreach ($years as $val => $lbl)
+                                    <option value="{{ $val }}" {{ request('export_year', now()->year) == $val ? 'selected' : '' }}>{{ $lbl }}</option>
+                                @endforeach
+                            </select>
 
                             <button type="submit" class="btn btn-sm btn-dark text-nowrap">
                                 <i class="fas fa-download"></i> {{ __('billing.button.export-year') }}
@@ -251,11 +251,11 @@
             <form method="GET" id="paginationForm" class="d-inline-flex align-items-center mb-3">
                 <label for="perPage"
                     class="fw-bold text-primary me-2 mb-0 me-1">{{ __('billing.label.show') }}</label>
-                {!! Form::select('perPage', [25 => 25, 50 => 50, 100 => 100], request('perPage'), [
-                    'class' => 'form-control form-control-sm w-auto',
-                    'onchange' => 'this.form.submit()',
-                    'id' => 'perPage',
-                ]) !!}
+                <select name="perPage" class="form-control form-control-sm w-auto" onchange="this.form.submit()" id="perPage">
+                    @foreach ([25 => 25, 50 => 50, 100 => 100] as $val => $lbl)
+                        <option value="{{ $val }}" {{ request('perPage') == $val ? 'selected' : '' }}>{{ $lbl }}</option>
+                    @endforeach
+                </select>
             </form>
         </div>
     </div>

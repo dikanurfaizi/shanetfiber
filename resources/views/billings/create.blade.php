@@ -38,7 +38,8 @@
                     </div>
                 </form>
 
-                {!! Form::open(['route' => 'billings.store', 'method' => 'POST']) !!}
+                <form action="{{ route('billings.store') }}" method="POST">
+                    @csrf
 
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
@@ -64,7 +65,7 @@
                 <a class="btn btn-primary" href="{{ route('billings.index') }}"><i class="fa fa-arrow-left"></i>
                     {{ __('billing.button.cancel') }}</a>
             </div>
-            {!! Form::close() !!}
+            </form>
             <div class="card-body">
                 <table id="billingsTable" cellspacing="0" width="100%"
                     class="table  datatable-loading no-footer sortable searchable">

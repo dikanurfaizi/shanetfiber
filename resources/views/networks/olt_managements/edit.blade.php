@@ -60,10 +60,11 @@
                     <label for="olt_type" class="form-label">{{ __('networks.label.olt-type') }}</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-server"></i></span>
-                        {!! Form::select('olt_type', ['' => 'Select OLT Type'] + $oidMappings->toArray(), $olt->oid_mapping_id ?? null, [
-                            'class' => 'form-control',
-                            'id' => 'olt_type',
-                        ]) !!}
+                        <select name="olt_type" class="form-control" id="olt_type">
+                            @foreach (['' => 'Select OLT Type'] + $oidMappings->toArray() as $k => $v)
+                                <option value="{{ $k }}" {{ old('olt_type', $olt->oid_mapping_id ?? '') == $k ? 'selected' : '' }}>{{ $v }}</option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
 

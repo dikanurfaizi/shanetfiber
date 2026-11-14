@@ -6,7 +6,9 @@
     <div class="row">
         <div class="col-lg-12">
 
-            {!! Form::model($autoisolir, ['method' => 'PATCH', 'route' => ['autoisolir.update', $autoisolir->id]]) !!}
+            <form action="{{ route('autoisolir.update', $autoisolir->id) }}" method="POST">
+                @csrf
+                @method('PATCH')
 
             <div class="card-body col-lg-8">
 
@@ -32,10 +34,12 @@
                     <div class="col-md-12 mb-3">
                         <label for="profile_isolir"><strong>{{ __('autoisolir.label.profile') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::select('profile_id', $collectionProfiles, null, [
-                                'placeholder' => __('autoisolir.placeholder.select-profile'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <select name="profile_id" class="form-control">
+                                <option value="">{{ __('autoisolir.placeholder.select-profile') }}</option>
+                                @foreach ($collectionProfiles as $id => $name)
+                                    <option value="{{ $id }}" {{ old('profile_id', $autoisolir->profile_id) == $id ? 'selected' : '' }}>{{ $name }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         @if ($errors->has('profile_id'))
                             <span class="text-danger">{{ $errors->first('profile_id') }}</span>
@@ -48,10 +52,7 @@
                         <label
                             for="address_list_isolir"><strong>{{ __('autoisolir.label.address_list_isolir') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('address_list_isolir', null, [
-                                'placeholder' => __('autoisolir.placeholder.address_list_isolir'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="address_list_isolir" class="form-control" placeholder="{{ __('autoisolir.placeholder.address_list_isolir') }}" value="{{ old('address_list_isolir', $autoisolir->address_list_isolir) }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="fas fa-plus"></span>
@@ -87,12 +88,7 @@
                     <div class="col-md-12 mb-3">
                         <label for="due_date"><strong>{{ __('autoisolir.label.due-date') }}</strong></label>
                         <div class="input-group mb-3">
-                            {!! Form::text('due_date', null, [
-                                'placeholder' => __('autoisolir.placeholder.due-date'),
-                                'class' => 'form-control',
-                                'id' => 'due_date',
-                                'readonly',
-                            ]) !!}
+                            <input type="text" name="due_date" id="due_date" class="form-control" placeholder="{{ __('autoisolir.placeholder.due-date') }}" value="{{ old('due_date', $autoisolir->due_date) }}" readonly>
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="far fa-calendar-alt"></span>
@@ -109,10 +105,7 @@
                         <label
                             for="comment_payment"><strong>{{ __('autoisolir.label.comment-payment') }}</strong></label>
                         <div class="input-group mb-3">
-                            {!! Form::text('comment_payment', null, [
-                                'placeholder' => __('autoisolir.placeholder.comment-payment'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="comment_payment" class="form-control" placeholder="{{ __('autoisolir.placeholder.comment-payment') }}" value="{{ old('comment_payment', $autoisolir->comment_payment) }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="far fa-comment-alt"></span>
@@ -129,10 +122,7 @@
                         <label
                             for="comment_unpayment"><strong>{{ __('autoisolir.label.comment-unpayment') }}</strong></label>
                         <div class="input-group mb-3">
-                            {!! Form::text('comment_unpayment', null, [
-                                'placeholder' => __('autoisolir.placeholder.comment-unpayment'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="comment_unpayment" class="form-control" placeholder="{{ __('autoisolir.placeholder.comment-unpayment') }}" value="{{ old('comment_unpayment', $autoisolir->comment_unpayment) }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="fas fa-comment-alt"></span>
@@ -154,7 +144,7 @@
                             class="fa fa-arrow-left"></i> &nbsp {{ __('autoisolir.button.back') }}</a>
                 </div>
             </div>
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
     @section('custom_scripts')

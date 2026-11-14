@@ -10,10 +10,11 @@ use App\Models\Customers\Customer;
 
 class CustomerBillingInfoService
 {
-    public function getCurrentBillingPeriod(string $traceId): string
+    public function getCurrentBillingPeriod(string $traceId): ?string
     {
         try {
-            $period = BillingPeriode::latest('created_at')->value('name');
+            // Ambil nama periode terbaru, berikan fallback string kosong jika null
+            $period = BillingPeriode::latest('created_at')->value('name') ?? '';
 
             LogHelper::logInfo(
                 null,
@@ -39,7 +40,9 @@ class CustomerBillingInfoService
                 'Failed to get current billing period',
                 $traceId
             );
-            throw $e;
+
+            // Kembalikan string kosong alih-alih melempar error agar aplikasi tetap berjalan aman
+            return '';
         }
     }
 
@@ -58,7 +61,8 @@ class CustomerBillingInfoService
 
             $totalAmount = $latestBilling?->total_amount ?? 0;
             $dueDate     = $latestBilling?->due_date ?? null;
-            $taxAmount = $latestBilling?->tax_amount ?? 0;
+            $taxAmount   = $latestBilling?->tax_amount ?? 0;
+
             if ($latestBilling?->status === 'LS') {
                 $billingStatus = 'PAID';
             } elseif ($latestBilling?->status === 'BL') {
@@ -86,22 +90,22 @@ class CustomerBillingInfoService
                 ->first();
 
             if (
-                $lastPaidBilling
+                $lastPaidBilling && $lastPaidBilling->billingPayment
             ) {
-                $lastPayment     = $lastPaidBilling->billingPayment->amount_paid;
-                $lastPaymentTime = $lastPaidBilling->billingPayment->payment_time;
+                $lastPayment     = $lastPaidBilling->billingPayment->amount_paid ?? 0;
+                $lastPaymentTime = $lastPaidBilling->billingPayment->payment_time ?? null;
             }
 
             // 3. Hitung unpaid (tanpa load semua billing)
             $unpaidSum = Billing::where('customer_id', $customer->id)
                 ->whereNotIn('status', ['LS', 'VD'])
-                ->sum('total_amount');
+                ->sum('total_amount') ?? 0;
 
-            // Build result
+            // Build result dengan null-safe operator yang aman
             $result = [
                 'lastPaymentTime'      => $lastPaymentTime,
                 'lastPayment'          => $lastPayment,
-                'billingPeriods'       => $latestBilling?->billingSubscription?->billingPeriode?->name,
+                'billingPeriods'       => $latestBilling?->billingSubscription?->billingPeriode?->name ?? '',
                 'totalAmount'          => $totalAmount,
                 'taxAmount'            => $taxAmount,
                 'dueDate'              => $dueDate,
@@ -127,14 +131,25 @@ class CustomerBillingInfoService
                         'file'    => $e->getFile(),
                         'line'    => $e->getLine(),
                     ],
-                    'customer_id' => $customer->id,
+                    'customer_id' => $customer->id ?? null,
                 ],
                 500,
                 'Failed to get customer details',
                 $traceId
             );
 
-            throw $e;
+            // Kembalikan array kosong dengan struktur aman agar UI tidak error fatal
+            return [
+                'lastPaymentTime'      => null,
+                'lastPayment'          => 0,
+                'billingPeriods'       => '',
+                'totalAmount'          => 0,
+                'taxAmount'            => 0,
+                'dueDate'              => null,
+                'notYetPaid'           => 0,
+                'billingStatus'        => 'UNBILL',
+                'stampText'            => 'BELUM TAGIHAN',
+            ];
         }
     }
 }

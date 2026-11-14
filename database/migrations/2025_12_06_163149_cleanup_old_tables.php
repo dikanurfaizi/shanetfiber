@@ -12,11 +12,9 @@ return new class extends Migration {
         /*
         |--------------------------------------------------------------------------
         | 1. Tambah kolom created_by & updated_by (nullable)
-        |   → Ditambah sebelum snapshot di-drop
         |--------------------------------------------------------------------------
         */
         Schema::table('billings', function (Blueprint $table) {
-
             if (!Schema::hasColumn('billings', 'created_by')) {
                 $table->unsignedBigInteger('created_by')->nullable()->after('created_at');
             }
@@ -26,61 +24,54 @@ return new class extends Migration {
             }
         });
 
-
         /*
         |--------------------------------------------------------------------------
         | 2. Migrasi created_name → created_by
         |--------------------------------------------------------------------------
         */
-        $billings = DB::table('billings')->select('id', 'created_name')->get();
+        if (Schema::hasColumn('billings', 'created_name')) {
+            $billings = DB::table('billings')->select('id', 'created_name')->get();
 
-        foreach ($billings as $b) {
+            foreach ($billings as $b) {
+                if (!$b->created_name) {
+                    continue;
+                }
 
-            if (!$b->created_name) {
-                continue; // billing dibuat sistem → created_by tetap null
+                $user = DB::table('users')
+                    ->where('name', $b->created_name)
+                    ->first();
+
+                DB::table('billings')
+                    ->where('id', $b->id)
+                    ->update([
+                        'created_by' => $user->id ?? null
+                    ]);
             }
-
-            // Cari user berdasarkan nama lama
-            $user = DB::table('users')
-                ->where('name', $b->created_name)
-                ->first();
-
-            DB::table('billings')
-                ->where('id', $b->id)
-                ->update([
-                    'created_by' => $user->id ?? null
-                ]);
         }
-
 
         /*
         |--------------------------------------------------------------------------
-        | 3. Finalisasi ENUM status_new → status
+        | 3. Finalisasi ENUM status_new → status (Menggunakan SQL Statement Langsung)
         |--------------------------------------------------------------------------
         */
         if (Schema::hasColumn('billings', 'status_new')) {
-
-            // Drop status lama
+            // Drop status lama jika ada
             if (Schema::hasColumn('billings', 'status')) {
                 Schema::table('billings', function (Blueprint $table) {
                     $table->dropColumn('status');
                 });
             }
 
-            // Rename status_new → status
-            Schema::table('billings', function (Blueprint $table) {
-                $table->renameColumn('status_new', 'status');
-            });
+            // Rename status_new → status menggunakan ALTER TABLE MODIFY yang bersih dari bug default value
+            DB::statement("ALTER TABLE `billings` CHANGE `status_new` `status` ENUM('BL','PL','LS','PR','VD') NOT NULL DEFAULT 'BL'");
         }
-
 
         /*
         |--------------------------------------------------------------------------
-        | 4. Drop kolom snapshot lama → setelah migrasi data aman
+        | 4. Drop kolom snapshot lama & pasang Foreign Key
         |--------------------------------------------------------------------------
         */
         Schema::table('billings', function (Blueprint $table) {
-
             $drop = [
                 'customer_name',
                 'customer_address',
@@ -96,25 +87,25 @@ return new class extends Migration {
             }
 
             // Tambahkan foreign key setelah data dimigrasi
-            $table->foreign('created_by')
-                ->references('id')->on('users')
-                ->nullOnDelete();
+            try {
+                $table->foreign('created_by')
+                    ->references('id')->on('users')
+                    ->nullOnDelete();
+            } catch (\Throwable $e) {
+            }
 
-            $table->foreign('updated_by')
-                ->references('id')->on('users')
-                ->nullOnDelete();
+            try {
+                $table->foreign('updated_by')
+                    ->references('id')->on('users')
+                    ->nullOnDelete();
+            } catch (\Throwable $e) {
+            }
         });
     }
 
     public function down(): void
     {
-        /*
-    |--------------------------------------------------------------------------
-    | 1. Tambah kembali snapshot columns (opsional)
-    |--------------------------------------------------------------------------
-    */
         Schema::table('billings', function (Blueprint $table) {
-
             if (!Schema::hasColumn('billings', 'customer_name')) {
                 $table->string('customer_name')->nullable();
             }
@@ -153,32 +144,9 @@ return new class extends Migration {
             }
         });
 
-        /*
-    |--------------------------------------------------------------------------
-    | 2. STEP TERPISAH — TAMBAH status_old
-    |--------------------------------------------------------------------------
-    */
-        if (
-            Schema::hasColumn('billings', 'status') &&
-            !Schema::hasColumn('billings', 'status_old')
-        ) {
-            Schema::table('billings', function (Blueprint $table) {
-                $table->enum('status_old', ['BL', 'PL', 'LS', 'NP'])
-                    ->nullable()
-                    ->after('status');
-            });
-        }
-
-        /*
-    |--------------------------------------------------------------------------
-    | 3. STEP TERPISAH — drop status, rename status_old → status
-    |--------------------------------------------------------------------------
-    */
-        if (Schema::hasColumn('billings', 'status_old')) {
-            Schema::table('billings', function (Blueprint $table) {
-                $table->dropColumn('status');
-                $table->renameColumn('status_old', 'status');
-            });
+        // Revert status enum back if needed
+        if (Schema::hasColumn('billings', 'status')) {
+            DB::statement("ALTER TABLE `billings` CHANGE `status` `status` ENUM('BL','PL','LS','NP') NULL");
         }
     }
 };

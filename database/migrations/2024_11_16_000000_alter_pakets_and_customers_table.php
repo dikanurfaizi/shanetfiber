@@ -12,7 +12,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Tambahkan softDeletes di tabel pakets jika belum ada
+        // 1. Tambahkan softDeletes di tabel pakets jika belum ada
         if (Schema::hasTable('pakets')) {
             Schema::table('pakets', function (Blueprint $table) {
                 if (!Schema::hasColumn('pakets', 'deleted_at')) {
@@ -21,19 +21,9 @@ return new class extends Migration
             });
         }
 
-        // Modifikasi tabel customers
+        // 2. Modifikasi tabel customers
         if (Schema::hasTable('customers')) {
             Schema::table('customers', function (Blueprint $table) {
-                // Ubah secret_id menjadi nullable jika kolom sudah ada
-                if (Schema::hasColumn('customers', 'secret_id')) {
-                    $table->string('secret_id')->nullable()->change();
-                }
-
-                // Ubah kolom ppp_type_id menjadi nullable dengan query langsung
-                if (Schema::hasColumn('customers', 'ppp_type_id')) {
-                    DB::statement('ALTER TABLE customers MODIFY ppp_type_id BIGINT UNSIGNED NULL');
-                }
-
                 // Tambahkan kolom baru jika belum ada
                 if (!Schema::hasColumn('customers', 'simpleque_id')) {
                     $table->string('simpleque_id')->nullable();
@@ -62,6 +52,15 @@ return new class extends Migration
                     $table->softDeletes();
                 }
             });
+
+            // Ubah secret_id dan ppp_type_id menjadi nullable menggunakan SQL Statement langsung (Aman dari error Doctrine)
+            if (Schema::hasColumn('customers', 'secret_id')) {
+                DB::statement('ALTER TABLE customers MODIFY secret_id VARCHAR(255) NULL');
+            }
+
+            if (Schema::hasColumn('customers', 'ppp_type_id')) {
+                DB::statement('ALTER TABLE customers MODIFY ppp_type_id BIGINT UNSIGNED NULL');
+            }
         }
     }
 
@@ -81,17 +80,16 @@ return new class extends Migration
 
         // Revert perubahan di tabel customers
         if (Schema::hasTable('customers')) {
+            // Kembalikan secret_id dan ppp_type_id menjadi non-nullable via SQL Statement
+            if (Schema::hasColumn('customers', 'secret_id')) {
+                DB::statement('ALTER TABLE customers MODIFY secret_id VARCHAR(255) NOT NULL');
+            }
+
+            if (Schema::hasColumn('customers', 'ppp_type_id')) {
+                DB::statement('ALTER TABLE customers MODIFY ppp_type_id BIGINT UNSIGNED NOT NULL');
+            }
+
             Schema::table('customers', function (Blueprint $table) {
-                // Kembalikan secret_id menjadi non-nullable
-                if (Schema::hasColumn('customers', 'secret_id')) {
-                    $table->string('secret_id')->nullable(false)->change();
-                }
-
-                // Kembalikan ppp_type_id menjadi non-nullable jika kolom ada
-                if (Schema::hasColumn('customers', 'ppp_type_id')) {
-                    DB::statement('ALTER TABLE customers MODIFY ppp_type_id BIGINT UNSIGNED NOT NULL');
-                }
-
                 // Hapus kolom baru jika ada
                 if (Schema::hasColumn('customers', 'simpleque_id')) {
                     $table->dropColumn('simpleque_id');

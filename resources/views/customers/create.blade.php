@@ -6,17 +6,20 @@
 
     <div class="row">
         <div class="col-lg-12">
-            {!! Form::open(['route' => 'customers.store', 'method' => 'POST']) !!}
+            <form action="{{ route('customers.store') }}" method="POST">
+                @csrf
             <div class="card-body col-lg-8">
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="user_id"><strong>{{ __('customer.label.responsibility') }}</strong><span
                                 class="text-danger">*</span></label>
                         <div class="input-group">
-                            {!! Form::select('user_id', $users->pluck('name', 'id'), null, [
-                                'placeholder' => __('customer.placeholder.responsibility'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <select name="user_id" class="form-control">
+                                <option value="">{{ __('customer.placeholder.responsibility') }}</option>
+                                @foreach ($users->pluck('name', 'id') as $id => $name)
+                                    <option value="{{ $id }}" {{ old('user_id') == $id ? 'selected' : '' }}>{{ $name }}</option>
+                                @endforeach
+                            </select>
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="fas fa-user"></span>
@@ -33,11 +36,12 @@
                     <div class="col-md-12 mb-3">
                         <label for="server"><strong>{{ __('customer.label.server') }}</strong><span
                                 class="text-danger">*</span></label>
-                        {!! Form::select('mikrotik_id', $mikrotiks, null, [
-                            'placeholder' => 'Select Server',
-                            'class' => 'form-control',
-                            'id' => 'server-dropdown',
-                        ]) !!}
+                        <select name="mikrotik_id" class="form-control" id="server-dropdown">
+                            <option value="">Select Server</option>
+                            @foreach ($mikrotiks as $id => $name)
+                                <option value="{{ $id }}" {{ old('mikrotik_id') == $id ? 'selected' : '' }}>{{ $name }}</option>
+                            @endforeach
+                        </select>
                         @if ($errors->has('mikrotik_id'))
                             <span class="text-danger">{{ $errors->first('mikrotik_id') }}</span>
                         @endif
@@ -45,12 +49,12 @@
                 </div>
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
-                        {!! Form::select('package_id', $pppprofiles, null, [
-                            'placeholder' => 'Select package',
-                            'class' => 'form-control d-none', // awalnya disembunyikan
-                            'id' => 'package-dropdown',
-                            'onchange' => 'updateMemberDropdown(this.value); calculateDiscount();',
-                        ]) !!}
+                        <select name="package_id" class="form-control d-none" id="package-dropdown" onchange="updateMemberDropdown(this.value); calculateDiscount();">
+                            <option value="">Select package</option>
+                            @foreach ($pppprofiles as $id => $name)
+                                <option value="{{ $id }}" {{ old('package_id') == $id ? 'selected' : '' }}>{{ $name }}</option>
+                            @endforeach
+                        </select>
 
                         @if ($errors->has('package_id'))
                             <span class="text-danger">{{ $errors->first('package_id') }}</span>
@@ -82,12 +86,12 @@
 
                 <div id="input-ppp" class="row align-items-center d-none">
                     <div class="col-md-12 mb-3">
-
-                        {!! Form::select('ppp_type_id', $pppservices, null, [
-                            'placeholder' => 'Select PPP Type',
-                            'class' => 'form-control',
-                            'id' => 'ppp_types_id',
-                        ]) !!}
+                        <select name="ppp_type_id" class="form-control" id="ppp_types_id">
+                            <option value="">Select PPP Type</option>
+                            @foreach ($pppservices as $id => $name)
+                                <option value="{{ $id }}" {{ old('ppp_type_id') == $id ? 'selected' : '' }}>{{ $name }}</option>
+                            @endforeach
+                        </select>
                         @if ($errors->has('ppp_type_id'))
                             <span class="text-danger">{{ $errors->first('ppp_type_id') }}</span>
                         @endif
@@ -108,10 +112,7 @@
                     </div>
                     <div class="col-md-12 mb-3">
                         <div class="input-group">
-                            {!! Form::text('ip_static', null, [
-                                'placeholder' => __('customer.placeholder.ip_static'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="ip_static" class="form-control" placeholder="{{ __('customer.placeholder.ip_static') }}" value="{{ old('ip_static') }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="far fa-keyboard"></span>
@@ -126,10 +127,7 @@
                     <div class="col-md-12 mb-3">
 
                         <div class="input-group">
-                            {!! Form::text('mac_address', null, [
-                                'placeholder' => __('customer.placeholder.mac_address'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="mac_address" class="form-control" placeholder="{{ __('customer.placeholder.mac_address') }}" value="{{ old('mac_address') }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="far fa-keyboard"></span>
@@ -148,7 +146,7 @@
                         <label for="name"><strong>{{ __('customer.label.name') }}</strong><span
                                 class="text-danger">*</span></label>
                         <div class="input-group ">
-                            {!! Form::text('name', null, ['placeholder' => __('customer.placeholder.name'), 'class' => 'form-control']) !!}
+                            <input type="text" name="name" class="form-control" placeholder="{{ __('customer.placeholder.name') }}" value="{{ old('name') }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="fas fa-user"></span>
@@ -164,10 +162,7 @@
                     <div class="col-md-12 mb-3">
                         <label for="contact"><strong>{{ __('customer.label.contact') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('contact', null, [
-                                'placeholder' => __('customer.placeholder.contact'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="contact" class="form-control" placeholder="{{ __('customer.placeholder.contact') }}" value="{{ old('contact') }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="far fa-address-book"></span>
@@ -184,7 +179,7 @@
                         <label for="email"><strong>{{ __('customer.label.email') }}</strong><span
                                 class="text-danger">*</span></label>
                         <div class="input-group">
-                            {!! Form::text('email', null, ['placeholder' => __('customer.placeholder.email'), 'class' => 'form-control']) !!}
+                            <input type="text" name="email" class="form-control" placeholder="{{ __('customer.placeholder.email') }}" value="{{ old('email') }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="fas fa-envelope"></span>
@@ -201,10 +196,7 @@
                     <div class="col-md-12 mb-3">
                         <label for="password"><strong>{{ __('customer.label.password') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::password('password', [
-                                'placeholder' => __('customer.placeholder.password'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="password" name="password" class="form-control" placeholder="{{ __('customer.placeholder.password') }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="fas fa-lock"></span>
@@ -222,10 +214,7 @@
                         <label
                             for="password_confirmation"><strong>{{ __('customer.label.confirm-password') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::password('password_confirmation', [
-                                'placeholder' => __('customer.placeholder.confirm-password'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="password" name="password_confirmation" class="form-control" placeholder="{{ __('customer.placeholder.confirm-password') }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="fas fa-lock"></span>
@@ -241,10 +230,7 @@
                     <div class="col-md-12 mb-3">
                         <label for="address"><strong>{{ __('customer.label.address') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('address', null, [
-                                'placeholder' => __('customer.placeholder.address'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="address" class="form-control" placeholder="{{ __('customer.placeholder.address') }}" value="{{ old('address') }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="fas fa-home"></span>
@@ -308,21 +294,12 @@
                             <div class="col-md-6">
                                 <div class="input-group">
                                     <span class="input-group-text">Rp</span>
-                                    {!! Form::text('discount_nominal', null, [
-                                        'placeholder' => __('customer.placeholder.discount_nominal'),
-                                        'class' => 'form-control',
-                                        'id' => 'discount_nominal',
-                                    ]) !!}
+                                    <input type="text" name="discount_nominal" id="discount_nominal" class="form-control" placeholder="{{ __('customer.placeholder.discount_nominal') }}" value="{{ old('discount_nominal') }}">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="input-group">
-                                    {!! Form::text('discount', null, [
-                                        'placeholder' => __('customer.placeholder.discount'),
-                                        'class' => 'form-control',
-                                        'id' => 'discount',
-                                        'readonly' => true,
-                                    ]) !!}
+                                    <input type="text" name="discount" id="discount" class="form-control" placeholder="{{ __('customer.placeholder.discount') }}" value="{{ old('discount') }}" readonly>
                                     <span class="input-group-text">%</span>
                                 </div>
                             </div>
@@ -343,7 +320,7 @@
                 <a class="btn btn-sm btn-secondary" href="{{ route('customers.index') }}"><i
                         class="fa fa-arrow-left"></i> &nbsp {{ __('customer.button.back') }}</a>
             </div>
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
 

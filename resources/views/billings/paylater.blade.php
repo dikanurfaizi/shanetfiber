@@ -3,11 +3,9 @@
     <div class="card-header py-3">
         <h5 class="m-0 fw-bold text-primary">{{ __('billing.header.billing-paylater') }}</h5>
     </div>
-    {!! Form::model($billing, [
-        'method' => 'PATCH',
-        'route' => ['billings.postPaylater', $billing->slug],
-        'style' => 'display:inline',
-    ]) !!}
+    <form action="{{ route('billings.postPaylater', $billing->slug) }}" method="POST" style="display:inline">
+        @csrf
+        @method('PATCH')
     <div class="card-body col-lg-8">
         <div class="col-xs-12 col-sm-12 col-md-12">
             <div class="mb-3">
@@ -110,7 +108,7 @@
                 {{ __('billing.button.pay-later') }}
             </a>
         @endif
-        {!! Form::close() !!}
+        </form>
         <a class="btn btn-sm btn-primary" href="{{ route('billings.index') }}"><i class="fa fa-arrow-left"></i>
             {{ __('billing.button.back') }}</a>
 

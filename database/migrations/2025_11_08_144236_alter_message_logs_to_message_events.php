@@ -22,14 +22,9 @@ return new class extends Migration
             }
         }
 
-        // 3) Tambah/ubah kolom
+        // 3) Tambah/ubah kolom menggunakan Schema builder untuk penambahan baru
         Schema::table('message_events', function (Blueprint $table) {
-            // pastikan gateway_id ada di depan
-            if (Schema::hasColumn('message_events', 'gateway_id')) {
-                $table->unsignedBigInteger('gateway_id')->nullable()->change();
-                // ubah urutannya jadi sebelum customer_id
-                DB::statement("ALTER TABLE message_events MODIFY COLUMN gateway_id BIGINT(20) UNSIGNED NULL AFTER id");
-            } else {
+            if (!Schema::hasColumn('message_events', 'gateway_id')) {
                 $table->unsignedBigInteger('gateway_id')->nullable()->after('id');
             }
 
@@ -61,6 +56,14 @@ return new class extends Migration
                 $table->string('trace_id', 100)->after('message_id');
             }
         });
+
+        // Modifikasi posisi/tipe gateway_id menggunakan DB::statement (Aman dari error change())
+        if (Schema::hasColumn('message_events', 'gateway_id')) {
+            try {
+                DB::statement("ALTER TABLE message_events MODIFY COLUMN gateway_id BIGINT UNSIGNED NULL AFTER id");
+            } catch (\Throwable $e) {
+            }
+        }
 
         // 4) Buat kolom meta (JSON) jika belum ada
         if (!Schema::hasColumn('message_events', 'meta')) {
@@ -107,7 +110,6 @@ return new class extends Migration
             DB::statement("ALTER TABLE message_events MODIFY COLUMN status ENUM('success','failed','pending') NOT NULL DEFAULT 'success' AFTER meta");
             DB::statement("ALTER TABLE message_events MODIFY COLUMN response_message TEXT NULL AFTER response_code");
         } catch (\Throwable $e) {
-            // abaikan jika RDBMS tidak mendukung MODIFY AFTER
         }
 
         // 7) (Opsional) Index untuk query dashboard
@@ -133,7 +135,6 @@ return new class extends Migration
                 }
 
                 try {
-                    // Jika meta adalah JSON berisi {"text": "..."} ambil isinya; jika tidak, cast ke string
                     DB::statement("
                         UPDATE message_events
                         SET content = CASE
@@ -143,7 +144,6 @@ return new class extends Migration
                         END
                     ");
                 } catch (\Throwable $e) {
-                    // fallback: copy raw
                     try {
                         DB::statement("UPDATE message_events SET content = meta");
                     } catch (\Throwable $e2) {

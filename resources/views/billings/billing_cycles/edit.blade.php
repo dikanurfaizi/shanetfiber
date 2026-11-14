@@ -10,13 +10,15 @@
     <div class="row">
         <div class="col-lg-12">
 
-            {!! Form::model($packet, ['method' => 'PATCH', 'route' => ['packets.update', $packet->slug]]) !!}
+            <form action="{{ route('packets.update', $packet->slug) }}" method="POST">
+                @csrf
+                @method('PATCH')
             <div class="card-body col-lg-8">
 
                 <div class="row align-items-center">
                     <div class="col-md-12 mb-3">
                         <label for="name"><strong>{{ __('package.label.name') }}</strong></label>
-                        {!! Form::text('name', null, ['placeholder' => __('package.placeholder.name'), 'class' => 'form-control']) !!}
+                        <input type="text" name="name" class="form-control" placeholder="{{ __('package.placeholder.name') }}" value="{{ old('name', $packet->name) }}">
                         @if ($errors->has('name'))
                             <span class="text-danger">{{ $errors->first('name') }}</span>
                         @endif
@@ -46,7 +48,7 @@
                     <div class="col-md-12 mb-3">
                         <label for="price"><strong>{{ __('package.label.price') }}</strong></label>
 
-                        {!! Form::text('price', null, ['placeholder' => __('package.placeholder.price'), 'class' => 'form-control']) !!}
+                        <input type="text" name="price" class="form-control" placeholder="{{ __('package.placeholder.price') }}" value="{{ old('price', $packet->price) }}">
 
                         @if ($errors->has('price'))
                             <span class="text-danger">{{ $errors->first('price') }}</span>
@@ -58,10 +60,7 @@
                     <div class="col-md-12 mb-3">
                         <label for="description"><strong>{{ __('package.label.description') }}</strong></label>
 
-                        {!! Form::text('description', null, [
-                            'placeholder' => __('package.placeholder.description'),
-                            'class' => 'form-control',
-                        ]) !!}
+                        <input type="text" name="description" class="form-control" placeholder="{{ __('package.placeholder.description') }}" value="{{ old('description', $packet->description) }}">
 
                         @if ($errors->has('description'))
                             <span class="text-danger">{{ $errors->first('description') }}</span>
@@ -75,7 +74,7 @@
                 <a class="btn btn-secondary" href="{{ route('packets.index') }}"><i class="fa fa-arrow-left"></i> &nbsp
                     {{ __('package.button.cancel') }}</a>
             </div>
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
 </x-layouts.app-layout>

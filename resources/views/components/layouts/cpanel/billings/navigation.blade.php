@@ -138,10 +138,7 @@
             <div class="card-header py-3 rounded">
                 <form>
                     <div class="row align-items-center mb-1">
-                        {!! Form::text('search_name', null, [
-                            'placeholder' => __('billing.placeholder.search-customer-name'),
-                            'class' => 'form-control',
-                        ]) !!}
+                        <input type="text" name="search_name" class="form-control" placeholder="{{ __('billing.placeholder.search-customer-name') }}" value="{{ request('search_name') }}">
                     </div>
                     <div class="row align-items-center mb-1">
                         <select name="search_address" class="form-control">
@@ -154,16 +151,20 @@
                         </select>
                     </div>
                     <div class="row align-items-center mb-1">
-                        {!! Form::select('search_month', $months ?? [], null, [
-                            'placeholder' => __('billing.placeholder.search-month'),
-                            'class' => 'form-control',
-                        ]) !!}
+                        <select name="search_month" class="form-control">
+                            <option value="">{{ __('billing.placeholder.search-month') }}</option>
+                            @foreach ($months ?? [] as $k => $v)
+                                <option value="{{ $k }}" {{ request('search_month') == $k ? 'selected' : '' }}>{{ $v }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="row align-items-center mb-1">
-                        {!! Form::select('search_year', $years ?? [], null, [
-                            'placeholder' => __('billing.placeholder.search-year'),
-                            'class' => 'form-control',
-                        ]) !!}
+                        <select name="search_year" class="form-control">
+                            <option value="">{{ __('billing.placeholder.search-year') }}</option>
+                            @foreach ($years ?? [] as $k => $v)
+                                <option value="{{ $k }}" {{ request('search_year') == $k ? 'selected' : '' }}>{{ $v }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="row align-items-center mb-1">
                         <select name="payment_methode" class="form-control" id="payment-methode-dropdown">
@@ -179,10 +180,12 @@
                         </select>
                     </div>
                     <div class="row align-items-center mb-1">
-                        {!! Form::select('teller', $tellers ?? [], null, [
-                            'placeholder' => __('billing.placeholder.search-teller'),
-                            'class' => 'form-control',
-                        ]) !!}
+                        <select name="teller" class="form-control">
+                            <option value="">{{ __('billing.placeholder.search-teller') }}</option>
+                            @foreach ($tellers ?? [] as $k => $v)
+                                <option value="{{ $k }}" {{ request('teller') == $k ? 'selected' : '' }}>{{ $v }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="row align-items-center mt-3">
                         <span>

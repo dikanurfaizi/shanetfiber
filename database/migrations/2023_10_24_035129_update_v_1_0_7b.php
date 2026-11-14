@@ -2,7 +2,7 @@
 
 //use DB;
 use App\Models\Midtran;
-use App\Models\Customer;
+use App\Models\Customers\Customer;
 use App\Models\PaymentGateway;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;

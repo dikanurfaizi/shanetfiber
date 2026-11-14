@@ -752,11 +752,6 @@
                         return file.mime_type?.startsWith('image/');
                     },
 
-                    statusClass(status) {
-                        if (status === 'read') return 'text-primary';
-                        return 'text-muted';
-                    },
-
                     setReply(msg) {
                         this.replyingTo = msg;
                         this.$nextTick(() => {

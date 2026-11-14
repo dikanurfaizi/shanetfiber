@@ -41,6 +41,8 @@ return [
         'view' => 'View this role',
         'edit' => 'Edit this role',
         'delete' => 'Delete this role',
+        'enable' => 'Enable this role',
+        'disable' => 'Disable this role'
     ],
 
     'info' => [

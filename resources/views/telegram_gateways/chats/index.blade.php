@@ -47,12 +47,15 @@
                             <td>{{ $index + 1 }}</td>
                             <td>
                                 <div class="mb-3 mb-0">
-                                    {!! Form::select("user_id_$chat->id", $users->pluck('name', 'id'), $chat->user_id, [
-                                        'class' => 'form-control select2-user',
-                                        'placeholder' => 'Select Admin',
-                                        'data-id' => $chat->id,
-                                        'style' => 'width: 100%',
-                                    ]) !!}
+                                    <select name="user_id_{{ $chat->id }}" class="form-control select2-user"
+                                        data-id="{{ $chat->id }}" style="width: 100%">
+                                        <option value="">Select Admin</option>
+                                        @foreach ($users->pluck('name', 'id') as $userId => $userName)
+                                            <option value="{{ $userId }}" @selected($chat->user_id == $userId)>
+                                                {{ $userName }}
+                                            </option>
+                                        @endforeach
+                                    </select>
                                 </div>
                             </td>
                             <td>
@@ -74,8 +77,8 @@
                             </td>
                             <td>
                                 <div class="d-flex flex-wrap gap-2">
-                                    <button class="btn btn-sm btn-success btn-update-user" data-id="{{ $chat->id }}"
-                                        disabled>
+                                    <button class="btn btn-sm btn-success btn-update-user"
+                                        data-id="{{ $chat->id }}" disabled>
                                         <i class="fa fa-save"></i> <span class="d-none d-lg-inline">Update</span>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-warning btn-test-message"
@@ -137,11 +140,15 @@
                         <div class="mb-3">
                             <label class="small text-muted">Assign Admin</label>
                             <div class="mb-3 mb-3">
-                                {!! Form::select("user_id_$chat->id", $users->pluck('name', 'id'), $chat->user_id, [
-                                    'class' => 'form-control select2-user-mobile',
-                                    'placeholder' => 'Select Admin',
-                                    'data-id' => $chat->id,
-                                ]) !!}
+                                <select name="user_id_{{ $chat->id }}" class="form-control select2-user-mobile"
+                                    data-id="{{ $chat->id }}">
+                                    <option value="">Select Admin</option>
+                                    @foreach ($users->pluck('name', 'id') as $userId => $userName)
+                                        <option value="{{ $userId }}" @selected($chat->user_id == $userId)>
+                                            {{ $userName }}
+                                        </option>
+                                    @endforeach
+                                </select>
                             </div>
                         </div>
 

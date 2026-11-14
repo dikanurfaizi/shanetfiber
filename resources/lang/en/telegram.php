@@ -228,8 +228,6 @@ return [
             'delete-message' => 'Delete :name message?',
             'preview-message' => 'Preview Message [:name]',
             'edit-message' => 'Edit Message [:name]',
-            'enable-message' => 'Enable Message [:name]',
-            'disable-message' => 'Disable Message [:name]'
         ],
         'label' => [
             'name'      => 'Name',
@@ -259,6 +257,7 @@ return [
             'show-message'   => 'Show Message',
             'enable-message'   => 'Enable Message',
             'disable-message'   => 'Disable Message',
+            'cancel' => 'Cancel'
         ],
         'validator' => [
             'incoming-message-required' => 'The keyword field is required.',

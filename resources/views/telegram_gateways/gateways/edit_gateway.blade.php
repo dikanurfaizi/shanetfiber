@@ -1,125 +1,138 @@
 <x-layouts.cpanel.settings.app-layout title="{{ __('telegram.gateway.header-edit') }}">
     <div class="card-header py-3">
         <h5 class="m-0 fw-bold text-primary">
-            {{ __('telegram.gateway.header-edit') }}</h5>
+            {{ __('telegram.gateway.header-edit') }}
+        </h5>
     </div>
 
     <div class="row">
         <div class="col-lg-12">
-            {!! Form::model($data, ['method' => 'PATCH', 'route' => ['telegramgateway.update_gateway', $data->slug]]) !!}
-            <div class="card-body col-lg-8">
+            <form action="{{ route('telegramgateway.update_gateway', $data->slug) }}" method="POST">
+                @csrf
+                @method('PATCH')
 
-                <div class="mb-3 has-feedback row mb-2">
-                    <div class="col-md-4">
-                        <label for="token">{!! trans('telegram.gateway.label.token') !!}</label>
-                    </div>
-                    <div class="col-md-8">
-
-                        {!! Form::text('token', null, [
-                            'placeholder' => __('telegram.gateway.ph.token'),
-                            'class' => 'form-control',
-                        ]) !!}
-                        @if ($errors->has('token'))
-                            <span class="text-danger">{{ $errors->first('token') }}</span>
-                        @endif
-
-                    </div>
-                </div>
-                <div class="mb-3 has-feedback row mb-2">
-                    <div class="col-md-4">
-                        <label for="url_callback">{!! trans('telegram.gateway.label.url-callback') !!}</label>
-                    </div>
-                    <div class="col-md-8">
-
-                        {!! Form::text('url_callback', null, [
-                            'placeholder' => __('telegram.gateway.ph.url_callback'),
-                            'class' => 'form-control',
-                        ]) !!}
-                        @if ($errors->has('url_callback'))
-                            <span class="text-danger">{{ $errors->first('url_callback') }}</span>
-                        @endif
-
-                    </div>
-                </div>
-                <div class="mb-3 has-feedback row mb-2">
-                    <div class="col-md-4">
-                        <label for="cert_file">{!! trans('telegram.gateway.label.cert-file') !!}</label>
-                    </div>
-                    <div class="col-md-8">
-                        {!! Form::text('cert_file', null, [
-                            'placeholder' => __('telegram.gateway.ph.cert_file'),
-                            'class' => 'form-control',
-                        ]) !!}
-                        @if ($errors->has('cert_file'))
-                            <span class="text-danger">{{ $errors->first('cert_file') }}</span>
-                        @endif
-
-                    </div>
-                </div>
-                <div class="mb-3 has-feedback row mb-2">
-                    <div class="col-md-4">
-                        <label for="auth_username">{!! trans('telegram.gateway.label.auth-username') !!}</label>
-                    </div>
-                    <div class="col-md-8">
-                        {!! Form::text('basic_auth_username', null, [
-                            'placeholder' => __('telegram.gateway.ph.basic_auth_username'),
-                            'class' => 'form-control',
-                        ]) !!}
-                        @if ($errors->has('basic_auth_username'))
-                            <span class="text-danger">{{ $errors->first('basic_auth_username') }}</span>
-                        @endif
-
-                    </div>
-                </div>
-                <div class="mb-3 has-feedback row mb-2">
-                    <div class="col-md-4">
-                        <label for="auth_password">{!! trans('telegram.gateway.label.auth-password') !!}</label>
-                    </div>
-                    <div class="col-md-8 d-flex align-items-center">
-                        {!! Form::text('basic_auth_password', old('basic_auth_password', Form::getModel()?->basic_auth_password), [
-                            'placeholder' => __('telegram.gateway.ph.basic_auth_password'),
-                            'class' => 'form-control',
-                            'id' => 'basic_auth_password',
-                            'pattern' => "^[a-zA-Z0-9!@#$%^&*()-_+=<>?]*$",
-                        ]) !!}
-                        <button type="button" class="btn btn-outline-secondary ms-2"
-                            onclick="togglePasswordVisibility()">
-                            <i id="togglePasswordIcon" class="fas fa-eye"></i>
-                        </button>
-                        @if ($errors->has('basic_auth_password'))
-                            <span class="text-danger">{{ $errors->first('basic_auth_password') }}</span>
-                        @endif
-                    </div>
-                </div>
-                <div class="mb-3 row mb-2">
-                    <div class="col-md-4">
-                        <label for="auth_disabled">{!! trans('telegram.gateway.label.auth-disabled') !!}</label>
-                    </div>
-                    <div class="col-md-8 d-flex align-items-center">
-                        <label class="switch">
-                            {!! Form::hidden('auth_disabled', 'false') !!}
-                            {!! Form::checkbox('auth_disabled', 'true', old('auth_disabled', Form::getModel()?->auth_disabled) === 'true', [
-                                'class' => 'toggle-input',
-                                'id' => 'auth_disabled_toggle',
-                            ]) !!}
-                            <span class="slider round"></span>
+                <div class="card-body col-lg-8">
+                    {{-- Token --}}
+                    <div class="row mb-3">
+                        <label for="token" class="col-md-4 col-form-label">
+                            {!! trans('telegram.gateway.label.token') !!}
                         </label>
-                        <span id="auth_disabled_label"
-                            class="ms-2 text-center">{{ old('auth_disabled', Form::getModel()?->auth_disabled) === 'true' ? 'Enable' : 'Disable' }}</span>
+                        <div class="col-md-8">
+                            <input type="text" name="token" id="token" value="{{ old('token', $data->token) }}"
+                                placeholder="{{ __('telegram.gateway.ph.token') }}"
+                                class="form-control @error('token') is-invalid @enderror">
+                            @error('token')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+
+                    {{-- URL Callback --}}
+                    <div class="row mb-3">
+                        <label for="url_callback" class="col-md-4 col-form-label">
+                            {!! trans('telegram.gateway.label.url-callback') !!}
+                        </label>
+                        <div class="col-md-8">
+                            <input type="text" name="url_callback" id="url_callback"
+                                value="{{ old('url_callback', $data->url_callback) }}"
+                                placeholder="{{ __('telegram.gateway.ph.url_callback') }}"
+                                class="form-control @error('url_callback') is-invalid @enderror">
+                            @error('url_callback')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+
+                    {{-- Cert File --}}
+                    <div class="row mb-3">
+                        <label for="cert_file" class="col-md-4 col-form-label">
+                            {!! trans('telegram.gateway.label.cert-file') !!}
+                        </label>
+                        <div class="col-md-8">
+                            <input type="text" name="cert_file" id="cert_file"
+                                value="{{ old('cert_file', $data->cert_file) }}"
+                                placeholder="{{ __('telegram.gateway.ph.cert_file') }}"
+                                class="form-control @error('cert_file') is-invalid @enderror">
+                            @error('cert_file')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+
+                    {{-- Basic Auth Username --}}
+                    <div class="row mb-3">
+                        <label for="basic_auth_username" class="col-md-4 col-form-label">
+                            {!! trans('telegram.gateway.label.auth-username') !!}
+                        </label>
+                        <div class="col-md-8">
+                            <input type="text" name="basic_auth_username" id="basic_auth_username"
+                                value="{{ old('basic_auth_username', $data->basic_auth_username) }}"
+                                placeholder="{{ __('telegram.gateway.ph.basic_auth_username') }}"
+                                class="form-control @error('basic_auth_username') is-invalid @enderror">
+                            @error('basic_auth_username')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+
+                    {{-- Basic Auth Password --}}
+                    <div class="row mb-3">
+                        <label for="basic_auth_password" class="col-md-4 col-form-label">
+                            {!! trans('telegram.gateway.label.auth-password') !!}
+                        </label>
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <input type="text" name="basic_auth_password" id="basic_auth_password"
+                                    value="{{ old('basic_auth_password', $data->basic_auth_password) }}"
+                                    placeholder="{{ __('telegram.gateway.ph.basic_auth_password') }}"
+                                    pattern="^[a-zA-Z0-9!@#$%^&*()-_+=<>?]*$"
+                                    class="form-control @error('basic_auth_password')
+is-invalid
+@enderror">
+                                <button type="button" class="btn btn-outline-secondary"
+                                    onclick="togglePasswordVisibility()">
+                                    <i id="togglePasswordIcon" class="fas fa-eye"></i>
+                                </button>
+                                @error('basic_auth_password')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Auth Disabled Toggle --}}
+                    @php
+                        $isAuthDisabled = old('auth_disabled', $data->auth_disabled) === 'true';
+                    @endphp
+                    <div class="row mb-3 align-items-center">
+                        <label for="auth_disabled_toggle" class="col-md-4 col-form-label">
+                            {!! trans('telegram.gateway.label.auth-disabled') !!}
+                        </label>
+                        <div class="col-md-8 d-flex align-items-center">
+                            <label class="switch mb-0">
+                                <input type="hidden" name="auth_disabled" value="false">
+                                <input type="checkbox" name="auth_disabled" id="auth_disabled_toggle" value="true"
+                                    class="toggle-input" @checked($isAuthDisabled)>
+                                <span class="slider round"></span>
+                            </label>
+                            <span id="auth_disabled_label" class="ms-2">
+                                {{ $isAuthDisabled ? 'Enable' : 'Disable' }}
+                            </span>
+                        </div>
                     </div>
                 </div>
 
-            </div>
-            <div class="card-footer">
-
-                <a class="btn btn-sm btn-outline-danger" href="{{ route('telegramgateway.index') }}"><i
-                        class="fa fa-arrow-left"></i>&nbsp{{ __('server.button.cancel') }}</a>
-                <button type="submit" class="btn btn-sm btn-outline-success pull-right btn-save" id="confirm">
-                    <span class="button-text"><i class="fa fa-save"></i>
-                        &nbsp{{ __('telegram.gateway.button.update') }}</span>
-                </button>
-            </div>
-            {!! Form::close() !!}
+                <div class="card-footer d-flex justify-content-between">
+                    <a class="btn btn-sm btn-outline-danger" href="{{ route('telegramgateway.index') }}">
+                        <i class="fa fa-arrow-left"></i>&nbsp;{{ __('server.button.cancel') }}
+                    </a>
+                    <button type="submit" class="btn btn-sm btn-outline-success btn-save" id="confirm">
+                        <span class="button-text">
+                            <i class="fa fa-save"></i>&nbsp;{{ __('telegram.gateway.button.update') }}
+                        </span>
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 

@@ -11,28 +11,31 @@
     <meta name="google-site-verification" content="VM3PKBo1GgIleHGysVVsGcowiPLWELh1d5qJ7cIP_pI" />
     <meta name="msvalidate.01" content="54E283E0B2DF8EDBB2221E556F92DECC" />
     <title>{{ $title ?? 'Shanet Fiber Management' }}</title>
+
+    <!-- Favicons & Manifest -->
     <link rel="apple-touch-icon" sizes="120x120" href="{{ asset('images/favicon/apple-touch-icon.png') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon/favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/favicon/favicon-16x16.png') }}">
     <link rel="icon" type="image/x-icon" href="{{ asset('images/favicon/favicon.png') }}" />
     <link rel="manifest" href="{{ asset('assets/site.webmanifest') }}">
     <link rel="mask-icon" href="{{ asset('images/favicon/safari-pinned-tab.svg') }}" color="#5bbad5">
+
+    <!-- Flag Icons & Vite -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css" />
     @vite('resources/sass/app.scss')
-    <!-- Custom fonts for this template-->
+
+    <!-- Custom CSS & Vendor Styles -->
     <link href="{{ asset('css/fontawsome-free-all.min.css') }}" rel="stylesheet" type="text/css">
     <link href="{{ asset('assets/notify/notify.min.css') }}" rel="stylesheet">
     <link href="{{ asset('assets/sweet-alert/sweet-alert.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
     <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
-
-    <!-- Custom styles for this template-->
     <link href="{{ asset('css/sb-admin-2.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Custom styles for this Page-->
+    <!-- Page Level Custom Styles (Yield & Stack) -->
     @yield('custom_styles')
-
+    @stack('styles')
 </head>
 
 <body id="page-top">
@@ -40,6 +43,7 @@
     <!-- Page Wrapper -->
     <div id="wrapper">
         <x-layouts.navigation />
+
         <!-- Content Wrapper -->
         <div id="content-wrapper" class="d-flex flex-column">
             <!-- Main Content -->
@@ -47,15 +51,15 @@
                 <!-- Topbar -->
                 <x-layouts.top-bar />
                 <!-- End of Topbar -->
+
                 @if ($errors->any())
                     <div class="container-fluid">
                         <div class="card shadow mb-4">
-
                             <div class="card-body">
-                                <div class="mb-3 mt-4 mb-4">
-                                    <div class="pull-right alert alert-danger">
+                                <div class="my-4">
+                                    <div class="alert alert-danger float-none clearfix mb-0">
                                         <strong>Whoops!</strong> There were some problems.<br><br>
-                                        <ul>
+                                        <ul class="mb-0">
                                             @foreach ($errors->all() as $error)
                                                 <li>{{ $error }}</li>
                                             @endforeach
@@ -63,14 +67,13 @@
                                     </div>
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 @endif
-                <!-- Main page content-->
+
+                <!-- Main page content -->
                 <div class="container-fluid">
                     <div class="card shadow mb-4">
-
                         {{ $slot }}
                     </div>
                 </div>
@@ -79,33 +82,30 @@
 
             <!-- Footer -->
             <x-layouts.footer />
-            <!-- End of Footer -->
         </div>
         <!-- End of Content Wrapper -->
     </div>
     <!-- End of Page Wrapper -->
 
-    <!-- Scroll to Top Button-->
+    <!-- Scroll to Top Button -->
     <a class="scroll-to-top rounded" href="#page-top">
         <i class="fas fa-angle-up"></i>
     </a>
 
-    <!-- Logout Modal-->
+    <!-- Logout Modal -->
     <x-layouts.logout-modal />
-    @vite('resources/js/app.js')
 
-    <!-- Core plugin JavaScript-->
+    <!-- Core Scripts -->
+    @vite('resources/js/app.js')
     <script src="{{ asset('assets/vendor/jquery/jquery.min.js') }}"></script>
     <script src="{{ asset('js/jquery.easing-1.4.1.min.js') }}"></script>
-    <!-- Custom scripts for all pages-->
     <script src="{{ asset('js/sb-admin-2.min.js') }}"></script>
     <script src="{{ asset('assets/notify/notify.min.js') }}"></script>
     <script src="{{ asset('assets/sweet-alert/sweet-alert.min.js') }}"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-    <!-- Page level custom scripts -->
-    @yield('custom_scripts')
-    @stack('scripts')
+
+    <!-- Global Toast Notifier (SweetAlert2) -->
     @if (Session::has('success') || Session::has('error'))
         <script>
             document.addEventListener('DOMContentLoaded', function() {
@@ -138,6 +138,12 @@
         </script>
     @endif
 
+    <!-- Page Level Custom Scripts (Yield & Stack Support) -->
+    @yield('custom_scripts')
+    @yield('scripts')
+    @stack('scripts')
+
+    <!-- Floating Sidebar Toggle Button -->
     <button id="floatingSidebarToggle" class="btn btn-toggle-sidebar rounded-circle shadow d-md-none position-fixed"
         style="top: calc(50% - 28px); right: 20px; width: 56px; height: 56px; z-index: 1050;">
         <i id="toggleIcon" class="fas fa-bars"></i>

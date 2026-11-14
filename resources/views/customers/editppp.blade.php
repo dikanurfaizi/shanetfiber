@@ -7,7 +7,9 @@
     <div class="row">
         <div class="col-lg-12">
 
-            {!! Form::model($customer, ['method' => 'PATCH', 'route' => ['customers.update.ppp', $customer->slug]]) !!}
+            <form action="{{ route('customers.update.ppp', $customer->slug) }}" method="POST">
+                @csrf
+                @method('PATCH')
             <div class="card-body col-lg-8">
 
                 <div class="row align-items-center">
@@ -24,11 +26,12 @@
                         <div class="col-md-12 mb-3">
                             <label for="package"><strong>{{ __('pppoe.secret.service') }}</strong>
                             </label>
-                            {!! Form::select('ppp_type_id', $services, null, [
-                                'placeholder' => 'Select Service',
-                                'class' => 'form-control',
-                                'id' => 'server-dropdown',
-                            ]) !!}
+                            <select name="ppp_type_id" class="form-control" id="server-dropdown">
+                                <option value="">Select Service</option>
+                                @foreach ($services as $id => $name)
+                                    <option value="{{ $id }}" {{ old('ppp_type_id', $customer->ppp_type_id) == $id ? 'selected' : '' }}>{{ $name }}</option>
+                                @endforeach
+                            </select>
                             @if ($errors->has('ppp_type_id'))
                                 <span class="text-danger">{{ $errors->first('ppp_type_id') }}</span>
                             @endif
@@ -40,10 +43,7 @@
                         <div class="col-md-12 mb-3">
                             <label for="address"><strong>{{ __('customer.label.username') }}</strong></label>
 
-                            {!! Form::text('username', null, [
-                                'placeholder' => __('customer.placeholder.username'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="username" class="form-control" placeholder="{{ __('customer.placeholder.username') }}" value="{{ old('username', $customer->username) }}">
 
                             @if ($errors->has('username'))
                                 <span class="text-danger">{{ $errors->first('username') }}</span>
@@ -54,10 +54,7 @@
                         <div class="col-md-12 mb-3">
                             <label for="password"><strong>{{ __('customer.label.password-ppp') }}</strong></label>
 
-                            {!! Form::text('password_ppp', null, [
-                                'placeholder' => __('customer.placeholder.username'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="password_ppp" class="form-control" placeholder="{{ __('customer.placeholder.username') }}" value="{{ old('password_ppp', $customer->password_ppp) }}">
 
                             @if ($errors->has('password_ppp'))
                                 <span class="text-danger">{{ $errors->first('password_ppp') }}</span>
@@ -67,10 +64,7 @@
                     <div class="row align-items-center">
                         <div class="col-md-12 mb-3">
                             <label for="address"><strong>{{ __('customer.label.caller-id') }}</strong></label>
-                            {!! Form::text('caller_id', null, [
-                                'placeholder' => __('customer.placeholder.caller-id'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="caller_id" class="form-control" placeholder="{{ __('customer.placeholder.caller-id') }}" value="{{ old('caller_id', $customer->caller_id) }}">
                             @if ($customer->caller_id != $callerID)
                                 <div class="form-switch">
                                     <input type="hidden" name="save_with_last_caller_id" value="false">
@@ -112,10 +106,7 @@
                     <div class="col-md-12 mb-3">
                         <label for="caller_id"><strong>{{ __('customer.label.ip_address') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('ip_static', null, [
-                                'placeholder' => __('customer.placeholder.ip_static'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="ip_static" class="form-control" placeholder="{{ __('customer.placeholder.ip_static') }}" value="{{ old('ip_static', $customer->ip_static) }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="far fa-keyboard"></span>
@@ -130,10 +121,7 @@
                     <div class="col-md-12 mb-3">
                         <label for="caller_id"><strong>{{ __('customer.label.mac_address') }}</strong></label>
                         <div class="input-group">
-                            {!! Form::text('mac_address', null, [
-                                'placeholder' => __('customer.placeholder.mac_address'),
-                                'class' => 'form-control',
-                            ]) !!}
+                            <input type="text" name="mac_address" class="form-control" placeholder="{{ __('customer.placeholder.mac_address') }}" value="{{ old('mac_address', $customer->mac_address) }}">
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <span class="far fa-keyboard"></span>
@@ -147,11 +135,12 @@
 
                     <div class="col-md-12 mb-3">
                         <label for="interface"><strong>{{ __('customer.label.interface') }}</strong></label>
-                        {!! Form::select('interface', $interfaces, null, [
-                            'placeholder' => 'Select Interface',
-                            'class' => 'form-control',
-                            'id' => 'interface',
-                        ]) !!}
+                        <select name="interface" class="form-control" id="interface">
+                            <option value="">Select Interface</option>
+                            @foreach ($interfaces as $id => $name)
+                                <option value="{{ $id }}" {{ old('interface', $customer->interface) == $id ? 'selected' : '' }}>{{ $name }}</option>
+                            @endforeach
+                        </select>
                         @if ($errors->has('interface'))
                             <span class="text-danger">{{ $errors->first('interface') }}</span>
                         @endif
@@ -172,7 +161,7 @@
             </div>
 
 
-            {!! Form::close() !!}
+            </form>
         </div>
     </div>
 </x-layouts.cpanel.customers.app-layout>
